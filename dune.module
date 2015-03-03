@@ -1,0 +1,10 @@
+################################
+# Dune module information file #
+################################
+
+#Name of the module
+Module: dune-dpg
+Version: 0.0.1
+Maintainer: gruber@igpm.rwth-aachen.de
+#depending on
+Depends: dune-geometry dune-grid dune-localfunctions dune-istl
