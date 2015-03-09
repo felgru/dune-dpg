@@ -1,6 +1,6 @@
 localfunctionsdir = $(includedir)/dune/localfunctions
 
-SUBDIRS = lagrange
+SUBDIRS = lagrange test
 
 include $(top_srcdir)/am/global-rules
 
