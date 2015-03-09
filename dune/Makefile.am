@@ -1,4 +1,4 @@
-SUBDIRS = dpg
+SUBDIRS = dpg functions localfunctions
 
 EXTRA_DIST = CMakeLists.txt
 
