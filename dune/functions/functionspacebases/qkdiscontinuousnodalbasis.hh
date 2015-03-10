@@ -1,7 +1,7 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_Q2TRACENODALBASIS_HH
-#define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_Q2TRACENODALBASIS_HH
+#ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_QKDiscontinuousNODALBASIS_HH
+#define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_QKDiscontinuousNODALBASIS_HH
 
 #include <array>
 #include <dune/common/exceptions.hh>
@@ -9,8 +9,7 @@
 #include <dune/common/std/memory.hh>
 
 
-#include <dune/localfunctions/lagrange/pqkfactory.hh>
-#include <dune/localfunctions/lagrange/qktrace.hh>
+#include <dune/localfunctions/lagrange/qkdiscontinuous.hh>
 
 #include <dune/typetree/leafnode.hh>
 
@@ -22,10 +21,10 @@ namespace Functions {
 
 
 template<typename GV>
-class Q2TraceNodalBasisLocalView;
+class QKDiscontinuousNodalBasisLocalView;
 
 template<typename GV>
-class Q2TraceNodalBasisLeafNode;
+class QKDiscontinuousNodalBasisLeafNode;
 
 
 
@@ -33,26 +32,26 @@ class Q2TraceNodalBasisLeafNode;
  *
  * \tparam GV The GridView that the space is defined on.
  */
-template<typename GV>
-class Q2TraceNodalBasis
+template<typename GV, int k>
+class QKDiscontinuousNodalBasis
 : public GridViewFunctionSpaceBasis<GV,
-                                    Q2TraceNodalBasisLocalView<GV>,
+                                    QKDiscontinuousNodalBasisLocalView<GV>,
                                     std::array<std::size_t, 1> >
 {
   static const int dim = GV::dimension;
 
   template<int dim>
-  struct P2MapperLayout
+  struct QKDiscontinuousMapperLayout
   {
     bool contains (Dune::GeometryType gt) const
     {
-      // All hypercubes carry a degree of freedom (this includes vertices and edges)
-      return gt.isCube() && gt.dim()<dim; //TODO pruefen, ob der mapper noch funktioniert
+      // All dim-dimensional cubes carry a degree of freedom (no dofs on vertices and edges)
+      return gt.isCube() && gt.dim()==dim;
     }
   };
 
   // Needs the mapper
-  friend class Q2TraceNodalBasisLeafNode<GV>;
+  friend class QKDiscontinuousNodalBasisLeafNode<GV, k>;
 
 public:
 
@@ -61,13 +60,13 @@ public:
   typedef std::size_t size_type;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef Q2TraceNodalBasisLocalView<GV> LocalView;
+  typedef QKDiscontinuousNodalBasisLocalView<GV, k> LocalView;
 
   /** \brief Type used for global numbering of the basis vectors */
   typedef std::array<size_type, 1> MultiIndex;
 
   /** \brief Constructor for a given grid view object */
-  Q2TraceNodalBasis(const GridView& gv) :
+  QKDiscontinuousNodalBasis(const GridView& gv) :
     gridView_(gv),
     mapper_(gv)
   {}
@@ -91,7 +90,7 @@ public:
    */
   size_type maxLocalSize() const DUNE_FINAL
   {
-    return StaticPower<3,dim>::power-1;
+    return StaticPower<k+1,dim>::power;
   }
 
   //! Return the number of possible values for next position in empty multi index
@@ -116,17 +115,17 @@ public:
 
 protected:
   const GridView gridView_;
-  const MultipleCodimMultipleGeomTypeMapper<GridView, P2MapperLayout> mapper_;
+  const MultipleCodimMultipleGeomTypeMapper<GridView, QKDiscontinuousMapperLayout> mapper_;
 };
 
 
 /** \brief The restriction of a finite element basis to a single element */
-template<typename GV>
-class Q2TraceNodalBasisLocalView
+template<typename GV, int k>
+class QKDiscontinuousNodalBasisLocalView
 {
 public:
   /** \brief The global FE basis that this is a view on */
-  typedef Q2TraceNodalBasis<GV> GlobalBasis;
+  typedef QKDiscontinuousNodalBasis<GV, k> GlobalBasis;
   typedef typename GlobalBasis::GridView GridView;
 
   /** \brief The type used for sizes */
@@ -147,10 +146,10 @@ public:
    * In the case of a P2 space this tree consists of a single leaf only,
    * i.e., Tree is basically the type of the LocalFiniteElement
    */
-  typedef Q2TraceNodalBasisLeafNode<GV> Tree;
+  typedef QKDiscontinuousNodalBasisLeafNode<GV, k> Tree;
 
   /** \brief Construct local view for a given global finite element basis */
-  Q2TraceNodalBasisLocalView(const GlobalBasis* globalBasis) :
+  QKDiscontinuousNodalBasisLocalView(const GlobalBasis* globalBasis) :
     globalBasis_(globalBasis),
     tree_(globalBasis)
   {}
@@ -181,7 +180,7 @@ public:
   /** \brief Unbind from the current element
    *
    * Calling this method should only be a hint that the view can be unbound.
-   * And indeed, in the Q2TraceNodalBasisView implementation this method does nothing.
+   * And indeed, in the QKDiscontinuousNodalBasisView implementation this method does nothing.
    */
   void unbind()
   {}
@@ -209,19 +208,19 @@ protected:
 };
 
 
-template<typename GV>
-class Q2TraceNodalBasisLeafNode :
+template<typename GV, int k>
+class QKDiscontinuousNodalBasisLeafNode :
   public GridFunctionSpaceBasisLeafNodeInterface<
     typename GV::template Codim<0>::Entity,
-    Dune::QkTraceLocalFiniteElement<typename GV::ctype,double,GV::dimension,2>,
-    typename Q2TraceNodalBasis<GV>::size_type,
-    typename Q2TraceNodalBasis<GV>::MultiIndex>
+    Dune::QkDiscontinuousLocalFiniteElement<typename GV::ctype,double,GV::dimension,k>,
+    typename QKDiscontinuousNodalBasis<GV>::size_type,
+    typename QKDiscontinuousNodalBasis<GV>::MultiIndex>
 {
-  typedef Q2TraceNodalBasis<GV> GlobalBasis;
+  typedef QKDiscontinuousNodalBasis<GV> GlobalBasis;
   static const int dim = GV::dimension;
 
   typedef typename GV::template Codim<0>::Entity E;
-  typedef typename Dune::QkTraceLocalFiniteElement<typename GV::ctype,double,GV::dimension,2> FE;
+  typedef typename Dune::QkDiscontinuousLocalFiniteElement<typename GV::ctype,double,GV::dimension,k> FE;
   typedef typename GlobalBasis::size_type ST;
   typedef typename GlobalBasis::MultiIndex MI;
 
@@ -235,7 +234,7 @@ public:
   typedef typename Interface::Element Element;
   typedef typename Interface::FiniteElement FiniteElement;
 
-  Q2TraceNodalBasisLeafNode(const GlobalBasis* globalBasis) :
+  QKDiscontinuousNodalBasisLeafNode(const GlobalBasis* globalBasis) :
     globalBasis_(globalBasis),
     finiteElement_(nullptr),
     element_(nullptr)
@@ -271,7 +270,7 @@ public:
   //! maximum size of subtree rooted in this node for any element of the global basis
   size_type maxSubTreeSize() const DUNE_FINAL // all nodes or leaf nodes only ?
   {
-    return StaticPower<3,dim>::power-1; //TODO
+    return StaticPower<k+1,dim>::power;
   }
 
   //! size of complete tree (element-local)
@@ -348,4 +347,4 @@ protected:
 } // end namespace Dune
 
 
-#endif // DUNE_FUNCTIONS_FUNCTIONSPACEBASES_Q2TRACENODALBASIS_HH
+#endif // DUNE_FUNCTIONS_FUNCTIONSPACEBASES_QKDiscontinuousNODALBASIS_HH
