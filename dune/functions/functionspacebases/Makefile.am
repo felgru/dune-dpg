@@ -1,5 +1,5 @@
 functionspacebasesincludedir = $(includedir)/dune/functions/functionspacebases
-functionspacebasesinclude_HEADERS = q2facenodalbasis.hh
+functionspacebasesinclude_HEADERS = q2tracenodalbasis.hh
 
 EXTRA_DIST = CMakeLists.txt
 

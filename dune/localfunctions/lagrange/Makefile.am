@@ -1,7 +1,7 @@
-SUBDIRS = qkface
+SUBDIRS = qktrace
 
 lagrangedir = $(includedir)/dune/localfunctions/lagrange
-lagrange_HEADERS = qkface.hh
+lagrange_HEADERS = qktrace.hh
 
 include $(top_srcdir)/am/global-rules
 

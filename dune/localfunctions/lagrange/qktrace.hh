@@ -1,12 +1,12 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
 
-#ifndef DUNE_LOCALFUNCTIONS_QKFace_LOCALFINITEELEMENT_HH
-#define DUNE_LOCALFUNCTIONS_QKFace_LOCALFINITEELEMENT_HH
+#ifndef DUNE_LOCALFUNCTIONS_QKTRACE_LOCALFINITEELEMENT_HH
+#define DUNE_LOCALFUNCTIONS_QKTRACE_LOCALFINITEELEMENT_HH
 
-#include "qkface/qkfacelocalinterpolation.hh"
-#include "qkface/qkfacelocalbasis.hh"
-#include "qkface/qkfacelocalcoefficients.hh"
+#include "qktrace/qktracelocalinterpolation.hh"
+#include "qktrace/qktracelocalbasis.hh"
+#include "qktrace/qktracelocalcoefficients.hh"
 
 namespace Dune
 {

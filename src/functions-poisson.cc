@@ -22,7 +22,7 @@
 #endif
 #include <dune/functions/functionspacebases/pq1nodalbasis.hh>
 #include <dune/functions/functionspacebases/pq2nodalbasis.hh>
-#include <dune/functions/functionspacebases/q2facenodalbasis.hh>
+#include <dune/functions/functionspacebases/q2tracenodalbasis.hh>
 
 using namespace Dune;
 
@@ -728,7 +728,7 @@ int main (int argc, char *argv[]) try
   //   Choose a finite element space
   /////////////////////////////////////////////////////////
 
-  typedef Functions::Q2FaceNodalBasis<GridView> FEBasis;
+  typedef Functions::Q2TraceNodalBasis<GridView> FEBasis;
   FEBasis feBasis(gridView);
 
   /////////////////////////////////////////////////////////
