@@ -20,10 +20,10 @@ namespace Dune {
 namespace Functions {
 
 
-template<typename GV>
+template<typename GV, int k>
 class QKDiscontinuousNodalBasisLocalView;
 
-template<typename GV>
+template<typename GV, int k>
 class QKDiscontinuousNodalBasisLeafNode;
 
 
@@ -35,20 +35,20 @@ class QKDiscontinuousNodalBasisLeafNode;
 template<typename GV, int k>
 class QKDiscontinuousNodalBasis
 : public GridViewFunctionSpaceBasis<GV,
-                                    QKDiscontinuousNodalBasisLocalView<GV>,
+                                    QKDiscontinuousNodalBasisLocalView<GV, k>,
                                     std::array<std::size_t, 1> >
 {
   static const int dim = GV::dimension;
 
-  template<int dim>
+/*  template<int dim>
   struct QKDiscontinuousMapperLayout
   {
     bool contains (Dune::GeometryType gt) const
     {
-      // All dim-dimensional cubes carry a degree of freedom (no dofs on vertices and edges)
+      // All dim-dimensional cubes carry degrees of freedom (no dofs on vertices and edges)
       return gt.isCube() && gt.dim()==dim;
     }
-  };
+  };*/
 
   // Needs the mapper
   friend class QKDiscontinuousNodalBasisLeafNode<GV, k>;
@@ -67,8 +67,8 @@ public:
 
   /** \brief Constructor for a given grid view object */
   QKDiscontinuousNodalBasis(const GridView& gv) :
-    gridView_(gv),
-    mapper_(gv)
+    gridView_(gv)
+    //mapper_(gv)
   {}
 
   /** \brief Obtain the grid view that the basis is defined on
@@ -96,13 +96,13 @@ public:
   //! Return the number of possible values for next position in empty multi index
   size_type subIndexCount() const
   {
-    return mapper_.size();
+    return gridView_.size(0)*maxLocalSize();
   }
 
   //! Return number possible values for next position in multi index
   size_type subIndexCount(const MultiIndex& index) const DUNE_FINAL
   {
-    return mapper_.size();
+    return gridView_.size(0)*maxLocalSize();
   }
 
   /** \brief Return local view for basis
@@ -115,7 +115,7 @@ public:
 
 protected:
   const GridView gridView_;
-  const MultipleCodimMultipleGeomTypeMapper<GridView, QKDiscontinuousMapperLayout> mapper_;
+  //const MultipleCodimMultipleGeomTypeMapper<GridView, QKDiscontinuousMapperLayout> mapper_;
 };
 
 
@@ -213,10 +213,10 @@ class QKDiscontinuousNodalBasisLeafNode :
   public GridFunctionSpaceBasisLeafNodeInterface<
     typename GV::template Codim<0>::Entity,
     Dune::QkDiscontinuousLocalFiniteElement<typename GV::ctype,double,GV::dimension,k>,
-    typename QKDiscontinuousNodalBasis<GV>::size_type,
-    typename QKDiscontinuousNodalBasis<GV>::MultiIndex>
+    typename QKDiscontinuousNodalBasis<GV, k>::size_type,
+    typename QKDiscontinuousNodalBasis<GV, k>::MultiIndex>
 {
-  typedef QKDiscontinuousNodalBasis<GV> GlobalBasis;
+  typedef QKDiscontinuousNodalBasis<GV, k> GlobalBasis;
   static const int dim = GV::dimension;
 
   typedef typename GV::template Codim<0>::Entity E;
@@ -296,14 +296,16 @@ public:
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis (pair of multi-indices)
   const MultiIndex globalIndex(size_type i) const DUNE_FINAL // move to LocalView?
   {
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,4)
+    const typename GV::IndexSet& is(globalBasis_->gridView_.indexSet());
+    return {(is.subIndex(*element_, 0, 0) * StaticPower<k+1,dim>::power) + i};
+/*#if DUNE_VERSION_NEWER(DUNE_GRID,2,4)
     return { globalBasis_->mapper_.subIndex(
 #else
     return { (size_t)globalBasis_->mapper_.map(
 #endif
         *element_,
         finiteElement_->localCoefficients().localKey(i).subEntity(),
-        finiteElement_->localCoefficients().localKey(i).codim()) };
+        finiteElement_->localCoefficients().localKey(i).codim()) };*/
   }
 
   //! Generate multi indices for current subtree into range starting at it
@@ -312,7 +314,8 @@ public:
   template<typename MultiIndexIterator>
   MultiIndexIterator generateMultiIndices(MultiIndexIterator it) const // move to LocalView?
   {
-    size_type size = subTreeSize();
+    DUNE_THROW(Dune::NotImplemented, "generateMultiIndices for QKDiscontinuousNodalBasis");
+/*    size_type size = subTreeSize();
     for(size_type i=0; i<size; ++i)
     {
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,4)
@@ -322,10 +325,11 @@ public:
 #endif
         *element_,
         finiteElement_->localCoefficients().localKey(i).subEntity(),
-        finiteElement_->localCoefficients().localKey(i).codim())};
+        finiteElement_->localCoefficients().localKey(i).codim())
+        + i};
       ++it;
     }
-    return it;
+    return it;*/
   }
 
 protected:

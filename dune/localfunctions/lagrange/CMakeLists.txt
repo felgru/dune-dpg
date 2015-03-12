@@ -1,7 +1,7 @@
-set(SUBDIRS  qktrace)
+set(SUBDIRS  qktrace qkdiscontinuous)
 
 set(lagrangedir  ${CMAKE_INSTALL_INCLUDEDIR}/dune/localfunctions/lagrange)
-set(lagrange_HEADERS  qktrace.hh)
+set(lagrange_HEADERS  qktrace.hh qkdiscontinuous.hh)
 
 install(FILES ${lagrange_HEADERS} DESTINATION ${lagrangedir})
 foreach(i ${SUBDIRS})

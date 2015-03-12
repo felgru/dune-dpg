@@ -1,12 +1,12 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
 
-#ifndef DUNE_LOCALFUNCTIONS_QK_LOCALFINITEELEMENT_HH
-#define DUNE_LOCALFUNCTIONS_QK_LOCALFINITEELEMENT_HH
+#ifndef DUNE_LOCALFUNCTIONS_QKDISCONTINUOUS_LOCALFINITEELEMENT_HH
+#define DUNE_LOCALFUNCTIONS_QKDISCONTINUOUS_LOCALFINITEELEMENT_HH
 
-#include "qk/qkdiscontinuouslocalinterpolation.hh"
-#include "qk/qkdiscontinuouslocalbasis.hh"
-#include "qk/qkdiscontinuouslocalcoefficients.hh"
+#include "qkdiscontinuous/qkdiscontinuouslocalinterpolation.hh"
+#include "qkdiscontinuous/qkdiscontinuouslocalbasis.hh"
+#include "qkdiscontinuous/qkdiscontinuouslocalcoefficients.hh"
 
 namespace Dune
 {
