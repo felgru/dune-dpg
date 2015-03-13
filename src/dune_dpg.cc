@@ -23,7 +23,7 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-//#define DUNE_FINAL final
+#include <dune/common/std/final.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
@@ -32,8 +32,6 @@
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
-
-//#include <dune/dpg/functionhelper.hh>
 
 using namespace Dune;
 
@@ -514,8 +512,6 @@ int main(int argc, char** argv)
   //assembleSystem<FEBasisTrace, FEBasisInterior, FEBasisTest>(feBasisTrace, feBasisInterior, feBasisTest, stiffnessMatrix, rhs, rightHandSide);
   assembleSystem(feBasisTrace, feBasisInterior, feBasisTest, stiffnessMatrix, rhs, rightHandSide);
 
-  //printmatrix(std::cout , stiffnessMatrix, "stiffness", "--");
-
   /////////////////////////////////////////////////
   //   Choose an initial iterate
   /////////////////////////////////////////////////
@@ -527,7 +523,9 @@ int main(int argc, char** argv)
   std::vector<bool> dirichletNodesInflow;
   boundaryTreatmentInflow(feBasisTrace, dirichletNodesInflow);
 
-/*  // Set Dirichlet values
+  // TODO unnoetig, da da eh schon 0 steht
+#if 0
+  // Set Dirichlet values
   for (size_t i=0; i<feBasisTrace.indexSet().size(); i++)
   {
     if (dirichletNodesInflow[i])
@@ -535,12 +533,12 @@ int main(int argc, char** argv)
       // The zero is the value of the Dirichlet boundary condition
       rhs[feBasisTest.indexSet().size()+i] = 0;
     }
-  }*/ //TODO unnoetig, da da eh schon 0 steht
+  }
+#endif
+
   ////////////////////////////////////////////
   //   Modify Dirichlet rows
   ////////////////////////////////////////////
-
-//printmatrix(std::cout , stiffnessMatrix, "stiffness1", "--");
 
   // loop over the matrix rows
   for (size_t i=0; i<feBasisTrace.indexSet().size(); i++)
@@ -565,8 +563,9 @@ int main(int argc, char** argv)
     }
 
   }
-/*
-// Determine Dirichlet dofs for v (inflow boundary)
+
+#if 0
+  // Determine Dirichlet dofs for v (inflow boundary)
   std::vector<bool> dirichletNodesInflowTest;
   boundaryTreatmentInflow(feBasisTest, dirichletNodesInflowTest);
 
@@ -603,10 +602,12 @@ int main(int argc, char** argv)
         }
       }
     }
-  }*/
+  }
+#endif
 
 
-/*  std::cout << "MatrixValues" << std::endl;
+#if 0
+  std::cout << "MatrixValues" << std::endl;
   for (unsigned int i=stiffnessMatrix.N()-4; i<stiffnessMatrix.N(); ++i)
   {
     for (unsigned int j=0; j<feBasisTest.indexSet().size(); ++j)
@@ -621,8 +622,10 @@ int main(int argc, char** argv)
       }
     }
     std::cout << std::endl;
-  }*/
-/*  std::cout << std::endl << "MatrixValues2" << std::endl;
+  }
+#endif
+#if 0
+    std::cout << std::endl << "MatrixValues2" << std::endl;
     for (unsigned int i=0; i<stiffnessMatrix.N(); ++i)
     {
       for (unsigned int j=0; j<stiffnessMatrix.M(); ++j)
@@ -645,7 +648,8 @@ int main(int argc, char** argv)
         }
       }
       std::cout << std::endl;
-    }*/
+    }
+#endif
 
   ////////////////////////////
   //   Compute solution
@@ -663,57 +667,16 @@ int main(int argc, char** argv)
   InverseOperatorResult statistics;
   umfPack.apply(x, rhs, statistics);
 
-#if 0
-  // Technicality:  turn the matrix into a linear operator
-  MatrixAdapter<MatrixType,VectorType,VectorType> op(stiffnessMatrix);
-
-
-  // Sequential SSOR as preconditioner
-  SeqSSOR<MatrixType,VectorType,VectorType> ssor(stiffnessMatrix, 3, 1);
-
-  // Preconditioned BiCGSTABSolver
-  BiCGSTABSolver<VectorType> BiCGSTAB(op,
-                                      ssor, // preconditioner
-                                      1e-4, // desired residual reduction factor
-                                      50,   // maximum number of iterations
-                                      2);   // verbosity of the solver)
-
-  // Sequential incomplete LU decomposition as the preconditioner
-/*  SeqILU0<MatrixType,VectorType,VectorType> ilu0(stiffnessMatrix,1.0);
-
-  // Preconditioned conjugate-gradient solver
-  CGSolver<VectorType> cg(op,
-                          ilu0, // preconditioner
-                          1e-4, // desired residual reduction factor
-                          50,   // maximum number of iterations
-                          2);   // verbosity of the solver*/
-
-  // Object storing some statistics about the solving process
-  InverseOperatorResult statistics;
-
-  // Solve!
-  BiCGSTAB.apply(x, rhs, statistics);
-#endif
-
-
   ////////////////////////////////////////////////////////////////////////////
   //  Make a discrete function from the FE basis and the coefficient vector
   ////////////////////////////////////////////////////////////////////////////
 
-//#if 0
   VectorType u(feBasisInterior.indexSet().size());
   u=0;
   for (unsigned int i=0; i<feBasisInterior.indexSet().size(); i++)
   {
     u[i] = x[feBasisTest.indexSet().size()+feBasisTrace.indexSet().size()+i];
   }
-
-//  u=0;
-  int idx = 3;
-  //int idx =atoi(argv[1]);
-//  u[idx]=1;
-
-  //std::cout << u << std::endl;
 
   Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisInterior),decltype(u)> uFunction(feBasisInterior,u);
   auto localUFunction = localFunction(uFunction);
@@ -724,8 +687,7 @@ int main(int argc, char** argv)
   //////////////////////////////////////////////////////////////////////////////////////////////
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
   vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("solution_transport"+ std::to_string(idx));
-//#endif
+  vtkWriter.write("solution_transport");
     return 0;
   }
   catch (Exception &e){
