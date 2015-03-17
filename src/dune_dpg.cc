@@ -23,12 +23,17 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#define DUNE_FINAL final
+//#define DUNE_FINAL final
+#include <dune/functions/functionspacebases/pqknodalbasis.hh>
+#include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
-#include <dune/functions/functionspacebases/q2tracenodalbasis.hh>
-#include <dune/functions/functionspacebases/qkdiscontinuousnodalbasis.hh>
+#include <dune/functions/functionspacebases/interpolate.hh>
+#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
+#include <dune/functions/gridfunctions/gridviewfunction.hh>
 
-#include <dune/dpg/functionhelper.hh>
+
+//#include <dune/dpg/functionhelper.hh>
 
 using namespace Dune;
 
@@ -73,8 +78,7 @@ void getLocalMatrix(const LocalViewTrace& localViewTrace,
   ////////////////////////////
 
   // Get a quadrature rule
-  //int order = 2*(dim-1); //TODO!!!!!!!!!
-  int order = 20;
+  int order = 2*(dim*localFiniteElementTest.localBasis().order()-1);  //TODO!!!!!!!!!
   const QuadratureRule<double, dim>& quad = QuadratureRules<double, dim>::rule(element.type(), order);
 
   // Loop over all quadrature points
@@ -179,10 +183,11 @@ void getLocalMatrix(const LocalViewTrace& localViewTrace,
 
 
 // Compute the source term for a single element
-template <class LocalViewTest>
+template <class LocalViewTest, class LocalVolumeTerm>
 void getVolumeTerm( const LocalViewTest& localViewTest,
                     BlockVector<FieldVector<double,1> >& localRhs,
-                    const Dune::VirtualFunction<FieldVector<double,LocalViewTest::Element::dimension>, double>* volumeTerm)
+                    //const Dune::VirtualFunction<FieldVector<double,LocalViewTest::Element::dimension>, double>* volumeTerm)
+                    LocalVolumeTerm&& localVolumeTerm)
 {
   // Get the grid element from the local FE basis view
   typedef typename LocalViewTest::Element Element;
@@ -198,7 +203,7 @@ void getVolumeTerm( const LocalViewTest& localViewTest,
   localRhs = 0;
 
   // A quadrature rule
-  int order = 20; //TODO!!!!!!
+  int order = dim*localFiniteElementTest.localBasis().order(); //TODO!!!!!!
   const QuadratureRule<double, dim>& quad = QuadratureRules<double, dim>::rule(element.type(), order);
 
 
@@ -211,8 +216,7 @@ void getVolumeTerm( const LocalViewTest& localViewTest,
     // The multiplicative factor in the integral transformation formula
     const double integrationElement = element.geometry().integrationElement(quadPos);
 
-    double functionValue;
-    volumeTerm->evaluate(element.geometry().global(quadPos), functionValue);
+    double functionValue = localVolumeTerm(quadPos);
 
     // Evaluate all shape function values at this point
     std::vector<FieldVector<double,1> > shapeFunctionValues;
@@ -234,7 +238,10 @@ void getOccupationPattern(const FEBasisTrace& feBasisTrace,
                             MatrixIndexSet& nb)
 {
   // Total number of degrees of freedom
-  auto n = feBasisTrace.subIndexCount()+feBasisInterior.subIndexCount()+feBasisTest.subIndexCount();
+  auto basisIndexSetTrace = feBasisTrace.indexSet();
+  auto basisIndexSetInterior = feBasisInterior.indexSet();
+  auto basisIndexSetTest = feBasisTest.indexSet();
+  auto n = basisIndexSetTrace.size()+basisIndexSetInterior.size()+basisIndexSetTest.size();
 
   nb.resize(n, n);
 
@@ -243,14 +250,18 @@ void getOccupationPattern(const FEBasisTrace& feBasisTrace,
   typename FEBasisTrace::LocalView localViewTrace(&feBasisTrace);
   typename FEBasisInterior::LocalView localViewInterior(&feBasisInterior);
 
+  auto localIndexSetTrace = basisIndexSetTrace.localIndexSet();
+  auto localIndexSetInterior = basisIndexSetInterior.localIndexSet();
+  auto localIndexSetTest = basisIndexSetTest.localIndexSet();
+
   // Loop over all leaf elements
   auto it    = feBasisTest.gridView().template begin<0>();
   auto endIt = feBasisTest.gridView().template end<0>  ();
   auto itTrace    = feBasisTrace.gridView().template begin<0>();
   auto itInterior    = feBasisInterior.gridView().template begin<0>();
 
-  int offsetTrace(feBasisTest.subIndexCount());
-  int offsetInterior(offsetTrace+feBasisTrace.subIndexCount());
+  int offsetTrace(feBasisTest.indexSet().size());
+  int offsetInterior(offsetTrace+feBasisTrace.indexSet().size());
 
   for (; it!=endIt; ++it, ++itTrace, ++itInterior)
   {
@@ -259,32 +270,36 @@ void getOccupationPattern(const FEBasisTrace& feBasisTrace,
     localViewTrace.bind(*itTrace);
     localViewInterior.bind(*itInterior);
 
+    localIndexSetTrace.bind(localViewTrace);
+    localIndexSetInterior.bind(localViewInterior);
+    localIndexSetTest.bind(localViewTest);
+
         // There is a matrix entry a_ij if the i-th and j-th vertex are connected in the grid
-        for (size_t i=0; i<localViewTest.tree().localSize(); i++) {
+        for (size_t i=0; i<localViewTest.tree().size(); i++) {
 
-            for (size_t j=0; j<localViewTest.tree().localSize(); j++) {
+            for (size_t j=0; j<localViewTest.tree().size(); j++) {
 
-                auto iIdx = localViewTest.tree().globalIndex(i)[0];
-                auto jIdx = localViewTest.tree().globalIndex(j)[0];
+                auto iIdx = localIndexSetTest.index(i)[0];
+                auto jIdx = localIndexSetTest.index(j)[0];
 
                 // Add a nonzero entry to the matrix
                 nb.add(iIdx, jIdx);
 
             }
-            for (size_t j=0; j<localViewTrace.tree().localSize(); j++) {
+            for (size_t j=0; j<localViewTrace.tree().size(); j++) {
 
-                auto iIdx = localViewTest.tree().globalIndex(i)[0];
-                auto jIdx = localViewTrace.tree().globalIndex(j)[0];
+                auto iIdx = localIndexSetTest.index(i)[0];
+                auto jIdx = localIndexSetTrace.index(j)[0];
 
                 // Add a nonzero entry to the matrix
                 nb.add(iIdx, jIdx+offsetTrace);
                 nb.add(jIdx+offsetTrace, iIdx);
 
             }
-            for (size_t j=0; j<localViewInterior.tree().localSize(); j++) {
+            for (size_t j=0; j<localViewInterior.tree().size(); j++) {
 
-                auto iIdx = localViewTest.tree().globalIndex(i)[0];
-                auto jIdx = localViewInterior.tree().globalIndex(j)[0];
+                auto iIdx = localIndexSetTest.index(i)[0];
+                auto jIdx = localIndexSetInterior.index(j)[0];
 
                 // Add a nonzero entry to the matrix
                 nb.add(iIdx, jIdx+offsetInterior);
@@ -301,17 +316,19 @@ void getOccupationPattern(const FEBasisTrace& feBasisTrace,
 
 
 /** \brief Assemble the Laplace stiffness matrix on the given grid view */
-template <class FEBasisTrace, class FEBasisInterior, class FEBasisTest>
+template <class FEBasisTrace, class FEBasisInterior, class FEBasisTest, class VolumeTerm>
 void assembleSystem(const FEBasisTrace& feBasisTrace,
                     const FEBasisInterior& feBasisInterior,
                     const FEBasisTest& feBasisTest,
                     BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                     BlockVector<FieldVector<double,1> >& rhs,
-                    const VirtualFunction<Dune::FieldVector<double,FEBasisTest::GridView::dimension>,double>* volumeTerm)
+                    VolumeTerm&& volumeTerm)
 {
   // Get the grid view from the finite element basis
   typedef typename FEBasisTest::GridView GridView;
   GridView gridView = feBasisTest.gridView();
+
+  auto localVolumeTerm = localFunction(Functions::makeGridViewFunction(volumeTerm, gridView));
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // They are not particularly efficient, but simple to use.
@@ -322,27 +339,34 @@ void assembleSystem(const FEBasisTrace& feBasisTrace,
   occupationPattern.exportIdx(matrix);
 
   // set rhs to correct length -- the total number of basis vectors in the basis
-  rhs.resize(feBasisTrace.subIndexCount()+feBasisInterior.subIndexCount()+feBasisTest.subIndexCount());
+  auto basisIndexSetTrace = feBasisTrace.indexSet();
+  auto basisIndexSetInterior = feBasisInterior.indexSet();
+  auto basisIndexSetTest = feBasisTest.indexSet();
+  rhs.resize(basisIndexSetTrace.size()+basisIndexSetInterior.size()+basisIndexSetTest.size());
 
   // Set all entries to zero
   matrix = 0;
   rhs = 0;
 
   // A view on the FE basis on a single element
-  typename FEBasisTrace::LocalView localViewTrace(&feBasisTrace);
-  typename FEBasisInterior::LocalView localViewInterior(&feBasisInterior);
-  typename FEBasisTest::LocalView localViewTest(&feBasisTest);
+  auto localViewTrace = feBasisTrace.localView();
+  auto localViewInterior = feBasisInterior.localView();
+  auto localViewTest = feBasisTest.localView();
+
+  auto localIndexSetTrace = basisIndexSetTrace.localIndexSet();
+  auto localIndexSetInterior = basisIndexSetInterior.localIndexSet();
+  auto localIndexSetTest = basisIndexSetTest.localIndexSet();
 
   // A loop over all elements of the grid
-  auto it    = gridView.template begin<0>();
-  auto endIt = gridView.template end<0>  ();
-
-  for( ; it != endIt; ++it ) {
+  for(const auto& e : elements(gridView)) {
 
     // Bind the local FE basis view to the current element
-    localViewTrace.bind(*it);
-    localViewInterior.bind(*it);
-    localViewTest.bind(*it);
+    localViewTrace.bind(e);
+    localViewInterior.bind(e);
+    localViewTest.bind(e);
+    localIndexSetTrace.bind(localViewTrace);
+    localIndexSetInterior.bind(localViewInterior);
+    localIndexSetTest.bind(localViewTest);
 
     // Now let's get the element stiffness matrix
     // A dense matrix is used for the element stiffness matrix
@@ -357,28 +381,28 @@ void assembleSystem(const FEBasisTrace& feBasisTrace,
     for (size_t i=0; i<nTest; i++)
     {
       // The global index of the i-th local degree of freedom of the element 'it'
-      auto row = localViewTest.tree().globalIndex(i)[0];
+      auto row = localIndexSetTest.index(i)[0];
 
       for (size_t j=0; j<nTest; j++ )
       {
         // The global index of the j-th local degree of freedom of the element 'it'
-        auto col = localViewTest.tree().globalIndex(j)[0];
+        auto col = localIndexSetTest.index(j)[0];
         matrix[row][col] += elementMatrix[i][j];
       }
       for (size_t j=0; j<nTrace; j++ )
       {
         // The global index of the j-th local degree of freedom of the element 'it'
-        auto col = localViewTrace.tree().globalIndex(j)[0]
-                    +feBasisTest.subIndexCount();
+        auto col = localIndexSetTrace.index(j)[0]
+                    +feBasisTest.indexSet().size();
         matrix[row][col] += elementMatrix[i][j+nTest];
         matrix[col][row] += elementMatrix[i][j+nTest];
       }
       for (size_t j=0; j<nInterior; j++ )
       {
         // The global index of the j-th local degree of freedom of the element 'it'
-        auto col = localViewInterior.tree().globalIndex(j)[0]
-                    +feBasisTest.subIndexCount()
-                    +feBasisTrace.subIndexCount();
+        auto col = localIndexSetInterior.index(j)[0]
+                    +feBasisTest.indexSet().size()
+                    +feBasisTrace.indexSet().size();
         matrix[row][col] += elementMatrix[i][j+nTest+nTrace];
         matrix[col][row] += elementMatrix[i][j+nTest+nTrace];
       }
@@ -386,12 +410,13 @@ void assembleSystem(const FEBasisTrace& feBasisTrace,
 
     // Now get the local contribution to the right-hand side vector
     BlockVector<FieldVector<double,1> > localRhs;
-    getVolumeTerm(localViewTest, localRhs, volumeTerm);
+    localVolumeTerm.bind(e);
+    getVolumeTerm(localViewTest, localRhs, localVolumeTerm);
 
      for (size_t i=0; i<localRhs.size(); i++) {
 
       // The global index of the i-th vertex of the element 'it'
-      auto row = localViewTest.tree().globalIndex(i)[0];
+      auto row = localIndexSetTest.index(i)[0];
       rhs[row] += localRhs[i];
 
     }
@@ -400,19 +425,9 @@ void assembleSystem(const FEBasisTrace& feBasisTrace,
 
 }
 
-// The identity function in R^dim.
-// This function is used to find the positions of the Lagrange nodes of the FE space
-template <int dim>
-struct Identity
-    : public VirtualFunction<FieldVector<double,dim>, FieldVector<double,dim> >
-{
-    void evaluate(const FieldVector<double,dim>& in, FieldVector<double,dim>& out) const {
-        out = in;
-    }
-};
 
 
-// TODO !!!!!!!!!!
+
 // This method marks all vertices on the boundary of the grid.
 // In our problem these are precisely the Dirichlet nodes.
 // The result can be found in the 'dirichletNodes' variable.  There, a bit
@@ -425,9 +440,12 @@ void boundaryTreatmentInflow (const FEBasis& feBasis,
 
   // Interpolating the identity function wrt to a Lagrange basis
   // yields the positions of the Lagrange nodes
-  Identity<dim> identity;
+
+  // TODO: We are hacking our way around the fact that interpolation
+  // of vector-value functions is not supported yet.
   BlockVector<FieldVector<double,dim> > lagrangeNodes;
-  interpolate(feBasis, lagrangeNodes, identity);
+  interpolate(feBasis, lagrangeNodes, [](FieldVector<double,dim> x){ return x; });
+
   dirichletNodes.resize(lagrangeNodes.size());
 
   // Mark all Lagrange nodes on the bounding box as Dirichlet
@@ -435,25 +453,13 @@ void boundaryTreatmentInflow (const FEBasis& feBasis,
   {
     bool isBoundary = false;
     for (int j=0; j<dim; j++)
-      isBoundary = isBoundary || lagrangeNodes[i][j] < 1e-8; //|| lagrangeNodes[i][j] > bbox[j]-1e-8;
+      isBoundary = isBoundary || lagrangeNodes[i][j] < 1e-8;
 
     if (isBoundary)
 
       dirichletNodes[i] = true;
   }
 }
-
-
-// A class implementing the analytical right hand side.  Here simply constant '1'
-template <int dim>
-class RightHandSide
-    : public VirtualFunction<FieldVector<double,dim>, double >
-{
-public:
-    void evaluate(const FieldVector<double,dim>& in, double& out) const {
-        out = 1;
-    }
-};
 
 
 
@@ -478,13 +484,13 @@ int main(int argc, char** argv)
   //   Choose a finite element space
   /////////////////////////////////////////////////////////
 
-  typedef Functions::Q2TraceNodalBasis<GridView> FEBasisTrace;              // u^
+  typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace;            // u^
   FEBasisTrace feBasisTrace(gridView);
 
-  typedef Functions::QKDiscontinuousNodalBasis<GridView, 1> FEBasisInterior;              // u
+  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior;              // u
   FEBasisInterior feBasisInterior(gridView);
 
-  typedef Functions::QKDiscontinuousNodalBasis<GridView, 4> FEBasisTest;              // v
+  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;              // v
   FEBasisTest feBasisTest(gridView);
 
 
@@ -502,15 +508,19 @@ int main(int argc, char** argv)
   //  Assemble the system
   /////////////////////////////////////////////////////////
 
-  RightHandSide<dim> rightHandSide;
-  assembleSystem<FEBasisTrace, FEBasisInterior, FEBasisTest>(feBasisTrace, feBasisInterior, feBasisTest, stiffnessMatrix, rhs, &rightHandSide);
+  using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;  //TODO: WOZU?
+
+  auto rightHandSide = [] (const Domain& x) { return 1;};
+  //assembleSystem<FEBasisTrace, FEBasisInterior, FEBasisTest>(feBasisTrace, feBasisInterior, feBasisTest, stiffnessMatrix, rhs, rightHandSide);
+  assembleSystem(feBasisTrace, feBasisInterior, feBasisTest, stiffnessMatrix, rhs, rightHandSide);
 
   //printmatrix(std::cout , stiffnessMatrix, "stiffness", "--");
 
   /////////////////////////////////////////////////
   //   Choose an initial iterate
   /////////////////////////////////////////////////
-  VectorType x(feBasisTest.subIndexCount()+feBasisTrace.subIndexCount()+feBasisInterior.subIndexCount());
+  VectorType x(feBasisTest.indexSet().size()+feBasisTrace.indexSet().size()
+                +feBasisInterior.indexSet().size());
   x = 0;
 
   // Determine Dirichlet dofs for u^ (inflow boundary)
@@ -518,12 +528,12 @@ int main(int argc, char** argv)
   boundaryTreatmentInflow(feBasisTrace, dirichletNodesInflow);
 
 /*  // Set Dirichlet values
-  for (size_t i=0; i<feBasisTrace.subIndexCount(); i++)
+  for (size_t i=0; i<feBasisTrace.indexSet().size(); i++)
   {
     if (dirichletNodesInflow[i])
     {
       // The zero is the value of the Dirichlet boundary condition
-      rhs[feBasisTest.subIndexCount()+i] = 0;
+      rhs[feBasisTest.indexSet().size()+i] = 0;
     }
   }*/ //TODO unnoetig, da da eh schon 0 steht
   ////////////////////////////////////////////
@@ -533,36 +543,36 @@ int main(int argc, char** argv)
 //printmatrix(std::cout , stiffnessMatrix, "stiffness1", "--");
 
   // loop over the matrix rows
-  for (size_t i=0; i<feBasisTrace.subIndexCount(); i++)
+  for (size_t i=0; i<feBasisTrace.indexSet().size(); i++)
   {
     if (dirichletNodesInflow[i])
     {
-      auto cIt    = stiffnessMatrix[feBasisTest.subIndexCount()+i].begin();
-      auto cEndIt = stiffnessMatrix[feBasisTest.subIndexCount()+i].end();
+      auto cIt    = stiffnessMatrix[feBasisTest.indexSet().size()+i].begin();
+      auto cEndIt = stiffnessMatrix[feBasisTest.indexSet().size()+i].end();
       // loop over nonzero matrix entries in current row
      for (; cIt!=cEndIt; ++cIt)
       {
-        if (feBasisTest.subIndexCount()+i==cIt.index())
+        if (feBasisTest.indexSet().size()+i==cIt.index())
         {
           *cIt = 1;
         }
         else
         {
           *cIt = 0;
-          stiffnessMatrix[cIt.index()][feBasisTest.subIndexCount()+i]=0;
+          stiffnessMatrix[cIt.index()][feBasisTest.indexSet().size()+i]=0;
         }
       }
     }
 
   }
-
-/*// Determine Dirichlet dofs for v (inflow boundary)
+/*
+// Determine Dirichlet dofs for v (inflow boundary)
   std::vector<bool> dirichletNodesInflowTest;
   boundaryTreatmentInflow(feBasisTest, dirichletNodesInflowTest);
 
 
   // Set Dirichlet values
-  for (size_t i=0; i<feBasisTest.subIndexCount(); i++)
+  for (size_t i=0; i<feBasisTest.indexSet().size(); i++)
     if (dirichletNodesInflowTest[i])
       // The zero is the value of the Dirichlet boundary condition
       rhs[i] = 0;
@@ -573,7 +583,7 @@ int main(int argc, char** argv)
   ////////////////////////////////////////////
 
   // loop over the matrix rows
-  for (size_t i=0; i<feBasisTest.subIndexCount(); i++)
+  for (size_t i=0; i<feBasisTest.indexSet().size(); i++)
   {
     if (dirichletNodesInflowTest[i])
     {
@@ -599,7 +609,7 @@ int main(int argc, char** argv)
 /*  std::cout << "MatrixValues" << std::endl;
   for (unsigned int i=stiffnessMatrix.N()-4; i<stiffnessMatrix.N(); ++i)
   {
-    for (unsigned int j=0; j<feBasisTest.subIndexCount(); ++j)
+    for (unsigned int j=0; j<feBasisTest.indexSet().size(); ++j)
     {
       if(stiffnessMatrix.exists(i,j))
       {
@@ -691,29 +701,29 @@ int main(int argc, char** argv)
   ////////////////////////////////////////////////////////////////////////////
 
 //#if 0
-  VectorType u(feBasisInterior.subIndexCount());
+  VectorType u(feBasisInterior.indexSet().size());
   u=0;
-  for (unsigned int i=0; i<feBasisInterior.subIndexCount(); i++)
+  for (unsigned int i=0; i<feBasisInterior.indexSet().size(); i++)
   {
-    u[i] = x[feBasisTest.subIndexCount()+feBasisTrace.subIndexCount()+i];
+    u[i] = x[feBasisTest.indexSet().size()+feBasisTrace.indexSet().size()+i];
   }
 
 //  u=0;
-  int idx = 2;
+  int idx = 3;
   //int idx =atoi(argv[1]);
 //  u[idx]=1;
 
   //std::cout << u << std::endl;
 
-  std::shared_ptr<VTKBasisGridFunction<FEBasisInterior,VectorType> > uFunction
-    = std::make_shared<VTKBasisGridFunction<FEBasisInterior,VectorType> >(feBasisInterior, u, "solution");
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisInterior),decltype(u)> uFunction(feBasisInterior,u);
+  auto localUFunction = localFunction(uFunction);
 
   //////////////////////////////////////////////////////////////////////////////////////////////
   //  Write result to VTK file
   //  We need to subsample, because VTK cannot natively display real second-order functions
   //////////////////////////////////////////////////////////////////////////////////////////////
-  SubsamplingVTKWriter<GridView> vtkWriter(gridView,5);
-  vtkWriter.addVertexData(uFunction);
+  SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
+  vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write("solution_transport"+ std::to_string(idx));
 //#endif
     return 0;
