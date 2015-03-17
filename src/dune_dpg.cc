@@ -605,52 +605,6 @@ int main(int argc, char** argv)
   }
 #endif
 
-
-#if 0
-  std::cout << "MatrixValues" << std::endl;
-  for (unsigned int i=stiffnessMatrix.N()-4; i<stiffnessMatrix.N(); ++i)
-  {
-    for (unsigned int j=0; j<feBasisTest.indexSet().size(); ++j)
-    {
-      if(stiffnessMatrix.exists(i,j))
-      {
-        std::cout << std::scientific << std::setprecision(2) << stiffnessMatrix.entry(i,j) <<" ";
-      }
-      else
-      {
-        std::cout <<"         ";
-      }
-    }
-    std::cout << std::endl;
-  }
-#endif
-#if 0
-    std::cout << std::endl << "MatrixValues2" << std::endl;
-    for (unsigned int i=0; i<stiffnessMatrix.N(); ++i)
-    {
-      for (unsigned int j=0; j<stiffnessMatrix.M(); ++j)
-      {
-        //if(std::abs(stiffnessMatrix.entry(i,j)-stiffnessMatrix.entry(j,i)) > 1e-4)
-        if(stiffnessMatrix.exists(i,j))
-        {
-          if (stiffnessMatrix.entry(i,j) > 1e-4 || stiffnessMatrix.entry(i,j) < -1e-4)
-          {
-            std::cout <<"1";
-          }
-          else
-          {
-            std::cout <<" ";
-          }
-        }
-        else
-        {
-          std::cout <<" ";
-        }
-      }
-      std::cout << std::endl;
-    }
-#endif
-
   ////////////////////////////
   //   Compute solution
   ////////////////////////////
