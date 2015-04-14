@@ -294,6 +294,11 @@ int main(int argc, char** argv)
           uFunction(innerSpace,u);
   auto localUFunction = localFunction(uFunction);
 
+  auto feBasisTrace = std::get<0>(solutionSpaces);
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace), decltype(theta)>
+      thetaFunction(feBasisTrace, theta);
+  auto localThetaFunction = localFunction(thetaFunction);
+
 
   ////////////////////////////////////////////////////////////////////////////
   //  Error evaluation
@@ -333,6 +338,10 @@ int main(int argc, char** argv)
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,0);
   vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write("solution_transport");
+
+ SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
+ vtkWriter1.addVertexData(localThetaFunction, VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
+ vtkWriter1.write("solution_trace");
 
     return 0;
   }
