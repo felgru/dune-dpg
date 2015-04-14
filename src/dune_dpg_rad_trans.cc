@@ -236,10 +236,17 @@ int main(int argc, char** argv)
     //  Assemble the systems
     /////////////////////////////////////////////////////////
     using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
-    auto f = std::make_tuple([] (const Domain& x) { return 1.;});
+    using Direction = FieldVector<double, dim> >;
+    auto f = [] (const Domain& x, const Direction& s) { return 1.;};
+
+    // loop of the discrete ordinates
     for(int i = 0; i < numS; ++i)
     {
-      systemAssemblers[i].assembleSystem(stiffnessMatrix[i], rhs[i], f);
+      FieldVector<double, dim> s = {cos(2*pi<double>()*i/numS),
+                                    sin(2*pi<double>()*i/numS)};
+      auto g = std::make_tuple([s] (const Domain& x) { return f(x,s);});
+
+      systemAssemblers[i].assembleSystem(stiffnessMatrix[i], rhs[i], g);
       VectorType scattering;
       scatteringAssemblers[i].assembleScattering<0>(scattering, x);
       rhs[i] += scattering;
