@@ -29,7 +29,7 @@
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
-#include <dune/dpg/assemble.hh>
+#include <dune/dpg/system_assembler.hh>
 
 
 using namespace Dune;
@@ -89,18 +89,39 @@ int main(int argc, char** argv)
   GridView gridView = grid.leafGridView();
 
   /////////////////////////////////////////////////////////
-  //   Choose a finite element space
+  //   Choose finite element spaces
   /////////////////////////////////////////////////////////
 
-  typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace;            // u^
-  FEBasisTrace feBasisTrace(gridView);
+  typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
+  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
+  auto solutionSpaces = std::make_tuple(FEBasisTrace(gridView),
+                                        FEBasisInterior(gridView));
 
-  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior;              // u
-  FEBasisInterior feBasisInterior(gridView);
+  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v
+  auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
-  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;              // v
-  FEBasisTest feBasisTest(gridView);
+  /////////////////////////////////////////////////////////
+  //   Choose a bilinear form
+  /////////////////////////////////////////////////////////
 
+
+  FieldVector<double, dim> beta = {1,1};
+  auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
+          make_tuple(
+              make_IntegralTerm<0,1,IntegrationType::valueValue,
+                                    DomainOfIntegration::interior>(0, beta),
+              make_IntegralTerm<0,1,IntegrationType::gradValue,
+                                    DomainOfIntegration::interior>(-1, beta),
+              make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                    DomainOfIntegration::face>(1, beta)));
+  auto innerProduct = make_InnerProduct(testSpaces,
+          make_tuple(
+              make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                    DomainOfIntegration::interior>(1, beta),
+              make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                    DomainOfIntegration::interior>(1, beta)));
+  auto systemAssembler = make_SystemAssembler(testSpaces, solutionSpaces,
+          bilinearForm, innerProduct);
 
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
@@ -116,102 +137,41 @@ int main(int argc, char** argv)
   //  Assemble the system
   /////////////////////////////////////////////////////////
 
-  using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;  //TODO: WOZU?
+  using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
-  auto rightHandSide = [] (const Domain& x) { return 1;};
-  //assembleSystem<FEBasisTrace, FEBasisInterior, FEBasisTest>(feBasisTrace, feBasisInterior, feBasisTest, stiffnessMatrix, rhs, rightHandSide);
-  assembleSystem(feBasisTrace, feBasisInterior, feBasisTest, stiffnessMatrix, rhs, rightHandSide);
+  auto rightHandSide = std::make_tuple([] (const Domain& x) { return 1;});
+  systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
   /////////////////////////////////////////////////
   //   Choose an initial iterate
   /////////////////////////////////////////////////
-  VectorType x(feBasisTest.indexSet().size()+feBasisTrace.indexSet().size()
-                +feBasisInterior.indexSet().size());
+  /* TODO: compute the correct size from the .sizes of the FE spaces. */
+  VectorType x(rhs.size());
   x = 0;
 
   // Determine Dirichlet dofs for u^ (inflow boundary)
-  std::vector<bool> dirichletNodesInflow;
-  boundaryTreatmentInflow(feBasisTrace, dirichletNodesInflow);
-
-  // TODO unnoetig, da da eh schon 0 steht
-#if 0
-  // Set Dirichlet values
-  for (size_t i=0; i<feBasisTrace.indexSet().size(); i++)
   {
-    if (dirichletNodesInflow[i])
-    {
-      // The zero is the value of the Dirichlet boundary condition
-      rhs[feBasisTest.indexSet().size()+i] = 0;
-    }
-  }
-#endif
-
-  ////////////////////////////////////////////
-  //   Modify Dirichlet rows
-  ////////////////////////////////////////////
-
-  // loop over the matrix rows
-  for (size_t i=0; i<feBasisTrace.indexSet().size(); i++)
-  {
-    if (dirichletNodesInflow[i])
-    {
-      auto cIt    = stiffnessMatrix[feBasisTest.indexSet().size()+i].begin();
-      auto cEndIt = stiffnessMatrix[feBasisTest.indexSet().size()+i].end();
-      // loop over nonzero matrix entries in current row
-     for (; cIt!=cEndIt; ++cIt)
-      {
-        if (feBasisTest.indexSet().size()+i==cIt.index())
-        {
-          *cIt = 1;
-        }
-        else
-        {
-          *cIt = 0;
-          stiffnessMatrix[cIt.index()][feBasisTest.indexSet().size()+i]=0;
-        }
-      }
-    }
-
+    std::vector<bool> dirichletNodesInflow;
+    boundaryTreatmentInflow(std::get<0>(solutionSpaces),
+                            dirichletNodesInflow);
+    systemAssembler.applyDirichletBoundary<SpaceType::solution,0,double>
+        (stiffnessMatrix,
+         rhs,
+         dirichletNodesInflow,
+         0);
   }
 
 #if 0
   // Determine Dirichlet dofs for v (inflow boundary)
-  std::vector<bool> dirichletNodesInflowTest;
-  boundaryTreatmentInflow(feBasisTest, dirichletNodesInflowTest);
-
-
-  // Set Dirichlet values
-  for (size_t i=0; i<feBasisTest.indexSet().size(); i++)
-    if (dirichletNodesInflowTest[i])
-      // The zero is the value of the Dirichlet boundary condition
-      rhs[i] = 0;
-
-
-  ////////////////////////////////////////////
-  //   Modify Dirichlet rows
-  ////////////////////////////////////////////
-
-  // loop over the matrix rows
-  for (size_t i=0; i<feBasisTest.indexSet().size(); i++)
   {
-    if (dirichletNodesInflowTest[i])
-    {
-      auto cIt    = stiffnessMatrix[i].begin();
-      auto cEndIt = stiffnessMatrix[i].end();
-      // loop over nonzero matrix entries in current row
-      for (; cIt!=cEndIt; ++cIt)
-      {
-        if (i==cIt.index())
-        {
-          *cIt = 1;
-        }
-        else
-        {
-          *cIt = 0;
-          stiffnessMatrix[cIt.index()][i]=0;
-        }
-      }
-    }
+    std::vector<bool> dirichletNodesInflowTest;
+    boundaryTreatmentInflow(std::get<0>(testSpaces),
+                            dirichletNodesInflowTest);
+    systemAssembler.applyDirichletBoundary<SpaceType::test,0,double>
+        (stiffnessMatrix,
+         rhs,
+         dirichletNodesInflowTest,
+         0);
   }
 #endif
 
@@ -235,14 +195,21 @@ int main(int argc, char** argv)
   //  Make a discrete function from the FE basis and the coefficient vector
   ////////////////////////////////////////////////////////////////////////////
 
-  VectorType u(feBasisInterior.indexSet().size());
+  size_t nTest = std::get<0>(testSpaces).indexSet().size();
+  size_t nFace = std::get<0>(solutionSpaces).indexSet().size();
+  size_t nInner = std::get<1>(solutionSpaces).indexSet().size();
+  VectorType u(nInner);
   u=0;
-  for (unsigned int i=0; i<feBasisInterior.indexSet().size(); i++)
+  for (size_t i=0; i<nInner; i++)
   {
-    u[i] = x[feBasisTest.indexSet().size()+feBasisTrace.indexSet().size()+i];
+    /* TODO: use a precomputed solution space offset. */
+    u[i] = x[nTest+nFace+i];
   }
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisInterior),decltype(u)> uFunction(feBasisInterior,u);
+  auto innerSpace = std::get<1>(solutionSpaces);
+  Dune::Functions::DiscreteScalarGlobalBasisFunction
+      <typename std::remove_reference<decltype(innerSpace)>::type, decltype(u)>
+          uFunction(innerSpace,u);
   auto localUFunction = localFunction(uFunction);
 
   //////////////////////////////////////////////////////////////////////////////////////////////
