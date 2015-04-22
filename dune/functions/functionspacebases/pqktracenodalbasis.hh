@@ -457,6 +457,9 @@ public:
     return i;
   }
 
+  void setLocalIndex(size_type leafindex, size_type localindex) DUNE_FINAL
+  { DUNE_THROW(Dune::NotImplemented, "PQKTraceNodalBasisLeafNode does not support setLocalIndex() yet."); }
+
 protected:
 
   //! Bind to element.
