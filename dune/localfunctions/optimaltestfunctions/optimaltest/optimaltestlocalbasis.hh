@@ -35,7 +35,7 @@ namespace Dune
   template<class D, class R, int d, class EnrichedTestspace>
   class OptimalTestLocalBasis
   {
-    typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
+    typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
 
   public:
     typedef LocalBasisTraits<D,d,Dune::FieldVector<D,d>,R,1,Dune::FieldVector<R,1>,Dune::FieldMatrix<R,1,d> > Traits;
@@ -49,7 +49,7 @@ namespace Dune
     //! \brief number of shape functions
     unsigned int size () const
     {
-      return coefficientMatrix->N();
+      return coefficientMatrix->M();
     }
 
     //! \brief Evaluate all shape functions
@@ -62,25 +62,10 @@ namespace Dune
       for (size_t i=0; i<size(); i++)
       {
         out[i] = 0;
-        for (size_t j=0; j<coefficientMatrix->M(); ++j)
+        for (size_t j=0; j<coefficientMatrix->N(); ++j)
         {
-          if(coefficientMatrix->exists(i,j))
-          {
-            out[i]+=(coefficientMatrix->entry(i,j)*valuesEnrichedTestspace[j][0]);
-          }
-        }                                              //TODO: Das wieder ordentlich mit Iteratoren machen!
-        /*auto cIt    = coefficientMatrix[i].begin();
-        auto cEndIt = coefficientMatrix[i].end();
-      // loop over nonzero matrix entries in current row
-        for (; cIt!=cEndIt; ++cIt)
-        {
-          std::cout <<"test" <<std::endl;
-          std::cout <<"cIt.index() = " <<cIt.index() <<std::endl;
-          std::cout <<"valuesEnrichedTestspace[cIt.index()][0] = "<<valuesEnrichedTestspace[cIt.index()][0] <<std::endl;
-          std::cout <<"(*cIt)[0][0] = "<<(*cIt)[0][0] <<std::endl;
-          out[i]+=((*cIt)[0][0]*valuesEnrichedTestspace[cIt.index()][0]);
-          std::cout <<"out[i]= " <<out[i] <<std::endl;
-        }*/
+          out[i]+=((*coefficientMatrix)[j][i][0]*valuesEnrichedTestspace[j][0]);
+        }
       }
     }
 
@@ -98,27 +83,16 @@ namespace Dune
       // Loop over all shape functions
       for (size_t i=0; i<size(); i++)
       {
-
         // Loop over all coordinate directions
         for (int b=0; b<d; b++)
         {
           // Initialize: the overall expression is a product
           // if j-th bit of i is set to -1, else 1
           out[i][0][b] = 0;
-          for (size_t j=0; j<coefficientMatrix->M(); ++j)
+          for (size_t j=0; j<coefficientMatrix->N(); ++j)
           {
-            if(coefficientMatrix->exists(i,j))
-            {
-              out[i][0][b]+=(coefficientMatrix->entry(i,j)*JacobianEnrichedTestspace[j][0][b]);
-            }
-          }                                             //TODO: Das wieder ordentlich mit Iteratoren machen!
-          /*auto cIt    = coefficientMatrix[i].begin();
-          auto cEndIt = coefficientMatrix[i].end();
-          // loop over nonzero matrix entries in current row
-          for (; cIt!=cEndIt; ++cIt)
-          {
-            out[i][0][b]+=((*cIt)[0][0]*JacobianEnrichedTestspace[cIt.index()][0][b]);
-          }*/
+            out[i][0][b]+=((*coefficientMatrix)[j][i][0]*JacobianEnrichedTestspace[j][0][b]);
+          }
         }
       }
     }

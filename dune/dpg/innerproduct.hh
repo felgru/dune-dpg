@@ -44,13 +44,14 @@ namespace Dune {
   /**
    * class InnerProduct
    *
-   * \tparam TestSpaces         tuple of test spaces
+   * \tparam TSpaces         tuple of test spaces
    * \tparam InnerProductTerms  tuple of IntegralTerm
    */
-  template<class TestSpaces, class InnerProductTerms>
+  template<class TSpaces, class InnerProductTerms>
   class InnerProduct
   {
   public:
+    typedef TSpaces TestSpaces;
     typedef typename boost::fusion::result_of::as_vector<
         typename boost::fusion::result_of::
         transform<TestSpaces, getLocalView>::type>::type TestLocalView;

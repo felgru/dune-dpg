@@ -405,7 +405,7 @@ class PQKTraceNodalBasisLeafNode :
   static const int dim = GV::dimension;
 
   typedef typename GV::template Codim<0>::Entity E;
-  typedef typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, k> FiniteElementCache;
+//  typedef typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, k> FiniteElementCache;
 //  typedef typename FiniteElementCache::FiniteElementType FE;
   typedef typename Dune::QkTraceLocalFiniteElement<typename GV::ctype,double,GV::dimension,k> FE;  //TODO!!!
   typedef typename GlobalBasis::size_type ST;

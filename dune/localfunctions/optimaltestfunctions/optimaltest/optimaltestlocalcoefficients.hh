@@ -25,6 +25,11 @@ namespace Dune
 
   public:
     //! \brief Default constructor
+    OptimalTestLocalCoefficients ()
+    {
+      li=nullptr;
+    }
+
     OptimalTestLocalCoefficients (std::vector<LocalKey>* localKeyList)
     {
       li=localKeyList;
@@ -33,12 +38,15 @@ namespace Dune
     //! number of coefficients
     std::size_t size () const
     {
+      //TODO: unsauber wenn li=nullptr
+      DUNE_THROW(Dune::NotImplemented, "Be Careful - local keys not properly implemented");
       return li->size();
     }
 
     //! get i'th index
     const LocalKey& localKey (std::size_t i) const
     {
+      DUNE_THROW(Dune::NotImplemented, "Be Careful - local keys not properly implemented");
       return (*li)[i];
     }
 

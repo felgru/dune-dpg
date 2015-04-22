@@ -106,8 +106,7 @@ void IntegralTerm<type, domain_of_integration>
 
   // Order for the quadrature rule
   /* TODO: can probably be one less for gradients. */
-  int order = (dim*lhsLocalFiniteElement.localBasis().order()-1)
-             +(dim*rhsLocalFiniteElement.localBasis().order()-1);
+  int order = 2*(dim*lhsLocalFiniteElement.localBasis().order()-1);
 
   ////////////////////////////
   // Assemble interior terms

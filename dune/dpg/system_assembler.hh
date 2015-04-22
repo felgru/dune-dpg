@@ -54,6 +54,21 @@
 
 namespace Dune {
 
+template<class Form, class newTestSpace>
+struct replaceTestSpace {};
+
+template<class TestSpaces, class SolutionSpaces, class BilinearTerms, class newTestSpaces>
+struct replaceTestSpace<BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>, newTestSpaces>
+{
+    typedef BilinearForm<newTestSpaces, SolutionSpaces, BilinearTerms> type;
+};
+
+template<class TestSpaces, class InnerProductTerms, class newTestSpaces>
+struct replaceTestSpace<InnerProduct<TestSpaces, InnerProductTerms>, newTestSpaces>
+{
+    typedef InnerProduct<newTestSpaces, InnerProductTerms> type;
+};
+
 // Compute the source term for a single element
 template <class LocalViewTest, class LocalVolumeTerm>
 void getVolumeTerm(const LocalViewTest& localViewTest,
@@ -117,11 +132,12 @@ struct getVolumeTermHelper
  *
  * \tparam TestSpaces     tuple of test spaces
  * \tparam SolutionSpaces tuple of solution spaces
- * \tparam BilinearForm   bilinear form describing the system
- * \tparam InnerProduct   inner product of the test space
+ * \tparam BilinForm      bilinear form describing the system
+ * \tparam InProduct      inner product of the test space
  */
 template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+         class BilinForm, class InProduct,
+         class FormulationType>
 class SystemAssembler
 {
 public:
@@ -131,16 +147,35 @@ public:
   typedef typename boost::fusion::result_of::as_vector<
       typename boost::fusion::result_of::
       transform<SolutionSpaces, getLocalView>::type>::type SolutionLocalView;
+  typedef typename std::conditional<
+        std::is_same<
+             typename std::decay<FormulationType>::type
+           , SaddlepointFormulation
+        >::value
+      , BilinForm
+      , typename replaceTestSpace<BilinForm, TestSpaces>::type
+      >::type BilinearForm;
+  typedef typename std::conditional<
+        std::is_same<
+             typename std::decay<FormulationType>::type
+           , SaddlepointFormulation
+        >::value
+      , InProduct
+      , typename replaceTestSpace<InProduct, TestSpaces>::type
+      >::type InnerProduct;
 
   SystemAssembler () = delete;
   constexpr SystemAssembler (TestSpaces     testSpaces,
                              SolutionSpaces solutionSpaces,
-                             BilinearForm   bilinearForm,
-                             InnerProduct   innerProduct)
+                             BilinForm      bilinearForm,
+                             InProduct      innerProduct)
              : testSpaces(testSpaces),
                solutionSpaces(solutionSpaces),
-               bilinearForm(bilinearForm),
-               innerProduct(innerProduct)
+               bilinearForm(make_BilinearForm(testSpaces,
+                                              solutionSpaces,
+                                              bilinearForm.getTerms())),
+               innerProduct(make_InnerProduct(testSpaces,
+                                              innerProduct.getTerms()))
   { };
 
   template <class VolumeTerms>
@@ -168,16 +203,20 @@ private:
 };
 
 template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+         class BilinearForm, class InnerProduct,
+         class FormulationType>
 auto make_SystemAssembler(TestSpaces     testSpaces,
                           SolutionSpaces solutionSpaces,
                           BilinearForm   bilinearForm,
-                          InnerProduct   innerProduct)
+                          InnerProduct   innerProduct,
+                          FormulationType)
     -> SystemAssembler<TestSpaces, SolutionSpaces,
-                       BilinearForm, InnerProduct>
+                       BilinearForm, InnerProduct,
+                       FormulationType>
 {
   return SystemAssembler<TestSpaces, SolutionSpaces,
-                         BilinearForm, InnerProduct>
+                         BilinearForm, InnerProduct,
+                         FormulationType>
                       (testSpaces,
                        solutionSpaces,
                        bilinearForm,
@@ -185,14 +224,22 @@ auto make_SystemAssembler(TestSpaces     testSpaces,
 }
 
 template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+         class BilinearForm, class InnerProduct,
+         class FormulationType>
 template <class VolumeTerms>
-void SystemAssembler<TestSpaces, SolutionSpaces, BilinearForm, InnerProduct>::
+void SystemAssembler<TestSpaces, SolutionSpaces,
+                     BilinearForm, InnerProduct, FormulationType>::
 assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                BlockVector<FieldVector<double,1> >& rhs,
                VolumeTerms&& volumeTerms)
 {
   using namespace boost::fusion;
+
+  constexpr bool isSaddlepoint =
+        std::is_same<
+             typename std::decay<FormulationType>::type
+           , SaddlepointFormulation
+        >::value;
 
   // Get the grid view from the finite element basis
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
@@ -216,34 +263,43 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       + at_c<std::tuple_size<TestSpaces>::value-1>(testBasisIndexSet).size();
 
   fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
-       globalTotalTestSize, globalOffsetHelper());
+       isSaddlepoint?globalTotalTestSize:0, globalOffsetHelper());
   size_t globalTotalSolutionSize =
       globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value-1]
       + at_c<std::tuple_size<SolutionSpaces>::value-1>
             (solutionBasisIndexSet).size()
-      - globalTotalTestSize;
+      - globalSolutionSpaceOffsets[0];
 
-  auto n = globalTotalTestSize + globalTotalSolutionSize;
+  auto n = globalTotalSolutionSize;
+  if(isSaddlepoint)
+  {
+    n+=globalTotalTestSize;
+  }
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // They are not particularly efficient, but simple to use.
   MatrixIndexSet occupationPattern;
   occupationPattern.resize(n, n);
-  bilinearForm.getOccupationPattern(occupationPattern);
-  innerProduct.getOccupationPattern(occupationPattern);
-
-  /* Add the diagonal of the matrix, since we need it for the
-   * interpolation of boundary values. */
-  for (size_t i=0; i<n; i++)
+  bilinearForm.template getOccupationPattern<isSaddlepoint>
+               (occupationPattern,
+                0, isSaddlepoint?globalTotalTestSize:0);
+  if(isSaddlepoint)
   {
-    occupationPattern.add(i, i);
+    innerProduct.getOccupationPattern(occupationPattern);
+
+    /* Add the diagonal of the matrix, since we need it for the
+     * interpolation of boundary values. */
+    for (size_t i=0; i<n; i++)
+    {
+      occupationPattern.add(i, i);
+    }
   }
 
   // ... and give it the occupation pattern we want.
   occupationPattern.exportIdx(matrix);
 
   // set rhs to correct length -- the total number of basis vectors in the basis
-  rhs.resize(globalTotalTestSize + globalTotalSolutionSize);
+  rhs.resize((isSaddlepoint?globalTotalTestSize:0) + globalTotalSolutionSize);
 
   // Set all entries to zero
   matrix = 0;
@@ -299,7 +355,10 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     /* Bind the bilinearForm and the innerProduct to the local views. */
     bilinearForm.bind(testLocalView, solutionLocalView);
-    innerProduct.bind(testLocalView);
+    if(isSaddlepoint)
+    {
+      innerProduct.bind(testLocalView);
+    }
 
     // Now let's get the element stiffness matrix and the Gram matrix
     // for the test space.
@@ -307,7 +366,9 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     Matrix<FieldMatrix<double,1,1> > ipElementMatrix;
 
     bilinearForm.getLocalMatrix(bfElementMatrix);
-    innerProduct.getLocalMatrix(ipElementMatrix);
+    if(isSaddlepoint) {
+      innerProduct.getLocalMatrix(ipElementMatrix);
+    }
 
 
     // Add element stiffness matrix onto the global stiffness matrix
@@ -318,10 +379,10 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                                         (ipElementMatrix, matrix));
     auto cpm = fused_procedure<localToGlobalCopier<decltype(bfElementMatrix),
                         typename remove_reference<decltype(matrix)>::type,
-                        true> >
+                        isSaddlepoint> >
                     (localToGlobalCopier<decltype(bfElementMatrix),
                         typename remove_reference<decltype(matrix)>::type,
-                        true>
+                        isSaddlepoint>
                                         (bfElementMatrix, matrix));
 
     /* iterate over bfIndices and ipIndices */
@@ -333,18 +394,20 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                            solutionLocalIndexSet,
                            bilinearForm.getLocalSolutionSpaceOffsets(),
                            globalSolutionSpaceOffsets);
-    for_each(ipIndices,
-             localToGlobalCopyHelper<decltype(testZip),
-                                     decltype(testZip),
-                                     decltype(cp)>
-                                    (testZip, testZip, std::ref(cp)));
+    if(isSaddlepoint)
+    {
+      for_each(ipIndices,
+               localToGlobalCopyHelper<decltype(testZip),
+                                       decltype(testZip),
+                                       decltype(cp)>
+                                      (testZip, testZip, std::ref(cp)));
+    }
     for_each(bfIndices,
              localToGlobalCopyHelper<decltype(solutionZip),
                                      decltype(testZip),
                                      decltype(cpm)>
                                     (solutionZip, testZip, std::ref(cpm)));
 
-    /* TODO: Make this work for larger sets of test spaces. */
     // Now get the local contribution to the right-hand side vector
     BlockVector<FieldVector<double,1> >
         localRhs[std::tuple_size<
@@ -378,9 +441,11 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 }
 
 template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+         class BilinearForm, class InnerProduct,
+         class FormulationType>
 template <SpaceType spaceType, size_t spaceIndex, class ValueType>
-void SystemAssembler<TestSpaces, SolutionSpaces, BilinearForm, InnerProduct>::
+void SystemAssembler<TestSpaces, SolutionSpaces,
+                     BilinearForm, InnerProduct, FormulationType>::
 applyDirichletBoundary(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                        BlockVector<FieldVector<double,1> >& rhs,
                        const std::vector<bool>& dirichletNodes,
@@ -390,6 +455,12 @@ applyDirichletBoundary(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   static_assert(std::is_arithmetic<ValueType>::value,
                 "applyDirichletBoundary not implemented for non arithmetic "
                 "boundary data types.");
+
+  constexpr bool isSaddlepoint =
+        std::is_same<
+             typename std::decay<FormulationType>::type
+           , SaddlepointFormulation
+        >::value;
 
   size_t spaceSize;
   if(spaceType==SpaceType::test)
@@ -407,14 +478,13 @@ applyDirichletBoundary(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     /* set up global offsets */
     size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
     size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-    fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
-         0, globalOffsetHelper());
+    fold(zip(globalTestSpaceOffsets, testBasisIndexSet), 0, globalOffsetHelper());
     size_t globalTotalTestSize =
         globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value-1]
         + at_c<std::tuple_size<TestSpaces>::value-1>(testBasisIndexSet).size();
 
     fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
-         globalTotalTestSize, globalOffsetHelper());
+         isSaddlepoint?globalTotalTestSize:0, globalOffsetHelper());
 
     if(spaceType==SpaceType::test)
       globalOffset = globalTestSpaceOffsets[spaceIndex];

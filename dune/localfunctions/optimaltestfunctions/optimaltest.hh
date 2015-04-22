@@ -23,7 +23,7 @@ namespace Dune
     typedef OptimalTestLocalBasis<D,R,d,EnrichedTestspace> LocalBasis;
     typedef OptimalTestLocalCoefficients<d> LocalCoefficients;
     typedef OptimalTestLocalInterpolation<d,LocalBasis> LocalInterpolation;
-    typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
+    typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
 
   public:
 
@@ -35,12 +35,22 @@ namespace Dune
      */
     OptimalTestLocalFiniteElement () = delete;
 
-    OptimalTestLocalFiniteElement (MatrixType* coeffMat, std::vector<LocalKey>* localKeyList)
-    :enrichedTestspace(),
-    basis(&enrichedTestspace, coeffMat),
+    OptimalTestLocalFiniteElement (MatrixType* coeffMat,
+                                   EnrichedTestspace* enrtest,
+                                   std::vector<LocalKey>* localKeyList)
+    :enrichedTestspace(enrtest),
+    basis(enrichedTestspace, coeffMat),
     coefficients(localKeyList)
     {
-      gt=enrichedTestspace.type();
+      gt=enrichedTestspace->type();
+    }
+
+    OptimalTestLocalFiniteElement (MatrixType* coeffMat,
+                                   EnrichedTestspace* enrtest)
+    :enrichedTestspace(enrtest),
+    basis(enrichedTestspace, coeffMat)
+    {
+      gt=enrichedTestspace->type();
     }
 
     /** \todo Please doc me !
@@ -83,7 +93,7 @@ namespace Dune
     }
 
   private:
-    EnrichedTestspace enrichedTestspace;
+    EnrichedTestspace* enrichedTestspace;
     MatrixType* coefficientMatrix;
     LocalBasis basis;
     LocalCoefficients coefficients;

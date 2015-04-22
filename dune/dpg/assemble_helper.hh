@@ -88,7 +88,10 @@ struct localViewFromFEBasis
   typename result<localViewFromFEBasis(B)>::type
   operator()(const B& b) const
   {
-    return new typename B::LocalView(std::addressof(b));
+    const typename B::LocalView& lv = b.localView();
+    typename B::LocalView& result =
+        const_cast<typename B::LocalView&>(lv);
+    return new typename B::LocalView(std::move(result));
   };
 };
 
@@ -522,6 +525,92 @@ struct globalOffsetHelper
     offset = s;
     return s + indexSet.size();
   };
+};
+
+
+struct getLocalFeSize
+{
+    template<class T>
+    struct result;
+
+    template<class T>
+    struct result<getLocalFeSize(T)>
+    {
+        typedef std::size_t type;
+    };
+    template<class T>
+    std::size_t operator()(T t) const
+    {
+        return t->tree().finiteElement().size();
+    };
+};
+
+
+
+struct getIndexSetSize
+{
+    template<class T>
+    struct result;
+
+    template<class T>
+    struct result<getIndexSetSize(T)>
+    {
+        typedef std::size_t type;
+    };
+    template<class T>
+    std::size_t operator()(T t) const
+    {
+        return t.indexSet().size();
+    };
+};
+
+
+
+struct getLocalViewMaxSize
+{
+    template<class T>
+    struct result;
+
+    template<class T>
+    struct result<getLocalViewMaxSize(T)>
+    {
+        typedef std::size_t type;
+    };
+    template<class T>
+    std::size_t operator()(T t) const
+    {
+        return t.localView().maxSize();
+    };
+};
+
+
+
+struct applyUnbind
+{
+    template<class T>
+    void operator()(T t) const
+    {
+        t->unbind();
+    }
+};
+
+
+struct getLocalFiniteElement
+{
+    template<class T>
+    struct result;
+
+    template<class T>
+    struct result<getLocalFiniteElement(T)>
+    {
+        typedef const typename std::remove_pointer<T>::type::Tree::FiniteElement& type;
+    };
+
+    template<class T>
+    typename result<getLocalFiniteElement(T)>::type operator()(const T& t) const
+    {
+        return t->tree().finiteElement();
+    };
 };
 
 } // end namespace Dune

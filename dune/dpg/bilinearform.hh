@@ -44,14 +44,16 @@ namespace Dune {
   /**
    * class BilinearForm
    *
-   * \tparam TestSpaces     tuple of test spaces
-   * \tparam SolutionSpaces tuple of solution spaces
+   * \tparam TSpaces     tuple of test spaces
+   * \tparam SolSpaces tuple of solution spaces
    * \tparam BilinearTerms  tuple of IntegralTerm
    */
-  template<class TestSpaces, class SolutionSpaces, class BilinearTerms>
+  template<class TSpaces, class SolSpaces, class BilinearTerms>
   class BilinearForm
   {
   public:
+    typedef TSpaces TestSpaces;
+    typedef SolSpaces SolutionSpaces;
     typedef typename boost::fusion::result_of::as_vector<
         typename boost::fusion::result_of::
         transform<TestSpaces, getLocalView>::type>::type TestLocalView;
@@ -94,7 +96,8 @@ namespace Dune {
                        localSolutionSpaceOffsets));
     };
 
-    void getOccupationPattern(MatrixIndexSet& nb) const;
+    template<bool mirror=false>
+    void getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift) const;
 
     void bind(const TestLocalView& tlv, const SolutionLocalView& slv)
     {
@@ -168,8 +171,9 @@ auto make_BilinearForm(TestSpaces     testSpaces,
 }
 
 template<class TestSpaces, class SolutionSpaces, class BilinearTerms>
+template<bool mirror>
 void BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>::
-getOccupationPattern(MatrixIndexSet& nb) const
+getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift) const
 {
   using namespace boost::fusion;
 
@@ -181,18 +185,9 @@ getOccupationPattern(MatrixIndexSet& nb) const
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  fold(zip(globalTestSpaceOffsets, testBasisIndexSet), 0, globalOffsetHelper());
-  size_t globalTotalTestSize =
-      globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value-1]
-      + at_c<std::tuple_size<TestSpaces>::value-1>(testBasisIndexSet).size();
-
+  fold(zip(globalTestSpaceOffsets, testBasisIndexSet), testShift, globalOffsetHelper());
   fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
-       globalTotalTestSize, globalOffsetHelper());
-  size_t globalTotalSolutionSize =
-      globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value-1]
-      + at_c<std::tuple_size<SolutionSpaces>::value-1>
-            (solutionBasisIndexSet).size()
-      - globalTotalTestSize;
+       solutionShift, globalOffsetHelper());
 
   // A view on the FE basis on a single element
   auto solutionLocalView = as_vector(transform(solutionSpaces,
@@ -234,12 +229,11 @@ getOccupationPattern(MatrixIndexSet& nb) const
     for_each(zip(testLocalIndexSet, testLocalView),
              make_fused_procedure(bindLocalIndexSet()));
 
-    /* TODO: This is specific to the saddlepoint formulation. */
     auto gOPH = getOccupationPatternHelper<decltype(testLocalView),
                                            decltype(solutionLocalView),
                                            decltype(testLocalIndexSet),
                                            decltype(solutionLocalIndexSet),
-                                           true>
+                                           mirror>
                         (testLocalView,
                          solutionLocalView,
                          testLocalIndexSet,

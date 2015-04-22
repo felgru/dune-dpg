@@ -21,6 +21,9 @@ enum class SpaceType {
     solution
 };
 
+struct SaddlepointFormulation {};
+struct DPGFormulation {};
+
 } // end namespace Dune
 
 #endif // DUNE_DPG_ASSEMBLE_TYPES_HH
