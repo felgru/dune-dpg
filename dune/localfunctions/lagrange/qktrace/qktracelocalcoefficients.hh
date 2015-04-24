@@ -43,13 +43,13 @@ namespace Dune
 
       // LocalKey: entity number , entity codim, dof indices within each entity
       /* edge and vertex numbering
-         2----3----3
+       2----3----3
        |         |
        |         |
-         0         1
+       0         1
        |         |
        |         |
-         0----2----1
+       0----2----1
        */
 
       // lower edge (2)
@@ -90,18 +90,23 @@ namespace Dune
 
       // LocalKey: entity number , entity codim, dof indices within each entity
       /* edge and vertex numbering
-          2----3----3
-       |         |
-       |         |
-          0         1
-       |         |
-       |         |
-          0----2----1
+
+              6---(11)--7              6---------7
+             /|        /|             /|  (5)   /|
+           (8)|      (9)|            / | top   / |
+           / (2)     / (3)          /  |(3)bac/k |
+          4---(10)--5   |          4---------5   |
+          |   |     |   |      left|(0)|     |(1)|right
+          |   2--(7)|---3          |   2-----|---3
+         (0) /     (1) /           |(2)front |  /
+          |(4)      |(5)           | /  (4)  | /
+          |/        |/             |/ bottom |/
+          0---(6)---1              0---------1
        */
 
       // bottom face (4)
       lastIndex=0;
-      // lower edge (2)
+      // lower edge (6)
       subEntity[lastIndex++] = 0;              // corner 0
       for (unsigned i = 0; i < numInnerEdgeDofs; ++i)
         subEntity[lastIndex++] = 6;                // inner dofs of lower edge (6)

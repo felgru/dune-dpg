@@ -11,9 +11,14 @@
 
 #include <dune/geometry/quadraturerules.hh>
 
-#include <dune/grid/yaspgrid.hh>
-#include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/common/intersection.hh> //TODO necessary?
+#include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
+#include <dune/grid/uggrid.hh>
+#include <dune/grid/utility/structuredgridfactory.hh>
+#include <dune/grid/io/file/vtk.hh>
+#include <dune/grid/io/file/gmshreader.hh>
+
+
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -84,13 +89,20 @@ int main(int argc, char** argv)
   ///////////////////////////////////
 
   const int dim = 2;
-  typedef YaspGrid<dim> GridType;
-  FieldVector<double,dim> l(1);
-  std::array<int,dim> elements = {2, 2};
-  GridType grid(l,elements);
+  typedef UGGrid<dim> GridType;
+
+  FieldVector<double,dim> lower = {0,0};
+  FieldVector<double,dim> upper = {1,1};
+  array<unsigned int,dim> elements = {10,10};
+
+  //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+
+  shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+
+  //shared_ptr<GridType> grid = shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh"));
 
   typedef GridType::LeafGridView GridView;
-  GridView gridView = grid.leafGridView();
+  GridView gridView = grid->leafGridView();
 
   /////////////////////////////////////////////////////////
   //   Choose a finite element space
@@ -99,8 +111,7 @@ int main(int argc, char** argv)
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
   FEBasisInterior feBasisInterior(gridView);
 
-  //typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
-  typedef Functions::PQKNodalBasis<GridView, 1> FEBasisTrace; // u^
+  typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
   FEBasisTrace feBasisTrace(gridView);
 
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
@@ -252,7 +263,7 @@ int main(int argc, char** argv)
   //////////////////////////////////////////////////////////////////////////////////////////////
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
   vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("solution_transport_interior5_");
+  vtkWriter.write("solution_transport_interior_simplexGrid_");
 
 //  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
 //  vtkWriter.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
@@ -260,7 +271,7 @@ int main(int argc, char** argv)
 
 //#endif
 
-
+# if 0
   VectorType sol(feBasisTest.indexSet().size());
   for(unsigned int idx = 0; idx<feBasisTest.indexSet().size(); idx++)
   {
@@ -278,9 +289,9 @@ int main(int argc, char** argv)
   //////////////////////////////////////////////////////////////////////////////////////////////
     SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
     vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("testfkt", VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter.write("optimal_testfunction5_"+ std::to_string(idx));
+    vtkWriter.write("optimal_testfunction_irregGrid_"+ std::to_string(idx));
   }
-
+# endif
 
     return 0;
   }

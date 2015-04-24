@@ -10,9 +10,7 @@
 
 #include <dune/common/std/final.hh>
 
-//#include <dune/localfunctions/lagrange/pqkfactory.hh>
-#include <dune/localfunctions/lagrange/qktrace.hh> //TODO
-
+#include <dune/localfunctions/lagrange/pqktracefactory.hh>
 
 #include <dune/typetree/leafnode.hh>
 
@@ -82,7 +80,6 @@ public:
 
     // The dimension of the entity that the current dof is related to
     size_t dofDim = dim - localKey.codim();
-
     if (dofDim==0) {  // vertex dof
       return {{ gridIndexSet.subIndex(element,localKey.subEntity(),dim) }};
     }
@@ -91,7 +88,7 @@ public:
     {  // edge dof
       if (dim==1)   // element dof -- any local numbering is fine
       {
-        return {{ basisIndexSet_.edgeOffset_ + (k-1)*gridIndexSet.subIndex(element,0,0) + localKey.index() }};
+        DUNE_THROW(Dune::NotImplemented, "traces have no elements of codimension 0");
       }
       else
       {
@@ -113,18 +110,7 @@ public:
     {
       if (dim==2)   // element dof -- any local numbering is fine
       {
-        if (element.type().isTriangle())
-        {
-          const int interiorLagrangeNodesPerTriangle = (k-1)*(k-2)/2;
-          return {{ basisIndexSet_.triangleOffset_ + interiorLagrangeNodesPerTriangle*gridIndexSet.subIndex(element,0,0) + localKey.index() }};
-        }
-        else if (element.type().isQuadrilateral())
-        {
-          const int interiorLagrangeNodesPerQuadrilateral = (k-1)*(k-1);
-          return {{ basisIndexSet_.quadrilateralOffset_ + interiorLagrangeNodesPerQuadrilateral*gridIndexSet.subIndex(element,0,0) + localKey.index() }};
-        }
-        else
-          DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");
+        DUNE_THROW(Dune::NotImplemented, "traces have no elements of codimension 0");
       } else
       {
         const Dune::ReferenceElement<double,dim>& refElement
@@ -397,17 +383,16 @@ template<typename GV, int k>
 class PQKTraceNodalBasisLeafNode :
   public GridFunctionSpaceBasisLeafNodeInterface<
     typename GV::template Codim<0>::Entity,
-//    typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, GV::dimension, k>::FiniteElementType,
-    Dune::QkTraceLocalFiniteElement<typename GV::ctype,double,GV::dimension,k>, //TODO!!!
+    typename Dune::PQkTraceLocalFiniteElementCache<typename GV::ctype
+                                                   , double, GV::dimension, k>::FiniteElementType,
     typename PQKTraceNodalBasis<GV,k>::size_type>
 {
   typedef PQKTraceNodalBasis<GV,k> GlobalBasis;
   static const int dim = GV::dimension;
 
   typedef typename GV::template Codim<0>::Entity E;
-//  typedef typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, k> FiniteElementCache;
-//  typedef typename FiniteElementCache::FiniteElementType FE;
-  typedef typename Dune::QkTraceLocalFiniteElement<typename GV::ctype,double,GV::dimension,k> FE;  //TODO!!!
+  typedef typename Dune::PQkTraceLocalFiniteElementCache<typename GV::ctype, double, dim, k> FiniteElementCache;
+  typedef typename FiniteElementCache::FiniteElementType FE;
   typedef typename GlobalBasis::size_type ST;
   typedef typename GlobalBasis::MultiIndex MI;
 
@@ -466,14 +451,12 @@ protected:
   void bind(const Element& e)
   {
     element_ = &e;
-    //finiteElement_ = &(cache_.get(element_->type()));
-    finiteElement_ = Dune::Std::make_unique<FiniteElement>();
+    finiteElement_ = &(cache_.get(element_->type()));
   }
 
   const GlobalBasis* globalBasis_;
-  //FiniteElementCache cache_;
-  std::unique_ptr<FiniteElement> finiteElement_;
-  //const FiniteElement* finiteElement_;
+  FiniteElementCache cache_;
+  const FiniteElement* finiteElement_;
   const Element* element_;
 };
 

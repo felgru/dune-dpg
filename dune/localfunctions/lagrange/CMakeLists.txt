@@ -1,4 +1,4 @@
-set(SUBDIRS  qktrace)
+set(SUBDIRS  qktrace pktrace2d)
 
 set(lagrangedir  ${CMAKE_INSTALL_INCLUDEDIR}/dune/localfunctions/lagrange)
 set(lagrange_HEADERS  qktrace.hh)
