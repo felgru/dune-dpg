@@ -178,9 +178,9 @@ int main(int argc, char** argv)
   // Determine Dirichlet dofs for u^ (inflow boundary)
   {
     std::vector<bool> dirichletNodesInflow;
-    boundaryTreatmentInflow(std::get<0>(solutionSpaces),
+    boundaryTreatmentInflow(std::get<1>(solutionSpaces),
                             dirichletNodesInflow);
-    systemAssembler.applyDirichletBoundary<SpaceType::solution,0,double>
+    systemAssembler.applyDirichletBoundarySolution<1,double>
         (stiffnessMatrix,
          rhs,
          dirichletNodesInflow,

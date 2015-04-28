@@ -183,8 +183,16 @@ public:
                       BlockVector<FieldVector<double,1> >& rhs,
                       VolumeTerms&& volumeTerms);
 
-  template <SpaceType spaceType, size_t spaceIndex, class ValueType>
-  void applyDirichletBoundary(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+  template <size_t spaceIndex, class ValueType>
+  void applyDirichletBoundaryTest(
+                              BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                              BlockVector<FieldVector<double,1> >& rhs,
+                              const std::vector<bool>& dirichletNodes,
+                              const ValueType& value);
+
+  template <size_t spaceIndex, class ValueType>
+  void applyDirichletBoundarySolution(
+                              BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                               BlockVector<FieldVector<double,1> >& rhs,
                               const std::vector<bool>& dirichletNodes,
                               const ValueType& value);
@@ -196,6 +204,15 @@ public:
   { return solutionSpaces; };
 
 private:
+
+  template <SpaceType spaceType, size_t spaceIndex, class ValueType, class Spaces>
+  void applyDirichletBoundaryImpl(
+                       BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                       BlockVector<FieldVector<double,1> >& rhs,
+                       const std::vector<bool>& dirichletNodes,
+                       const ValueType& value,
+                       const Spaces& spaces);
+
   TestSpaces     testSpaces;
   SolutionSpaces solutionSpaces;
   BilinearForm   bilinearForm;
@@ -440,16 +457,54 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   for_each(solutionLocalView,     default_deleter());
 }
 
+
 template<class TestSpaces, class SolutionSpaces,
          class BilinearForm, class InnerProduct,
          class FormulationType>
-template <SpaceType spaceType, size_t spaceIndex, class ValueType>
+template <size_t spaceIndex, class ValueType>
 void SystemAssembler<TestSpaces, SolutionSpaces,
                      BilinearForm, InnerProduct, FormulationType>::
-applyDirichletBoundary(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+applyDirichletBoundaryTest
+                      (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                        BlockVector<FieldVector<double,1> >& rhs,
                        const std::vector<bool>& dirichletNodes,
                        const ValueType& value)
+{
+  applyDirichletBoundaryImpl<SpaceType::test, spaceIndex,
+                             ValueType, TestSpaces>
+                             (matrix, rhs, dirichletNodes,
+                              value, testSpaces);
+}
+
+template<class TestSpaces, class SolutionSpaces,
+         class BilinearForm, class InnerProduct,
+         class FormulationType>
+template <size_t spaceIndex, class ValueType>
+void SystemAssembler<TestSpaces, SolutionSpaces,
+                     BilinearForm, InnerProduct, FormulationType>::
+applyDirichletBoundarySolution
+                      (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                       BlockVector<FieldVector<double,1> >& rhs,
+                       const std::vector<bool>& dirichletNodes,
+                       const ValueType& value)
+{
+  applyDirichletBoundaryImpl<SpaceType::solution, spaceIndex,
+                             ValueType, SolutionSpaces>
+                             (matrix, rhs, dirichletNodes,
+                              value, solutionSpaces);
+}
+
+template<class TestSpaces, class SolutionSpaces,
+         class BilinearForm, class InnerProduct,
+         class FormulationType>
+template <SpaceType spaceType, size_t spaceIndex, class ValueType, class Spaces>
+void SystemAssembler<TestSpaces, SolutionSpaces,
+                     BilinearForm, InnerProduct, FormulationType>::
+applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                       BlockVector<FieldVector<double,1> >& rhs,
+                       const std::vector<bool>& dirichletNodes,
+                       const ValueType& value,
+                       const Spaces& spaces)
 {
   using namespace boost::fusion;
   static_assert(std::is_arithmetic<ValueType>::value,
@@ -462,11 +517,8 @@ applyDirichletBoundary(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
            , SaddlepointFormulation
         >::value;
 
-  size_t spaceSize;
-  if(spaceType==SpaceType::test)
-    spaceSize = std::get<spaceIndex>(testSpaces).indexSet().size();
-  else
-    spaceSize = std::get<spaceIndex>(solutionSpaces).indexSet().size();
+  const size_t spaceSize =
+        std::get<spaceIndex>(spaces).indexSet().size();
 
   size_t globalOffset;
   {

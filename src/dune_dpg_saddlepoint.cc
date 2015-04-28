@@ -153,7 +153,7 @@ int main(int argc, char** argv)
     std::vector<bool> dirichletNodesInflow;
     boundaryTreatmentInflow(std::get<0>(solutionSpaces),
                             dirichletNodesInflow);
-    systemAssembler.applyDirichletBoundary<SpaceType::solution,0,double>
+    systemAssembler.applyDirichletBoundarySolution<0,double>
         (stiffnessMatrix,
          rhs,
          dirichletNodesInflow,
@@ -166,7 +166,7 @@ int main(int argc, char** argv)
     std::vector<bool> dirichletNodesInflowTest;
     boundaryTreatmentInflow(std::get<0>(testSpaces),
                             dirichletNodesInflowTest);
-    systemAssembler.applyDirichletBoundary<SpaceType::test,0,double>
+    systemAssembler.applyDirichletBoundaryTest<0,double>
         (stiffnessMatrix,
          rhs,
          dirichletNodesInflowTest,
