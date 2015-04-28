@@ -180,11 +180,11 @@ int main(int argc, char** argv)
     std::vector<bool> dirichletNodesInflow;
     boundaryTreatmentInflow(std::get<1>(solutionSpaces),
                             dirichletNodesInflow);
-    systemAssembler.applyDirichletBoundarySolution<1,double>
+    systemAssembler.applyDirichletBoundarySolution<1>
         (stiffnessMatrix,
          rhs,
          dirichletNodesInflow,
-         0);
+         0.);
   }
 
 //printmatrix(std::cout , stiffnessMatrix, "stiffness2", "--");
