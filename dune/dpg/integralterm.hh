@@ -71,7 +71,8 @@ template<size_t lhsSpaceIndex,
          IntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
          EnableIf<std::integral_constant<bool,
-                     integrationType == IntegrationType::valueValue> >...
+                     integrationType == IntegrationType::valueValue
+                  || integrationType == IntegrationType::normalSign> >...
         >
 auto make_IntegralTerm(double c)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
@@ -92,7 +93,8 @@ template<size_t lhsSpaceIndex,
          EnableIf<std::integral_constant<bool,
                      integrationType == IntegrationType::gradValue
                   || integrationType == IntegrationType::valueGrad
-                  || integrationType == IntegrationType::gradGrad> >...
+                  || integrationType == IntegrationType::gradGrad
+                  || integrationType == IntegrationType::normalVector> >...
         >
 auto make_IntegralTerm(double c, FieldVector<double, 2> beta)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
@@ -225,8 +227,16 @@ void IntegralTerm<type, domain_of_integration>
         static_assert(type == IntegrationType::valueValue
                    || type == IntegrationType::gradValue
                    || type == IntegrationType::valueGrad
-                   || type == IntegrationType::gradGrad,
+                   || type == IntegrationType::gradGrad
+                   || type == IntegrationType::normalVector
+                   || type == IntegrationType::normalSign,
                    "Use of unknown IntegrationType.");
+        static_assert(domain_of_integration != DomainOfIntegration::interior
+                      || type == IntegrationType::valueValue
+                      || type == IntegrationType::gradValue
+                      || type == IntegrationType::valueGrad
+                      || type == IntegrationType::gradGrad,
+                      "IntegrationType not implemented on interior.");
         if(type == IntegrationType::valueValue) {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
                 += (lhsValues[i] * rhsValues[j]) * constant_factor
@@ -269,6 +279,33 @@ void IntegralTerm<type, domain_of_integration>
     const FieldVector<double,dim>& integrationOuterNormal =
             intersection.integrationOuterNormal(quadFacePos);
 
+    // The multiplicative factor in the integral transformation formula -
+    // TODO this way, the computation is absolutely inefficient!
+    const double integrationElement = integrationOuterNormal.two_norm();
+   //const double integrationElement = intersection.geometry().integrationElement(quadFacePos); TODO ???
+
+   const FieldVector<double,dim>& centerOuterNormal =
+            intersection.centerUnitOuterNormal();
+
+    int sign = 1;
+    bool signfound = false;
+    for (unsigned int i=0;
+         i<centerOuterNormal.size() and signfound == false;
+         i++)
+    {
+      if (centerOuterNormal[i]<0)
+      {
+        sign = -1;
+        signfound = true;
+      }
+      else if (centerOuterNormal[i]>0)
+      {
+        sign = 1;
+        signfound = true;
+      }
+    }
+
+
                 // position of the quadrature point within the element
     const FieldVector<double,dim> elementQuadPos =
             intersection.geometryInInside().global(quadFacePos);
@@ -298,16 +335,22 @@ void IntegralTerm<type, domain_of_integration>
         static_assert(type == IntegrationType::valueValue
                    || type == IntegrationType::gradValue
                    || type == IntegrationType::valueGrad
-                   || type == IntegrationType::gradGrad,
+                   || type == IntegrationType::gradGrad
+                   || type == IntegrationType::normalVector
+                   || type == IntegrationType::normalSign,
                    "Use of unknown IntegrationType.");
         static_assert(domain_of_integration != DomainOfIntegration::face
-                      || type == IntegrationType::valueValue,
-                   "IntegrationType not implemented on boundary.");
-        if(type == IntegrationType::valueValue) {
-        /* TODO: Isn't the integrationElement missing here? */
+                      || type == IntegrationType::normalVector
+                      || type == IntegrationType::normalSign,
+                      "IntegrationType not implemented on boundary.");
+        if(type == IntegrationType::normalVector) {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
                 += ((lhsBeta*integrationOuterNormal) * constant_factor
                     * lhsValues[i] * rhsValues[j]) * quadFace[pt].weight();
+        } else if(type == IntegrationType::normalSign) {
+        elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
+                += (sign * constant_factor * lhsValues[i] * rhsValues[j])
+                    * quadFace[pt].weight() * integrationElement;
         }
       }
     }

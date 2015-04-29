@@ -13,7 +13,9 @@ enum class IntegrationType {
     valueValue,
     gradValue,
     valueGrad,
-    gradGrad
+    gradGrad,
+    normalVector,
+    normalSign
 };
 
 enum class SpaceType {

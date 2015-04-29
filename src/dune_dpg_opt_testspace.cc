@@ -129,8 +129,8 @@ int main(int argc, char** argv)
                                     DomainOfIntegration::interior>(0),
               make_IntegralTerm<0,0,IntegrationType::gradValue,
                                     DomainOfIntegration::interior>(-1, beta),
-              make_IntegralTerm<0,1,IntegrationType::valueValue,
-                                    DomainOfIntegration::face>(1)));
+              make_IntegralTerm<0,1,IntegrationType::normalVector,
+                                    DomainOfIntegration::face>(1, beta)));
   auto innerProduct = make_InnerProduct(testSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
