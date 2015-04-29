@@ -20,6 +20,7 @@
 #include <dune/functions/functionspacebases/interpolate.hh>
 
 #include "assemble_types.hh"
+#include "traits.hh"
 
 namespace Dune {
 
@@ -40,9 +41,11 @@ namespace Dune {
     IntegralTerm () = delete;
 
     IntegralTerm (double constant_factor = 1,
-                  FieldVector<double, dim> beta = {1,1})
+                  FieldVector<double, dim> lhsBeta = {1,1},
+                  FieldVector<double, dim> rhsBeta = {1,1})
         : constant_factor(constant_factor),
-          beta(beta)
+          lhsBeta(lhsBeta),
+          rhsBeta(rhsBeta)
     {};
 
     /** Compute the stiffness matrix for a single element */
@@ -58,14 +61,39 @@ namespace Dune {
   private:
 
     double constant_factor;
-    FieldVector<double, dim> beta;
+    FieldVector<double, dim> lhsBeta;
+    FieldVector<double, dim> rhsBeta;
 
   };
 
 template<size_t lhsSpaceIndex,
          size_t rhsSpaceIndex,
          IntegrationType integrationType,
-         DomainOfIntegration domainOfIntegration>
+         DomainOfIntegration domainOfIntegration,
+         EnableIf<std::integral_constant<bool,
+                     integrationType == IntegrationType::valueValue> >...
+        >
+auto make_IntegralTerm(double c)
+    -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
+                  std::integral_constant<size_t, rhsSpaceIndex>,
+                  IntegralTerm<integrationType, domainOfIntegration> >
+{
+  return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
+                std::integral_constant<size_t, rhsSpaceIndex>,
+                IntegralTerm<integrationType, domainOfIntegration> >
+         ({},{},
+          IntegralTerm<integrationType, domainOfIntegration>(c));
+}
+
+template<size_t lhsSpaceIndex,
+         size_t rhsSpaceIndex,
+         IntegrationType integrationType,
+         DomainOfIntegration domainOfIntegration,
+         EnableIf<std::integral_constant<bool,
+                     integrationType == IntegrationType::gradValue
+                  || integrationType == IntegrationType::valueGrad
+                  || integrationType == IntegrationType::gradGrad> >...
+        >
 auto make_IntegralTerm(double c, FieldVector<double, 2> beta)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                   std::integral_constant<size_t, rhsSpaceIndex>,
@@ -75,7 +103,29 @@ auto make_IntegralTerm(double c, FieldVector<double, 2> beta)
                 std::integral_constant<size_t, rhsSpaceIndex>,
                 IntegralTerm<integrationType, domainOfIntegration> >
          ({},{},
-          IntegralTerm<integrationType, domainOfIntegration>(c, beta));
+          IntegralTerm<integrationType, domainOfIntegration>(c, beta, beta));
+}
+
+template<size_t lhsSpaceIndex,
+         size_t rhsSpaceIndex,
+         IntegrationType integrationType,
+         DomainOfIntegration domainOfIntegration,
+         EnableIf<std::integral_constant<bool,
+                     integrationType == IntegrationType::gradGrad> >...
+        >
+auto make_IntegralTerm(double c,
+                       FieldVector<double, 2> lhsBeta,
+                       FieldVector<double, 2> rhsBeta)
+    -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
+                  std::integral_constant<size_t, rhsSpaceIndex>,
+                  IntegralTerm<integrationType, domainOfIntegration> >
+{
+  return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
+                std::integral_constant<size_t, rhsSpaceIndex>,
+                IntegralTerm<integrationType, domainOfIntegration> >
+         ({},{},
+          IntegralTerm<integrationType, domainOfIntegration>(c, lhsBeta,
+                                                                rhsBeta));
 }
 
 template<IntegrationType type, DomainOfIntegration domain_of_integration>
@@ -183,15 +233,15 @@ void IntegralTerm<type, domain_of_integration>
                    * quad[pt].weight() * integrationElement;
         } else if(type == IntegrationType::valueGrad) {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += lhsValues[i] * (beta*rhsGradients[j]) * constant_factor
+                += lhsValues[i] * (rhsBeta*rhsGradients[j]) * constant_factor
                    * quad[pt].weight() * integrationElement;
         } else if(type == IntegrationType::gradValue) {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += (beta*lhsGradients[i]) * rhsValues[j] * constant_factor
+                += (lhsBeta*lhsGradients[i]) * rhsValues[j] * constant_factor
                    * quad[pt].weight() * integrationElement;
         } else if(type == IntegrationType::gradGrad) {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += (beta*lhsGradients[i]) * (beta*rhsGradients[j])
+                += (lhsBeta*lhsGradients[i]) * (rhsBeta*rhsGradients[j])
                    * constant_factor * quad[pt].weight() * integrationElement;
         }
       }
@@ -256,7 +306,7 @@ void IntegralTerm<type, domain_of_integration>
         if(type == IntegrationType::valueValue) {
         /* TODO: Isn't the integrationElement missing here? */
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += ((beta*integrationOuterNormal) * constant_factor
+                += ((lhsBeta*integrationOuterNormal) * constant_factor
                     * lhsValues[i] * rhsValues[j]) * quadFace[pt].weight();
         }
       }

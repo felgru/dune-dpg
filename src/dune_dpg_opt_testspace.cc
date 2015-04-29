@@ -126,15 +126,15 @@ int main(int argc, char** argv)
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(0, beta),
+                                    DomainOfIntegration::interior>(0),
               make_IntegralTerm<0,0,IntegrationType::gradValue,
                                     DomainOfIntegration::interior>(-1, beta),
               make_IntegralTerm<0,1,IntegrationType::valueValue,
-                                    DomainOfIntegration::face>(1, beta)));
+                                    DomainOfIntegration::face>(1)));
   auto innerProduct = make_InnerProduct(testSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1, beta),
+                                    DomainOfIntegration::interior>(1),
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                     DomainOfIntegration::interior>(1, beta)));
 
