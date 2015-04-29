@@ -48,7 +48,7 @@ namespace Dune {
    * \tparam SolSpaces tuple of solution spaces
    * \tparam BilinearTerms  tuple of IntegralTerm
    */
-  template<class TSpaces, class SolSpaces, class BilinearTerms>
+  template<class TSpaces, class SolSpaces, class BilinearTerms, class FormulationType>
   class BilinearForm
   {
   public:
@@ -101,6 +101,12 @@ namespace Dune {
 
     void bind(const TestLocalView& tlv, const SolutionLocalView& slv)
     {
+      constexpr bool isSaddlepoint =
+                std::is_same<
+                typename std::decay<FormulationType>::type
+              , SaddlepointFormulation
+            >::value;
+
       testLocalView     = const_cast<TestLocalView*>
                               (std::addressof(tlv));
       solutionLocalView = const_cast<SolutionLocalView*>
@@ -111,7 +117,14 @@ namespace Dune {
       using SolutionSize = typename result_of::size<SolutionLocalView>::type;
 
       /* set up local offsets */
-      fold(zip(localTestSpaceOffsets, tlv), 0, offsetHelper());
+      if(isSaddlepoint) {
+        fold(zip(localTestSpaceOffsets, tlv), 0, offsetHelper());
+      } else { /* DPG formulation */
+        for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
+        {
+          localTestSpaceOffsets[i] = 0;
+        }
+      }
       localTotalTestSize =
           localTestSpaceOffsets[TestSize::value-1]
           + at_c<TestSize::value-1>(tlv)->size();
@@ -162,30 +175,63 @@ template<class TestSpaces, class SolutionSpaces, class BilinearTerms>
 auto make_BilinearForm(TestSpaces     testSpaces,
                        SolutionSpaces solutionSpaces,
                        BilinearTerms  terms)
-    -> BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>
+    -> BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms, SaddlepointFormulation>
 {
-  return BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>
+  return BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms, SaddlepointFormulation>
                       (testSpaces,
                        solutionSpaces,
                        terms);
 }
 
-template<class TestSpaces, class SolutionSpaces, class BilinearTerms>
+
+namespace detail {
+
+  template<class FormulationType, class TestSpaces, class SolutionSpaces, class BilinearTerms>
+  auto make_BilinearForm(TestSpaces     testSpaces,
+                         SolutionSpaces solutionSpaces,
+                         BilinearTerms  terms)
+      -> BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms, FormulationType>
+  {
+    return BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms, FormulationType>
+                        (testSpaces,
+                         solutionSpaces,
+                         terms);
+  }
+
+}
+
+
+template<class TestSpaces, class SolutionSpaces, class BilinearTerms, class FormulationType>
 template<bool mirror>
-void BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>::
+void BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms, FormulationType>::
 getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift) const
 {
   using namespace boost::fusion;
+
+  constexpr bool isSaddlepoint =
+        std::is_same<
+             typename std::decay<FormulationType>::type
+           , SaddlepointFormulation
+        >::value;
 
   // Total number of degrees of freedom
   auto testBasisIndexSet = as_vector(transform(testSpaces, getIndexSet()));
   auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
                                                    getIndexSet()));
 
+
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  fold(zip(globalTestSpaceOffsets, testBasisIndexSet), testShift, globalOffsetHelper());
+  if(isSaddlepoint) {
+    fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
+         testShift, globalOffsetHelper());
+  } else { /* DPG formulation */
+    for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
+    {
+      globalTestSpaceOffsets[i] = 0;
+    }
+  }
   fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
        solutionShift, globalOffsetHelper());
 

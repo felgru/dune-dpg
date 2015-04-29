@@ -139,10 +139,9 @@ getOccupationPattern(MatrixIndexSet& nb) const
 
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-  fold(zip(globalTestSpaceOffsets, testBasisIndexSet), 0, globalOffsetHelper());
-  size_t globalTotalTestSize =
-      globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value-1]
-      + at_c<std::tuple_size<TestSpaces>::value-1>(testBasisIndexSet).size();
+
+  fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
+       0, globalOffsetHelper());
 
   // A view on the FE basis on a single element
   auto testLocalView = as_vector(transform(testSpaces,

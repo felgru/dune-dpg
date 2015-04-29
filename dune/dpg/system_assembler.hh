@@ -54,14 +54,19 @@
 
 namespace Dune {
 
+template<class Form, class newTestSpace, class newFormulationType>
+struct replaceTestSpaceAndType {};
+
+template<class TestSpaces, class SolutionSpaces, class BilinearTerms, class FormulationType,
+         class newTestSpaces, class newFormulationType>
+struct replaceTestSpaceAndType<BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms, FormulationType>,
+                        newTestSpaces, newFormulationType>
+{
+    typedef BilinearForm<newTestSpaces, SolutionSpaces, BilinearTerms, newFormulationType> type;
+};
+
 template<class Form, class newTestSpace>
 struct replaceTestSpace {};
-
-template<class TestSpaces, class SolutionSpaces, class BilinearTerms, class newTestSpaces>
-struct replaceTestSpace<BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>, newTestSpaces>
-{
-    typedef BilinearForm<newTestSpaces, SolutionSpaces, BilinearTerms> type;
-};
 
 template<class TestSpaces, class InnerProductTerms, class newTestSpaces>
 struct replaceTestSpace<InnerProduct<TestSpaces, InnerProductTerms>, newTestSpaces>
@@ -153,7 +158,7 @@ public:
            , SaddlepointFormulation
         >::value
       , BilinForm
-      , typename replaceTestSpace<BilinForm, TestSpaces>::type
+      , typename replaceTestSpaceAndType<BilinForm, TestSpaces, FormulationType>::type
       >::type BilinearForm;
   typedef typename std::conditional<
         std::is_same<
@@ -171,7 +176,7 @@ public:
                              InProduct      innerProduct)
              : testSpaces(testSpaces),
                solutionSpaces(solutionSpaces),
-               bilinearForm(make_BilinearForm(testSpaces,
+               bilinearForm(detail::make_BilinearForm<FormulationType>(testSpaces,
                                               solutionSpaces,
                                               bilinearForm.getTerms())),
                innerProduct(make_InnerProduct(testSpaces,
@@ -271,16 +276,28 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
                                                    getIndexSet()));
 
+
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  fold(zip(globalTestSpaceOffsets, testBasisIndexSet), 0, globalOffsetHelper());
-  size_t globalTotalTestSize =
-      globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value-1]
-      + at_c<std::tuple_size<TestSpaces>::value-1>(testBasisIndexSet).size();
+  size_t globalTotalTestSize = 0;
+
+  if(isSaddlepoint) {
+    fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
+         0, globalOffsetHelper());
+    globalTotalTestSize =
+        globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value-1]
+        + at_c<std::tuple_size<TestSpaces>::value-1>(testBasisIndexSet).size();
+  } else { /* DPG formulation */
+    for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
+    {
+      globalTestSpaceOffsets[i] = 0;
+    }
+  }
 
   fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
        isSaddlepoint?globalTotalTestSize:0, globalOffsetHelper());
+
   size_t globalTotalSolutionSize =
       globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value-1]
       + at_c<std::tuple_size<SolutionSpaces>::value-1>
@@ -530,10 +547,20 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     /* set up global offsets */
     size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
     size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-    fold(zip(globalTestSpaceOffsets, testBasisIndexSet), 0, globalOffsetHelper());
-    size_t globalTotalTestSize =
-        globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value-1]
-        + at_c<std::tuple_size<TestSpaces>::value-1>(testBasisIndexSet).size();
+    size_t globalTotalTestSize = 0;
+
+    if(isSaddlepoint) {
+      fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
+           0, globalOffsetHelper());
+      globalTotalTestSize =
+          globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value-1]
+          + at_c<std::tuple_size<TestSpaces>::value-1>(testBasisIndexSet).size();
+    } else { /* DPG formulation */
+      for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
+      {
+        globalTestSpaceOffsets[i] = 0;
+      }
+    }
 
     fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
          isSaddlepoint?globalTotalTestSize:0, globalOffsetHelper());
