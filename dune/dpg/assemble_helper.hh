@@ -13,6 +13,8 @@
 
 namespace Dune {
 
+namespace detail {
+
 struct getIndexSet
 {
   template<class T>
@@ -613,6 +615,6 @@ struct getLocalFiniteElement
     };
 };
 
-} // end namespace Dune
+} } // end namespace Dune::detail
 
 #endif // DUNE_DPG_ASSEMBLE_HELPER_HH

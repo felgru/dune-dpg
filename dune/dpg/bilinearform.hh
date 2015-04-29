@@ -56,10 +56,11 @@ namespace Dune {
     typedef SolSpaces SolutionSpaces;
     typedef typename boost::fusion::result_of::as_vector<
         typename boost::fusion::result_of::
-        transform<TestSpaces, getLocalView>::type>::type TestLocalView;
+        transform<TestSpaces, detail::getLocalView>::type>::type TestLocalView;
     typedef typename boost::fusion::result_of::as_vector<
         typename boost::fusion::result_of::
-        transform<SolutionSpaces, getLocalView>::type>::type SolutionLocalView;
+        transform<SolutionSpaces, detail::getLocalView>::type
+        >::type SolutionLocalView;
 
     BilinearForm () = delete;
     constexpr BilinearForm (TestSpaces     testSpaces,
@@ -83,7 +84,7 @@ namespace Dune {
       elementMatrix = 0;      // fills the entire matrix with zeroes
 
       boost::fusion::for_each(terms,
-              getLocalMatrixHelper
+              detail::getLocalMatrixHelper
                       <MatrixType,
                        typename std::remove_pointer
                                 <decltype(testLocalView)>::type,
@@ -113,6 +114,8 @@ namespace Dune {
                               (std::addressof(slv));
 
       using namespace boost::fusion;
+      using namespace Dune::detail;
+
       using TestSize     = typename result_of::size<TestLocalView>::type;
       using SolutionSize = typename result_of::size<SolutionLocalView>::type;
 
@@ -207,6 +210,7 @@ void BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms, FormulationType>::
 getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift) const
 {
   using namespace boost::fusion;
+  using namespace Dune::detail;
 
   constexpr bool isSaddlepoint =
         std::is_same<

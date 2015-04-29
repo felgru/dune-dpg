@@ -148,10 +148,11 @@ class SystemAssembler
 public:
   typedef typename boost::fusion::result_of::as_vector<
       typename boost::fusion::result_of::
-      transform<TestSpaces, getLocalView>::type>::type TestLocalView;
+      transform<TestSpaces, detail::getLocalView>::type>::type TestLocalView;
   typedef typename boost::fusion::result_of::as_vector<
       typename boost::fusion::result_of::
-      transform<SolutionSpaces, getLocalView>::type>::type SolutionLocalView;
+      transform<SolutionSpaces, detail::getLocalView>::type
+      >::type SolutionLocalView;
   typedef typename std::conditional<
         std::is_same<
              typename std::decay<FormulationType>::type
@@ -256,6 +257,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                VolumeTerms&& volumeTerms)
 {
   using namespace boost::fusion;
+  using namespace Dune::detail;
 
   constexpr bool isSaddlepoint =
         std::is_same<
@@ -524,6 +526,8 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                        const Spaces& spaces)
 {
   using namespace boost::fusion;
+  using namespace Dune::detail;
+
   static_assert(std::is_arithmetic<ValueType>::value,
                 "applyDirichletBoundary not implemented for non arithmetic "
                 "boundary data types.");

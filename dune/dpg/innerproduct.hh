@@ -54,7 +54,7 @@ namespace Dune {
     typedef TSpaces TestSpaces;
     typedef typename boost::fusion::result_of::as_vector<
         typename boost::fusion::result_of::
-        transform<TestSpaces, getLocalView>::type>::type TestLocalView;
+        transform<TestSpaces, detail::getLocalView>::type>::type TestLocalView;
 
     InnerProduct () = delete;
     constexpr InnerProduct (TestSpaces        testSpaces,
@@ -75,7 +75,7 @@ namespace Dune {
       elementMatrix = 0;      // fills the entire matrix with zeroes
 
       boost::fusion::for_each(terms,
-              getLocalMatrixHelper
+              detail::getLocalMatrixHelper
                       <MatrixType,
                        typename std::remove_pointer
                                 <decltype(testLocalView)>::type,
@@ -95,6 +95,8 @@ namespace Dune {
       testLocalView = const_cast<TestLocalView*>(std::addressof(tlv));
 
       using namespace boost::fusion;
+      using namespace Dune::detail;
+
       using TestSize = typename result_of::size<TestLocalView>::type;
 
       /* set up local offsets */
@@ -133,6 +135,7 @@ void InnerProduct<TestSpaces, InnerProductTerms>::
 getOccupationPattern(MatrixIndexSet& nb) const
 {
   using namespace boost::fusion;
+  using namespace Dune::detail;
 
   // Total number of degrees of freedom
   auto testBasisIndexSet = as_vector(transform(testSpaces, getIndexSet()));

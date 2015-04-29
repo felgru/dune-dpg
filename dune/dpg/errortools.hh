@@ -253,6 +253,7 @@ namespace Dune {
                         )
   {
     using namespace boost::fusion;
+    using namespace Dune::detail;
 
     typedef typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView GridView;
     const GridView gridView = std::get<0>(bilinearForm.getSolutionSpaces()).gridView() ;
@@ -260,11 +261,11 @@ namespace Dune {
     typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
     typedef typename BilinearForm::TestSpaces EnrichedTestspaces;
 
-    typedef typename boost::fusion::result_of::as_vector<typename boost::fusion::result_of::transform<SolutionSpaces,getLocalView>::type>::type SolutionLocalView;
-    typedef typename boost::fusion::result_of::as_vector<typename boost::fusion::result_of::transform<EnrichedTestspaces,getLocalView>::type>::type TestLocalView;
+    typedef typename result_of::as_vector<typename result_of::transform<SolutionSpaces,getLocalView>::type>::type SolutionLocalView;
+    typedef typename result_of::as_vector<typename result_of::transform<EnrichedTestspaces,getLocalView>::type>::type TestLocalView;
 
-    SolutionLocalView localViewSolution = boost::fusion::as_vector(boost::fusion::transform(bilinearForm.getSolutionSpaces(),getLocalView()));
-    TestLocalView localViewTest = boost::fusion::as_vector(boost::fusion::transform(bilinearForm.getTestSpaces(),getLocalView()));
+    SolutionLocalView localViewSolution = as_vector(transform(bilinearForm.getSolutionSpaces(),getLocalView()));
+    TestLocalView localViewTest = as_vector(transform(bilinearForm.getTestSpaces(),getLocalView()));
 
     //We get the index set of the test spaces: variable testLocalIndexSet
     auto testBasisIndexSet = as_vector(transform(bilinearForm.getTestSpaces(), getIndexSet()));

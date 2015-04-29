@@ -228,17 +228,21 @@ public:
 
   OptimalTestLocalIndexSet(const OptimalTestIndexSet<BilinearForm, InnerProduct, testIndex> & indexSet, const SolutionSpaces& solSp)
   : basisIndexSet_(indexSet),
-  solutionBasisIndexSet_(boost::fusion::as_vector(boost::fusion::transform(solSp,getIndexSet()))),
-  solutionLocalIndexSet_(boost::fusion::as_vector(transform(solutionBasisIndexSet_,getLocalIndexSet())))
+  solutionBasisIndexSet_(boost::fusion::as_vector(
+              boost::fusion::transform(solSp,detail::getIndexSet()))),
+  solutionLocalIndexSet_(boost::fusion::as_vector(
+              transform(solutionBasisIndexSet_,detail::getLocalIndexSet())))
   {}
 
   typedef typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<SolutionSpaces,
-                                                          getIndexSet>::type
+                                                          detail::getIndexSet
+                                                         >::type
              >::type SolutionBasisIndexSet;
   typedef typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<SolutionBasisIndexSet,
-                                                          getLocalIndexSet>::type
+             typename boost::fusion::result_of::transform<
+                       SolutionBasisIndexSet,
+                       detail::getLocalIndexSet>::type
              >::type SolutionLocalIndexSet;
 
   /** \brief Bind the view to a grid element
@@ -248,6 +252,8 @@ public:
    */
   void bind(const OptimalTestBasisLocalView<BilinearForm, InnerProduct, testIndex>& localView)
   {
+    using namespace Dune::detail;
+
     localView_ = &localView;
 
     boost::fusion::for_each(boost::fusion::zip(solutionLocalIndexSet_, localView_->tree().localViewSolution),
@@ -258,6 +264,8 @@ public:
    */
   void unbind()
   {
+    using namespace Dune::detail;
+
     localView_ = nullptr;
     for_each(solutionLocalIndexSet_, applyUnbind());
   }
@@ -272,6 +280,8 @@ public:
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
   const MultiIndex index(size_type i) const
   {
+    using namespace Dune::detail;
+
     /* set up global offsets*/
     size_t globalOffsets[std::tuple_size<SolutionSpaces>::value];
     boost::fusion::fold(boost::fusion::zip(globalOffsets, solutionBasisIndexSet_), 0, globalOffsetHelper());
@@ -326,6 +336,8 @@ public:
 
   std::size_t size() const
   {
+    using namespace Dune::detail;
+
     return boost::fusion::fold(boost::fusion::transform(solutionSpaces,
                                                         getIndexSetSize()),
                                0, std::plus<std::size_t>());
@@ -519,9 +531,12 @@ public:
    */
   size_type maxSize() const
   {
-    return boost::fusion::fold(boost::fusion::transform(bilinearForm.getSolutionSpaces(),
-                                                        getLocalViewMaxSize()),
-                               0, std::plus<std::size_t>());
+    using namespace boost::fusion;
+    using namespace Dune::detail;
+
+    return fold(transform(bilinearForm.getSolutionSpaces(),
+                          getLocalViewMaxSize()),
+                0, std::plus<std::size_t>());
   }
 
   /** \brief Return the global basis that we are a view on
@@ -580,13 +595,17 @@ private:
   friend class OptimalTestLocalIndexSet<BilinearForm,InnerProduct,testIndex>;
 
   typedef typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<SolutionSpaces,
-                                                          getLocalView>::type
+             typename boost::fusion::result_of::transform<
+                         SolutionSpaces,
+                         detail::getLocalView
+                      >::type
              >::type SolutionLocalView;
 
   typedef typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<EnrichedTestspaces,
-                                                          getLocalView>::type
+             typename boost::fusion::result_of::transform<
+                         EnrichedTestspaces,
+                         detail::getLocalView
+                      >::type
              >::type TestLocalView;
 
 public:
@@ -602,8 +621,12 @@ public:
     finiteElement_(nullptr),
     enrichedTestspace_(nullptr),
     element_(nullptr),
-    localViewSolution(boost::fusion::as_vector(boost::fusion::transform(bilinForm.getSolutionSpaces(),getLocalView()))),
-    localViewTest(boost::fusion::as_vector(boost::fusion::transform(bilinForm.getTestSpaces(),getLocalView())))
+    localViewSolution(boost::fusion::as_vector(
+                boost::fusion::transform(bilinForm.getSolutionSpaces(),
+                                         detail::getLocalView()))),
+    localViewTest(boost::fusion::as_vector(
+                boost::fusion::transform(bilinForm.getTestSpaces(),
+                                         detail::getLocalView())))
   { }
 
   //! Return current element, throw if unbound
@@ -643,6 +666,8 @@ protected:
   //! Bind to element.
   void bind(const Element& e)
   {
+    using namespace Dune::detail;
+
     element_ = &e;
     for_each(localViewTest, applyBind<decltype(e)>(e));
     enrichedTestspace_ = const_cast<typename std::tuple_element<testIndex,EnrichedTestspaces>::type::LocalView::Tree::FiniteElement*>
