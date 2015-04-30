@@ -126,17 +126,17 @@ int main(int argc, char** argv)
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(0),
+                                    DomainOfIntegration::interior>(0.),
               make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                    DomainOfIntegration::interior>(-1, beta),
+                                    DomainOfIntegration::interior>(-1., beta),
               make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                    DomainOfIntegration::face>(1, beta)));
+                                    DomainOfIntegration::face>(1., beta)));
   auto innerProduct = make_InnerProduct(testSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1),
+                                    DomainOfIntegration::interior>(1.),
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1, beta)));
+                                    DomainOfIntegration::interior>(1., beta)));
 
     typedef decltype(bilinearForm) BilinearForm;
     typedef decltype(innerProduct) InnerProduct;
@@ -165,7 +165,7 @@ int main(int argc, char** argv)
 //#if 0
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
-  auto rightHandSide = std::make_tuple([] (const Domain& x) { return 1;});
+  auto rightHandSide = std::make_tuple([] (const Domain& x) { return 1.;});
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
   /////////////////////////////////////////////////

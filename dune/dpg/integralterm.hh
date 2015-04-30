@@ -29,8 +29,9 @@ namespace Dune {
    *
    */
   template <IntegrationType type,
-            DomainOfIntegration domain_of_integration =
-                DomainOfIntegration::interior>
+            DomainOfIntegration domain_of_integration,
+            class FactorType,
+            class DirectionType = FieldVector<double, 2> >
   class IntegralTerm
   {
   public:
@@ -40,10 +41,10 @@ namespace Dune {
 
     IntegralTerm () = delete;
 
-    IntegralTerm (double constant_factor = 1,
-                  FieldVector<double, dim> lhsBeta = {1,1},
-                  FieldVector<double, dim> rhsBeta = {1,1})
-        : constant_factor(constant_factor),
+    IntegralTerm (FactorType factor = 1,
+                  DirectionType lhsBeta = {1,1},
+                  DirectionType rhsBeta = {1,1})
+        : factor(factor),
           lhsBeta(lhsBeta),
           rhsBeta(rhsBeta)
     {};
@@ -60,9 +61,9 @@ namespace Dune {
 
   private:
 
-    double constant_factor;
-    FieldVector<double, dim> lhsBeta;
-    FieldVector<double, dim> rhsBeta;
+    FactorType factor;
+    DirectionType lhsBeta;
+    DirectionType rhsBeta;
 
   };
 
@@ -70,71 +71,82 @@ template<size_t lhsSpaceIndex,
          size_t rhsSpaceIndex,
          IntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
+         class FactorType,
          EnableIf<std::integral_constant<bool,
                      integrationType == IntegrationType::valueValue
                   || integrationType == IntegrationType::normalSign> >...
         >
-auto make_IntegralTerm(double c)
+auto make_IntegralTerm(FactorType c)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                   std::integral_constant<size_t, rhsSpaceIndex>,
-                  IntegralTerm<integrationType, domainOfIntegration> >
+                  IntegralTerm<integrationType, domainOfIntegration,
+                               FactorType> >
 {
   return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                 std::integral_constant<size_t, rhsSpaceIndex>,
-                IntegralTerm<integrationType, domainOfIntegration> >
+                IntegralTerm<integrationType, domainOfIntegration,
+                             FactorType> >
          ({},{},
-          IntegralTerm<integrationType, domainOfIntegration>(c));
+          IntegralTerm<integrationType, domainOfIntegration, FactorType>(c));
 }
 
 template<size_t lhsSpaceIndex,
          size_t rhsSpaceIndex,
          IntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
+         class FactorType, class DirectionType,
          EnableIf<std::integral_constant<bool,
                      integrationType == IntegrationType::gradValue
                   || integrationType == IntegrationType::valueGrad
                   || integrationType == IntegrationType::gradGrad
                   || integrationType == IntegrationType::normalVector> >...
         >
-auto make_IntegralTerm(double c, FieldVector<double, 2> beta)
+auto make_IntegralTerm(FactorType c, DirectionType beta)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                   std::integral_constant<size_t, rhsSpaceIndex>,
-                  IntegralTerm<integrationType, domainOfIntegration> >
+                  IntegralTerm<integrationType, domainOfIntegration,
+                               FactorType, DirectionType> >
 {
   return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                 std::integral_constant<size_t, rhsSpaceIndex>,
-                IntegralTerm<integrationType, domainOfIntegration> >
+                IntegralTerm<integrationType, domainOfIntegration,
+                             FactorType, DirectionType> >
          ({},{},
-          IntegralTerm<integrationType, domainOfIntegration>(c, beta, beta));
+          IntegralTerm<integrationType, domainOfIntegration,
+                       FactorType, DirectionType>(c, beta, beta));
 }
 
 template<size_t lhsSpaceIndex,
          size_t rhsSpaceIndex,
          IntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
+         class FactorType, class DirectionType,
          EnableIf<std::integral_constant<bool,
                      integrationType == IntegrationType::gradGrad> >...
         >
-auto make_IntegralTerm(double c,
-                       FieldVector<double, 2> lhsBeta,
-                       FieldVector<double, 2> rhsBeta)
+auto make_IntegralTerm(FactorType c,
+                       DirectionType lhsBeta,
+                       DirectionType rhsBeta)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                   std::integral_constant<size_t, rhsSpaceIndex>,
-                  IntegralTerm<integrationType, domainOfIntegration> >
+                  IntegralTerm<integrationType, domainOfIntegration,
+                               FactorType, DirectionType> >
 {
   return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                 std::integral_constant<size_t, rhsSpaceIndex>,
-                IntegralTerm<integrationType, domainOfIntegration> >
+                IntegralTerm<integrationType, domainOfIntegration,
+                             FactorType, DirectionType> >
          ({},{},
-          IntegralTerm<integrationType, domainOfIntegration>(c, lhsBeta,
-                                                                rhsBeta));
+          IntegralTerm<integrationType, domainOfIntegration,
+                       FactorType, DirectionType>(c, lhsBeta, rhsBeta));
 }
 
-template<IntegrationType type, DomainOfIntegration domain_of_integration>
+template<IntegrationType type, DomainOfIntegration domain_of_integration,
+         class FactorType, class DirectionType>
 template <class LhsLocalView,
           class RhsLocalView,
           class MatrixType>
-void IntegralTerm<type, domain_of_integration>
+void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
      ::getLocalMatrix(
         const LhsLocalView& lhsLocalView,
         const RhsLocalView& rhsLocalView,
@@ -142,6 +154,14 @@ void IntegralTerm<type, domain_of_integration>
         size_t lhsSpaceOffset,
         size_t rhsSpaceOffset) const
 {
+  static_assert(std::is_arithmetic<typename std::decay<FactorType>::type
+                                  >::value
+             && std::is_same<typename std::decay<DirectionType>::type,
+                             FieldVector<double, 2>
+                            >::value,
+             "getLocalMatrix only implemented for constant factors!");
+
+
   // Get the grid element from the local FE basis view
   using Element = typename std::remove_pointer<LhsLocalView>::type::Element;
   const Element& element = lhsLocalView->element();
@@ -239,20 +259,20 @@ void IntegralTerm<type, domain_of_integration>
                       "IntegrationType not implemented on interior.");
         if(type == IntegrationType::valueValue) {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += (lhsValues[i] * rhsValues[j]) * constant_factor
+                += (lhsValues[i] * rhsValues[j]) * factor
                    * quad[pt].weight() * integrationElement;
         } else if(type == IntegrationType::valueGrad) {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += lhsValues[i] * (rhsBeta*rhsGradients[j]) * constant_factor
+                += lhsValues[i] * (rhsBeta*rhsGradients[j]) * factor
                    * quad[pt].weight() * integrationElement;
         } else if(type == IntegrationType::gradValue) {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += (lhsBeta*lhsGradients[i]) * rhsValues[j] * constant_factor
+                += (lhsBeta*lhsGradients[i]) * rhsValues[j] * factor
                    * quad[pt].weight() * integrationElement;
         } else if(type == IntegrationType::gradGrad) {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
                 += (lhsBeta*lhsGradients[i]) * (rhsBeta*rhsGradients[j])
-                   * constant_factor * quad[pt].weight() * integrationElement;
+                   * factor * quad[pt].weight() * integrationElement;
         }
       }
     }
@@ -345,11 +365,11 @@ void IntegralTerm<type, domain_of_integration>
                       "IntegrationType not implemented on boundary.");
         if(type == IntegrationType::normalVector) {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += ((lhsBeta*integrationOuterNormal) * constant_factor
+                += ((lhsBeta*integrationOuterNormal) * factor
                     * lhsValues[i] * rhsValues[j]) * quadFace[pt].weight();
         } else if(type == IntegrationType::normalSign) {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += (sign * constant_factor * lhsValues[i] * rhsValues[j])
+                += (sign * factor * lhsValues[i] * rhsValues[j])
                     * quadFace[pt].weight() * integrationElement;
         }
       }
