@@ -36,9 +36,6 @@ namespace Dune {
   {
   public:
 
-    /* TODO: make this a template argument. */
-    static const int dim = 2;
-
     IntegralTerm () = delete;
 
     IntegralTerm (FactorType factor = 1,
