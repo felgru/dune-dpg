@@ -45,6 +45,8 @@
 
 #include <dune/localfunctions/optimaltestfunctions/optimaltest.hh>
 
+#include <dune/functions/functionspacebases/optimaltestbasis.hh>  //we only use this for the Cholesky
+
 #include <dune/typetree/leafnode.hh>
 
 #include <dune/functions/functionspacebases/gridviewfunctionspacebasis.hh>
@@ -166,6 +168,34 @@ public:
         rhsMatrix[j][im] = (rhsMatrix[j][im]-summe);
       }
     }
+  }
+
+
+  void apply(BlockVector<FieldVector<double,1> >& rhsVector)
+  {
+    unsigned int n = rhsVector.size();
+
+    // solve LY = B
+      for (int j=0; j<n; j++)
+      {
+        double summe = 0;
+        for (unsigned int i=0; i<j; i++)
+        {
+          summe+=matrix[j][i]*rhsVector[i];
+        }
+        rhsVector[j] = (rhsVector[j]-summe);
+      }
+     // solve L^TX = D^(-1)B
+      for (int j=n-1; j>-1; j--)
+      {
+        rhsVector[j] = rhsVector[j]/matrix[j][j];
+        double summe = 0;
+        for (unsigned int i=j+1; i<n; i++)
+        {
+          summe+=matrix[i][j]*rhsVector[i];
+        }
+        rhsVector[j] = (rhsVector[j]-summe);
+      }
   }
 
 private:
