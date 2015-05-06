@@ -54,25 +54,32 @@
 
 namespace Dune {
 
+namespace detail {
+
 template<class Form, class newTestSpace, class newFormulationType>
 struct replaceTestSpaceAndType {};
 
-template<class TestSpaces, class SolutionSpaces, class BilinearTerms, class FormulationType,
-         class newTestSpaces, class newFormulationType>
-struct replaceTestSpaceAndType<BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms, FormulationType>,
-                        newTestSpaces, newFormulationType>
+template<class TestSpaces, class SolutionSpaces, class BilinearTerms,
+         class FormulationType, class newTestSpaces, class newFormulationType>
+struct replaceTestSpaceAndType<BilinearForm<TestSpaces, SolutionSpaces,
+                                            BilinearTerms, FormulationType>,
+                               newTestSpaces, newFormulationType>
 {
-    typedef BilinearForm<newTestSpaces, SolutionSpaces, BilinearTerms, newFormulationType> type;
+    typedef BilinearForm<newTestSpaces, SolutionSpaces,
+                         BilinearTerms, newFormulationType> type;
 };
 
 template<class Form, class newTestSpace>
 struct replaceTestSpace {};
 
 template<class TestSpaces, class InnerProductTerms, class newTestSpaces>
-struct replaceTestSpace<InnerProduct<TestSpaces, InnerProductTerms>, newTestSpaces>
+struct replaceTestSpace<InnerProduct<TestSpaces, InnerProductTerms>,
+                        newTestSpaces>
 {
     typedef InnerProduct<newTestSpaces, InnerProductTerms> type;
 };
+
+} // end namespace detail
 
 // Compute the source term for a single element
 template <class LocalViewTest, class LocalVolumeTerm>
@@ -121,6 +128,7 @@ void getVolumeTerm(const LocalViewTest& localViewTest,
 
 }
 
+namespace detail {
 struct getVolumeTermHelper
 {
   template<class Seq>
@@ -131,6 +139,7 @@ struct getVolumeTermHelper
     getVolumeTerm(*(at_c<0>(seq)), at_c<1>(seq), at_c<2>(seq));
     };
 };
+} // end namespace detail
 
 /**
  * class SystemAssembler
@@ -159,7 +168,9 @@ public:
            , SaddlepointFormulation
         >::value
       , BilinForm
-      , typename replaceTestSpaceAndType<BilinForm, TestSpaces, FormulationType>::type
+      , typename detail::replaceTestSpaceAndType<
+                          BilinForm, TestSpaces, FormulationType
+                         >::type
       >::type BilinearForm;
   typedef typename std::conditional<
         std::is_same<
@@ -167,7 +178,7 @@ public:
            , SaddlepointFormulation
         >::value
       , InProduct
-      , typename replaceTestSpace<InProduct, TestSpaces>::type
+      , typename detail::replaceTestSpace<InProduct, TestSpaces>::type
       >::type InnerProduct;
 
   SystemAssembler () = delete;

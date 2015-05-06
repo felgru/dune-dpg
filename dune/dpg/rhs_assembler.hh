@@ -56,7 +56,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
             VolumeTerms&& volumeTerms)
 {
   using namespace boost::fusion;
-  using namespace detail;
+  using namespace Dune::detail;
 
   // Get the grid view from the finite element basis
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
