@@ -4,26 +4,28 @@
 namespace Dune {
 
 enum class DomainOfIntegration {
-    interior,
-    face,
+    interior, //!< integration over the interior of a cell
+    face,     //!< integration over the faces of a cell
     subface
 };
 
 enum class IntegrationType {
-    valueValue,
-    gradValue,
-    valueGrad,
-    gradGrad,
-    normalVector,
+    valueValue,   //!< v u
+    gradValue,    //!< ∇v ·  u
+    valueGrad,    //!<  v · ∇u
+    gradGrad,     //!< ∇v · ∇u
+    normalVector, //!< v u n · β, where n is the outer unit normal vector
     normalSign
 };
 
 enum class SpaceType {
-    test,
-    solution
+    test,     //!< a test space
+    solution  //!< a solution space
 };
 
+//! The saddlepoint formulation of a DPG system.
 struct SaddlepointFormulation {};
+//! The optimal test function formulation of a DPG system.
 struct DPGFormulation {};
 
 } // end namespace Dune

@@ -42,27 +42,37 @@
 namespace Dune {
 
   /**
-   * class BilinearForm
+   * \brief This class describes a bilinear form.
    *
-   * \tparam TSpaces     tuple of test spaces
-   * \tparam SolSpaces tuple of solution spaces
-   * \tparam BilinearTerms  tuple of IntegralTerm
+   * \tparam TSpaces         tuple of test spaces
+   * \tparam SolSpaces       tuple of solution spaces
+   * \tparam BilinearTerms   tuple of IntegralTerm
+   * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
    */
   template<class TSpaces, class SolSpaces, class BilinearTerms, class FormulationType>
   class BilinearForm
   {
   public:
+    //! tuple type of test spaces
     typedef TSpaces TestSpaces;
+    //! tuple type of solution spaces
     typedef SolSpaces SolutionSpaces;
+    //! tuple type for the local views of the test spaces
     typedef typename boost::fusion::result_of::as_vector<
         typename boost::fusion::result_of::
         transform<TestSpaces, detail::getLocalView>::type>::type TestLocalView;
+    //! tuple type for the local views of the solution spaces
     typedef typename boost::fusion::result_of::as_vector<
         typename boost::fusion::result_of::
         transform<SolutionSpaces, detail::getLocalView>::type
         >::type SolutionLocalView;
 
     BilinearForm () = delete;
+    /**
+     * \brief constructor for BilinearForm
+     *
+     * \note For your convenience, use make_BilinearForm() instead.
+     */
     constexpr BilinearForm (TestSpaces     testSpaces,
                             SolutionSpaces solutionSpaces,
                             BilinearTerms  terms)
@@ -73,8 +83,13 @@ namespace Dune {
                  solutionLocalView(nullptr)
     { };
 
-    /** Compute the stiffness matrix for a single element
-     *  \pre bind has to be called on the current element before. */
+    /**
+     * \brief Compute the stiffness matrix for a single element.
+     *
+     * \pre bind() has to be called on the current element before.
+     *
+     * \param[out] elementMatrix will hold the local system matrix
+     */
     template <class MatrixType>
     void getLocalMatrix(MatrixType& elementMatrix) const
     {
@@ -97,9 +112,28 @@ namespace Dune {
                        localSolutionSpaceOffsets));
     };
 
+    /**
+     * \brief Creates the occupation pattern for the system matrix.
+     *
+     * This creates an index set of all those entries of the system
+     * matrix that might be non-zero.
+     *
+     * \param nb  the matrix index set of the non-zero entries
+     * \param testShift      offset for the test space indices
+     * \param solutionShift  offset for the solution space indices
+     *
+     * \tparam mirror  if true, the indices additionally get written mirrored,
+     *                 this is used for the saddlepoint formulation
+     */
     template<bool mirror=false>
-    void getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift) const;
+    void getOccupationPattern(MatrixIndexSet& nb,
+                              size_t testShift, size_t solutionShift) const;
 
+    /**
+     * \brief Bind the BilinearForm to the given localViews.
+     *
+     * \pre The given localViews have to be bound to the same element.
+     */
     void bind(const TestLocalView& tlv, const SolutionLocalView& slv)
     {
       constexpr bool isSaddlepoint =
@@ -139,12 +173,21 @@ namespace Dune {
           + at_c<SolutionSize::value-1>(slv)->size();
     };
 
+    /**
+     * \brief Does exactly what it says on the tin.
+     */
     const TestSpaces& getTestSpaces() const
     { return testSpaces; };
 
+    /**
+     * \brief Does exactly what it says on the tin.
+     */
     const SolutionSpaces& getSolutionSpaces() const
     { return solutionSpaces; };
 
+    /**
+     * \brief Does exactly what it says on the tin.
+     */
     const BilinearTerms& getTerms() const
     {
       return terms;
@@ -154,9 +197,15 @@ namespace Dune {
     using SolutionSpaceIndexArray
         = size_t[std::tuple_size<SolutionSpaces>::value];
 
+    /**
+     * \brief Does exactly what it says on the tin.
+     */
     const TestSpaceIndexArray& getLocalTestSpaceOffsets() const
     { return localTestSpaceOffsets; };
 
+    /**
+     * \brief Does exactly what it says on the tin.
+     */
     const SolutionSpaceIndexArray& getLocalSolutionSpaceOffsets() const
     { return localSolutionSpaceOffsets; };
 
@@ -174,6 +223,14 @@ namespace Dune {
     SolutionLocalView* solutionLocalView;
   };
 
+/**
+ * \brief Creates a BilinearForm,
+ *        deducing the target type from the types of arguments.
+ *
+ * \param testSpaces     a tuple of test spaces
+ * \param solutionSpaces a tuple of solution spaces
+ * \param terms          a tuple of IntegralTerm
+ */
 template<class TestSpaces, class SolutionSpaces, class BilinearTerms>
 auto make_BilinearForm(TestSpaces     testSpaces,
                        SolutionSpaces solutionSpaces,

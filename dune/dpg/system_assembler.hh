@@ -142,12 +142,13 @@ struct getVolumeTermHelper
 } // end namespace detail
 
 /**
- * class SystemAssembler
+ * \brief This constructs the matrix and vector of a DPG system.
  *
  * \tparam TestSpaces     tuple of test spaces
  * \tparam SolutionSpaces tuple of solution spaces
  * \tparam BilinForm      bilinear form describing the system
  * \tparam InProduct      inner product of the test space
+ * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
  */
 template<class TestSpaces, class SolutionSpaces,
          class BilinForm, class InProduct,
@@ -155,13 +156,16 @@ template<class TestSpaces, class SolutionSpaces,
 class SystemAssembler
 {
 public:
+  //! tuple type for the local views of the test spaces
   typedef typename boost::fusion::result_of::as_vector<
       typename boost::fusion::result_of::
       transform<TestSpaces, detail::getLocalView>::type>::type TestLocalView;
+  //! tuple type for the local views of the solution spaces
   typedef typename boost::fusion::result_of::as_vector<
       typename boost::fusion::result_of::
       transform<SolutionSpaces, detail::getLocalView>::type
       >::type SolutionLocalView;
+  //! type of the bilinear form describing this DPG system
   typedef typename std::conditional<
         std::is_same<
              typename std::decay<FormulationType>::type
@@ -172,6 +176,7 @@ public:
                           BilinForm, TestSpaces, FormulationType
                          >::type
       >::type BilinearForm;
+  //! type of the inner product on the test spaces
   typedef typename std::conditional<
         std::is_same<
              typename std::decay<FormulationType>::type
@@ -182,6 +187,11 @@ public:
       >::type InnerProduct;
 
   SystemAssembler () = delete;
+  /**
+   * \brief constructor for SystemAssembler
+   *
+   * \note For your convenience, use make_SystemAssembler() instead.
+   */
   constexpr SystemAssembler (TestSpaces     testSpaces,
                              SolutionSpaces solutionSpaces,
                              BilinForm      bilinearForm,
@@ -195,11 +205,35 @@ public:
                                               innerProduct.getTerms()))
   { };
 
+  /**
+   * \brief Assemble the DPG system for a given rhs function.
+   *
+   * Given a tuple of right hand side functions \p volumeTerms,
+   * this assembles the matrix and vector of the corresponding
+   * DPG system. \p matrix and \p rhs will be overwritten by this
+   * function.
+   *
+   * \param[out] matrix      the matrix of the DPG system
+   * \param[out] rhs         the rhs vector of the DPG system
+   * \param[in]  volumeTerms the rhs functions describing the DPG system
+   * \tparam     VolumeTerms a tuple type of rhs functions
+   */
   template <class VolumeTerms>
   void assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                       BlockVector<FieldVector<double,1> >& rhs,
                       VolumeTerms&& volumeTerms);
 
+  /**
+   * \brief Apply Dirichlet boundary values on a test space
+   *
+   * \param[in,out] matrix      the matrix of the DPG system
+   * \param[in,out] rhs         the rhs vector of the DPG system
+   * \param[in] dirichletNodes  true marks the dofs in the Dirichlet boundary
+   * \param[in] value           the Dirichlet boundary value
+   * \tparam spaceIndex  the index of the test space on which we apply
+   *                     the boundary data
+   * \tparam ValueType   we take either constants or functions for \p value
+   */
   template <size_t spaceIndex, class ValueType>
   void applyDirichletBoundaryTest(
                               BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
@@ -207,6 +241,17 @@ public:
                               const std::vector<bool>& dirichletNodes,
                               const ValueType& value);
 
+  /**
+   * \brief Apply Dirichlet boundary values on a solution space
+   *
+   * \param[in,out] matrix      the matrix of the DPG system
+   * \param[in,out] rhs         the rhs vector of the DPG system
+   * \param[in] dirichletNodes  true marks the dofs in the Dirichlet boundary
+   * \param[in] value           the Dirichlet boundary value
+   * \tparam spaceIndex  the index of the solution space on which we apply
+   *                     the boundary data
+   * \tparam ValueType   we take either constants or functions for \p value
+   */
   template <size_t spaceIndex, class ValueType>
   void applyDirichletBoundarySolution(
                               BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
@@ -214,15 +259,22 @@ public:
                               const std::vector<bool>& dirichletNodes,
                               const ValueType& value);
 
+  /**
+   * \brief Does exactly what it says on the tin.
+   */
   const TestSpaces& getTestSpaces() const
   { return testSpaces; };
 
+  /**
+   * \brief Does exactly what it says on the tin.
+   */
   const SolutionSpaces& getSolutionSpaces() const
   { return solutionSpaces; };
 
 private:
 
-  template <SpaceType spaceType, size_t spaceIndex, class ValueType, class Spaces>
+  template <SpaceType spaceType, size_t spaceIndex,
+            class ValueType, class Spaces>
   void applyDirichletBoundaryImpl(
                        BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                        BlockVector<FieldVector<double,1> >& rhs,
@@ -236,6 +288,16 @@ private:
   InnerProduct   innerProduct;
 };
 
+/**
+ * \brief Creates a SystemAssembler,
+ *        deducing the target type from the types of arguments.
+ *
+ * \param testSpaces     a tuple of test spaces
+ * \param solutionSpaces a tuple of solution spaces
+ * \param bilinearForm   the bilinear form describing the DPG system
+ * \param innerProduct   the inner product of the test spaces
+ * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
+ */
 template<class TestSpaces, class SolutionSpaces,
          class BilinearForm, class InnerProduct,
          class FormulationType>

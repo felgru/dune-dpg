@@ -42,21 +42,28 @@
 namespace Dune {
 
   /**
-   * class InnerProduct
+   * \brief This class describes an inner product.
    *
-   * \tparam TSpaces         tuple of test spaces
+   * \tparam TSpaces            tuple of test spaces
    * \tparam InnerProductTerms  tuple of IntegralTerm
    */
   template<class TSpaces, class InnerProductTerms>
   class InnerProduct
   {
   public:
+    //! tuple type of test spaces
     typedef TSpaces TestSpaces;
+    //! tuple type for the local views of the test spaces
     typedef typename boost::fusion::result_of::as_vector<
         typename boost::fusion::result_of::
         transform<TestSpaces, detail::getLocalView>::type>::type TestLocalView;
 
     InnerProduct () = delete;
+    /**
+     * \brief constructor for InnerProduct
+     *
+     * \note For your convenience, use make_InnerProduct() instead.
+     */
     constexpr InnerProduct (TestSpaces        testSpaces,
                             InnerProductTerms terms)
                : testSpaces(testSpaces),
@@ -64,8 +71,13 @@ namespace Dune {
                  testLocalView(nullptr)
     { };
 
-    /** Compute the stiffness matrix for a single element
-     *  \pre bind has to be called on the current element before. */
+    /**
+     * \brief Compute the stiffness matrix for a single element.
+     *
+     * \pre bind() has to be called on the current element before.
+     *
+     * \param[out] elementMatrix will hold the local system matrix
+     */
     template <class MatrixType>
     void getLocalMatrix(MatrixType& elementMatrix) const
     {
@@ -88,8 +100,21 @@ namespace Dune {
                        localTestSpaceOffsets));
     };
 
+    /**
+     * \brief Creates the occupation pattern for the system matrix.
+     *
+     * This creates an index set of all those entries of the system
+     * matrix that might be non-zero.
+     *
+     * \param nb  the matrix index set of the non-zero entries
+     */
     void getOccupationPattern(MatrixIndexSet& nb) const;
 
+    /**
+     * \brief Bind the InnerProduct to the given localViews.
+     *
+     * \pre The given localViews have to be bound to the same element.
+     */
     void bind(const TestLocalView& tlv)
     {
       testLocalView = const_cast<TestLocalView*>(std::addressof(tlv));
@@ -106,9 +131,15 @@ namespace Dune {
           + at_c<TestSize::value-1>(tlv)->size();
     };
 
+    /**
+     * \brief Does exactly what it says on the tin.
+     */
     const TestSpaces& getTestSpaces() const
     { return testSpaces; };
 
+    /**
+     * \brief Does exactly what it says on the tin.
+     */
     const InnerProductTerms& getTerms() const
     {
       return terms;
@@ -122,6 +153,13 @@ namespace Dune {
     TestLocalView*     testLocalView;
   };
 
+/**
+ * \brief Creates an InnerProduct,
+ *        deducing the target type from the types of arguments.
+ *
+ * \param testSpaces  a tuple of test spaces
+ * \param terms       a tuple of IntegralTerm
+ */
 template<class TestSpaces, class InnerProductTerms>
 auto make_InnerProduct(TestSpaces        testSpaces,
                        InnerProductTerms terms)

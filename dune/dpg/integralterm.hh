@@ -25,8 +25,16 @@
 namespace Dune {
 
   /**
-   * class IntegralTerm
+   * \brief This class describes an integral term.
    *
+   * This is the essential building block from which BilinearForm and
+   * InnerProduct are built.
+   *
+   * \tparam integrationType  the form of the integrand
+   * \tparam domainOfIntegration
+   * \tparam FactorType     the type of the factor with which
+   *                        we multiply the integrand
+   * \tparam DirectionType  the type of the transport directions
    */
   template <IntegrationType type,
             DomainOfIntegration domain_of_integration,
@@ -38,6 +46,11 @@ namespace Dune {
 
     IntegralTerm () = delete;
 
+    /**
+     * \brief constructor for IntegralTerm
+     *
+     * \note For your convenience, use make_IntegralTerm() instead.
+     */
     IntegralTerm (FactorType factor = 1,
                   DirectionType lhsBeta = {1,1},
                   DirectionType rhsBeta = {1,1})
@@ -46,7 +59,20 @@ namespace Dune {
           rhsBeta(rhsBeta)
     {};
 
-    /** Compute the stiffness matrix for a single element */
+    /**
+     * \brief Compute the stiffness matrix for a single element.
+     *
+     * The local integrals will be added with the given offsets
+     * to \p elementMatrix.
+     *
+     * \pre The localViews have to be bound to the same element.
+     *
+     * \param[in]     lhsLocalView    local view of the left space
+     * \param[in]     lhsLocalView    local view of the right space
+     * \param[in,out] elementMatrix   the local system matrix
+     * \param         lhsSpaceOffset  row offset for the left space
+     * \param         rhsSpaceOffset  column offset for the right space
+     */
     template <class LhsLocalView,
               class RhsLocalView,
               class MatrixType>
@@ -64,6 +90,17 @@ namespace Dune {
 
   };
 
+/**
+ * \brief Creates a Tuple of an IntegralTerm and the indices
+ *        of both spaces involved.
+ *
+ * \param c  the factor with which we multiply the integrand
+ * \tparam lhsSpaceIndex the index of the left space
+ * \tparam rhsSpaceIndex the index of the right space
+ * \tparam integrationType  the form of the integrand
+ * \tparam domainOfIntegration
+ * \tparam FactorType  the type of the factor \p c
+ */
 template<size_t lhsSpaceIndex,
          size_t rhsSpaceIndex,
          IntegrationType integrationType,
@@ -87,6 +124,19 @@ auto make_IntegralTerm(FactorType c)
           IntegralTerm<integrationType, domainOfIntegration, FactorType>(c));
 }
 
+/**
+ * \brief Creates a Tuple of an IntegralTerm and the indices
+ *        of both spaces involved.
+ *
+ * \param c     the factor with which we multiply the integrand
+ * \param beta  the transport direction
+ * \tparam lhsSpaceIndex the index of the left space
+ * \tparam rhsSpaceIndex the index of the right space
+ * \tparam integrationType  the form of the integrand
+ * \tparam domainOfIntegration
+ * \tparam FactorType     the type of the factor \p c
+ * \tparam DirectionType  the type of the transport direction \p beta
+ */
 template<size_t lhsSpaceIndex,
          size_t rhsSpaceIndex,
          IntegrationType integrationType,
@@ -113,6 +163,20 @@ auto make_IntegralTerm(FactorType c, DirectionType beta)
                        FactorType, DirectionType>(c, beta, beta));
 }
 
+/**
+ * \brief Creates a Tuple of an IntegralTerm and the indices
+ *        of both spaces involved.
+ *
+ * \param c        the factor with which we multiply the integrand
+ * \param lhsbeta  the transport direction for the left space
+ * \param rhsbeta  the transport direction for the right space
+ * \tparam lhsSpaceIndex the index of the left space
+ * \tparam rhsSpaceIndex the index of the right space
+ * \tparam integrationType  the form of the integrand
+ * \tparam domainOfIntegration
+ * \tparam FactorType     the type of the factor \p c
+ * \tparam DirectionType  the type of the transport directions
+ */
 template<size_t lhsSpaceIndex,
          size_t rhsSpaceIndex,
          IntegrationType integrationType,
