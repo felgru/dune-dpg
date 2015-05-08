@@ -12,6 +12,8 @@
  * change our procedures later. */
 #define BOOST_FUSION_INVOKE_PROCEDURE_MAX_ARITY 10
 
+#include <boost/mpl/identity.hpp>
+#include <boost/mpl/range_c.hpp>
 #include <boost/mpl/set.hpp>
 #include <boost/mpl/transform.hpp>
 
@@ -259,6 +261,12 @@ public:
                               const std::vector<bool>& dirichletNodes,
                               const ValueType& value);
 
+  template <size_t spaceIndex, unsigned int dim>
+  void applyWeakBoundaryCondition(
+                              BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                              FieldVector<double, dim> beta,
+                              double c);
+
   /**
    * \brief Does exactly what it says on the tin.
    */
@@ -431,7 +439,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
           typename result_of::as_vector<typename std::remove_reference<
                 decltype(bilinearForm.getTerms())>::type
               >::type
-        , firstTwo::mpl<boost::mpl::_1>
+        , mpl::firstTwo<boost::mpl::_1>
         >::type
     , boost::mpl::set0<>
     , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
@@ -441,7 +449,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
           typename result_of::as_vector<typename std::remove_reference<
                 decltype(innerProduct.getTerms())>::type
               >::type
-        , firstTwo::mpl<boost::mpl::_1>
+        , mpl::firstTwo<boost::mpl::_1>
         >::type
     , boost::mpl::set0<>
     , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
@@ -510,12 +518,28 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                                        decltype(testZip),
                                        decltype(cp)>
                                       (testZip, testZip, std::ref(cp)));
+      for_each(bfIndices,
+               localToGlobalCopyHelper<decltype(solutionZip),
+                                       decltype(testZip),
+                                       decltype(cpm)>
+                                      (solutionZip, testZip, std::ref(cpm)));
+    } else {
+      typedef
+          typename boost::mpl::transform<
+              typename result_of::as_vector<typename boost::mpl::range_c<
+                                  size_t,0,std::tuple_size<SolutionSpaces
+                               >::value>::type
+                  >::type
+            , mpl::tupleOf0And<boost::mpl::_1>
+            >::type BFIndices;
+
+      auto bfIndices = BFIndices{};
+      for_each(bfIndices,
+               localToGlobalCopyHelper<decltype(solutionZip),
+                                       decltype(testZip),
+                                       decltype(cpm)>
+                                      (solutionZip, testZip, std::ref(cpm)));
     }
-    for_each(bfIndices,
-             localToGlobalCopyHelper<decltype(solutionZip),
-                                     decltype(testZip),
-                                     decltype(cpm)>
-                                    (solutionZip, testZip, std::ref(cpm)));
 
     // Now get the local contribution to the right-hand side vector
     BlockVector<FieldVector<double,1> >
@@ -531,6 +555,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                                                  localVolumeTerms)),
              getVolumeTermHelper());
 
+    /* TODO: This will break with more than 1 test space having a rhs! */
     auto cpr = fused_procedure<localToGlobalRHSCopier<
                         typename remove_reference<decltype(rhs)>::type> >
                     (localToGlobalRHSCopier<
@@ -687,6 +712,116 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
   }
 };
+
+template<class TestSpaces, class SolutionSpaces,
+         class BilinearForm, class InnerProduct,
+         class FormulationType>
+template <size_t spaceIndex, unsigned int dim>
+void SystemAssembler<TestSpaces, SolutionSpaces,
+                     BilinearForm, InnerProduct, FormulationType>::
+applyWeakBoundaryCondition
+                    (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                     FieldVector<double, dim> beta,
+                     double c)
+{
+  using namespace boost::fusion;
+  using namespace Dune::detail;
+
+  static_assert(std::is_same<
+             typename std::decay<FormulationType>::type
+           , DPGFormulation
+                            >::value,
+                "applyWeakBoundaryConditions not implemented "
+                "for Saddlepointformulation ");
+
+  // Get the grid view from the finite element basis
+  typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
+  GridView gridView = std::get<0>(testSpaces).gridView();
+
+  // get global solution Space Offsets
+  auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
+                                                     getIndexSet()));
+
+  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+  fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
+       0, globalOffsetHelper());
+  size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
+  // get local view and local index set for the spaceIndex'th solution space
+  auto localView = std::get<spaceIndex>(solutionSpaces).localView();
+  typedef decltype(localView) LocalView;
+  auto localIndexSet = at_c<spaceIndex>(solutionBasisIndexSet).localIndexSet();
+
+  for(const auto& e : elements(gridView))
+  {
+    localView.bind(e);
+    localIndexSet.bind(localView);
+
+    const auto& localFiniteElement = localView.tree().finiteElement();
+
+    int order = 2*(dim*localFiniteElement.localBasis().order()-1);
+
+    size_t n = localFiniteElement.localBasis().size();
+
+    Matrix<FieldMatrix<double,1,1> > elementMatrix;
+    // Set all matrix entries to zero
+    elementMatrix.setSize(n,n);
+    elementMatrix = 0;      // fills the entire matrix with zeroes
+
+    for (auto&& intersection : intersections(gridView, e))
+    {
+      if (intersection.boundary()) //if the intersection is at the (physical) boundary of the domain
+      {
+        const FieldVector<double,dim>& centerOuterNormal =
+                intersection.centerUnitOuterNormal();
+
+        if ((beta*centerOuterNormal) > -1e-10) //everywhere except inflow boundary
+        {
+          const QuadratureRule<double, dim-1>& quadFace =
+                  QuadratureRules<double, dim-1>::rule(intersection.type(), order);
+
+          for (size_t pt=0; pt < quadFace.size(); pt++)
+          {
+            // Position of the current quadrature point in the reference element (face!)
+            const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
+
+            const double integrationElement = intersection.geometry().integrationElement(quadFacePos);
+
+            // position of the quadrature point within the element
+            const FieldVector<double,dim> elementQuadPos =
+                intersection.geometryInInside().global(quadFacePos);
+
+            // values of the shape functions
+            std::vector<FieldVector<double,1> > solutionValues;
+            localFiniteElement.localBasis().evaluateFunction(elementQuadPos,
+                                                        solutionValues);
+            for (size_t i=0; i<n; i++)
+            {
+              for (size_t j=0; j<n; j++)
+              {
+                elementMatrix[i][j]
+                        += (c * solutionValues[i] * solutionValues[j])
+                           * quadFace[pt].weight() * integrationElement;
+              }
+            }
+
+          }
+        }
+      }
+    }
+    for (size_t i=0; i<n; i++)
+    {
+      auto row = localIndexSet.index(i)[0];
+      for (size_t j=0; j<n; j++)
+      {
+        auto col = localIndexSet.index(j)[0];
+        matrix[row+globalOffset][col+globalOffset]
+                        += elementMatrix[i][j];
+
+      }
+    }
+  }
+};
+
 
 } // end namespace Dune
 

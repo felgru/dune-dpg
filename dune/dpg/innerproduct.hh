@@ -201,7 +201,7 @@ getOccupationPattern(MatrixIndexSet& nb) const
           /* This as_vector is probably not needed for boost::fusion 1.58
            * or higher. */
           typename result_of::as_vector<InnerProductTerms>::type
-        , firstTwo::mpl<boost::mpl::_1>
+        , mpl::firstTwo<boost::mpl::_1>
         >::type
     , boost::mpl::set0<>
     , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>

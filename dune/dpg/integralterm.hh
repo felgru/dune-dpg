@@ -361,12 +361,12 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
             intersection.integrationOuterNormal(quadFacePos);
 
     // The multiplicative factor in the integral transformation formula -
-    // TODO this way, the computation is absolutely inefficient!
-    const double integrationElement = integrationOuterNormal.two_norm();
-   //const double integrationElement = intersection.geometry().integrationElement(quadFacePos); TODO ???
+    const double integrationElement = intersection.geometry().integrationElement(quadFacePos);
+    //const double integrationElement = integrationOuterNormal.two_norm();
 
    const FieldVector<double,dim>& centerOuterNormal =
             intersection.centerUnitOuterNormal();
+
 
     int sign = 1;
     bool signfound = false;
@@ -374,18 +374,17 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
          i<centerOuterNormal.size() and signfound == false;
          i++)
     {
-      if (centerOuterNormal[i]<0)
+      if (centerOuterNormal[i]<(-1e-10))
       {
         sign = -1;
         signfound = true;
       }
-      else if (centerOuterNormal[i]>0)
+      else if (centerOuterNormal[i]>(1e-10))
       {
         sign = 1;
         signfound = true;
       }
     }
-
 
                 // position of the quadrature point within the element
     const FieldVector<double,dim> elementQuadPos =

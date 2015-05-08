@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <vector>
+#include <ctime>
 #define FUSION_MAX_VECTOR_SIZE 15
 
 #include <dune/common/exceptions.hh> // We use exceptions
@@ -43,6 +44,7 @@
 #include <dune/dpg/system_assembler.hh>
 
 
+
 using namespace Dune;
 
 
@@ -80,7 +82,7 @@ void boundaryTreatmentInflow (const FEBasis& feBasis,
   }
 }
 
-template <class FEBasis>
+/*template <class FEBasis>
 void boundaryTreatment (const FEBasis& feBasis,
                         std::vector<bool>& dirichletNodes )
 {
@@ -107,7 +109,7 @@ void boundaryTreatment (const FEBasis& feBasis,
 
       dirichletNodes[i] = true;
   }
-}
+}*/
 
 
 int main(int argc, char** argv)
@@ -116,17 +118,21 @@ int main(int argc, char** argv)
   ///////////////////////////////////
   //   Generate the grid
   ///////////////////////////////////
+  time_t tstart, tassembled, tsolved;
+  tstart = time(0);
 
   const int dim = 2;
   typedef UGGrid<dim> GridType;
 
+  int nelements =atoi(argv[1]);
+
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
-  array<unsigned int,dim> elements = {8,8};
+  array<unsigned int,dim> elements = {nelements,nelements};
 
-  //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+  shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
-  shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+  //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
   //shared_ptr<GridType> grid = shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh"));
 
@@ -145,7 +151,7 @@ int main(int argc, char** argv)
 //  FEBasisSigma feBasisSigma2(gridView);
 
   typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
-//  FEBasisTrace feBasisTrace(gridView);
+  FEBasisTrace feBasisTrace(gridView);
 
   typedef Functions::PQKFaceNodalBasis<GridView, 2> FEBasisFace; // sigma_n^
 //  FEBasisFace feBasisFace(gridView);
@@ -156,9 +162,9 @@ int main(int argc, char** argv)
                                         FEBasisTrace(gridView),
                                         FEBasisFace(gridView));
 
-  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestV;   // v enriched
+  typedef Functions::LagrangeDGBasis<GridView, 5> FEBasisTestV;   // v enriched
 
-  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestTau; // tau enriched
+  typedef Functions::LagrangeDGBasis<GridView, 5> FEBasisTestTau; // tau enriched
   auto testSpaces = std::make_tuple(FEBasisTestV(gridView),
                                     FEBasisTestTau(gridView),
                                     FEBasisTestTau(gridView));
@@ -167,10 +173,12 @@ int main(int argc, char** argv)
     typedef decltype(solutionSpaces) SolutionSpaces;  // solutionSpaces =
                                                       // (u, sigma1, sigma2, u^, sigma_n^)
 
-  FieldVector<double, dim> beta = {2,1};
-  double c = 0;
-  double epsilon = 0.025;
+  FieldVector<double, dim> beta = {1,1};
+  double c = 1;
+  double epsilon = 5*1e-2;
   double sqrtepsilon = std::sqrt(epsilon);
+  double mu = 1;
+  std::cout <<"c = " << c <<" epsilon = " <<epsilon <<" sqrtepsilon = " << sqrtepsilon << " beta = [" << beta[0] <<"," << beta[1] <<"] mu = " <<mu <<std::endl;
 
   FieldVector<double, dim> firstcomponent = {1,0};
   FieldVector<double, dim> secondcomponent = {0,1};
@@ -196,11 +204,11 @@ int main(int argc, char** argv)
               make_IntegralTerm<0,3,IntegrationType::normalVector,              // <u^, beta n v>
                                     DomainOfIntegration::face>(1, beta),
               make_IntegralTerm<1,3,IntegrationType::normalVector,              // <u^, n_1 tau1>
-                                    DomainOfIntegration::face>(-sqrtepsilon, firstcomponent),
+                                    DomainOfIntegration::face>((-1*sqrtepsilon), firstcomponent),
               make_IntegralTerm<2,3,IntegrationType::normalVector,              // <u^, n_2 tau2>
-                                    DomainOfIntegration::face>(-sqrtepsilon, secondcomponent),
+                                    DomainOfIntegration::face>((-1*sqrtepsilon), secondcomponent),
               make_IntegralTerm<0,4,IntegrationType::normalSign,              // <sigma^ sgn(n), v>
-                                    DomainOfIntegration::face>(-sqrtepsilon)
+                                    DomainOfIntegration::face>((-1*sqrtepsilon))
           ));
   auto innerProduct = make_InnerProduct(testSpaces,
           make_tuple(
@@ -219,13 +227,16 @@ int main(int argc, char** argv)
               make_IntegralTerm<1,1,IntegrationType::gradGrad,              // epsilon (dx_1 tau1,dx_1 tau1)
                                     DomainOfIntegration::interior>(epsilon, firstcomponent),
               make_IntegralTerm<2,2,IntegrationType::gradGrad,              // epsilon (dx_2 tau2,dx_2 tau2)
-                                    DomainOfIntegration::interior>(epsilon, secondcomponent)));
-
-//              make_IntegralTerm<1,2,IntegrationType::gradGrad,              // 2 epsilon (dx_1 tau1, dx_2 tau2)
-//                                    DomainOfIntegration::interior>(2*epsilon,
-//                                                                   firstcomponent,
-//                                                                   secondcomponent),  //TODO beta1, beta2
-//          ));
+                                    DomainOfIntegration::interior>(epsilon, secondcomponent),
+              make_IntegralTerm<1,2,IntegrationType::gradGrad,              // epsilon (dx_1 tau1, dx_2 tau2)
+                                    DomainOfIntegration::interior>(epsilon,
+                                                                   firstcomponent,
+                                                                   secondcomponent),
+              make_IntegralTerm<2,1,IntegrationType::gradGrad,              // epsilon (dx_2 tau2, dx_1 tau1)
+                                    DomainOfIntegration::interior>(epsilon,
+                                                                   secondcomponent,
+                                                                   firstcomponent)
+          ));
 
     typedef decltype(bilinearForm) BilinearForm;
     typedef decltype(innerProduct) InnerProduct;
@@ -239,9 +250,10 @@ int main(int argc, char** argv)
 
   auto optimalTestSpaces = make_tuple(feBasisTest0, feBasisTest1, feBasisTest2);
 
-  auto systemAssembler = make_SystemAssembler(optimalTestSpaces, solutionSpaces,
+  auto systemAssembler = make_SystemAssembler(optimalTestSpaces, solutionSpaces,    //DPG
           bilinearForm, innerProduct, DPGFormulation());
-
+//  auto systemAssembler = make_SystemAssembler(testSpaces, solutionSpaces,    //Saddlepoint
+//          bilinearForm, innerProduct, SaddlepointFormulation());
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
   /////////////////////////////////////////////////////////
@@ -264,10 +276,54 @@ int main(int argc, char** argv)
                                        [] (const Domain& x) { return 0;});
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
-  // Determine Dirichlet dofs for u^ (whole boundary)
+/*  std::ofstream filesymwobc("matrixsymmetrywithoutbc_test.txt");
+  filesymwobc <<"Stiffness Matrix (without BC) Symmetry:" <<std::endl;
+  for (unsigned int i=0; i<stiffnessMatrix.N(); i++)
+  {
+    for (unsigned int j=0; j<stiffnessMatrix.M(); j++)
+    {
+      if (stiffnessMatrix.exists(i,j))
+      {
+        if ((stiffnessMatrix.entry(i,j)-stiffnessMatrix.entry(j,i))>1e-8 or
+            (stiffnessMatrix.entry(i,j)-stiffnessMatrix.entry(j,i))<-1e-8)
+        {
+          filesymwobc << " 1 ";
+        }
+        else
+        {
+          if (stiffnessMatrix.entry(i,j)>1e-8 or stiffnessMatrix.entry(i,j)<-1e-8)
+          {
+            filesymwobc << " 0 ";
+          }
+          else
+          {
+            filesymwobc << " . ";
+          }
+        }
+      }
+      else
+      {
+        filesymwobc << "   ";
+      }
+    }
+    filesymwobc <<std::endl;
+  }*/
+
+//std::ofstream file2("matrixwithoutbc_test.txt");
+//printmatrix(file2 , stiffnessMatrix, "matrix", "--");
+  // Set weak boundary conditions for u^ (outflow boundary)
+  systemAssembler.applyWeakBoundaryCondition<3,2>
+                    (stiffnessMatrix,
+                     beta,
+                     mu);
+
+//std::ofstream file1("matrixweakbc.txt");
+//printmatrix(file1 , stiffnessMatrix, "matrix", "--");
+
+  // Determine Dirichlet dofs for u^ (inflow boundary)
   {
     std::vector<bool> dirichletNodesInflow;
-    boundaryTreatment(std::get<3>(solutionSpaces),
+    boundaryTreatmentInflow(std::get<3>(solutionSpaces),
                             dirichletNodesInflow);
     systemAssembler.applyDirichletBoundarySolution<3,double>
         (stiffnessMatrix,
@@ -276,7 +332,55 @@ int main(int argc, char** argv)
          0.);
   }
 
-//printmatrix(std::cout , stiffnessMatrix, "stiffness2", "--");
+  tassembled = time(0);
+
+/*  bool issymmetric = true;
+  std::ofstream filesym("matrixsymmetry.txt");
+  filesym <<"Stiffness Matrix Symmetry:" <<std::endl;
+  for (unsigned int i=0; i<stiffnessMatrix.N(); i++)
+  {
+    for (unsigned int j=0; j<stiffnessMatrix.M(); j++)
+    {
+      if (stiffnessMatrix.exists(i,j))
+      {
+        if ((stiffnessMatrix.entry(i,j)-stiffnessMatrix.entry(j,i))>1e-8 or
+            (stiffnessMatrix.entry(i,j)-stiffnessMatrix.entry(j,i))<-1e-8)
+        {
+          issymmetric = false;
+          filesym << " 1 ";
+        }
+        else
+        {
+          if (stiffnessMatrix.entry(i,j)>1e-8 or stiffnessMatrix.entry(i,j)<-1e-8)
+          {
+            filesym << " 0 ";
+          }
+          else
+          {
+            filesym << " . ";
+          }
+        }
+      }
+      else
+      {
+        filesym << "   ";
+      }
+    }
+    filesym <<std::endl;
+  }
+  std::cout <<"is symmetric = " <<issymmetric <<std::endl; */
+
+//std::ofstream file("matrix.txt");
+//printmatrix(file , stiffnessMatrix, "matrix", "--");
+
+//printmatrix(std::cout , stiffnessMatrix, "matrix", "--");
+
+//file <<"rhs = " <<std::endl;
+//for (unsigned int i=0; i<rhs.size(); i++)
+//  file <<rhs[i] <<std::endl;
+
+//  writeMatrixToMatlab(stiffnessMatrix, "stiffnessMatrix");
+
   ////////////////////////////
   //   Compute solution
   ////////////////////////////
@@ -287,12 +391,15 @@ int main(int argc, char** argv)
             <<" matrix size = " << stiffnessMatrix.N() <<" x " << stiffnessMatrix.M()
             <<" solution size = "<< x.size() <<std::endl;
 
-//  writeMatrixToMatlab(stiffnessMatrix, "TestMatrix1cell");
 
 //#if 0
   UMFPack<MatrixType> umfPack(stiffnessMatrix, 2);
   InverseOperatorResult statistics;
   umfPack.apply(x, rhs, statistics);
+
+  tsolved = time(0);
+
+  std::cout <<"It took " << difftime(tassembled, tstart) <<" seconds to assemble the matrix and " << difftime (tsolved, tassembled) << " seconds to solve it." <<std::endl;
 //#endif
 
 #if 0
@@ -322,13 +429,16 @@ int main(int argc, char** argv)
   //  Make a discrete function from the FE basis and the coefficient vector
   ////////////////////////////////////////////////////////////////////////////
 
-
+  unsigned int shift = 0;
+  //shift+= std::get<0>(testSpaces).indexSet().size();  //Saddlepoint TODO here for 3 testSpaces
+  //shift+= std::get<1>(testSpaces).indexSet().size();  //Saddlepoint TODO here for 3 testSpaces
+  //shift+= std::get<2>(testSpaces).indexSet().size();  //Saddlepoint TODO here for 3 testSpaces
 
   VectorType u(std::get<0>(solutionSpaces).indexSet().size());
   u=0;
   for (unsigned int i=0; i<std::get<0>(solutionSpaces).indexSet().size(); i++)
   {
-    u[i] = x[i];
+    u[i] = x[shift+i];
   }
 
 //  VectorType uhat(feBasisInterior.indexSet().size());
@@ -352,11 +462,11 @@ int main(int argc, char** argv)
   //////////////////////////////////////////////////////////////////////////////////////////////
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
   vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("solution_convdiff_interior_simplexGrid_40");
+  vtkWriter.write("convdiff_cube_"+ std::to_string(nelements));
 
 //  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-//  vtkWriter.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
-//  vtkWriter.write("solution_transport_trace");
+//  vtkWriter1.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
+//  vtkWriter1.write("solution_transport_trace");
 
 //#endif
 
@@ -379,6 +489,28 @@ int main(int argc, char** argv)
     SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
     vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("testfkt", VTK::FieldInfo::Type::scalar, 1));
     vtkWriter.write("optimal_testfunction_irregGrid_"+ std::to_string(idx));
+  }
+# endif
+
+# if 0
+  VectorType sol(feBasisTrace.indexSet().size());
+  for(unsigned int idx = 0; idx<feBasisTrace.indexSet().size(); idx++)
+  {
+    sol=0;
+  //int idx = 1;
+  //int idx =atoi(argv[1]);
+    sol[idx]=1;
+
+  //std::cout << u << std::endl;
+    Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace),decltype(sol)> uhatbasisFunction(feBasisTrace,sol);
+    auto localUhatbasisFunction = localFunction(uhatbasisFunction);
+  //////////////////////////////////////////////////////////////////////////////////////////////
+  //  Write result to VTK file
+  //  We need to subsample, because VTK cannot natively display real second-order functions
+  //////////////////////////////////////////////////////////////////////////////////////////////
+    SubsamplingVTKWriter<GridView> vtkWriterUhatbasis(gridView,2);
+    vtkWriterUhatbasis.addVertexData(localUhatbasisFunction, VTK::FieldInfo("uhatbasisfkt", VTK::FieldInfo::Type::scalar, 1));
+    vtkWriterUhatbasis.write("basisfunction_uhat_"+ std::to_string(idx));
   }
 # endif
 

@@ -339,38 +339,6 @@ private:
   Dune::MatrixIndexSet& nb;
 };
 
-/* TODO: maybe we could use boost::fusion::pop_back instead? */
-struct firstTwo
-{
-  template<class R>
-  struct result;
-
-  template<class Seq>
-  struct result<firstTwo(Seq)>
-  {
-    template <size_t i>
-    using type_at = typename std::remove_reference<
-        typename boost::fusion::result_of::at_c<Seq,i>::type>::type;
-
-    typedef std::tuple<type_at<0>, type_at<1> > type;
-  };
-
-  /* TODO: This hack is necessary, as I don't know how to call
-   *       result_of as an MPL metafunction. */
-  template<class Seq>
-  struct mpl
-  {
-    typedef typename result<firstTwo(Seq)>::type type;
-  };
-
-  template<class Seq>
-  typename result<firstTwo(Seq)>::type operator()(const Seq& s) const
-  {
-    using boost::fusion::at_c;
-    return make_tuple(at_c<0>(s), at_c<1>(s));
-  };
-};
-
 template<class LocalMatrix, class GlobalMatrix,
          bool mirror = false>
 struct localToGlobalCopier
@@ -614,6 +582,25 @@ struct getLocalFiniteElement
         return t->tree().finiteElement();
     };
 };
+
+
+namespace mpl {
+  template<class Seq>
+  struct firstTwo
+  {
+    template <size_t i>
+    using type_at = typename std::remove_reference<
+        typename boost::fusion::result_of::at_c<Seq,i>::type>::type;
+
+    typedef std::tuple<type_at<0>, type_at<1> > type;
+  };
+
+  template<class T>
+  struct tupleOf0And
+  {
+    typedef std::tuple<std::integral_constant<size_t,0>, T> type;
+  };
+}
 
 } } // end namespace Dune::detail
 

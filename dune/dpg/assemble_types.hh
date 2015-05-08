@@ -5,8 +5,7 @@ namespace Dune {
 
 enum class DomainOfIntegration {
     interior, //!< integration over the interior of a cell
-    face,     //!< integration over the faces of a cell
-    subface
+    face      //!< integration over the faces of a cell
 };
 
 enum class IntegrationType {
