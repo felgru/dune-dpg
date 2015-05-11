@@ -31,6 +31,7 @@
 
 #include <dune/dpg/system_assembler.hh>
 #include <dune/dpg/errortools.hh>
+#include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/rhs_assembler.hh>
 
 #include <dune/grid/uggrid.hh>   // for triangular meshes that are locally adaptive
@@ -62,28 +63,49 @@ void boundaryTreatmentInflow (const FEBasis& feBasis,
 
   dirichletNodes.resize(lagrangeNodes.size());
 
+  //std::cout<< lagrangeNodes.size() << std::endl;
+
   // Mark all Lagrange nodes on the bounding box as Dirichlet
   for (size_t i=0; i<lagrangeNodes.size(); i++)
   {
     bool isBoundary = false;
     for (int j=0; j<dim; j++)
+    {
+      //std::cout << "lagrangeNodes["<<i <<"]["<<j <<"]="<< lagrangeNodes[i][j] << std::endl;
       isBoundary = isBoundary || lagrangeNodes[i][j] < 1e-8;
+    }
 
     if (isBoundary)
-
       dirichletNodes[i] = true;
+
+    std::cout << dirichletNodes[i] << std::endl;
   }
+
 }
 
 
 // The right-hand side explicit expression
 double fieldRHS(const Dune::FieldVector<double, 2>& x) {
-  return 3*std::exp(x[0]+x[1])-2*(std::exp(x[0])+std::exp(x[1]))+1  ;
+
+  double beta0 = -1.;
+  double beta1 = -1.;
+
+  double c0 = 1.;
+  double c1 = 1.;
+
+  return beta0*c0*std::exp(c0*x[0])*(std::exp(c1*x[1])-std::exp(1.))
+        +beta1*c1*std::exp(c1*x[1])*(std::exp(c0*x[0])-std::exp(1.))
+        +(std::exp(c0*x[0])-std::exp(1.))*(std::exp(c1*x[1])-std::exp(1.)) ;
+  //return 3*std::exp(x[0]+x[1])-2*(std::exp(x[0])+std::exp(x[1]))+1  ;
 }
 
 // The exact transport solution
 double fieldExact(const Dune::FieldVector<double, 2>& x) {
-  return (std::exp(x[0])-1)*(std::exp(x[1])-1) ;
+
+  double c0 = 1.;
+  double c1 = 1.;
+
+  return (std::exp(c0*x[0])-std::exp(1.))*(std::exp(c1*x[1])-std::exp(1.)) ;
 }
 
 int main(int argc, char** argv)
@@ -99,14 +121,15 @@ int main(int argc, char** argv)
    typedef UGGrid<dim> GridType;
    FieldVector<double,dim> lower = {0,0};
    FieldVector<double,dim> upper = {1,1};
-   array<unsigned int,dim> elements = {1,1};
+   array<unsigned int,dim> elements = {10,10};
 
    // Square mesh
    //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
    // Triangular mesh
    shared_ptr<GridType> grid  =  StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
    // Read mesh from an input file
-    //shared_ptr<GridType> grid = shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh"));
+   // shared_ptr<GridType> grid = shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh")); // for an irregular mesh square
+   // shared_ptr<GridType> grid = shared_ptr<GridType>(GmshReader<GridType>::read("circle.msh")); // for an irregular mesh square
 
     typedef GridType::LeafGridView GridView;
     GridView gridView = grid->leafGridView();
@@ -128,7 +151,9 @@ int main(int argc, char** argv)
   //   Choose a bilinear form
   /////////////////////////////////////////////////////////
 
-  FieldVector<double, dim> beta = {1,1};
+  double beta0 = -1.0;
+  double beta1 = -1.0;
+  FieldVector<double, dim> beta = {beta0,beta1};
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
               make_IntegralTerm<0,1,IntegrationType::valueValue,
@@ -188,8 +213,17 @@ int main(int argc, char** argv)
   // Determine Dirichlet dofs for u^ (inflow boundary)
   {
     std::vector<bool> dirichletNodesInflow;
-    boundaryTreatmentInflow(std::get<0>(solutionSpaces),
-                            dirichletNodesInflow);
+    std::vector<bool> dirichletNodesInflowErrorTools;
+
+    // boundaryTreatmentInflow(std::get<0>(solutionSpaces),
+    //                         dirichletNodesInflow);
+
+    BoundaryTools boundaryTools = BoundaryTools();
+    boundaryTools.boundaryTreatmentInflow(std::get<0>(solutionSpaces),
+                                          dirichletNodesInflow,
+                                          beta);
+
+
     systemAssembler.applyDirichletBoundarySolution<0>
         (stiffnessMatrix,
          rhs,
@@ -293,7 +327,7 @@ int main(int argc, char** argv)
   //  We need to subsample, because VTK cannot natively display real second-order functions
   //////////////////////////////////////////////////////////////////////////////////////////////
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,0);
-  //vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write("solution_transport");
 
     return 0;

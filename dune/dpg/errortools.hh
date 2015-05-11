@@ -10,17 +10,11 @@
 #include <dune/common/function.hh>
 #include <dune/common/bitsetvector.hh>
 
-// #include <dune/grid/yaspgrid.hh>
-// #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
-// #include <dune/grid/common/intersection.hh> //TODO necessary?
-
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
-// #include <dune/istl/preconditioners.hh>
-// #include <dune/istl/solvers.hh>
+
 #include <dune/istl/io.hh>
-// #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
@@ -72,6 +66,7 @@ namespace Dune {
 
   };
 
+//*******************************************************************
   ErrorTools::ErrorTools (double tol)
   {
     errorTol_ = tol;
