@@ -171,8 +171,8 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////
   //   Choose an initial iterate
   /////////////////////////////////////////////////
-  VectorType x(feBasisTest.indexSet().size()+feBasisTrace.indexSet().size()
-                +feBasisInterior.indexSet().size());
+  VectorType x(feBasisTrace.indexSet().size()
+               +feBasisInterior.indexSet().size());
   x = 0;
 
   // Determine Dirichlet dofs for u^ (inflow boundary)
