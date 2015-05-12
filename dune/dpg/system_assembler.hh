@@ -703,7 +703,7 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
         }
         else
         {
-          /* TODO: This seems somewhat redundant... */
+          /* Zero out row and column to keep symmetry. */
           *cIt = 0;
           matrix[cIt.index()][globalOffset+i]=0;
         }
