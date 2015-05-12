@@ -23,3 +23,8 @@ target_link_dune_default_libraries("dune_dpg_opt_testspace")
 #add_dune_umfpack_flags(dune_dpg_conv_diff)
 #add_dune_ug_flags(dune_dpg_conv_diff)
 #target_link_dune_default_libraries("dune_dpg_conv_diff")
+
+add_executable("dune_dpg_rad_trans" dune_dpg_rad_trans.cc)
+add_dune_umfpack_flags(dune_dpg_rad_trans)
+add_dune_ug_flags(dune_dpg_rad_trans)
+target_link_dune_default_libraries("dune_dpg_rad_trans")
