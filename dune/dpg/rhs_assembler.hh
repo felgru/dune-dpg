@@ -23,9 +23,9 @@ class RhsAssembler
 public:
   RhsAssembler () = delete;
   /**
-   * \brief constructor for rhsAssembler
+   * \brief constructor for RhsAssembler
    *
-   * \note For your convenience, use make_rhsAssembler() instead.
+   * \note For your convenience, use make_RhsAssembler() instead.
    */
   constexpr RhsAssembler (TestSpaces testSpaces)
              : testSpaces(testSpaces)
