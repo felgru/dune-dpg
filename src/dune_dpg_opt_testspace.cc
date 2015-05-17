@@ -4,14 +4,11 @@
 #include <iostream>
 
 #include <vector>
+#include <array>
+#include <tuple>
 
 #include <dune/common/exceptions.hh> // We use exceptions
-#include <dune/common/function.hh>
-#include <dune/common/bitsetvector.hh>
 
-#include <dune/geometry/quadraturerules.hh>
-
-#include <dune/grid/common/intersection.hh> //TODO necessary?
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>

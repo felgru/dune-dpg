@@ -3,15 +3,16 @@
 #endif
 #include <iostream>
 
+#include <cmath>
+
 #include <vector>
+#include <array>
+#include <tuple>
 
 #include <dune/common/exceptions.hh> // We use exceptions
-#include <dune/common/function.hh>
-#include <dune/common/bitsetvector.hh>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
-#include <dune/grid/common/intersection.hh> //TODO necessary?
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
