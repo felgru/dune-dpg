@@ -124,7 +124,9 @@ namespace Dune {
         double scalarProd = centerOuterNormal * beta ;
 
         // We see whether we are on the inflow boundary
-        bool isOnInflowBoundary = (scalarProd<0) && intersection.boundary() ;
+        double tolerance = -1e-8*beta.two_norm();
+        bool isOnInflowBoundary = (scalarProd<tolerance)
+                                  && intersection.boundary() ;
 
         // We store this information in faceOnInflowBoundary
         faceOnInflowBoundary[indexIntersection] = isOnInflowBoundary ;
