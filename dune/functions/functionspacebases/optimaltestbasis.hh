@@ -56,14 +56,8 @@
 namespace Dune {
 namespace Functions {
 
-template<typename BilinearForm, typename InnerProduct, std::size_t testIndex>
-class OptimalTestBasisLocalView;
 
-template<typename BilinearForm, typename InnerProduct, std::size_t testIndex>
-class OptimalTestBasisLeafNode;
 
-template<typename BilinearForm, typename InnerProduct, std::size_t testIndex>
-class OptimalTestIndexSet;
 
 /////////////////////////////////////////////////////////////////////////////////
 // Helper begin
@@ -207,26 +201,191 @@ private:
 /////////////////////////////////////////////////////////////////////////////////
 
 
+template <typename Geometry>
+class GeometryBuffer
+{
+  typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
+
+  public:
+
+  void set(Geometry geometry)
+  {
+    corners=geometry.corners();
+    cornerVector.resize(corners);
+    for (unsigned int i=0; i<corners; i++)
+    {
+      cornerVector[i]=geometry.corner(i);
+    }
+  };
+
+  bool isSame(Geometry geometry)
+  {
+    if (geometry.corners()==corners)
+    {
+      GlobalCoordinate difference = cornerVector[0];
+      difference -= geometry.corner(0);
+      double volume = geometry.volume();    //TODO evtl. schon Volumen fuer ersten Vergleich nutzen?
+      for (unsigned int i=1; i<corners; i++)
+      {
+        for (unsigned int j=0; j<difference.size(); j++)
+        {
+          if (std::abs(geometry.corner(i)[j]+difference[j]-cornerVector[i][j] )/volume > 1e-10)
+          {
+            return false;
+          }
+        }
+        return true;
+      }
+    }
+    std::cout << "different number of corners" <<std::endl;
+    return false;
+  };
+
+  private:
+  int corners;
+  std::vector<GlobalCoordinate> cornerVector;
+};
 
 
-template<typename BilinearForm, typename InnerProduct, std::size_t testIndex>
+
+
+template<typename BilinForm, typename InnerProd>
+class TestspaceCoefficientMatrix
+{
+
+  public:
+  typedef BilinForm BilinearForm;
+  typedef InnerProd InnerProduct;
+  typedef typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView GridView;
+  typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
+  typedef typename BilinearForm::TestSpaces TestSpaces;
+
+  private:
+  typedef typename boost::fusion::result_of::as_vector<
+             typename boost::fusion::result_of::transform<
+                         SolutionSpaces,
+                         detail::getLocalView
+                      >::type
+             >::type SolutionLocalView;
+
+  typedef typename boost::fusion::result_of::as_vector<
+             typename boost::fusion::result_of::transform<
+                         TestSpaces,
+                         detail::getLocalView
+                      >::type
+             >::type TestLocalView;
+
+  typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
+
+  public:
+  TestspaceCoefficientMatrix(BilinearForm& bilinForm, InnerProduct& innerProd) :
+    gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
+    bilinearForm_(bilinForm),
+    innerProduct_(innerProd),
+    localViewSolution_(boost::fusion::as_vector(
+                boost::fusion::transform(bilinearForm_.getSolutionSpaces(),
+                                         detail::getLocalView()))),
+    localViewTest_(boost::fusion::as_vector(
+                boost::fusion::transform(bilinearForm_.getTestSpaces(),
+                                         detail::getLocalView()))),
+    geometryBufferIsSet_(false)
+  {}
+
+  typedef decltype(std::declval<typename GridView::template Codim<0>::Entity>().geometry()) Geometry;
+  typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
+
+  void bind(const typename GridView::template Codim<0>::Entity& e)
+  {
+    using namespace Dune::detail;
+
+    if (geometryBufferIsSet_ and geometryBuffer_.isSame(e.geometry()))
+    {
+      //std::cout <<"Old Geometry" <<std::endl;
+    }
+    else
+    {
+      geometryBuffer_.set(e.geometry());
+      //std::cout <<"New Geometry" <<std::endl;
+      for_each(localViewTest_, applyBind<decltype(e)>(e));
+      for_each(localViewSolution_, applyBind<decltype(e)>(e));
+
+      MatrixType stiffnessMatrix;
+
+      innerProduct_.bind(localViewTest_);
+      innerProduct_.getLocalMatrix(stiffnessMatrix);
+
+      bilinearForm_.bind(localViewTest_, localViewSolution_);
+      bilinearForm_.getLocalMatrix(coefficientMatrix_);
+
+      Cholesky<MatrixType> cholesky(stiffnessMatrix);
+      cholesky.apply(coefficientMatrix_);
+      geometryBufferIsSet_ = true;
+    }
+  }
+
+  MatrixType& coefficientMatrix()
+  {
+    return coefficientMatrix_;
+  };
+
+  BilinearForm& bilinearForm() const
+  {
+    return bilinearForm_;
+  };
+
+  InnerProduct& innerProduct() const
+  {
+    return innerProduct_;
+  };
+
+  const GridView& gridView() const
+  {
+    return gridView_;
+  }
+
+  private:
+  BilinearForm&     bilinearForm_;
+  InnerProduct&     innerProduct_;
+  GridView          gridView_;
+  SolutionLocalView localViewSolution_;
+  TestLocalView     localViewTest_;
+  GeometryBuffer<Geometry> geometryBuffer_;
+  bool              geometryBufferIsSet_;
+  MatrixType        coefficientMatrix_;
+};
+
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
+class OptimalTestBasisLocalView;
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
+class OptimalTestBasisLeafNode;
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
+class OptimalTestIndexSet;
+
+
+
+
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 class OptimalTestLocalIndexSet
 {
-  typedef typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView GridView;
+  typedef typename TestspaceCoefficientMatrix::GridView GridView;
   enum {dim = GridView::dimension};
 
 public:
-  typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
+  typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
 
   typedef std::size_t size_type;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef OptimalTestBasisLocalView<BilinearForm, InnerProduct, testIndex> LocalView;
+  typedef OptimalTestBasisLocalView<TestspaceCoefficientMatrix, testIndex> LocalView;
 
   /** \brief Type used for global numbering of the basis vectors */
   typedef std::array<size_type, 1> MultiIndex;
 
-  OptimalTestLocalIndexSet(const OptimalTestIndexSet<BilinearForm, InnerProduct, testIndex> & indexSet, const SolutionSpaces& solSp)
+  OptimalTestLocalIndexSet(const OptimalTestIndexSet<TestspaceCoefficientMatrix, testIndex> & indexSet, const SolutionSpaces& solSp)
   : basisIndexSet_(indexSet),
   solutionBasisIndexSet_(boost::fusion::as_vector(
               boost::fusion::transform(solSp,detail::getIndexSet()))),
@@ -250,7 +409,7 @@ public:
    * Having to bind the view to an element before being able to actually access any of its data members
    * offers to centralize some expensive setup code in the 'bind' method, which can save a lot of run-time.
    */
-  void bind(const OptimalTestBasisLocalView<BilinearForm, InnerProduct, testIndex>& localView)
+  void bind(const OptimalTestBasisLocalView<TestspaceCoefficientMatrix, testIndex>& localView)
   {
     using namespace Dune::detail;
 
@@ -305,9 +464,9 @@ public:
     return *localView_;
   }
 
-  const OptimalTestBasisLocalView<BilinearForm, InnerProduct, testIndex>* localView_;
+  const OptimalTestBasisLocalView<TestspaceCoefficientMatrix, testIndex>* localView_;
 
-  const OptimalTestIndexSet<BilinearForm, InnerProduct, testIndex> basisIndexSet_;
+  const OptimalTestIndexSet<TestspaceCoefficientMatrix, testIndex> basisIndexSet_;
 
   SolutionBasisIndexSet solutionBasisIndexSet_;
   SolutionLocalIndexSet solutionLocalIndexSet_;
@@ -315,19 +474,19 @@ public:
 
 
 
-template<typename BilinearForm, typename InnerProduct, std::size_t testIndex>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 class OptimalTestIndexSet
 {
-  typedef typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView GridView;
+  typedef typename TestspaceCoefficientMatrix::GridView GridView;
   static const int dim = GridView::dimension;
 
   // Needs the mapper
-  friend class OptimalTestLocalIndexSet<BilinearForm,InnerProduct,testIndex>;
+  friend class OptimalTestLocalIndexSet<TestspaceCoefficientMatrix,testIndex>;
 
 public:
-  typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
+  typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
 
-  typedef OptimalTestLocalIndexSet<BilinearForm, InnerProduct, testIndex> LocalIndexSet;
+  typedef OptimalTestLocalIndexSet<TestspaceCoefficientMatrix, testIndex> LocalIndexSet;
 
   OptimalTestIndexSet(const SolutionSpaces& solSp)
   : solutionSpaces(solSp),
@@ -365,40 +524,34 @@ private:
  * \tparam k The order of the basis
  */
 
-template<typename BilinearForm, typename InnerProduct, std::size_t testIndex = 0>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex = 0>
 class OptimalTestBasis
-: public GridViewFunctionSpaceBasis<typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>
-                                                  ::type::GridView,
-                                    OptimalTestBasisLocalView<BilinearForm,InnerProduct, testIndex>,
-                                    OptimalTestIndexSet<BilinearForm,InnerProduct, testIndex>,
+: public GridViewFunctionSpaceBasis<typename TestspaceCoefficientMatrix::GridView,
+                                    OptimalTestBasisLocalView<TestspaceCoefficientMatrix, testIndex>,
+                                    OptimalTestIndexSet<TestspaceCoefficientMatrix, testIndex>,
                                     std::array<std::size_t, 1> >
 {
-public:
-  typedef typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView GridView;
-
-private:
-  static const int dim = GridView::dimension;
+  static const int dim = TestspaceCoefficientMatrix::GridView::dimension;
 
 public:
-
+  typedef typename TestspaceCoefficientMatrix::GridView GridView;
   /** \brief The grid view that the FE space is defined on */
   typedef std::size_t size_type;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef OptimalTestBasisLocalView<BilinearForm,InnerProduct, testIndex> LocalView;
+  typedef OptimalTestBasisLocalView<TestspaceCoefficientMatrix, testIndex> LocalView;
 
   /** \brief Type used for global numbering of the basis vectors */
   typedef std::array<size_type, 1> MultiIndex;   //TODO: Brauche ich das?
 
-  typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
-  typedef typename BilinearForm::TestSpaces EnrichedTestspaces;
+  typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
+  typedef typename TestspaceCoefficientMatrix::TestSpaces EnrichedTestspaces;
 
   /** \brief Constructor for a given grid view object */
-  OptimalTestBasis(BilinearForm& bilinForm, InnerProduct& inProd) :
-    gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
-    bilinearForm(bilinForm),
-    innerProduct(inProd),
-    indexSet_(bilinearForm.getSolutionSpaces())
+  OptimalTestBasis(TestspaceCoefficientMatrix& testCoeffMat) :
+    gridView_(testCoeffMat.gridView()),
+    testspaceCoefficientMatrix(testCoeffMat),
+    indexSet_(testCoeffMat.bilinearForm().getSolutionSpaces())
   {}
 
   /** \brief Obtain the grid view that the basis is defined on
@@ -408,7 +561,7 @@ public:
     return gridView_;
   }
 
-  OptimalTestIndexSet<BilinearForm,InnerProduct,testIndex> indexSet() const
+  OptimalTestIndexSet<TestspaceCoefficientMatrix,testIndex> indexSet() const
   {
     return indexSet_;
   }
@@ -418,29 +571,28 @@ public:
    */
   LocalView localView() const
   {
-    return LocalView(this, bilinearForm, innerProduct);
+    return LocalView(this, testspaceCoefficientMatrix);
   }
 
 protected:
   const GridView gridView_;
-  BilinearForm& bilinearForm;
-  InnerProduct& innerProduct;
-  OptimalTestIndexSet<BilinearForm, InnerProduct, testIndex> indexSet_;
+  TestspaceCoefficientMatrix& testspaceCoefficientMatrix;
+  OptimalTestIndexSet<TestspaceCoefficientMatrix, testIndex> indexSet_;
 };
 
 
 
 
 /** \brief The restriction of a finite element basis to a single element */
-template<typename BilinearForm, typename InnerProduct, std::size_t testIndex>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 class OptimalTestBasisLocalView
 {
 public:
 
-  typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
-  typedef typename BilinearForm::TestSpaces EnrichedTestspaces;
+  typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
+  typedef typename TestspaceCoefficientMatrix::TestSpaces EnrichedTestspaces;
   /** \brief The global FE basis that this is a view on */
-  typedef OptimalTestBasis<BilinearForm,InnerProduct, testIndex> GlobalBasis;
+  typedef OptimalTestBasis<TestspaceCoefficientMatrix, testIndex> GlobalBasis;
   typedef typename GlobalBasis::GridView GridView;
 
   /** \brief The type used for sizes */
@@ -461,16 +613,14 @@ public:
    * In the case of a P3 space this tree consists of a single leaf only,
    * i.e., Tree is basically the type of the LocalFiniteElement
    */
-  typedef OptimalTestBasisLeafNode<BilinearForm,InnerProduct, testIndex> Tree;
+  typedef OptimalTestBasisLeafNode<TestspaceCoefficientMatrix, testIndex> Tree;
 
   /** \brief Construct local view for a given global finite element basis */
   OptimalTestBasisLocalView(const GlobalBasis* globalBasis,
-                            BilinearForm& bilinForm,
-                            InnerProduct& innerProd) :
+                            TestspaceCoefficientMatrix& testCoeffMat) :
     globalBasis_(globalBasis),
-    bilinearForm(bilinForm),
-    innerProduct(innerProd),
-    tree_(globalBasis, bilinearForm, innerProduct)
+    testspaceCoefficientMatrix(testCoeffMat),
+    tree_(globalBasis, testCoeffMat)
   {}
 
   /** \brief Bind the view to a grid element
@@ -534,7 +684,7 @@ public:
     using namespace boost::fusion;
     using namespace Dune::detail;
 
-    return fold(transform(bilinearForm.getSolutionSpaces(),
+    return fold(transform(testspaceCoefficientMatrix.bilinearForm().getSolutionSpaces(),
                           getLocalViewMaxSize()),
                 0, std::plus<std::size_t>());
   }
@@ -548,8 +698,7 @@ public:
 
 protected:
   const GlobalBasis* globalBasis_;
-  BilinearForm& bilinearForm;
-  InnerProduct& innerProduct;
+  TestspaceCoefficientMatrix& testspaceCoefficientMatrix;
   const Element* element_;
   Tree tree_;
 };
@@ -557,31 +706,31 @@ protected:
 
 
 
-template<typename BilinearForm, typename InnerProduct, std::size_t testIndex>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 class OptimalTestBasisLeafNode :
   public GridFunctionSpaceBasisLeafNodeInterface<
-    typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView::template Codim<0>::Entity,
-    Dune::OptimalTestLocalFiniteElement<typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView::ctype,
+    typename TestspaceCoefficientMatrix::GridView::template Codim<0>::Entity,
+    Dune::OptimalTestLocalFiniteElement<typename TestspaceCoefficientMatrix::GridView::ctype,
                                         double,
-                                        std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView::dimension,
-                                        typename std::tuple_element<0,typename BilinearForm::TestSpaces>::type::LocalView::Tree::FiniteElement  >, //TODO fuer mehrere testspaces
-    typename OptimalTestBasis<BilinearForm,InnerProduct,testIndex>::size_type>
+                                        TestspaceCoefficientMatrix::GridView::dimension,
+                                        typename std::tuple_element<testIndex, typename TestspaceCoefficientMatrix::BilinearForm::TestSpaces>::type::LocalView::Tree::FiniteElement  >,
+    typename OptimalTestBasis<TestspaceCoefficientMatrix,testIndex>::size_type>
 {
 public:
-  typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
-  typedef typename BilinearForm::TestSpaces EnrichedTestspaces;
-
+  typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
+  typedef typename TestspaceCoefficientMatrix::TestSpaces EnrichedTestspaces;
+  typedef typename TestspaceCoefficientMatrix::BilinearForm BilinearForm;
+    typedef typename TestspaceCoefficientMatrix::InnerProduct InnerProduct;
 
 private:
-  typedef OptimalTestBasis<BilinearForm,InnerProduct,testIndex> GlobalBasis;
-  typedef typename std::tuple_element<0,SolutionSpaces>::type::GridView GridView;
+  typedef OptimalTestBasis<TestspaceCoefficientMatrix,testIndex> GlobalBasis;
+  typedef typename TestspaceCoefficientMatrix::GridView GridView;
   static const int dim = GridView::dimension;
 
   typedef typename GridView::template Codim<0>::Entity E;
-  typedef typename std::tuple_element<0,EnrichedTestspaces>::type::LocalView::Tree::FiniteElement EnrichedFiniteElement;
+  typedef typename std::tuple_element<testIndex,EnrichedTestspaces>::type::LocalView::Tree::FiniteElement EnrichedFiniteElement;
   typedef typename Dune::OptimalTestLocalFiniteElement<typename GridView::ctype,double,GridView::dimension,
-                                                       EnrichedFiniteElement> FE; //TODO fuer mehrere testspaces
-
+                                                       EnrichedFiniteElement> FE;
 
 
   typedef typename GlobalBasis::size_type ST;
@@ -592,7 +741,7 @@ private:
 //  typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
 
   friend LocalView;
-  friend class OptimalTestLocalIndexSet<BilinearForm,InnerProduct,testIndex>;
+  friend class OptimalTestLocalIndexSet<TestspaceCoefficientMatrix,testIndex>;
 
   typedef typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<
@@ -600,7 +749,6 @@ private:
                          detail::getLocalView
                       >::type
              >::type SolutionLocalView;
-
   typedef typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<
                          EnrichedTestspaces,
@@ -614,18 +762,19 @@ public:
   typedef typename Interface::Element Element;
   typedef typename Interface::FiniteElement FiniteElement;
 
-  OptimalTestBasisLeafNode(const GlobalBasis* globalBasis, BilinearForm& bilinForm, InnerProduct& innerProd):
+  OptimalTestBasisLeafNode(const GlobalBasis* globalBasis, TestspaceCoefficientMatrix& testCoeffMat):
     globalBasis_(globalBasis),
-    bilinearForm(bilinForm),
-    innerProduct(innerProd),
+    testspaceCoefficientMatrix(testCoeffMat),
+    bilinearForm(testspaceCoefficientMatrix.bilinearForm()),
+    innerProduct(testspaceCoefficientMatrix.innerProduct()),
     finiteElement_(nullptr),
     enrichedTestspace_(nullptr),
     element_(nullptr),
     localViewSolution(boost::fusion::as_vector(
-                boost::fusion::transform(bilinForm.getSolutionSpaces(),
+                boost::fusion::transform(bilinearForm.getSolutionSpaces(),
                                          detail::getLocalView()))),
     localViewTest(boost::fusion::as_vector(
-                boost::fusion::transform(bilinForm.getTestSpaces(),
+                boost::fusion::transform(bilinearForm.getTestSpaces(),
                                          detail::getLocalView())))
   { }
 
@@ -674,52 +823,29 @@ protected:
                           (&(boost::fusion::at_c<testIndex>(localViewTest)->tree().finiteElement()));
     for_each(localViewSolution, applyBind<decltype(e)>(e));
 
-    //auto solutionLocalFeSize = boost::fusion::as_vector(
-    //                              boost::fusion::transform(localViewSolution_, getLocalFeSize()));
-    //int n = boost::fusion::fold(solutionLocalFeSize, 0, std::plus<std::size_t>());
+    testspaceCoefficientMatrix.bind(e);
 
-    Matrix<FieldMatrix<double,1,1> > stiffnessMatrix;
+//    coefficientMatrix = testspaceCoefficientMatrix.coefficientMatrix();
 
-    innerProduct.bind(localViewTest);
-    innerProduct.getLocalMatrix(stiffnessMatrix);
+    size_t k = boost::fusion::at_c<testIndex>(localViewTest)->tree().finiteElement().size();
+    size_t localTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
+    fold(zip(localTestSpaceOffsets, localViewTest), 0, offsetHelper());
+    size_t offset = boost::fusion::at_c<testIndex>(localTestSpaceOffsets);
 
-    bilinearForm.bind(localViewTest, localViewSolution);
-    bilinearForm.getLocalMatrix(coefficientMatrix);
+    finiteElement_ = Dune::Std::make_unique<FiniteElement>(&(testspaceCoefficientMatrix.coefficientMatrix()), enrichedTestspace_, offset, k);
 
-    Cholesky<Matrix<FieldMatrix<double,1,1> > > cholesky(stiffnessMatrix);
-    cholesky.apply(coefficientMatrix);
-
-    if (testIndex ==0 and std::tuple_size<EnrichedTestspaces>::value == 1)
-    {
-      finiteElement_ = Dune::Std::make_unique<FiniteElement>(&coefficientMatrix, enrichedTestspace_);
-    }
-    else
-    {
-      size_t n = boost::fusion::at_c<testIndex>(localViewTest)->tree().finiteElement().size();
-      size_t localTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
-      fold(zip(localTestSpaceOffsets, localViewTest), 0, offsetHelper());
-
-      unsigned int offset = boost::fusion::at_c<testIndex>(localTestSpaceOffsets);
-      relevantCoefficientMatrix.setSize(n,coefficientMatrix.M());
-      for (unsigned int i=0; i<n; i++)                          //TODO make more efficient
-      {
-        relevantCoefficientMatrix[i] = coefficientMatrix[offset+i];
-      }
-      finiteElement_ = Dune::Std::make_unique<FiniteElement>(&relevantCoefficientMatrix, enrichedTestspace_);
-    }
   }
 
   const GlobalBasis* globalBasis_;
+  TestspaceCoefficientMatrix& testspaceCoefficientMatrix;
   BilinearForm& bilinearForm;
   InnerProduct& innerProduct;
   std::unique_ptr<FiniteElement> finiteElement_;
   EnrichedFiniteElement* enrichedTestspace_;
   const Element* element_;
-  Matrix<FieldMatrix<double,1,1> > coefficientMatrix;         //TODO make more efficient
-  Matrix<FieldMatrix<double,1,1> > relevantCoefficientMatrix; //TODO make more efficient
+//  Matrix<FieldMatrix<double,1,1> > coefficientMatrix;
   SolutionLocalView localViewSolution;
   TestLocalView localViewTest;
-
 };
 
 } // end namespace Functions

@@ -40,8 +40,10 @@
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/dpg/system_assembler.hh>
+#include <dune/dpg/errortools.hh>
+#include <dune/dpg/rhs_assembler.hh>
 
-
+#include <boost/math/constants/constants.hpp>
 
 using namespace Dune;
 
@@ -71,7 +73,8 @@ void boundaryTreatmentInflow (const FEBasis& feBasis,
   for (size_t i=0; i<lagrangeNodes.size(); i++)
   {
     bool isBoundary = false;
-    for (int j=0; j<dim; j++)
+    //for (int j=0; j<dim; j++)
+    int j = 0;
       isBoundary = isBoundary || lagrangeNodes[i][j] < 1e-8;
 
     if (isBoundary)
@@ -109,6 +112,24 @@ void boundaryTreatment (const FEBasis& feBasis,
   }
 }*/
 
+// The right-hand side explicit expression
+
+double epsilon = 0.00000001;
+
+
+double fieldRHS(const Dune::FieldVector<double, 2>& x) {
+  const double pi = boost::math::constants::pi<double>();
+  return (-(-pi*pi*epsilon*x[0] + pi*pi*epsilon - 1) * std::sin(pi*x[1]));
+};
+
+// The exact transport solution
+double fieldExact(const Dune::FieldVector<double, 2>& x) {
+  const double pi = boost::math::constants::pi<double>();
+  const double r1 = (-1+std::sqrt(1+4*epsilon*epsilon*pi*pi))/(-2*epsilon);
+  const double r2 = (-1-std::sqrt(1+4*epsilon*epsilon*pi*pi))/(-2*epsilon);
+  return (((std::exp(r1*(x[0]-1))-std::exp(r2*(x[0]-1)))/(std::exp(-r1)-std::exp(-r2)) - (1-x[0]))* std::sin(pi*x[1]) ) ;
+};
+
 
 int main(int argc, char** argv)
 {
@@ -122,7 +143,7 @@ int main(int argc, char** argv)
   const int dim = 2;
   typedef UGGrid<dim> GridType;
 
-  int nelements =atoi(argv[1]);
+  unsigned int nelements = atoi(argv[1]);
 
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
@@ -142,40 +163,32 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////////////
 
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
-  FEBasisInterior feBasisInterior(gridView);
-
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisSigma; // sigma 1 und 2
-//  FEBasisSigma feBasisSigma1(gridView);
-//  FEBasisSigma feBasisSigma2(gridView);
-
   typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
-  FEBasisTrace feBasisTrace(gridView);
-
   typedef Functions::PQKFaceNodalBasis<GridView, 2> FEBasisFace; // sigma_n^
-//  FEBasisFace feBasisFace(gridView);
-
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView),
                                         FEBasisSigma(gridView),
                                         FEBasisSigma(gridView),
                                         FEBasisTrace(gridView),
                                         FEBasisFace(gridView));
 
-  typedef Functions::LagrangeDGBasis<GridView, 5> FEBasisTestV;   // v enriched
-
-  typedef Functions::LagrangeDGBasis<GridView, 5> FEBasisTestTau; // tau enriched
+  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestV;   // v enriched
+  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestTau; // tau enriched
   auto testSpaces = std::make_tuple(FEBasisTestV(gridView),
                                     FEBasisTestTau(gridView),
                                     FEBasisTestTau(gridView));
 
-    typedef decltype(testSpaces) TestSpaces;          // testSpaces = (v, tau1, tau2)
-    typedef decltype(solutionSpaces) SolutionSpaces;  // solutionSpaces =
+  typedef decltype(testSpaces) TestSpaces;          // testSpaces = (v, tau1, tau2)
+  typedef decltype(solutionSpaces) SolutionSpaces;  // solutionSpaces =
                                                       // (u, sigma1, sigma2, u^, sigma_n^)
 
-  FieldVector<double, dim> beta = {1,1};
-  double c = 1;
-  double epsilon = 5*1e-2;
-  double sqrtepsilon = std::sqrt(epsilon);
-  double mu = 1;
+//  FieldVector<double, dim> beta = {1,0};
+  FieldVector<double, dim> beta = {1,0};
+  const double c(0);
+//  const double epsilon(0.01);
+  const double sqrtepsilon (std::sqrt(epsilon));
+  const double mu(epsilon);
+
   std::cout <<"c = " << c <<" epsilon = " <<epsilon <<" sqrtepsilon = " << sqrtepsilon << " beta = [" << beta[0] <<"," << beta[1] <<"] mu = " <<mu <<std::endl;
 
   FieldVector<double, dim> firstcomponent = {1,0};
@@ -205,8 +218,14 @@ int main(int argc, char** argv)
                                     DomainOfIntegration::face>((-1*sqrtepsilon), firstcomponent),
               make_IntegralTerm<2,3,IntegrationType::normalVector,              // <u^, n_2 tau2>
                                     DomainOfIntegration::face>((-1*sqrtepsilon), secondcomponent),
-              make_IntegralTerm<0,4,IntegrationType::normalSign,              // <sigma^ sgn(n), v>
-                                    DomainOfIntegration::face>((-1*sqrtepsilon))
+              make_IntegralTerm<0,4,IntegrationType::normalSign,              // -sqrtepsilon <sigma^ sgn(n), v>
+                                    DomainOfIntegration::face>((-1*sqrtepsilon))/*,
+              make_IntegralTerm<0,4,IntegrationType::normalSign,              // (sqrtepsilon-1) <sigma^ sgn(n),v>
+                                    DomainOfIntegration::face>((sqrtepsilon-1)),
+              make_IntegralTerm<0,1,IntegrationType::normalVector,              // (1-sqrtepsilon) <n_1 sigma_1,v>
+                                    DomainOfIntegration::face>((1-sqrtepsilon), firstcomponent),
+              make_IntegralTerm<0,2,IntegrationType::normalVector,              // (1-sqrtepsilon) <n_2 sigma_2,v>
+                                    DomainOfIntegration::face>((1-sqrtepsilon), secondcomponent)*/
           ));
   auto innerProduct = make_InnerProduct(testSpaces,
           make_tuple(
@@ -236,15 +255,18 @@ int main(int argc, char** argv)
                                                                    firstcomponent)
           ));
 
-    typedef decltype(bilinearForm) BilinearForm;
-    typedef decltype(innerProduct) InnerProduct;
+  typedef decltype(bilinearForm) BilinearForm;
+  typedef decltype(innerProduct) InnerProduct;
+  typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct> TestspaceCoefficientMatrix;
 
-  typedef Functions::OptimalTestBasis<BilinearForm, InnerProduct, 0> FEBasisOptimalTest0;              // v
-  FEBasisOptimalTest0 feBasisTest0(bilinearForm, innerProduct);
-  typedef Functions::OptimalTestBasis<BilinearForm, InnerProduct, 1> FEBasisOptimalTest1;              // tau1
-  FEBasisOptimalTest1 feBasisTest1(bilinearForm, innerProduct);
-  typedef Functions::OptimalTestBasis<BilinearForm, InnerProduct, 2> FEBasisOptimalTest2;              // tau2
-  FEBasisOptimalTest2 feBasisTest2(bilinearForm, innerProduct);
+  TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
+
+  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix, 0> FEBasisOptimalTest0;              // v
+  FEBasisOptimalTest0 feBasisTest0(testspaceCoefficientMatrix);
+  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix, 1> FEBasisOptimalTest1;              // tau1
+  FEBasisOptimalTest1 feBasisTest1(testspaceCoefficientMatrix);
+  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix, 2> FEBasisOptimalTest2;              // tau2
+  FEBasisOptimalTest2 feBasisTest2(testspaceCoefficientMatrix);
 
   auto optimalTestSpaces = make_tuple(feBasisTest0, feBasisTest1, feBasisTest2);
 
@@ -269,56 +291,18 @@ int main(int argc, char** argv)
 //#if 0
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
-  auto rightHandSide = std::make_tuple([] (const Domain& x) { return 1;},
+  auto rightHandSide = std::make_tuple(fieldRHS,
                                        [] (const Domain& x) { return 0;},
                                        [] (const Domain& x) { return 0;});
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
-/*  std::ofstream filesymwobc("matrixsymmetrywithoutbc_test.txt");
-  filesymwobc <<"Stiffness Matrix (without BC) Symmetry:" <<std::endl;
-  for (unsigned int i=0; i<stiffnessMatrix.N(); i++)
-  {
-    for (unsigned int j=0; j<stiffnessMatrix.M(); j++)
-    {
-      if (stiffnessMatrix.exists(i,j))
-      {
-        if ((stiffnessMatrix.entry(i,j)-stiffnessMatrix.entry(j,i))>1e-8 or
-            (stiffnessMatrix.entry(i,j)-stiffnessMatrix.entry(j,i))<-1e-8)
-        {
-          filesymwobc << " 1 ";
-        }
-        else
-        {
-          if (stiffnessMatrix.entry(i,j)>1e-8 or stiffnessMatrix.entry(i,j)<-1e-8)
-          {
-            filesymwobc << " 0 ";
-          }
-          else
-          {
-            filesymwobc << " . ";
-          }
-        }
-      }
-      else
-      {
-        filesymwobc << "   ";
-      }
-    }
-    filesymwobc <<std::endl;
-  }*/
-
-//std::ofstream file2("matrixwithoutbc_test.txt");
-//printmatrix(file2 , stiffnessMatrix, "matrix", "--");
-  // Set weak boundary conditions for u^ (outflow boundary)
+  // Set weak zero-boundary conditions for u^ (outflow boundary)
   systemAssembler.applyWeakBoundaryCondition<3,2>
                     (stiffnessMatrix,
                      beta,
                      mu);
 
-//std::ofstream file1("matrixweakbc.txt");
-//printmatrix(file1 , stiffnessMatrix, "matrix", "--");
-
-  // Determine Dirichlet dofs for u^ (inflow boundary)
+  // Determine Dirichlet dofs for u^ (inflow boundary) and set them to zero
   {
     std::vector<bool> dirichletNodesInflow;
     boundaryTreatmentInflow(std::get<3>(solutionSpaces),
@@ -427,44 +411,139 @@ int main(int argc, char** argv)
   //  Make a discrete function from the FE basis and the coefficient vector
   ////////////////////////////////////////////////////////////////////////////
 
-  unsigned int shift = 0;
-  //shift+= std::get<0>(testSpaces).indexSet().size();  //Saddlepoint TODO here for 3 testSpaces
-  //shift+= std::get<1>(testSpaces).indexSet().size();  //Saddlepoint TODO here for 3 testSpaces
-  //shift+= std::get<2>(testSpaces).indexSet().size();  //Saddlepoint TODO here for 3 testSpaces
+  size_t nu = std::get<0>(solutionSpaces).indexSet().size();
+  size_t nsigma1 = std::get<1>(solutionSpaces).indexSet().size();
+  size_t nsigma2 = std::get<2>(solutionSpaces).indexSet().size();
+  size_t nuhat = std::get<3>(solutionSpaces).indexSet().size();
+  size_t nsigmahat = std::get<4>(solutionSpaces).indexSet().size();
 
-  VectorType u(std::get<0>(solutionSpaces).indexSet().size());
+  size_t ntestv = std::get<0>(testSpaces).indexSet().size();
+  size_t ntesttau1 = std::get<1>(testSpaces).indexSet().size();
+  size_t ntesttau2 = std::get<2>(testSpaces).indexSet().size();
+  unsigned int shift = 0;
+
+  VectorType u(nu);
+  VectorType sigma1(nsigma1);
+  VectorType sigma2(nsigma2);
+  VectorType uhat(nuhat);
+  VectorType sigmahat(nsigmahat);
+
   u=0;
-  for (unsigned int i=0; i<std::get<0>(solutionSpaces).indexSet().size(); i++)
+  sigma1=0;
+  sigma2=0;
+  u=0;
+  sigmahat=0;
+
+  for (unsigned int i=0; i<nu; i++)
   {
     u[i] = x[shift+i];
   }
+  shift += nu;
 
-//  VectorType uhat(feBasisInterior.indexSet().size());
-//  uhat=0;
-//  for (unsigned int i=0; i<feBasisTrace.indexSet().size(); i++)
-//  {
-//    uhat[i] = x[i+feBasisInterior.indexSet().size()];
-//  }
+  for (unsigned int i=0; i<nsigma1; i++)
+  {
+    sigma1[i] = x[shift+i];
+  }
+  shift += nsigma1;
 
-//  std::cout << u << std::endl;
+  for (unsigned int i=0; i<nsigma2; i++)
+  {
+    sigma2[i] = x[shift+i];
+  }
+  shift += nsigma2;
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisInterior),decltype(u)> uFunction(feBasisInterior,u);
-  auto localUFunction = localFunction(uFunction);
+  for (unsigned int i=0; i<nuhat; i++)
+  {
+    uhat[i] = x[shift+i];
+  }
+  shift += nuhat;
 
-//  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace),decltype(uhat)> uhatFunction(feBasisTrace,uhat);
-//  auto localUhatFunction = localFunction(uhatFunction);
+  for (unsigned int i=0; i<nsigmahat; i++)
+  {
+    sigmahat[i] = x[shift+i];
+  }
+  shift += nsigmahat;
+
+  auto feBasisInterior = std::get<0>(solutionSpaces);
+  auto feBasisSigma1 = std::get<1>(solutionSpaces);
+  auto feBasisSigma2 = std::get<2>(solutionSpaces);
+  auto feBasisTrace = std::get<3>(solutionSpaces);
+  auto feBasisFace = std::get<4>(solutionSpaces);
+
+
+  ////////////////////////////////////////////////////////////////////////////
+  //  Error evaluation
+  ////////////////////////////////////////////////////////////////////////////
+
+
+  std::cout << std::endl << "******** Computation of errors *************" << std::endl;
+  // The exact solution against which we are comparing our FEM solution
+  auto uExact = std::make_tuple(fieldExact);
+  // to retrive the value out of this:
+  // std::get<0>(uExact)(x)
+
+  // Error tolerance to do h-refinement
+  double adaptivityTol = 0.001;
+
+  //We build an object of type ErrorTools to study errors, residuals and do hp-adaptivity
+  ErrorTools errorTools = ErrorTools(adaptivityTol);
+
+  //We compute the L2 error between the exact and the fem solutions
+  double err = errorTools.computeL2error(feBasisInterior,u,uExact) ;
+  std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl ;
+
+  //// todo: h-refinement
+  //errorTools->hRefinement(grid);
+  //// todo: p-refinement
+
+/*  // A posteriori error
+      //We compute the rhs in the form given by the projection approach
+  rhsAssembler.assembleRhs(rhs, rightHandSide);
+      //It is necessary to provide rhs in the above form to call this aPosterioriError method
+  double aposterioriErr = errorTools.aPosterioriError(bilinearForm,innerProduct,u,theta,rhs) ;
+  std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl ;*/
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////
   //  Write result to VTK file
   //  We need to subsample, because VTK cannot natively display real second-order functions
   //////////////////////////////////////////////////////////////////////////////////////////////
+
+
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisInterior),decltype(u)> uFunction(feBasisInterior,u);
+  auto localUFunction = localFunction(uFunction);
+
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace),decltype(uhat)> uhatFunction(feBasisTrace,uhat);
+  auto localUhatFunction = localFunction(uhatFunction);
+
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisSigma1),decltype(sigma1)> sigma1Function(feBasisSigma1,sigma1);
+  auto localSigma1Function = localFunction(sigma1Function);
+
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisSigma2),decltype(sigma2)> sigma2Function(feBasisSigma2,sigma2);
+  auto localSigma2Function = localFunction(sigma2Function);
+
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisFace),decltype(sigmahat)> sigmahatFunction(feBasisFace,sigmahat);
+  auto localSigmahatFunction = localFunction(sigmahatFunction);
+
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
   vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("convdiff_cube_"+ std::to_string(nelements));
+  vtkWriter.write("convdiff_cube_finer_"+ std::to_string(nelements));
 
-//  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-//  vtkWriter1.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
-//  vtkWriter1.write("solution_transport_trace");
+  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
+  vtkWriter1.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter1.write("convdiff_cube_trace_finer_"+ std::to_string(nelements));
+
+  SubsamplingVTKWriter<GridView> vtkWriter2(gridView,2);
+  vtkWriter2.addVertexData(localSigma1Function, VTK::FieldInfo("sigma1", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter2.write("convdiff_cube_sigma1_finer_"+ std::to_string(nelements));
+
+  SubsamplingVTKWriter<GridView> vtkWriter3(gridView,2);
+  vtkWriter3.addVertexData(localSigma2Function, VTK::FieldInfo("sigma2", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter3.write("convdiff_cube_sigma2_finer_"+ std::to_string(nelements));
+
+  SubsamplingVTKWriter<GridView> vtkWriter4(gridView,2);
+  vtkWriter4.addVertexData(localSigmahatFunction, VTK::FieldInfo("sigmahat", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter4.write("convdiff_cube_sigmahat_finer_"+ std::to_string(nelements));
 
 //#endif
 
@@ -511,7 +590,6 @@ int main(int argc, char** argv)
     vtkWriterUhatbasis.write("basisfunction_uhat_"+ std::to_string(idx));
   }
 # endif
-
     return 0;
   }
   catch (Exception &e){
