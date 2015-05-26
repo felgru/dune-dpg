@@ -20,7 +20,7 @@
 #include <dune/functions/functionspacebases/interpolate.hh>
 
 #include "assemble_types.hh"
-#include "traits.hh"
+#include "type_traits.hh"
 
 namespace Dune {
 
