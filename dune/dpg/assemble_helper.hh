@@ -565,6 +565,16 @@ struct getLocalFiniteElement
 };
 
 
+struct setToNullptr
+{
+    template<class T>
+    void operator()(T* const & t) const
+    {
+        const_cast<T*&>(t) = nullptr;
+    }
+};
+
+
 namespace mpl {
   template<class Seq>
   struct firstTwo

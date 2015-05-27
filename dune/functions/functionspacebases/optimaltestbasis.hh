@@ -229,6 +229,25 @@ public:
               transform(solutionBasisIndexSet_,detail::getLocalIndexSet())))
   {}
 
+  /* TODO: Can probably be replaced by default move ctor with
+   *       boost::fusion 1.55. */
+  OptimalTestLocalIndexSet(OptimalTestLocalIndexSet&& indexSet)
+  : solutionBasisIndexSet_(indexSet.solutionBasisIndexSet_)
+  {
+    using namespace boost::fusion;
+
+    copy(indexSet.solutionLocalIndexSet_, solutionLocalIndexSet_);
+    for_each(indexSet.solutionLocalIndexSet_, detail::setToNullptr());
+    localView_ = indexSet.localView_;
+    indexSet.localView_ = nullptr;
+  }
+
+  ~OptimalTestLocalIndexSet()
+  {
+      using namespace boost::fusion;
+      for_each(solutionLocalIndexSet_, detail::default_deleter());
+  }
+
   typedef typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<SolutionSpaces,
                                                           detail::getIndexSet
@@ -623,6 +642,30 @@ public:
                 boost::fusion::transform(bilinForm.getTestSpaces(),
                                          detail::getLocalView())))
   { }
+
+  /* TODO: Can probably be replaced by default move ctor with
+   *       boost::fusion 1.55. */
+  OptimalTestBasisLeafNode(OptimalTestBasisLeafNode&& ln)
+  : globalBasis_(std::move(ln.globalBasis_)),
+    bilinearForm(ln.bilinearForm),
+    innerProduct(ln.innerProduct),
+    finiteElement_(std::move(ln.finiteElement_)),
+    enrichedTestspace_(std::move(ln.enrichedTestspace_)),
+    element_(std::move(ln.element_))
+  {
+    using namespace boost::fusion;
+
+    copy(ln.localViewSolution, localViewSolution);
+    copy(ln.localViewTest, localViewTest);
+    for_each(ln.localViewSolution, detail::setToNullptr());
+    for_each(ln.localViewTest, detail::setToNullptr());
+  }
+
+  ~OptimalTestBasisLeafNode()
+  {
+    for_each(localViewTest,     detail::default_deleter());
+    for_each(localViewSolution, detail::default_deleter());
+  }
 
   //! Return current element, throw if unbound
   const Element& element() const DUNE_FINAL
