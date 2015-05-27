@@ -125,10 +125,8 @@ namespace Dune {
       using TestSize = typename result_of::size<TestLocalView>::type;
 
       /* set up local offsets */
-      fold(zip(localTestSpaceOffsets, tlv), 0, offsetHelper());
       localTotalTestSize =
-          localTestSpaceOffsets[TestSize::value-1]
-          + at_c<TestSize::value-1>(tlv)->size();
+          fold(zip(localTestSpaceOffsets, tlv), 0, offsetHelper());
     };
 
     /**
