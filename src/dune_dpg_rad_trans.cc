@@ -115,13 +115,13 @@ int main(int argc, char** argv)
       FEBasisOptimalTest;              // v
 
   typedef decltype(make_SystemAssembler(
-#if 0
+#if 1
               std::declval<std::tuple<FEBasisOptimalTest>>(), solutionSpaces,
 #else
               testSpaces, solutionSpaces,
 #endif
               std::declval<BilinearForm>(),
-              std::declval<InnerProduct>(), SaddlepointFormulation()))
+              std::declval<InnerProduct>(), DPGFormulation()))
           SystemAssembler_t;
 
   if(argc != 2) {
@@ -134,46 +134,57 @@ int main(int argc, char** argv)
   std::vector<SystemAssembler_t> systemAssemblers;
   systemAssemblers.reserve(numS);
 
-  std::vector<ScatteringAssembler<TestSpaces, SolutionSpaces,
-                                  SaddlepointFormulation>
+  std::vector<ScatteringAssembler<std::tuple<FEBasisOptimalTest>,
+                                  SolutionSpaces,
+                                  DPGFormulation>
              > scatteringAssemblers;
   scatteringAssemblers.reserve(numS);
 
-  /* TODO: not thread-safe, each thread will need its own
-   *       FEBasisOptimalTest */
-#if 0
-  FEBasisOptimalTest feBasisTest(bilinearForm, innerProduct);
-  auto optimalTestSpaces = make_tuple(feBasisTest);
-#endif
+  /* create an FEBasisOptimalTest for each direction */
+  std::vector<std::tuple<FEBasisOptimalTest> > optimalTestSpaces;
+  optimalTestSpaces.reserve(numS);
+  /* All the following objects have to be created outside of the
+   * following for loop, as the optimalTestSpace holds references
+   * to them which will otherwise go out of scope. */
+  std::vector<BilinearForm> bilinearForms;
+  bilinearForms.reserve(numS);
+  std::vector<InnerProduct> innerProducts;
+  innerProducts.reserve(numS);
 
   for(int i = 0; i < numS; ++i)
   {
     using namespace boost::math::constants;
     FieldVector<double, dim> s = {cos(2*pi<double>()*i/numS),
                                   sin(2*pi<double>()*i/numS)};
-    auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
+    bilinearForms.emplace_back(
+      make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
                                     DomainOfIntegration::interior>(2.),
               make_IntegralTerm<0,0,IntegrationType::gradValue,
                                     DomainOfIntegration::interior>(-1., s),
               make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                    DomainOfIntegration::face>(1., s)));
-    auto innerProduct = make_InnerProduct(testSpaces,
+                                    DomainOfIntegration::face>(1., s))));
+    innerProducts.emplace_back(
+      make_InnerProduct(testSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
                                     DomainOfIntegration::interior>(1.),
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., s)));
+                                    DomainOfIntegration::interior>(1., s))));
+
+    optimalTestSpaces.emplace_back(
+            make_tuple(FEBasisOptimalTest(bilinearForms[i],
+                                          innerProducts[i])));
 
     systemAssemblers.emplace_back(
-        make_SystemAssembler(testSpaces, solutionSpaces,
-                             bilinearForm, innerProduct,
-                             SaddlepointFormulation()));
+        make_SystemAssembler(optimalTestSpaces[i], solutionSpaces,
+                             bilinearForms[i], innerProducts[i],
+                             DPGFormulation()));
     scatteringAssemblers.emplace_back(
-        make_ScatteringAssembler(testSpaces,
+        make_ScatteringAssembler(optimalTestSpaces[i],
                                  solutionSpaces,
-                                 SaddlepointFormulation()));
+                                 DPGFormulation()));
   }
 
   /////////////////////////////////////////////////////////
@@ -207,8 +218,7 @@ int main(int argc, char** argv)
   x.reserve(numS);
   for(int i = 0; i < numS; ++i)
   {
-    x.emplace_back(std::get<0>(testSpaces).indexSet().size()
-                   +feBasisTrace.indexSet().size()
+    x.emplace_back(feBasisTrace.indexSet().size()
                    +feBasisInterior.indexSet().size());
     x[i] = 0;
   }
@@ -248,7 +258,6 @@ int main(int argc, char** argv)
               <<" solution size = "<< x[0].size() <<std::endl;
 
 
-#if 1
     for(int i = 0; i < numS; ++i)
     {
       UMFPack<MatrixType> umfPack(stiffnessMatrix[i], 2);
@@ -265,10 +274,9 @@ int main(int argc, char** argv)
     {
       VectorType u(feBasisInterior.indexSet().size());
       u=0;
-      size_t u_offset = std::get<0>(testSpaces).indexSet().size();
       for (unsigned int j=0; j<feBasisInterior.indexSet().size(); j++)
       {
-        u[j] = x[i][u_offset+j];
+        u[j] = x[i][j];
       }
 
       Dune::Functions::DiscreteScalarGlobalBasisFunction
@@ -290,34 +298,7 @@ int main(int argc, char** argv)
                        + std::to_string(i);
       vtkWriter.write(name);
 
-
-#if 0
-      VectorType q(feBasisTrace.indexSet().size());
-      q=0;
-      for (unsigned int j=0; j<feBasisTrace.indexSet().size(); j++)
-      {
-        q[j] = dirichletNodesInflow[i][j] ? 1. : 0.;
-      }
-
-      Dune::Functions::DiscreteScalarGlobalBasisFunction
-          <decltype(feBasisTrace),decltype(q)>
-          qFunction(feBasisTrace,q);
-      auto localQFunction = localFunction(qFunction);
-
-      ////////////////////////////////////////////////////////////////////////
-      //  Write result to VTK file
-      //  We need to subsample, because VTK cannot natively display
-      //  real second-order functions
-      ////////////////////////////////////////////////////////////////////////
-      SubsamplingVTKWriter<GridView> qvtkWriter(gridView,0);
-      qvtkWriter.addVertexData(localQFunction,
-                      VTK::FieldInfo("q", VTK::FieldInfo::Type::scalar, 1));
-      std::string qname = std::string("solution_rad_trans_q_s")
-                       + std::to_string(i) + std::string("_");
-      qvtkWriter.write(qname);
-#endif
     }
-#endif
   }
 
   return 0;
