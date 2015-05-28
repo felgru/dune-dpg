@@ -227,7 +227,7 @@ public:
   typedef std::array<size_type, 1> MultiIndex;
 
   OptimalTestLocalIndexSet(const OptimalTestIndexSet<BilinearForm, InnerProduct, testIndex> & indexSet, const SolutionSpaces& solSp)
-  : basisIndexSet_(indexSet),
+  :
   solutionBasisIndexSet_(boost::fusion::as_vector(
               boost::fusion::transform(solSp,detail::getIndexSet()))),
   solutionLocalIndexSet_(boost::fusion::as_vector(
@@ -305,9 +305,9 @@ public:
     return *localView_;
   }
 
-  const OptimalTestBasisLocalView<BilinearForm, InnerProduct, testIndex>* localView_;
-
-  const OptimalTestIndexSet<BilinearForm, InnerProduct, testIndex> basisIndexSet_;
+private:
+  const OptimalTestBasisLocalView<BilinearForm, InnerProduct, testIndex>*
+                                                                   localView_;
 
   SolutionBasisIndexSet solutionBasisIndexSet_;
   SolutionLocalIndexSet solutionLocalIndexSet_;
@@ -465,11 +465,9 @@ public:
 
   /** \brief Construct local view for a given global finite element basis */
   OptimalTestBasisLocalView(const GlobalBasis* globalBasis,
-                            BilinearForm& bilinForm,
-                            InnerProduct& innerProd) :
+                            BilinearForm& bilinearForm,
+                            InnerProduct& innerProduct) :
     globalBasis_(globalBasis),
-    bilinearForm(bilinForm),
-    innerProduct(innerProd),
     tree_(globalBasis, bilinearForm, innerProduct)
   {}
 
@@ -534,7 +532,7 @@ public:
     using namespace boost::fusion;
     using namespace Dune::detail;
 
-    return fold(transform(bilinearForm.getSolutionSpaces(),
+    return fold(transform(tree_.bilinearForm.getSolutionSpaces(),
                           getLocalViewMaxSize()),
                 0, std::plus<std::size_t>());
   }
@@ -548,8 +546,6 @@ public:
 
 protected:
   const GlobalBasis* globalBasis_;
-  BilinearForm& bilinearForm;
-  InnerProduct& innerProduct;
   const Element* element_;
   Tree tree_;
 };
