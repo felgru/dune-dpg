@@ -319,7 +319,7 @@ template<typename BilinearForm, typename InnerProduct, std::size_t testIndex>
 class OptimalTestIndexSet
 {
   typedef typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView GridView;
-  static const int dim = GridView::dimension;
+  enum {dim = GridView::dimension};
 
   // Needs the mapper
   friend class OptimalTestLocalIndexSet<BilinearForm,InnerProduct,testIndex>;
@@ -377,7 +377,7 @@ public:
   typedef typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView GridView;
 
 private:
-  static const int dim = GridView::dimension;
+  enum {dim = GridView::dimension};
 
 public:
 
@@ -575,7 +575,7 @@ public:
 private:
   typedef OptimalTestBasis<BilinearForm,InnerProduct,testIndex> GlobalBasis;
   typedef typename std::tuple_element<0,SolutionSpaces>::type::GridView GridView;
-  static const int dim = GridView::dimension;
+  enum {dim = GridView::dimension};
 
   typedef typename GridView::template Codim<0>::Entity E;
   typedef typename std::tuple_element<0,EnrichedTestspaces>::type::LocalView::Tree::FiniteElement EnrichedFiniteElement;

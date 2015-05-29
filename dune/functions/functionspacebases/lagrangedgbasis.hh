@@ -134,7 +134,7 @@ public:
 template<typename GV, int k>
 class LagrangeDGIndexSet
 {
-  static const int dim = GV::dimension;
+  enum {dim = GV::dimension};
 
   // Needs the mapper
   friend class LagrangeDGLocalIndexSet<GV,k>;
@@ -246,7 +246,7 @@ class LagrangeDGBasis
                                     LagrangeDGIndexSet<GV,k>,
                                     std::array<std::size_t, 1> >
 {
-  static const int dim = GV::dimension;
+  enum {dim = GV::dimension};
 
 public:
 
@@ -411,7 +411,7 @@ class LagrangeDGBasisLeafNode :
     typename LagrangeDGBasis<GV,k>::size_type>
 {
   typedef LagrangeDGBasis<GV,k> GlobalBasis;
-  static const int dim = GV::dimension;
+  enum {dim = GV::dimension};
 
   typedef typename GV::template Codim<0>::Entity E;
   typedef typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, k> FiniteElementCache;
