@@ -221,7 +221,7 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   typedef std::array<size_type, 1> MultiIndex;
 
-  OptimalTestLocalIndexSet(const OptimalTestIndexSet<BilinearForm, InnerProduct, testIndex> & indexSet, const SolutionSpaces& solSp)
+  OptimalTestLocalIndexSet(const SolutionSpaces& solSp)
   :
   solutionBasisIndexSet_(boost::fusion::as_vector(
               boost::fusion::transform(solSp,detail::getIndexSet()))),
@@ -344,7 +344,7 @@ public:
 
   LocalIndexSet localIndexSet() const
   {
-    return LocalIndexSet(*this, solutionSpaces);
+    return LocalIndexSet(solutionSpaces);
   }
 
 private:
