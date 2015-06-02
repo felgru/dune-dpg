@@ -17,6 +17,11 @@ enum class IntegrationType {
     normalSign
 };
 
+enum class EvaluationType {
+    value,   //!< v
+    grad,    //!< ∇v
+};
+
 enum class SpaceType {
     test,     //!< a test space
     solution  //!< a solution space

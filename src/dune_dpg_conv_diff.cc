@@ -55,7 +55,7 @@ template <class FEBasis>
 void boundaryTreatmentInflow (const FEBasis& feBasis,
                         std::vector<bool>& dirichletNodes )
 {
-  static const int dim = FEBasis::GridView::dimension;
+  const int dim = FEBasis::GridView::dimension;
 
   // Interpolating the identity function wrt to a Lagrange basis
   // yields the positions of the Lagrange nodes
@@ -84,7 +84,7 @@ void boundaryTreatmentInflow (const FEBasis& feBasis,
 void boundaryTreatment (const FEBasis& feBasis,
                         std::vector<bool>& dirichletNodes )
 {
-  static const int dim = FEBasis::GridView::dimension;
+  const int dim = FEBasis::GridView::dimension;
 
   // Interpolating the identity function wrt to a Lagrange basis
   // yields the positions of the Lagrange nodes

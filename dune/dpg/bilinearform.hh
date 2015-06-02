@@ -166,11 +166,9 @@ namespace Dune {
           localTestSpaceOffsets[TestSize::value-1]
           + at_c<TestSize::value-1>(tlv)->size();
 
-      fold(zip(localSolutionSpaceOffsets, slv),
-           0, offsetHelper());
       localTotalSolutionSize =
-          localSolutionSpaceOffsets[SolutionSize::value-1]
-          + at_c<SolutionSize::value-1>(slv)->size();
+          fold(zip(localSolutionSpaceOffsets, slv),
+               0, offsetHelper());
     };
 
     /**

@@ -20,7 +20,7 @@
 #include <dune/functions/functionspacebases/interpolate.hh>
 
 #include "assemble_types.hh"
-#include "traits.hh"
+#include "type_traits.hh"
 
 namespace Dune {
 
@@ -202,6 +202,86 @@ auto make_IntegralTerm(FactorType c,
                        FactorType, DirectionType>(c, lhsBeta, rhsBeta));
 }
 
+namespace detail {
+    /* We need to make this a class, as partial specializations of
+     * function templates are not allowed. */
+template<int dim, EvaluationType type,
+         DomainOfIntegration domain_of_integration>
+struct LocalFunctionEvaluation {
+
+  template <class LocalFiniteElement, class Geometry>
+  std::vector<FieldVector<double,1> >
+  operator() (const LocalFiniteElement& localFiniteElement,
+              const FieldVector<double, dim>& quadPos,
+              const Geometry& geometry,
+              const FieldVector<double, dim>& beta) const;
+};
+
+template<int dim, DomainOfIntegration domain_of_integration>
+struct LocalFunctionEvaluation<dim, EvaluationType::value,
+                               domain_of_integration> {
+
+  template <class LocalFiniteElement, class Geometry>
+  std::vector<FieldVector<double,1> > operator()
+                      (const LocalFiniteElement& localFiniteElement,
+                       const FieldVector<double, dim>& quadPos,
+                       const Geometry& geometry,
+                       const FieldVector<double, dim>&) const
+  {
+    // values of the shape functions
+    std::vector<FieldVector<double,1> > values;
+    localFiniteElement.localBasis().evaluateFunction(quadPos, values);
+    return values;
+  }
+};
+
+template<int dim, DomainOfIntegration domain_of_integration>
+struct LocalFunctionEvaluation<dim, EvaluationType::grad,
+                               domain_of_integration> {
+
+  template <class LocalFiniteElement, class Geometry>
+  std::vector<FieldVector<double,1> > operator()
+                      (const LocalFiniteElement& localFiniteElement,
+                       const FieldVector<double, dim> & quadPos,
+                       const Geometry& geometry,
+                       const FieldVector<double, dim>& beta) const
+  {
+    const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
+    // The gradients of the shape functions on the reference element
+    std::vector<FieldMatrix<double,1,dim> > referenceGradients;
+    localFiniteElement.localBasis()
+            .evaluateJacobian(quadPos, referenceGradients);
+
+    // Compute the shape function gradients on the real element
+    std::vector<FieldVector<double, 1> >
+            derivatives(referenceGradients.size());
+    for (size_t i=0, i_max=referenceGradients.size(); i<i_max; i++)
+    {
+      FieldVector<double,dim> gradient;
+      jacobian.mv(referenceGradients[i][0], gradient);
+      derivatives[i] = beta * gradient;
+    }
+
+    return derivatives;
+  }
+};
+
+template<class FactorType, class PositionType,
+         EnableIf<std::is_arithmetic<FactorType> >... >
+inline double evaluateFactor(FactorType factor, PositionType)
+{
+  return factor;
+}
+
+template<class FactorType, class PositionType,
+         EnableIf<std::is_function<FactorType> >... >
+inline double evaluateFactor(FactorType factor, PositionType x)
+{
+  return factor(x);
+}
+
+}
+
 template<IntegrationType type, DomainOfIntegration domain_of_integration,
          class FactorType, class DirectionType>
 template <class LhsLocalView,
@@ -215,12 +295,28 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
         size_t lhsSpaceOffset,
         size_t rhsSpaceOffset) const
 {
-  static_assert(std::is_arithmetic<typename std::decay<FactorType>::type
-                                  >::value
-             && std::is_same<typename std::decay<DirectionType>::type,
+  static_assert(std::is_same<typename std::decay<DirectionType>::type,
                              FieldVector<double, 2>
                             >::value,
-             "getLocalMatrix only implemented for constant factors!");
+             "getLocalMatrix only implemented for constant flow!");
+
+   static_assert(type == IntegrationType::valueValue
+              || type == IntegrationType::gradValue
+              || type == IntegrationType::valueGrad
+              || type == IntegrationType::gradGrad
+              || type == IntegrationType::normalVector
+              || type == IntegrationType::normalSign,
+              "Use of unknown IntegrationType.");
+   static_assert(domain_of_integration != DomainOfIntegration::interior
+                 || type == IntegrationType::valueValue
+                 || type == IntegrationType::gradValue
+                 || type == IntegrationType::valueGrad
+                 || type == IntegrationType::gradGrad,
+                 "IntegrationType not implemented on interior.");
+   static_assert(domain_of_integration != DomainOfIntegration::face
+                 || type == IntegrationType::normalVector
+                 || type == IntegrationType::normalSign,
+                 "IntegrationType not implemented on boundary.");
 
 
   // Get the grid element from the local FE basis view
@@ -238,7 +334,8 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
   const int nRhs(rhsLocalFiniteElement.localBasis().size());
 
   // Order for the quadrature rule
-  /* TODO: can probably be one less for gradients. */
+  /* TODO: We might need a higher order when factor is a function. */
+  /* TODO: Can probably be one less for gradients. */
   int order = 2*(dim*lhsLocalFiniteElement.localBasis().order()-1);
 
   ////////////////////////////
@@ -260,81 +357,45 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
     const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
 
     // The multiplicative factor in the integral transformation formula
-    const double integrationElement = geometry.integrationElement(quadPos);
+    const double integrationWeight = geometry.integrationElement(quadPos)
+                                   * quad[pt].weight()
+                                   * detail::evaluateFactor(factor, quadPos);
 
     //////////////////////////////
     // Left hand side Functions //
     //////////////////////////////
-    // values of the shape functions
-    std::vector<FieldVector<double,1> > lhsValues;
-    lhsLocalFiniteElement.localBasis().evaluateFunction(quadPos, lhsValues);
+    constexpr auto lhsType = (type == IntegrationType::valueValue ||
+                              type == IntegrationType::valueGrad)
+                             ? EvaluationType::value : EvaluationType::grad;
 
-    /* TODO: only compute what is necessary */
-    // The gradients of the shape functions on the reference element
-    std::vector<FieldMatrix<double,1,dim> > lhsReferenceGradients;
-    lhsLocalFiniteElement.localBasis()
-            .evaluateJacobian(quadPos, lhsReferenceGradients);
-
-    // Compute the shape function gradients on the real element
-    std::vector<FieldVector<double,dim> >
-            lhsGradients(lhsReferenceGradients.size());
-        for (size_t i=0; i<lhsGradients.size(); i++)
-      jacobian.mv(lhsReferenceGradients[i][0], lhsGradients[i]);
+    std::vector<FieldVector<double,1> > lhsValues =
+        detail::LocalFunctionEvaluation<dim, lhsType, domain_of_integration>()
+                      (lhsLocalFiniteElement,
+                       quadPos,
+                       geometry,
+                       lhsBeta);
 
     ///////////////////////////////
     // Right hand side Functions //
     ///////////////////////////////
-    // values of the shape functions
-    std::vector<FieldVector<double,1> > rhsValues;
-    rhsLocalFiniteElement.localBasis()
-            .evaluateFunction(quadPos, rhsValues);
+    constexpr auto rhsType = (type == IntegrationType::valueValue ||
+                              type == IntegrationType::gradValue)
+                             ? EvaluationType::value : EvaluationType::grad;
 
-    // The gradients of the shape functions on the reference element
-    std::vector<FieldMatrix<double,1,dim> > rhsReferenceGradients;
-    rhsLocalFiniteElement.localBasis()
-            .evaluateJacobian(quadPos, rhsReferenceGradients);
-
-    // Compute the shape function gradients on the real element
-    std::vector<FieldVector<double,dim> >
-            rhsGradients(rhsReferenceGradients.size());
-    for (size_t i=0; i<rhsGradients.size(); i++)
-      jacobian.mv(rhsReferenceGradients[i][0], rhsGradients[i]);
+    std::vector<FieldVector<double,1> > rhsValues =
+        detail::LocalFunctionEvaluation<dim, rhsType, domain_of_integration>()
+                      (rhsLocalFiniteElement,
+                       quadPos,
+                       geometry,
+                       rhsBeta);
 
     // Compute the actual matrix entries
     for (size_t i=0; i<nLhs; i++)
     {
       for (size_t j=0; j<nRhs; j++)
       {
-        static_assert(type == IntegrationType::valueValue
-                   || type == IntegrationType::gradValue
-                   || type == IntegrationType::valueGrad
-                   || type == IntegrationType::gradGrad
-                   || type == IntegrationType::normalVector
-                   || type == IntegrationType::normalSign,
-                   "Use of unknown IntegrationType.");
-        static_assert(domain_of_integration != DomainOfIntegration::interior
-                      || type == IntegrationType::valueValue
-                      || type == IntegrationType::gradValue
-                      || type == IntegrationType::valueGrad
-                      || type == IntegrationType::gradGrad,
-                      "IntegrationType not implemented on interior.");
-        if(type == IntegrationType::valueValue) {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += (lhsValues[i] * rhsValues[j]) * factor
-                   * quad[pt].weight() * integrationElement;
-        } else if(type == IntegrationType::valueGrad) {
-        elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += lhsValues[i] * (rhsBeta*rhsGradients[j]) * factor
-                   * quad[pt].weight() * integrationElement;
-        } else if(type == IntegrationType::gradValue) {
-        elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += (lhsBeta*lhsGradients[i]) * rhsValues[j] * factor
-                   * quad[pt].weight() * integrationElement;
-        } else if(type == IntegrationType::gradGrad) {
-        elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += (lhsBeta*lhsGradients[i]) * (rhsBeta*rhsGradients[j])
-                   * factor * quad[pt].weight() * integrationElement;
-        }
+                += (lhsValues[i] * rhsValues[j]) * integrationWeight;
       }
     }
   }
@@ -361,32 +422,42 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
             intersection.integrationOuterNormal(quadFacePos);
 
     // The multiplicative factor in the integral transformation formula -
-    const double integrationElement = intersection.geometry().integrationElement(quadFacePos);
-    //const double integrationElement = integrationOuterNormal.two_norm();
 
-   const FieldVector<double,dim>& centerOuterNormal =
-            intersection.centerUnitOuterNormal();
+    double integrationWeight;
+    if(type == IntegrationType::normalVector) {
+      integrationWeight = (lhsBeta*integrationOuterNormal)
+                        * detail::evaluateFactor(factor, quadFacePos)
+                        * quadFace[pt].weight();
+    } else if(type == IntegrationType::normalSign) {
+      const double integrationElement =
+          intersection.geometry().integrationElement(quadFacePos);
 
+      const FieldVector<double,dim>& centerOuterNormal =
+          intersection.centerUnitOuterNormal();
 
-    int sign = 1;
-    bool signfound = false;
-    for (unsigned int i=0;
+      int sign = 1;
+      bool signfound = false;
+      for (unsigned int i=0;
          i<centerOuterNormal.size() and signfound == false;
          i++)
-    {
-      if (centerOuterNormal[i]<(-1e-10))
       {
-        sign = -1;
-        signfound = true;
+        if (centerOuterNormal[i]<(-1e-10))
+        {
+          sign = -1;
+          signfound = true;
+        }
+        else if (centerOuterNormal[i]>(1e-10))
+        {
+          sign = 1;
+          signfound = true;
+        }
       }
-      else if (centerOuterNormal[i]>(1e-10))
-      {
-        sign = 1;
-        signfound = true;
-      }
+
+      integrationWeight = sign * detail::evaluateFactor(factor, quadFacePos)
+                        * quadFace[pt].weight() * integrationElement;
     }
 
-                // position of the quadrature point within the element
+    // position of the quadrature point within the element
     const FieldVector<double,dim> elementQuadPos =
             intersection.geometryInInside().global(quadFacePos);
 
@@ -412,26 +483,8 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
     {
       for (size_t j=0; j<nRhs; j++)
       {
-        static_assert(type == IntegrationType::valueValue
-                   || type == IntegrationType::gradValue
-                   || type == IntegrationType::valueGrad
-                   || type == IntegrationType::gradGrad
-                   || type == IntegrationType::normalVector
-                   || type == IntegrationType::normalSign,
-                   "Use of unknown IntegrationType.");
-        static_assert(domain_of_integration != DomainOfIntegration::face
-                      || type == IntegrationType::normalVector
-                      || type == IntegrationType::normalSign,
-                      "IntegrationType not implemented on boundary.");
-        if(type == IntegrationType::normalVector) {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += ((lhsBeta*integrationOuterNormal) * factor
-                    * lhsValues[i] * rhsValues[j]) * quadFace[pt].weight();
-        } else if(type == IntegrationType::normalSign) {
-        elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += (sign * factor * lhsValues[i] * rhsValues[j])
-                    * quadFace[pt].weight() * integrationElement;
-        }
+                += (lhsValues[i] * rhsValues[j]) * integrationWeight;
       }
     }
     }

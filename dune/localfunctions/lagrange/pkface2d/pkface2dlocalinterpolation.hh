@@ -17,7 +17,7 @@ namespace Dune
     enum {k = LB::O};
 
   private:
-    static const int kdiv = (k == 0 ? 1 : k);
+    enum {kdiv = (k == 0 ? 1 : k)};
 
   public:
 

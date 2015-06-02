@@ -1,14 +1,14 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-
-/* Convenience interface for enable_if, taken from
- * http://flamingdangerzone.com/cxx11/2012/06/01/almost-static-if.html */
-#ifndef DUNE_DPG_TRAITS_HH
-#define DUNE_DPG_TRAITS_HH
+#ifndef DUNE_DPG_TYPE_TRAITS_HH
+#define DUNE_DPG_TYPE_TRAITS_HH
 
 #include<type_traits>
 
 namespace Dune {
+
+/* Convenience interface for enable_if, taken from
+ * http://flamingdangerzone.com/cxx11/2012/06/01/almost-static-if.html */
 
 namespace detail {
   enum class enabler {};
@@ -20,4 +20,4 @@ using EnableIf =
 
 } // end namespace Dune
 
-#endif // DUNE_DPG_TRAITS_HH
+#endif // DUNE_DPG_TYPE_TRAITS_HH
