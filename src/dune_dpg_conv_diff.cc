@@ -114,8 +114,7 @@ void boundaryTreatment (const FEBasis& feBasis,
 
 // The right-hand side explicit expression
 
-double epsilon = 0.00000001;
-
+double epsilon;   //TODO classes for fieldRHS and fielsExact with epsilon as variable
 
 double fieldRHS(const Dune::FieldVector<double, 2>& x) {
   const double pi = boost::math::constants::pi<double>();
@@ -144,6 +143,9 @@ int main(int argc, char** argv)
   typedef UGGrid<dim> GridType;
 
   unsigned int nelements = atoi(argv[1]);
+  int epsinv = atoi(argv[2]);
+//  int muinv = atoi(argv[3]);
+  epsilon = 0;//1./double(epsinv);
 
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
@@ -164,7 +166,8 @@ int main(int argc, char** argv)
 
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisSigma; // sigma 1 und 2
-  typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
+  typedef Functions::PQKNodalBasis<GridView, 2> FEBasisTrace; // u^
+//  typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
   typedef Functions::PQKFaceNodalBasis<GridView, 2> FEBasisFace; // sigma_n^
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView),
                                         FEBasisSigma(gridView),
@@ -187,7 +190,14 @@ int main(int argc, char** argv)
   const double c(0);
 //  const double epsilon(0.01);
   const double sqrtepsilon (std::sqrt(epsilon));
-  const double mu(epsilon);
+  const double mu(epsilon*epsilon);   //1000./double(muinv)
+  const double delta(1e-2);
+
+  double sqrtEpsilonCutof = sqrtepsilon;
+  if (sqrtepsilon < delta)
+  {
+//    sqrtEpsilonCutof = 0;
+  }
 
   std::cout <<"c = " << c <<" epsilon = " <<epsilon <<" sqrtepsilon = " << sqrtepsilon << " beta = [" << beta[0] <<"," << beta[1] <<"] mu = " <<mu <<std::endl;
 
@@ -212,51 +222,61 @@ int main(int argc, char** argv)
                                     DomainOfIntegration::interior>(sqrtepsilon, firstcomponent),
               make_IntegralTerm<0,2,IntegrationType::gradValue,               // sqrtepsilon (sigma2, dx_2 v)
                                     DomainOfIntegration::interior>(sqrtepsilon, secondcomponent),
-              make_IntegralTerm<0,3,IntegrationType::normalVector,              // <u^, beta n v>
+//
+              make_IntegralTerm<0,3,IntegrationType::normalVector,            // <u^, beta n v>
                                     DomainOfIntegration::face>(1, beta),
-              make_IntegralTerm<1,3,IntegrationType::normalVector,              // <u^, n_1 tau1>
-                                    DomainOfIntegration::face>((-1*sqrtepsilon), firstcomponent),
-              make_IntegralTerm<2,3,IntegrationType::normalVector,              // <u^, n_2 tau2>
-                                    DomainOfIntegration::face>((-1*sqrtepsilon), secondcomponent),
+              make_IntegralTerm<1,3,IntegrationType::normalVector,            // <u^, n_1 tau1>
+                                    DomainOfIntegration::face>((-1*sqrtEpsilonCutof), firstcomponent),
+              make_IntegralTerm<2,3,IntegrationType::normalVector,            // <u^, n_2 tau2>
+                                    DomainOfIntegration::face>((-1*sqrtEpsilonCutof), secondcomponent),
+//
               make_IntegralTerm<0,4,IntegrationType::normalSign,              // -sqrtepsilon <sigma^ sgn(n), v>
-                                    DomainOfIntegration::face>((-1*sqrtepsilon))/*,
-              make_IntegralTerm<0,4,IntegrationType::normalSign,              // (sqrtepsilon-1) <sigma^ sgn(n),v>
-                                    DomainOfIntegration::face>((sqrtepsilon-1)),
-              make_IntegralTerm<0,1,IntegrationType::normalVector,              // (1-sqrtepsilon) <n_1 sigma_1,v>
-                                    DomainOfIntegration::face>((1-sqrtepsilon), firstcomponent),
-              make_IntegralTerm<0,2,IntegrationType::normalVector,              // (1-sqrtepsilon) <n_2 sigma_2,v>
-                                    DomainOfIntegration::face>((1-sqrtepsilon), secondcomponent)*/
+                                    DomainOfIntegration::face>((-1))//((-1*sqrtepsilon) (-1) TODO which formulation makes more sense?
           ));
+
   auto innerProduct = make_InnerProduct(testSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,              // (v,v)
                                     DomainOfIntegration::interior>(1),
               make_IntegralTerm<0,0,IntegrationType::gradGrad,                // (beta grad v,beta grad v)
                                     DomainOfIntegration::interior>(1, beta),
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,                // (dx_1 v,dx_1 v)
+              make_IntegralTerm<0,0,IntegrationType::gradGrad,                // epsilon (dx_1 v,dx_1 v)
                                     DomainOfIntegration::interior>(epsilon, firstcomponent),
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,                // (dx_2 v,dx_2 v)
+              make_IntegralTerm<0,0,IntegrationType::gradGrad,                // epsilon (dx_2 v,dx_2 v)
                                     DomainOfIntegration::interior>(epsilon, secondcomponent),
               make_IntegralTerm<1,1,IntegrationType::valueValue,              // (tau1,tau1)
                                     DomainOfIntegration::interior>(1),
               make_IntegralTerm<2,2,IntegrationType::valueValue,              // (tau2,tau2)
                                     DomainOfIntegration::interior>(1),
-              make_IntegralTerm<1,1,IntegrationType::gradGrad,              // epsilon (dx_1 tau1,dx_1 tau1)
+              make_IntegralTerm<1,1,IntegrationType::gradGrad,                // epsilon (dx_1 tau1,dx_1 tau1)
                                     DomainOfIntegration::interior>(epsilon, firstcomponent),
-              make_IntegralTerm<2,2,IntegrationType::gradGrad,              // epsilon (dx_2 tau2,dx_2 tau2)
+              make_IntegralTerm<2,2,IntegrationType::gradGrad,                // epsilon (dx_2 tau2,dx_2 tau2)
                                     DomainOfIntegration::interior>(epsilon, secondcomponent),
-              make_IntegralTerm<1,2,IntegrationType::gradGrad,              // epsilon (dx_1 tau1, dx_2 tau2)
+              make_IntegralTerm<1,2,IntegrationType::gradGrad,                // epsilon (dx_1 tau1, dx_2 tau2)
                                     DomainOfIntegration::interior>(epsilon,
                                                                    firstcomponent,
                                                                    secondcomponent),
-              make_IntegralTerm<2,1,IntegrationType::gradGrad,              // epsilon (dx_2 tau2, dx_1 tau1)
+              make_IntegralTerm<2,1,IntegrationType::gradGrad,                // epsilon (dx_2 tau2, dx_1 tau1)
                                     DomainOfIntegration::interior>(epsilon,
                                                                    secondcomponent,
                                                                    firstcomponent)
           ));
 
+  auto minInnerProduct = make_InnerProduct(solutionSpaces,
+          make_tuple(
+              make_IntegralTerm<3,3,IntegrationType::valueValue,              // (u^,u^)
+                                    DomainOfIntegration::interior>(1),
+              make_IntegralTerm<3,3,IntegrationType::gradGrad,                // (beta grad u^,beta grad u^)
+                                    DomainOfIntegration::interior>(1, beta),
+              make_IntegralTerm<3,3,IntegrationType::gradGrad,                // epsilon (dx_1 u^,dx_1 u^)
+                                    DomainOfIntegration::interior>(epsilon, firstcomponent),
+              make_IntegralTerm<3,3,IntegrationType::gradGrad,                // epsilon (dx_2 u^,dx_2 u^)
+                                    DomainOfIntegration::interior>(epsilon, secondcomponent)
+          ));
+
   typedef decltype(bilinearForm) BilinearForm;
   typedef decltype(innerProduct) InnerProduct;
+  typedef decltype(minInnerProduct) MinInnerProduct;
   typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct> TestspaceCoefficientMatrix;
 
   TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
@@ -268,11 +288,12 @@ int main(int argc, char** argv)
   typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix, 2> FEBasisOptimalTest2;              // tau2
   FEBasisOptimalTest2 feBasisTest2(testspaceCoefficientMatrix);
 
+
   auto optimalTestSpaces = make_tuple(feBasisTest0, feBasisTest1, feBasisTest2);
 
   auto systemAssembler = make_SystemAssembler(optimalTestSpaces, solutionSpaces,    //DPG
           bilinearForm, innerProduct, DPGFormulation());
-//  auto systemAssembler = make_SystemAssembler(testSpaces, solutionSpaces,    //Saddlepoint
+//  auto systemAssembler = make_SystemAssembler(testSpaces, solutionSpaces,         //Saddlepoint
 //          bilinearForm, innerProduct, SaddlepointFormulation());
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
@@ -296,8 +317,41 @@ int main(int argc, char** argv)
                                        [] (const Domain& x) { return 0;});
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
+  MatrixType testMatrix(stiffnessMatrix);
+
+  for (unsigned int i=0; i<testMatrix.N(); i++)
+  {
+    for (unsigned int j=0; j<testMatrix.M(); j++)
+    {
+      if (testMatrix.exists(i,j))
+      {
+        testMatrix[i][j]=0;
+      }
+    }
+  }
+  // Add minimization property for u^ on (near-)characteristic boundary if epsilon is closed to zero
+  systemAssembler.applyMinimization<3, MinInnerProduct,2>
+                    (testMatrix,
+                     minInnerProduct,
+                     beta,
+                     delta,
+                     sqrtepsilon);  //TODO is this really sqrtepsilon or something similar?
+
+std::ofstream file("testmatrix.txt");
+printmatrix(file , testMatrix, "testmatrix", "--");
+
+
+  // Add minimization property for u^ on (near-)characteristic boundary if epsilon is closed to zero
+  systemAssembler.applyMinimization<3, MinInnerProduct,2>
+                    (stiffnessMatrix,
+                     minInnerProduct,
+                     beta,
+                     delta,
+                     sqrtepsilon);  //TODO is this really sqrtepsilon or something similar?
+
+
   // Set weak zero-boundary conditions for u^ (outflow boundary)
-  systemAssembler.applyWeakBoundaryCondition<3,2>
+  systemAssembler.applyWeakBoundaryCondition<3, 2>
                     (stiffnessMatrix,
                      beta,
                      mu);
@@ -352,10 +406,10 @@ int main(int argc, char** argv)
   }
   std::cout <<"is symmetric = " <<issymmetric <<std::endl; */
 
-//std::ofstream file("matrix.txt");
-//printmatrix(file , stiffnessMatrix, "matrix", "--");
-
 //printmatrix(std::cout , stiffnessMatrix, "matrix", "--");
+
+std::ofstream file1("matrix.txt");
+printmatrix(file1 , stiffnessMatrix, "matrix", "--");
 
 //file <<"rhs = " <<std::endl;
 //for (unsigned int i=0; i<rhs.size(); i++)
@@ -509,41 +563,40 @@ int main(int argc, char** argv)
   //  We need to subsample, because VTK cannot natively display real second-order functions
   //////////////////////////////////////////////////////////////////////////////////////////////
 
-
   Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisInterior),decltype(u)> uFunction(feBasisInterior,u);
   auto localUFunction = localFunction(uFunction);
 
   Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace),decltype(uhat)> uhatFunction(feBasisTrace,uhat);
   auto localUhatFunction = localFunction(uhatFunction);
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisSigma1),decltype(sigma1)> sigma1Function(feBasisSigma1,sigma1);
-  auto localSigma1Function = localFunction(sigma1Function);
+//  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisSigma1),decltype(sigma1)> sigma1Function(feBasisSigma1,sigma1);
+//  auto localSigma1Function = localFunction(sigma1Function);
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisSigma2),decltype(sigma2)> sigma2Function(feBasisSigma2,sigma2);
-  auto localSigma2Function = localFunction(sigma2Function);
+//  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisSigma2),decltype(sigma2)> sigma2Function(feBasisSigma2,sigma2);
+//  auto localSigma2Function = localFunction(sigma2Function);
 
   Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisFace),decltype(sigmahat)> sigmahatFunction(feBasisFace,sigmahat);
   auto localSigmahatFunction = localFunction(sigmahatFunction);
 
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
   vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("convdiff_cube_finer_"+ std::to_string(nelements));
+  vtkWriter.write("convdiff_cube_scaled_min_"+ std::to_string(nelements)+"_"+ std::to_string(epsinv));
 
-  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-  vtkWriter1.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter1.write("convdiff_cube_trace_finer_"+ std::to_string(nelements));
+//  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
+//  vtkWriter1.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
+//  vtkWriter1.write("convdiff_cube_trace_"+ std::to_string(nelements)+"_"+ std::to_string(epsinv));
 
-  SubsamplingVTKWriter<GridView> vtkWriter2(gridView,2);
-  vtkWriter2.addVertexData(localSigma1Function, VTK::FieldInfo("sigma1", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter2.write("convdiff_cube_sigma1_finer_"+ std::to_string(nelements));
+//  SubsamplingVTKWriter<GridView> vtkWriter2(gridView,2);
+//  vtkWriter2.addVertexData(localSigma1Function, VTK::FieldInfo("sigma1", VTK::FieldInfo::Type::scalar, 1));
+//  vtkWriter2.write("convdiff_cube_sigma1_"+ std::to_string(nelements));
 
-  SubsamplingVTKWriter<GridView> vtkWriter3(gridView,2);
-  vtkWriter3.addVertexData(localSigma2Function, VTK::FieldInfo("sigma2", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter3.write("convdiff_cube_sigma2_finer_"+ std::to_string(nelements));
+//  SubsamplingVTKWriter<GridView> vtkWriter3(gridView,2);
+//  vtkWriter3.addVertexData(localSigma2Function, VTK::FieldInfo("sigma2", VTK::FieldInfo::Type::scalar, 1));
+//  vtkWriter3.write("convdiff_cube_sigma2_"+ std::to_string(nelements));
 
-  SubsamplingVTKWriter<GridView> vtkWriter4(gridView,2);
-  vtkWriter4.addVertexData(localSigmahatFunction, VTK::FieldInfo("sigmahat", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter4.write("convdiff_cube_sigmahat_finer_"+ std::to_string(nelements));
+//  SubsamplingVTKWriter<GridView> vtkWriter4(gridView,2);
+//  vtkWriter4.addVertexData(localSigmahatFunction, VTK::FieldInfo("sigmahat", VTK::FieldInfo::Type::scalar, 1));
+//  vtkWriter4.write("convdiff_cube_sigmahat_"+ std::to_string(nelements)+"_"+ std::to_string(epsinv));
 
 //#endif
 

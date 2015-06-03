@@ -29,6 +29,8 @@
 #include <boost/fusion/algorithm/iteration/accumulate.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
+#include <boost/fusion/container/generation/make_vector.hpp>
+#include <boost/fusion/include/make_vector.hpp>
 
 #include <dune/common/exceptions.hh> // We use exceptions
 #include <dune/common/function.hh>
@@ -265,7 +267,15 @@ public:
   void applyWeakBoundaryCondition(
                               BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                               FieldVector<double, dim> beta,
-                              double c);
+                              double mu);
+
+  template <size_t spaceIndex, class MinInnerProduct, unsigned int dim>
+  void applyMinimization(
+                      BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                      MinInnerProduct minInnerProduct,
+                      FieldVector<double, dim> beta,
+                      double delta,
+                      double epsilon);
 
   /**
    * \brief Does exactly what it says on the tin.
@@ -715,7 +725,7 @@ void SystemAssembler<TestSpaces, SolutionSpaces,
 applyWeakBoundaryCondition
                     (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                      FieldVector<double, dim> beta,
-                     double c)
+                     double mu)
 {
   using namespace boost::fusion;
   using namespace Dune::detail;
@@ -792,7 +802,7 @@ applyWeakBoundaryCondition
               for (size_t j=0; j<n; j++)
               {
                 elementMatrix[i][j]
-                        += (c * solutionValues[i] * solutionValues[j])
+                        += (mu * solutionValues[i] * solutionValues[j])
                            * quadFace[pt].weight() * integrationElement;
               }
             }
@@ -814,6 +824,120 @@ applyWeakBoundaryCondition
     }
   }
 };
+
+
+template<class TestSpaces, class SolutionSpaces,
+         class BilinearForm, class InnerProduct,
+         class FormulationType>
+template <size_t spaceIndex, class MinInnerProduct, unsigned int dim>
+void SystemAssembler<TestSpaces, SolutionSpaces,
+                     BilinearForm, InnerProduct, FormulationType>::
+applyMinimization
+            (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+             MinInnerProduct minInnerProduct,
+             FieldVector<double, dim> beta,
+             double delta,
+             double epsilon = 0)
+{
+  using namespace boost::fusion;
+  using namespace Dune::detail;
+
+  static_assert(std::is_same<
+             typename std::decay<FormulationType>::type
+           , DPGFormulation
+                            >::value,
+                "applyMinimization not implemented "
+                "for Saddlepointformulation ");
+
+  // Get the grid view from the finite element basis
+  typedef typename std::tuple_element<spaceIndex,SolutionSpaces>::type::GridView GridView;
+  GridView gridView = std::get<spaceIndex>(solutionSpaces).gridView();
+
+  // get global solution Space Offsets
+  auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
+                                                     getIndexSet()));
+
+  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+  fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
+       0, globalOffsetHelper());
+  size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
+
+  size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+
+  // get local view for solution space (necessary if we want to use inner product) /TODO inefficient
+  auto solutionLocalView = as_vector(transform(solutionSpaces, getLocalView()));
+
+  auto localIndexSet = at_c<spaceIndex>(solutionBasisIndexSet).localIndexSet(); //only relevant localIndexSet
+
+  bool epsilonSmallerDelta(epsilon<delta);
+
+  for(const auto& e : elements(gridView))
+  {
+    for_each(solutionLocalView, applyBind<decltype(e)>(e));
+    localIndexSet.bind(*at_c<spaceIndex>(solutionLocalView));
+
+    /* set up local offsets */
+    fold(zip(localSolutionSpaceOffsets, solutionLocalView), 0, offsetHelper());
+
+    const auto& localFiniteElement = at_c<spaceIndex>(solutionLocalView)->tree().finiteElement();
+
+    size_t n = localFiniteElement.localBasis().size();
+
+    Matrix<FieldMatrix<double,1,1> > elementMatrix;
+    // Set all matrix entries to zero
+    //elementMatrix.setSize(n,n);
+    //elementMatrix = 0;      // fills the entire matrix with zeroes
+
+    minInnerProduct.bind(solutionLocalView);
+    minInnerProduct.getLocalMatrix(elementMatrix);
+
+    std::vector<bool> relevantFaces(e.subEntities(1), 0);
+
+    for (auto&& intersection : intersections(gridView, e))
+    {
+      const FieldVector<double,dim>& centerOuterNormal =
+              intersection.centerUnitOuterNormal();
+      //set relevant faces for almost characteristic faces
+      relevantFaces[intersection.indexInInside()] = (std::abs(beta*centerOuterNormal) < delta);
+    }
+
+    std::vector<bool> relevantDOFs(n, 0);
+
+    for (unsigned int i=0; i<n; i++)
+    {
+      if (localFiniteElement.localCoefficients().localKey(i).codim()==0) // interior DOFs
+      {
+        relevantDOFs[i] = 1;
+      }
+      else if (localFiniteElement.localCoefficients().localKey(i).codim()==1 and epsilonSmallerDelta) // edge DOFs
+      {
+        relevantDOFs[i] = relevantFaces[localFiniteElement.localCoefficients().localKey(i).subEntity()];
+      }
+      // vertex DOFs never are relevant because the correspondig basis functions have support on
+      // at least two edges which can never be both (almost) characteristic
+    }
+
+    for (size_t i=0; i<n; i++)
+    {
+      if (relevantDOFs[i])
+      {
+        auto row = localIndexSet.index(i)[0];
+        for (size_t j=0; j<n; j++)
+        {
+          auto col = localIndexSet.index(j)[0];
+          matrix[row+globalOffset][col+globalOffset]
+                          += elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                          [localSolutionSpaceOffsets[spaceIndex]+j];
+        }
+      }
+    }
+  }
+};
+
+
+
+
+
 
 
 } // end namespace Dune
