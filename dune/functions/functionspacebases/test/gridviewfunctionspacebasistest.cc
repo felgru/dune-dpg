@@ -92,7 +92,7 @@ void testScalarBasis(const Basis& feBasis)
   std::vector<double> x(indexSet.size());
 
   // TODO: Implement interpolation properly using the global basis.
-  static const int dim = Basis::GridView::dimension;
+  const int dim = Basis::GridView::dimension;
   for (auto it = gridView.template begin<dim>(); it != gridView.template end<dim>(); ++it)
     x[gridView.indexSet().index(*it)] = it->geometry().corner(0)[0];
 

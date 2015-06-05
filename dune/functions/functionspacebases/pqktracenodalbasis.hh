@@ -141,7 +141,7 @@ public:
 template<typename GV, int k>
 class PQKTraceIndexSet
 {
-  static const int dim = GV::dimension;
+  enum {dim = GV::dimension};
 
   // Needs the mapper
   friend class PQKTraceLocalIndexSet<GV,k>;
@@ -222,7 +222,7 @@ class PQKTraceNodalBasis
                                     PQKTraceIndexSet<GV,k>,
                                     std::array<std::size_t, 1> >
 {
-  static const int dim = GV::dimension;
+  enum {dim = GV::dimension};
 
 public:
 
@@ -388,7 +388,7 @@ class PQKTraceNodalBasisLeafNode :
     typename PQKTraceNodalBasis<GV,k>::size_type>
 {
   typedef PQKTraceNodalBasis<GV,k> GlobalBasis;
-  static const int dim = GV::dimension;
+  enum {dim = GV::dimension};
 
   typedef typename GV::template Codim<0>::Entity E;
   typedef typename Dune::PQkTraceLocalFiniteElementCache<typename GV::ctype, double, dim, k> FiniteElementCache;

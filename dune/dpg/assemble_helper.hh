@@ -498,25 +498,6 @@ struct globalOffsetHelper
 };
 
 
-struct getLocalFeSize
-{
-    template<class T>
-    struct result;
-
-    template<class T>
-    struct result<getLocalFeSize(T)>
-    {
-        typedef std::size_t type;
-    };
-    template<class T>
-    std::size_t operator()(T t) const
-    {
-        return t->tree().finiteElement().size();
-    };
-};
-
-
-
 struct getIndexSetSize
 {
     template<class T>
@@ -581,6 +562,16 @@ struct getLocalFiniteElement
     {
         return t->tree().finiteElement();
     };
+};
+
+
+struct setToNullptr
+{
+    template<class T>
+    void operator()(T* const & t) const
+    {
+        const_cast<T*&>(t) = nullptr;
+    }
 };
 
 
