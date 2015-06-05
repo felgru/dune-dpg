@@ -40,7 +40,9 @@ namespace Dune
   public:
     typedef LocalBasisTraits<D,d,Dune::FieldVector<D,d>,R,1,Dune::FieldVector<R,1>,Dune::FieldMatrix<R,1,d> > Traits;
 
-    OptimalTestLocalBasis (EnrichedTestspace* enrTest, MatrixType* coeffMat)
+    OptimalTestLocalBasis (EnrichedTestspace* enrTest, MatrixType* coeffMat, size_t offset, size_t k):
+      offset(offset),
+      k(k)
     {
       enrichedTestspace=enrTest;
       coefficientMatrix=coeffMat;
@@ -57,14 +59,14 @@ namespace Dune
                                   std::vector<typename Traits::RangeType>& out) const
     {
       out.resize(size());
-      std::vector<FieldVector<double,1> > valuesEnrichedTestspace(coefficientMatrix->N());
+      std::vector<FieldVector<double,1> > valuesEnrichedTestspace(k);
       enrichedTestspace->localBasis().evaluateFunction(in, valuesEnrichedTestspace);
       for (size_t i=0; i<size(); i++)
       {
         out[i] = 0;
-        for (size_t j=0; j<coefficientMatrix->N(); ++j)
+        for (size_t j=0; j<k; ++j)
         {
-          out[i]+=((*coefficientMatrix)[j][i][0]*valuesEnrichedTestspace[j][0]);
+          out[i]+=((*coefficientMatrix)[offset+j][i][0]*valuesEnrichedTestspace[j][0]);
         }
       }
     }
@@ -78,7 +80,7 @@ namespace Dune
                       std::vector<typename Traits::JacobianType>& out) const
     {
       out.resize(size());
-      std::vector<typename Traits::JacobianType> JacobianEnrichedTestspace(coefficientMatrix->N());
+      std::vector<typename Traits::JacobianType> JacobianEnrichedTestspace(k);
       enrichedTestspace->localBasis().evaluateJacobian(in, JacobianEnrichedTestspace);
       // Loop over all shape functions
       for (size_t i=0; i<size(); i++)
@@ -89,9 +91,9 @@ namespace Dune
           // Initialize: the overall expression is a product
           // if j-th bit of i is set to -1, else 1
           out[i][0][b] = 0;
-          for (size_t j=0; j<coefficientMatrix->N(); ++j)
+          for (size_t j=0; j<k; ++j)
           {
-            out[i][0][b]+=((*coefficientMatrix)[j][i][0]*JacobianEnrichedTestspace[j][0][b]);
+            out[i][0][b]+=((*coefficientMatrix)[offset+j][i][0]*JacobianEnrichedTestspace[j][0][b]);
           }
         }
       }
@@ -105,6 +107,8 @@ namespace Dune
   private:
     EnrichedTestspace* enrichedTestspace;
     MatrixType* coefficientMatrix;
+    size_t offset;
+    size_t k;
   };
 }
 

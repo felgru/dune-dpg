@@ -111,7 +111,9 @@ int main(int argc, char** argv)
                                        FieldVector<double, dim>{1.,1.}))))
           InnerProduct;
 
-  typedef Functions::OptimalTestBasis<BilinearForm, InnerProduct>
+  typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>
+      TestspaceCoefficientMatrix;
+  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix>
       FEBasisOptimalTest;              // v
 
   typedef decltype(make_SystemAssembler(
@@ -150,6 +152,8 @@ int main(int argc, char** argv)
   bilinearForms.reserve(numS);
   std::vector<InnerProduct> innerProducts;
   innerProducts.reserve(numS);
+  std::vector<TestspaceCoefficientMatrix> coefficientMatrices;
+  coefficientMatrices.reserve(numS);
 
   for(int i = 0; i < numS; ++i)
   {
@@ -173,9 +177,10 @@ int main(int argc, char** argv)
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                     DomainOfIntegration::interior>(1., s))));
 
+    coefficientMatrices.emplace_back(bilinearForms[i], innerProducts[i]);
+
     optimalTestSpaces.emplace_back(
-            make_tuple(FEBasisOptimalTest(bilinearForms[i],
-                                          innerProducts[i])));
+            make_tuple(FEBasisOptimalTest(coefficientMatrices[i])));
 
     systemAssemblers.emplace_back(
         make_SystemAssembler(optimalTestSpaces[i], solutionSpaces,

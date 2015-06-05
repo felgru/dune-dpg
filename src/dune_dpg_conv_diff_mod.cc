@@ -57,7 +57,7 @@ template <class FEBasis>
 void boundaryTreatmentInflow (const FEBasis& feBasis,
                         std::vector<bool>& dirichletNodes )
 {
-  const int dim = FEBasis::GridView::dimension;
+  static const int dim = FEBasis::GridView::dimension;
 
   // Interpolating the identity function wrt to a Lagrange basis
   // yields the positions of the Lagrange nodes
@@ -87,7 +87,7 @@ void boundaryTreatmentInflow (const FEBasis& feBasis,
 void boundaryTreatment (const FEBasis& feBasis,
                         std::vector<bool>& dirichletNodes )
 {
-  const int dim = FEBasis::GridView::dimension;
+  static const int dim = FEBasis::GridView::dimension;
 
   // Interpolating the identity function wrt to a Lagrange basis
   // yields the positions of the Lagrange nodes
@@ -114,7 +114,7 @@ void boundaryTreatment (const FEBasis& feBasis,
 
 // The right-hand side explicit expression
 
-double epsilon;   //TODO classes for fieldRHS and fielsExact with epsilon as variable
+double epsilon;
 
 double fieldRHS(const Dune::FieldVector<double, 2>& x) {
   const double pi = boost::math::constants::pi<double>();
@@ -144,9 +144,14 @@ int main(int argc, char** argv)
 
   unsigned int nelements = atoi(argv[1]);
   int epsinv = atoi(argv[2]);
-//  int muinv = atoi(argv[3]);
-  epsilon = 0;//1./double(epsinv);
-
+  if (epsinv == 0)
+  {
+    epsilon = 0;
+  }
+  else
+  {
+    epsilon = 1/double(epsinv);
+  }
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
   array<unsigned int,dim> elements = {nelements,nelements};
@@ -167,7 +172,6 @@ int main(int argc, char** argv)
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisSigma; // sigma 1 und 2
   typedef Functions::PQKNodalBasis<GridView, 2> FEBasisTrace; // u^
-//  typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
   typedef Functions::PQKFaceNodalBasis<GridView, 2> FEBasisFace; // sigma_n^
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView),
                                         FEBasisSigma(gridView),
@@ -177,11 +181,13 @@ int main(int argc, char** argv)
 
   typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestV;   // v enriched
   typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestTau; // tau enriched
+  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestNu; // nu enriched
   auto testSpaces = std::make_tuple(FEBasisTestV(gridView),
                                     FEBasisTestTau(gridView),
-                                    FEBasisTestTau(gridView));
+                                    FEBasisTestTau(gridView),
+                                    FEBasisTestNu(gridView));
 
-  typedef decltype(testSpaces) TestSpaces;          // testSpaces = (v, tau1, tau2)
+  typedef decltype(testSpaces) TestSpaces;          // testSpaces = (v, tau1, tau2, nu)
   typedef decltype(solutionSpaces) SolutionSpaces;  // solutionSpaces =
                                                       // (u, sigma1, sigma2, u^, sigma_n^)
 
@@ -190,14 +196,16 @@ int main(int argc, char** argv)
   const double c(0);
 //  const double epsilon(0.01);
   const double sqrtepsilon (std::sqrt(epsilon));
-  const double mu(epsilon*epsilon);   //1000./double(muinv)
-  const double delta(1e-2);
+  const double mu(epsilon*epsilon);
+  const double delta(1e-4);
 
-  double sqrtEpsilonCutof = sqrtepsilon;
-  if (sqrtepsilon < delta)
-  {
-//    sqrtEpsilonCutof = 0;
-  }
+  double scale_u(1);
+  double scale_sigma(1);
+  double scale_uhat(1);
+  double scale_sigmahat(1);
+  double scale_tau(1);
+  double scale_v(1);
+  double scale_nu(1);
 
   std::cout <<"c = " << c <<" epsilon = " <<epsilon <<" sqrtepsilon = " << sqrtepsilon << " beta = [" << beta[0] <<"," << beta[1] <<"] mu = " <<mu <<std::endl;
 
@@ -207,59 +215,76 @@ int main(int argc, char** argv)
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,              // (cu, v))
-                                    DomainOfIntegration::interior>(c),
+                                    DomainOfIntegration::interior>(c*scale_u*scale_v),
               make_IntegralTerm<0,0,IntegrationType::gradValue,               // -(u, beta Grad v)
-                                    DomainOfIntegration::interior>(-1, beta),
+                                    DomainOfIntegration::interior>(-1*scale_u*scale_v, beta),
               make_IntegralTerm<1,0,IntegrationType::gradValue,               // sqrtepsilon (u, dx_1 tau1)
-                                    DomainOfIntegration::interior>(sqrtepsilon, firstcomponent),
+                                    DomainOfIntegration::interior>(sqrtepsilon*scale_u*scale_tau, firstcomponent),
               make_IntegralTerm<2,0,IntegrationType::gradValue,               // sqrtepsilon (u, dx_2 tau2)
-                                    DomainOfIntegration::interior>(sqrtepsilon, secondcomponent),
+                                    DomainOfIntegration::interior>(sqrtepsilon*scale_u*scale_tau, secondcomponent),
               make_IntegralTerm<1,1,IntegrationType::valueValue,              // (sigma1, tau1)
-                                    DomainOfIntegration::interior>(1),
+                                    DomainOfIntegration::interior>(1*scale_sigma*scale_tau),
               make_IntegralTerm<2,2,IntegrationType::valueValue,              // (sigma2, tau2)
-                                    DomainOfIntegration::interior>(1),
+                                    DomainOfIntegration::interior>(1*scale_sigma*scale_tau),
               make_IntegralTerm<0,1,IntegrationType::gradValue,               // sqrtepsilon (sigma1, dx_1 v)
-                                    DomainOfIntegration::interior>(sqrtepsilon, firstcomponent),
+                                    DomainOfIntegration::interior>(sqrtepsilon*scale_sigma*scale_v, firstcomponent),
               make_IntegralTerm<0,2,IntegrationType::gradValue,               // sqrtepsilon (sigma2, dx_2 v)
-                                    DomainOfIntegration::interior>(sqrtepsilon, secondcomponent),
-//
-              make_IntegralTerm<0,3,IntegrationType::normalVector,            // <u^, beta n v>
-                                    DomainOfIntegration::face>(1, beta),
-              make_IntegralTerm<1,3,IntegrationType::normalVector,            // <u^, n_1 tau1>
-                                    DomainOfIntegration::face>((-1*sqrtEpsilonCutof), firstcomponent),
-              make_IntegralTerm<2,3,IntegrationType::normalVector,            // <u^, n_2 tau2>
-                                    DomainOfIntegration::face>((-1*sqrtEpsilonCutof), secondcomponent),
-//
+                                    DomainOfIntegration::interior>(sqrtepsilon*scale_sigma*scale_v, secondcomponent),
+              make_IntegralTerm<0,3,IntegrationType::normalVector,              // <u^, beta n v>
+                                    DomainOfIntegration::face>(1*scale_uhat*scale_v, beta),
+              make_IntegralTerm<1,3,IntegrationType::normalVector,              // <u^, n_1 tau1>
+                                    DomainOfIntegration::face>((-1*sqrtepsilon*scale_uhat*scale_tau), firstcomponent),
+              make_IntegralTerm<2,3,IntegrationType::normalVector,              // <u^, n_2 tau2>
+                                    DomainOfIntegration::face>((-1*sqrtepsilon*scale_uhat*scale_tau), secondcomponent),
               make_IntegralTerm<0,4,IntegrationType::normalSign,              // -sqrtepsilon <sigma^ sgn(n), v>
-                                    DomainOfIntegration::face>((-1))//((-1*sqrtepsilon) (-1) TODO which formulation makes more sense?
+                                    DomainOfIntegration::face>((-1*scale_sigmahat*scale_v)),
+              make_IntegralTerm<3,1,IntegrationType::valueGrad,
+                                    DomainOfIntegration::interior>(sqrtepsilon*scale_sigma*scale_nu, firstcomponent),
+              make_IntegralTerm<3,2,IntegrationType::valueGrad,
+                                    DomainOfIntegration::interior>(sqrtepsilon*scale_sigma*scale_nu, secondcomponent),
+              make_IntegralTerm<3,1,IntegrationType::gradValue,
+                                    DomainOfIntegration::interior>(sqrtepsilon*scale_sigma*scale_nu, firstcomponent),
+              make_IntegralTerm<3,2,IntegrationType::gradValue,
+                                    DomainOfIntegration::interior>(sqrtepsilon*scale_sigma*scale_nu, secondcomponent),
+              make_IntegralTerm<3,4,IntegrationType::normalSign,              // - <sigma^ sgn(n), nu>
+                                    DomainOfIntegration::face>(-1*scale_sigmahat*scale_nu)
           ));
-
   auto innerProduct = make_InnerProduct(testSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,              // (v,v)
                                     DomainOfIntegration::interior>(1),
               make_IntegralTerm<0,0,IntegrationType::gradGrad,                // (beta grad v,beta grad v)
                                     DomainOfIntegration::interior>(1, beta),
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,                // epsilon (dx_1 v,dx_1 v)
+              make_IntegralTerm<0,0,IntegrationType::gradGrad,                // (dx_1 v,dx_1 v)
                                     DomainOfIntegration::interior>(epsilon, firstcomponent),
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,                // epsilon (dx_2 v,dx_2 v)
+              make_IntegralTerm<0,0,IntegrationType::gradGrad,                // (dx_2 v,dx_2 v)
                                     DomainOfIntegration::interior>(epsilon, secondcomponent),
               make_IntegralTerm<1,1,IntegrationType::valueValue,              // (tau1,tau1)
                                     DomainOfIntegration::interior>(1),
               make_IntegralTerm<2,2,IntegrationType::valueValue,              // (tau2,tau2)
                                     DomainOfIntegration::interior>(1),
-              make_IntegralTerm<1,1,IntegrationType::gradGrad,                // epsilon (dx_1 tau1,dx_1 tau1)
+              make_IntegralTerm<1,1,IntegrationType::gradGrad,              // epsilon (dx_1 tau1,dx_1 tau1)
                                     DomainOfIntegration::interior>(epsilon, firstcomponent),
-              make_IntegralTerm<2,2,IntegrationType::gradGrad,                // epsilon (dx_2 tau2,dx_2 tau2)
+              make_IntegralTerm<2,2,IntegrationType::gradGrad,              // epsilon (dx_2 tau2,dx_2 tau2)
                                     DomainOfIntegration::interior>(epsilon, secondcomponent),
-              make_IntegralTerm<1,2,IntegrationType::gradGrad,                // epsilon (dx_1 tau1, dx_2 tau2)
+              make_IntegralTerm<1,2,IntegrationType::gradGrad,              // epsilon (dx_1 tau1, dx_2 tau2)
                                     DomainOfIntegration::interior>(epsilon,
                                                                    firstcomponent,
                                                                    secondcomponent),
-              make_IntegralTerm<2,1,IntegrationType::gradGrad,                // epsilon (dx_2 tau2, dx_1 tau1)
+              make_IntegralTerm<2,1,IntegrationType::gradGrad,              // epsilon (dx_2 tau2, dx_1 tau1)
                                     DomainOfIntegration::interior>(epsilon,
                                                                    secondcomponent,
-                                                                   firstcomponent)
+                                                                   firstcomponent),
+              make_IntegralTerm<3,3,IntegrationType::gradGrad,              // (dx_1 nu, dx_1 nu)
+                                    DomainOfIntegration::interior>(1,
+                                                                   firstcomponent,
+                                                                   firstcomponent),
+              make_IntegralTerm<3,3,IntegrationType::gradGrad,              // (dx_2 nu, dx_2 nu)
+                                    DomainOfIntegration::interior>(1,
+                                                                   secondcomponent,
+                                                                   secondcomponent),
+              make_IntegralTerm<3,3,IntegrationType::valueValue,              // (nu, nu)
+                                    DomainOfIntegration::interior>(1)
           ));
 
   auto minInnerProduct = make_InnerProduct(solutionSpaces,
@@ -277,6 +302,7 @@ int main(int argc, char** argv)
   typedef decltype(bilinearForm) BilinearForm;
   typedef decltype(innerProduct) InnerProduct;
   typedef decltype(minInnerProduct) MinInnerProduct;
+
   typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct> TestspaceCoefficientMatrix;
 
   TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
@@ -287,13 +313,15 @@ int main(int argc, char** argv)
   FEBasisOptimalTest1 feBasisTest1(testspaceCoefficientMatrix);
   typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix, 2> FEBasisOptimalTest2;              // tau2
   FEBasisOptimalTest2 feBasisTest2(testspaceCoefficientMatrix);
+  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix, 3> FEBasisOptimalTest3;              // nu
+  FEBasisOptimalTest3 feBasisTest3(testspaceCoefficientMatrix);
 
 
-  auto optimalTestSpaces = make_tuple(feBasisTest0, feBasisTest1, feBasisTest2);
+  auto optimalTestSpaces = make_tuple(feBasisTest0, feBasisTest1, feBasisTest2, feBasisTest3);
 
   auto systemAssembler = make_SystemAssembler(optimalTestSpaces, solutionSpaces,    //DPG
           bilinearForm, innerProduct, DPGFormulation());
-//  auto systemAssembler = make_SystemAssembler(testSpaces, solutionSpaces,         //Saddlepoint
+//  auto systemAssembler = make_SystemAssembler(testSpaces, solutionSpaces,    //Saddlepoint
 //          bilinearForm, innerProduct, SaddlepointFormulation());
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
@@ -317,30 +345,6 @@ int main(int argc, char** argv)
                                        [] (const Domain& x) { return 0;});
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
-  MatrixType testMatrix(stiffnessMatrix);
-
-  for (unsigned int i=0; i<testMatrix.N(); i++)
-  {
-    for (unsigned int j=0; j<testMatrix.M(); j++)
-    {
-      if (testMatrix.exists(i,j))
-      {
-        testMatrix[i][j]=0;
-      }
-    }
-  }
-  // Add minimization property for u^ on (near-)characteristic boundary if epsilon is closed to zero
-  systemAssembler.applyMinimization<3, MinInnerProduct,2>
-                    (testMatrix,
-                     minInnerProduct,
-                     beta,
-                     delta,
-                     sqrtepsilon);  //TODO is this really sqrtepsilon or something similar?
-
-std::ofstream file("testmatrix.txt");
-printmatrix(file , testMatrix, "testmatrix", "--");
-
-
   // Add minimization property for u^ on (near-)characteristic boundary if epsilon is closed to zero
   systemAssembler.applyMinimization<3, MinInnerProduct,2>
                     (stiffnessMatrix,
@@ -349,9 +353,8 @@ printmatrix(file , testMatrix, "testmatrix", "--");
                      delta,
                      sqrtepsilon);  //TODO is this really sqrtepsilon or something similar?
 
-
   // Set weak zero-boundary conditions for u^ (outflow boundary)
-  systemAssembler.applyWeakBoundaryCondition<3, 2>
+  systemAssembler.applyWeakBoundaryCondition<3,2>
                     (stiffnessMatrix,
                      beta,
                      mu);
@@ -369,6 +372,19 @@ printmatrix(file , testMatrix, "testmatrix", "--");
   }
 
   tassembled = time(0);
+
+  for (unsigned int i=0; i<stiffnessMatrix.N(); i++)
+  {
+    double sum=0;
+    for (unsigned int j=0; j<stiffnessMatrix.M(); j++)
+    {
+      if (stiffnessMatrix.exists(i,j))
+      {
+        sum+=std::abs(stiffnessMatrix.entry(i,j));
+      }
+    }
+    std::cout << sum <<std::endl;
+  }
 
 /*  bool issymmetric = true;
   std::ofstream filesym("matrixsymmetry.txt");
@@ -406,10 +422,10 @@ printmatrix(file , testMatrix, "testmatrix", "--");
   }
   std::cout <<"is symmetric = " <<issymmetric <<std::endl; */
 
-//printmatrix(std::cout , stiffnessMatrix, "matrix", "--");
+//std::ofstream file("matrix.txt");
+//printmatrix(file , stiffnessMatrix, "matrix", "--");
 
-std::ofstream file1("matrix.txt");
-printmatrix(file1 , stiffnessMatrix, "matrix", "--");
+//printmatrix(std::cout , stiffnessMatrix, "matrix", "--");
 
 //file <<"rhs = " <<std::endl;
 //for (unsigned int i=0; i<rhs.size(); i++)
@@ -566,8 +582,8 @@ printmatrix(file1 , stiffnessMatrix, "matrix", "--");
   Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisInterior),decltype(u)> uFunction(feBasisInterior,u);
   auto localUFunction = localFunction(uFunction);
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace),decltype(uhat)> uhatFunction(feBasisTrace,uhat);
-  auto localUhatFunction = localFunction(uhatFunction);
+//  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace),decltype(uhat)> uhatFunction(feBasisTrace,uhat);
+//  auto localUhatFunction = localFunction(uhatFunction);
 
 //  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisSigma1),decltype(sigma1)> sigma1Function(feBasisSigma1,sigma1);
 //  auto localSigma1Function = localFunction(sigma1Function);
@@ -575,16 +591,16 @@ printmatrix(file1 , stiffnessMatrix, "matrix", "--");
 //  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisSigma2),decltype(sigma2)> sigma2Function(feBasisSigma2,sigma2);
 //  auto localSigma2Function = localFunction(sigma2Function);
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisFace),decltype(sigmahat)> sigmahatFunction(feBasisFace,sigmahat);
-  auto localSigmahatFunction = localFunction(sigmahatFunction);
+//  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisFace),decltype(sigmahat)> sigmahatFunction(feBasisFace,sigmahat);
+//  auto localSigmahatFunction = localFunction(sigmahatFunction);
 
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
   vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("convdiff_cube_scaled_min_"+ std::to_string(nelements)+"_"+ std::to_string(epsinv));
+  vtkWriter.write("convdiff_cube_mod_min_"+ std::to_string(nelements)+"_"+ std::to_string(epsinv));
 
 //  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
 //  vtkWriter1.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
-//  vtkWriter1.write("convdiff_cube_trace_"+ std::to_string(nelements)+"_"+ std::to_string(epsinv));
+//  vtkWriter1.write("convdiff_cube_trace_"+ std::to_string(nelements));
 
 //  SubsamplingVTKWriter<GridView> vtkWriter2(gridView,2);
 //  vtkWriter2.addVertexData(localSigma1Function, VTK::FieldInfo("sigma1", VTK::FieldInfo::Type::scalar, 1));
@@ -596,7 +612,7 @@ printmatrix(file1 , stiffnessMatrix, "matrix", "--");
 
 //  SubsamplingVTKWriter<GridView> vtkWriter4(gridView,2);
 //  vtkWriter4.addVertexData(localSigmahatFunction, VTK::FieldInfo("sigmahat", VTK::FieldInfo::Type::scalar, 1));
-//  vtkWriter4.write("convdiff_cube_sigmahat_"+ std::to_string(nelements)+"_"+ std::to_string(epsinv));
+//  vtkWriter4.write("convdiff_cube_sigmahat_"+ std::to_string(nelements));
 
 //#endif
 

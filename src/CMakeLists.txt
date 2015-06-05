@@ -24,6 +24,11 @@
 #add_dune_ug_flags(dune_dpg_conv_diff)
 #target_link_dune_default_libraries("dune_dpg_conv_diff")
 
+#add_executable("dune_dpg_conv_diff_mod" dune_dpg_conv_diff_mod.cc)
+#add_dune_umfpack_flags(dune_dpg_conv_diff_mod)
+#add_dune_ug_flags(dune_dpg_conv_diff_mod)
+#target_link_dune_default_libraries("dune_dpg_conv_diff_mod")
+
 add_executable("dune_dpg_rad_trans" dune_dpg_rad_trans.cc)
 add_dune_umfpack_flags(dune_dpg_rad_trans)
 add_dune_ug_flags(dune_dpg_rad_trans)

@@ -28,6 +28,7 @@
 
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
+#include <dune/functions/functionspacebases/pqkfacenodalbasis.hh>
 #include <dune/functions/functionspacebases/optimaltestbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
@@ -75,9 +76,6 @@ void boundaryTreatmentInflow (const FEBasis& feBasis,
   }
 }
 
-
-
-
 int main(int argc, char** argv)
 {
   try{
@@ -88,9 +86,11 @@ int main(int argc, char** argv)
   const int dim = 2;
   typedef UGGrid<dim> GridType;
 
+  unsigned int nelements = atoi(argv[1]);
+
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
-  array<unsigned int,dim> elements = {10,10};
+  array<unsigned int,dim> elements = {nelements,nelements};
 
   //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
@@ -108,22 +108,25 @@ int main(int argc, char** argv)
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
   FEBasisInterior feBasisInterior(gridView);
 
-  typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
+  typedef Functions::PQKNodalBasis<GridView, 2> FEBasisTrace; // bulk term corresponding to u^
   FEBasisTrace feBasisTrace(gridView);
 
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
-  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v enriched
+  typedef Functions::LagrangeDGBasis<GridView, 5> FEBasisTest;     // v enriched
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
     typedef decltype(testSpaces) TestSpaces;
     typedef decltype(solutionSpaces) SolutionSpaces;
-
+  //atof(argv[2])
   FieldVector<double, dim> beta = {1,1};
+  double c = 1;
+  double delta = 0.0001;
+
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(0.),
+                                    DomainOfIntegration::interior>(c),
               make_IntegralTerm<0,0,IntegrationType::gradValue,
                                     DomainOfIntegration::interior>(-1., beta),
               make_IntegralTerm<0,1,IntegrationType::normalVector,
@@ -135,11 +138,23 @@ int main(int argc, char** argv)
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                     DomainOfIntegration::interior>(1., beta)));
 
-    typedef decltype(bilinearForm) BilinearForm;
-    typedef decltype(innerProduct) InnerProduct;
+  auto minInnerProduct = make_InnerProduct(solutionSpaces,
+          make_tuple(
+              make_IntegralTerm<1,1,IntegrationType::valueValue,              // (u^,u^)
+                                    DomainOfIntegration::interior>(1),
+              make_IntegralTerm<1,1,IntegrationType::gradGrad,                // (beta grad u^,beta grad u^)
+                                    DomainOfIntegration::interior>(1, beta)
+          ));
 
-  typedef Functions::OptimalTestBasis<BilinearForm, InnerProduct> FEBasisOptimalTest;              // v
-  FEBasisOptimalTest feBasisTest(bilinearForm, innerProduct);
+  typedef decltype(bilinearForm) BilinearForm;
+  typedef decltype(innerProduct) InnerProduct;
+  typedef decltype(minInnerProduct) MinInnerProduct;
+  typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct> TestspaceCoefficientMatrix;
+
+  TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
+
+  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix> FEBasisOptimalTest;              // v
+  FEBasisOptimalTest feBasisTest(testspaceCoefficientMatrix);
   auto optimalTestSpaces = make_tuple(feBasisTest);
 
   auto systemAssembler = make_SystemAssembler(optimalTestSpaces, solutionSpaces,
@@ -171,6 +186,19 @@ int main(int argc, char** argv)
   VectorType x(feBasisTrace.indexSet().size()
                +feBasisInterior.indexSet().size());
   x = 0;
+  //printmatrix(std::cout , stiffnessMatrix, "stiffnessMatrixWithoutBV", "--");
+  //std::cout <<"rhsWithoutBV" <<std::endl;
+  //for (unsigned int i=0; i<rhs.size(); i++)
+  //{
+  //  std::cout <<rhs[i] <<std::endl;
+  //}
+
+  // Add minimization property for u^ on (near-)characteristic boundary if epsilon is closed to zero
+  systemAssembler.applyMinimization<1, MinInnerProduct,2>
+                    (stiffnessMatrix,
+                     minInnerProduct,
+                     beta,
+                     delta);
 
   // Determine Dirichlet dofs for u^ (inflow boundary)
   {
@@ -184,7 +212,14 @@ int main(int argc, char** argv)
          0.);
   }
 
-//printmatrix(std::cout , stiffnessMatrix, "stiffness2", "--");
+  writeMatrixToMatlab(stiffnessMatrix, "transportMatrix_"+ std::to_string(nelements));
+
+ // printmatrix(std::cout , stiffnessMatrix, "stiffnessMatrix", "--");
+//  std::cout <<"rhs" <<std::endl;
+//  for (unsigned int i=0; i<rhs.size(); i++)
+//  {
+//    std::cout <<rhs[i] <<std::endl;
+//  }
   ////////////////////////////
   //   Compute solution
   ////////////////////////////
@@ -193,9 +228,6 @@ int main(int argc, char** argv)
             <<" matrix size = " << stiffnessMatrix.N() <<" x " << stiffnessMatrix.M()
             <<" solution size = "<< x.size() <<std::endl;
 
-
-
-//  writeMatrixToMatlab(stiffnessMatrix, "TestMatrix1cell");
 
 //#if 0
   UMFPack<MatrixType> umfPack(stiffnessMatrix, 2);
@@ -239,20 +271,20 @@ int main(int argc, char** argv)
     u[i] = x[i];
   }
 
-//  VectorType uhat(feBasisInterior.indexSet().size());
-//  uhat=0;
-//  for (unsigned int i=0; i<feBasisTrace.indexSet().size(); i++)
-//  {
-//    uhat[i] = x[i+feBasisInterior.indexSet().size()];
-//  }
+  VectorType uhat(feBasisTrace.indexSet().size());
+  uhat=0;
+  for (unsigned int i=0; i<feBasisTrace.indexSet().size(); i++)
+  {
+    uhat[i] = x[i+feBasisInterior.indexSet().size()];
+  }
 
 //  std::cout << u << std::endl;
 
   Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisInterior),decltype(u)> uFunction(feBasisInterior,u);
   auto localUFunction = localFunction(uFunction);
 
-//  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace),decltype(uhat)> uhatFunction(feBasisTrace,uhat);
-//  auto localUhatFunction = localFunction(uhatFunction);
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace),decltype(uhat)> uhatFunction(feBasisTrace,uhat);
+  auto localUhatFunction = localFunction(uhatFunction);
 
   //////////////////////////////////////////////////////////////////////////////////////////////
   //  Write result to VTK file
@@ -260,11 +292,11 @@ int main(int argc, char** argv)
   //////////////////////////////////////////////////////////////////////////////////////////////
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
   vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("solution_transport_interior_simplexGrid_");
+  vtkWriter.write("transport_simplex_"+std::to_string(nelements) +"_"+ std::to_string(beta[0]) + "_" + std::to_string(beta[1]));
 
-//  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-//  vtkWriter.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
-//  vtkWriter.write("solution_transport_trace");
+  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
+  vtkWriter1.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter1.write("transport_simplex_trace_"+std::to_string(nelements) +"_"+ std::to_string(beta[0]) + "_" + std::to_string(beta[1]));
 
 //#endif
 
