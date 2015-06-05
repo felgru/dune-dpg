@@ -39,7 +39,7 @@ namespace Dune
                                    EnrichedTestspace* enrtest,
                                    std::vector<LocalKey>* localKeyList)
     :enrichedTestspace(enrtest),
-    basis(enrichedTestspace, coeffMat),
+    basis(enrichedTestspace, coeffMat, 0, coeffMat->N()),
     coefficients(localKeyList)
     {
       gt=enrichedTestspace->type();
@@ -48,7 +48,17 @@ namespace Dune
     OptimalTestLocalFiniteElement (MatrixType* coeffMat,
                                    EnrichedTestspace* enrtest)
     :enrichedTestspace(enrtest),
-    basis(enrichedTestspace, coeffMat)
+    basis(enrichedTestspace, coeffMat, 0, coeffMat->N())
+    {
+      gt=enrichedTestspace->type();
+    }
+
+    OptimalTestLocalFiniteElement (MatrixType* coeffMat,
+                                   EnrichedTestspace* enrtest,
+                                   size_t offset,
+                                   size_t k)
+    :enrichedTestspace(enrtest),
+    basis(enrichedTestspace, coeffMat, offset, k)
     {
       gt=enrichedTestspace->type();
     }

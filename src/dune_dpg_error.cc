@@ -174,9 +174,12 @@ int main(int argc, char** argv)
 
   typedef decltype(bilinearForm) BilinearForm;
   typedef decltype(innerProduct) InnerProduct;
+  typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct> TestspaceCoefficientMatrix;
 
-  typedef Functions::OptimalTestBasis<BilinearForm, InnerProduct> FEBasisOptimalTest;              // v
-  FEBasisOptimalTest feBasisTest(bilinearForm, innerProduct);
+  TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
+
+  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix> FEBasisOptimalTest;              // v
+  FEBasisOptimalTest feBasisTest(testspaceCoefficientMatrix);
   auto optimalTestSpaces = make_tuple(feBasisTest);
 
   auto systemAssembler = make_SystemAssembler(optimalTestSpaces, solutionSpaces,
