@@ -13,8 +13,6 @@
 #include <dune/common/exceptions.hh> // We use exceptions
 
 #include <dune/grid/io/file/gmshreader.hh>
-#include <dune/grid/io/file/vtk.hh>
-#include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
@@ -35,6 +33,7 @@
 
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/functionplotter.hh>
 
 #include <chrono>
 
@@ -182,46 +181,20 @@ int main(int argc, char** argv)
   InverseOperatorResult statistics;
   umfPack.apply(x, rhs, statistics);
 
-  ////////////////////////////////////////////////////////////////////////////
-  //  Make a discrete function from the FE basis and the coefficient vector
-  ////////////////////////////////////////////////////////////////////////////
-
-  VectorType u(feBasisInterior.size());
-  u=0;
-  for (unsigned int i=0; i<feBasisInterior.size(); i++)
-  {
-    u[i] = x[i];
-  }
-
-  VectorType uhat(feBasisTrace.size());
-  uhat=0;
-  for (unsigned int i=0; i<feBasisTrace.size(); i++)
-  {
-    uhat[i] = x[i+feBasisInterior.size()];
-  }
-
-  auto uFunction
-      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-            (feBasisInterior, Dune::TypeTree::hybridTreePath(), u);
-  auto localUFunction = localFunction(uFunction);
-
-  auto uhatFunction
-      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-            (feBasisTrace, Dune::TypeTree::hybridTreePath(), uhat);
-  auto localUhatFunction = localFunction(uhatFunction);
-
-  /////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////
   //  Write result to VTK file
-  //  We need to subsample, because VTK cannot natively display
-  //  real second-order functions
-  /////////////////////////////////////////////////////////////////////////
-  SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
-  vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("transport_simplex_"+std::to_string(nelements) +"_"+ std::to_string(beta[0]) + "_" + std::to_string(beta[1]));
-
-  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-  vtkWriter1.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter1.write("transport_simplex_trace_"+std::to_string(nelements) +"_"+ std::to_string(beta[0]) + "_" + std::to_string(beta[1]));
+  //////////////////////////////////////////////////////////////////
+  FunctionPlotter uPlotter("transport_simplex_"
+                          + std::to_string(nelements) + "_"
+                          + std::to_string(beta[0]) + "_"
+                          + std::to_string(beta[1]));
+  FunctionPlotter uhatPlotter("transport_simplex_trace_"
+                             + std::to_string(nelements) + "_"
+                             + std::to_string(beta[0]) + "_"
+                             + std::to_string(beta[1]));
+  uPlotter.plot("u", x, feBasisInterior, 2, 0);
+  uhatPlotter.plot("uhat", x, feBasisTrace, 2,
+                   feBasisInterior.size());
 
     return 0;
   }

@@ -14,8 +14,6 @@
 #include <dune/common/exceptions.hh> // We use exceptions
 
 #include <dune/grid/io/file/gmshreader.hh>
-#include <dune/grid/io/file/vtk.hh>
-#include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
@@ -36,6 +34,7 @@
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/rhs_assembler.hh>
+#include <dune/dpg/functionplotter.hh>
 
 #include <chrono>
 
@@ -269,60 +268,27 @@ int main(int argc, char** argv)
               << std::chrono::duration_cast<std::chrono::microseconds>(endsolve - startsolve).count()
               << "us.\n";
 
-    ////////////////////////////////////////////////////////////////////////////
-    //  Make a discrete function from the FE basis and the coefficient vector
-    ////////////////////////////////////////////////////////////////////////////
 #if 1
-//  if ((i/10)*10 == i)
-//  {
     std::chrono::steady_clock::time_point startresults = std::chrono::steady_clock::now();
-    VectorType u(feBasisInterior.size());
-    u=0;
-    for (unsigned int i=0; i<feBasisInterior.size(); i++)
-    {
-      u[i] = x[i];
-    }
-
-    VectorType theta(feBasisTrace.size());
-    theta=0;
-    for (unsigned int i=0; i<feBasisTrace.size(); i++)
-    {
-      theta[i] = x[i+feBasisInterior.size()];
-    }
-
-    auto uFunction
-        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-              (feBasisInterior, Dune::TypeTree::hybridTreePath(), u);
-    auto localUFunction = localFunction(uFunction);
-
-    auto thetaFunction
-        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-              (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta);
-    auto localThetaFunction = localFunction(thetaFunction);
-
-    /////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////
     //  Write result to VTK file
-    //  We need to subsample, because VTK cannot natively display
-    //  real second-order functions
-    /////////////////////////////////////////////////////////////////////////
-    SubsamplingVTKWriter<GridView> vtkWriter(gridView,0);
-    vtkWriter.addVertexData(localUFunction,
-                 VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter.write("transport_solution_"+std::to_string(nelements)
-        +"_"+std::to_string(i));
-
-    SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-    vtkWriter1.addVertexData(localThetaFunction,
-                  VTK::FieldInfo("theta", VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter1.write("transport_solution_trace_"+std::to_string(nelements)
-        +"_"+std::to_string(i));
+    //////////////////////////////////////////////////////////////////
+    FunctionPlotter uPlotter("transport_solution_"
+                            + std::to_string(nelements)
+                            + "_" + std::to_string(i));
+    FunctionPlotter thetaPlotter("transport_solution_trace_"
+                                + std::to_string(nelements)
+                                + "_" + std::to_string(i));
+    uPlotter.plot("u", x, feBasisInterior, 0, 0);
+    thetaPlotter.plot("theta", x, feBasisTrace, 2,
+                      feBasisInterior.size());
 
     std::chrono::steady_clock::time_point endresults = std::chrono::steady_clock::now();
     std::cout << "Saving the results took "
               << std::chrono::duration_cast<std::chrono::microseconds>(endresults - startresults).count()
               << "us.\n";
-//  }
 #endif
+
     ////////////////////////////////////////////////////
     // Estimate a posteriori error and refine
     ////////////////////////////////////////////////////

@@ -27,6 +27,7 @@
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/saddlepoint_system_assembler.hh>
+#include <dune/dpg/functionplotter.hh>
 
 
 
@@ -167,35 +168,16 @@ int main(int argc, char** argv)
   InverseOperatorResult statistics;
   umfPack.apply(x, rhs, statistics);
 
-  ////////////////////////////////////////////////////////////////////////////
-  //  Make a discrete function from the FE basis and the coefficient vector
-  ////////////////////////////////////////////////////////////////////////////
-
+  //////////////////////////////////////////////////////////////////
+  //  Write result to VTK file
+  //////////////////////////////////////////////////////////////////
   size_t nTest = std::get<0>(testSpaces).size();
   size_t nFace = std::get<0>(solutionSpaces).size();
-  size_t nInner = std::get<1>(solutionSpaces).size();
-  VectorType u(nInner);
-  u=0;
-  for (size_t i=0; i<nInner; i++)
-  {
-    /* TODO: use a precomputed solution space offset. */
-    u[i] = x[nTest+nFace+i];
-  }
 
-  auto innerSpace = std::get<1>(solutionSpaces);
-  auto uFunction
-      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-            (innerSpace, Dune::TypeTree::hybridTreePath(), u);
-  auto localUFunction = localFunction(uFunction);
+  FunctionPlotter uPlotter("solution_transport");
+  uPlotter.plot("u", x, std::get<1>(solutionSpaces), 2, nTest+nFace);
 
-  //////////////////////////////////////////////////////////////////////////////////////////////
-  //  Write result to VTK file
-  //  We need to subsample, because VTK cannot natively display real second-order functions
-  //////////////////////////////////////////////////////////////////////////////////////////////
-  SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
-  vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("solution_transport");
-    return 0;
+  return 0;
   }
   catch (Exception &e){
     std::cerr << "Dune reported error: " << e << std::endl;

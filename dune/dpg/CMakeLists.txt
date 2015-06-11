@@ -9,6 +9,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               cholesky.hh
               dpg_system_assembler.hh
               errortools.hh
+              functionplotter.hh
               getvolumeterm_impl.hh
               innerproduct.hh
               integralterm.hh
