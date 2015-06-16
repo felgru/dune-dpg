@@ -531,14 +531,15 @@ private:
 
 
 
-/** \brief Nodal basis of a scalar third-order Lagrangean finite element space
+/** \brief Basis for DPG optimal test spaces
  *
  * \note This only works for certain grids.  The following restrictions hold
  * - Grids must be 1d, 2d, or 3d
  * - 3d grids must be simplex grids
  *
- * \tparam GV The GridView that the space is defined on
- * \tparam k The order of the basis
+ * \tparam TestspaceCoefficentMatrix  caches the computation of local
+ *                                    optimal test spaces
+ * \tparam testIndex  index of the optimal test space in the test space tuple
  */
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex = 0>
