@@ -126,12 +126,13 @@ int main(int argc, char** argv)
               std::declval<InnerProduct>(), DPGFormulation()))
           SystemAssembler_t;
 
-  if(argc != 2) {
+  if(argc != 3) {
       std::cerr << "Usage: " << argv[0] << " <# of ordinates>"
-                << std::endl;
+                << " <# of iterations>" << std::endl;
       std::abort();
   }
   int numS = atoi(argv[1]);
+  int N = atoi(argv[2]);
 
   std::vector<SystemAssembler_t> systemAssemblers;
   systemAssemblers.reserve(numS);
@@ -228,7 +229,6 @@ int main(int argc, char** argv)
     x[i] = 0;
   }
 
-  const int N = 5;
   for(int n = 0; n < N; ++n)
   {
 
