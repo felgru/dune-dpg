@@ -200,32 +200,36 @@ assembleScattering(BlockVector<FieldVector<double,1> >& rhs,
       // The multiplicative factor in the integral transformation formula
       const double integrationElement = e.geometry().integrationElement(quadPos);
 
-      /* TODO: evaluate u_s_i(quadPos) */
-      double uValue = 0;
-      {
+      // Evaluate all test shape function values at this quadrature point
+      std::vector<FieldVector<double,1> > testShapeFunctionValues;
+      localFiniteElementTest.localBasis()
+          .evaluateFunction(quadPos, testShapeFunctionValues);
+
+      for( size_t scatteringAngle=0;
+           scatteringAngle<numS; ++scatteringAngle) {
+        double uValue = 0; // in direction of scatteringAngle
         // Evaluate all shape function values at this point
         std::vector<FieldVector<double,1> > shapeFunctionValues;
         localFiniteElementSolution.localBasis().
             evaluateFunction(quadPos, shapeFunctionValues);
         for (size_t j=0; j<shapeFunctionValues.size(); j++)
         {
-          /* TODO: Did we define solutionLocalIndexSet and
-           *       globalSolutionSpaceOffset? */
-          auto row = at_c<solutionSpaceIndex>(solutionLocalIndexSet)->index(j)[0]
-                     + globalSolutionSpaceOffset;
-          uValue += x[i][row] * shapeFunctionValues[j];
+          /* This assumes that solutionLocalIndexSet and
+           * globalSolutionSpaceOffset don't change for different
+           * scattering angles.
+           */
+          auto row =
+              at_c<solutionSpaceIndex>(solutionLocalIndexSet)->index(j)[0]
+            + globalSolutionSpaceOffset;
+          uValue += x[scatteringAngle][row] * shapeFunctionValues[j];
         }
+
+        // Actually compute the vector entries
+        const double factor = 2 * boost::math::constants::pi<double>()/numS
+                              * uValue * quad[pt].weight() * integrationElement;
+        for (size_t i=0, i_max=localScattering.size(); i<i_max; i++)
+          localScattering[i] += factor * testShapeFunctionValues[i];
       }
-
-      // Evaluate all shape function values at this point
-      std::vector<FieldVector<double,1> > shapeFunctionValues;
-      localFiniteElementTest.localBasis().evaluateFunction(quadPos, shapeFunctionValues);
-
-      // Actually compute the vector entries
-      const double factor = 2 * boost::math::constants::pi<double>()/numS
-                            * uValue * quad[pt].weight() * integrationElement;
-      for (size_t i=0, i_max=localScattering.size(); i<i_max; i++)
-        localScattering[i] += factor * shapeFunctionValues[i];
 
     }
 
