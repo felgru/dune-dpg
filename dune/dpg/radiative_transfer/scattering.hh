@@ -225,7 +225,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& rhs,
         }
 
         // Actually compute the vector entries
-        const double factor = 2 * boost::math::constants::pi<double>()/numS
+        const double factor = 1./numS
                               * uValue * quad[pt].weight() * integrationElement;
         for (size_t i=0, i_max=localScattering.size(); i<i_max; i++)
           localScattering[i] += factor * testShapeFunctionValues[i];
