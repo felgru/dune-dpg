@@ -241,7 +241,7 @@ int main(int argc, char** argv)
     {
       systemAssemblers[i].assembleSystem(stiffnessMatrix[i], rhs[i], f);
       VectorType scattering;
-      scatteringAssemblers[i].assembleScattering<0>(scattering, i, x);
+      scatteringAssemblers[i].assembleScattering<0>(scattering, x);
       rhs[i] += scattering;
       systemAssemblers[i].applyDirichletBoundarySolution<1>
           (stiffnessMatrix[i],
