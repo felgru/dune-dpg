@@ -13,8 +13,6 @@
 
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 
-#include <boost/math/constants/constants.hpp>
-
 namespace Dune {
 
 /**
@@ -49,12 +47,13 @@ public:
    * \todo: For now, the scattering kernel is assumed to be constant
    *        and normed to integral 1.
    *
-   * \param[out] rhs  the scattering vector
-   * \param[in]  x    the vectors of the solutions of the previous iteration
+   * \param[out] scattering  the scattering vector
+   * \param[in]  x           the vectors of the solutions of the
+   *                           previous iteration
    */
   template<size_t solutionSpaceIndex>
   void assembleScattering
-         (BlockVector<FieldVector<double,1> >& rhs,
+         (BlockVector<FieldVector<double,1> >& scattering,
           const std::vector<BlockVector<FieldVector<double,1> >>& x);
 
 private:
@@ -66,9 +65,9 @@ private:
  * \brief Creates an ScatteringAssembler,
  *        deducing the target type from the types of arguments.
  *
- * \param testSpaces     a tuple of test spaces
- * \param testSpaces     a tuple of solution spaces
- * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
+ * \param  testSpaces       a tuple of test spaces
+ * \param  solutionSpaces   a tuple of solution spaces
+ * \tparam FormulationType  either SaddlepointFormulation or DPGFormulation
  */
 template<class TestSpaces,
          class SolutionSpaces,
@@ -88,7 +87,7 @@ template<class TestSpaces,
          class FormulationType>
 template<size_t solutionSpaceIndex>
 void ScatteringAssembler<TestSpaces, SolutionSpaces, FormulationType>::
-assembleScattering(BlockVector<FieldVector<double,1> >& rhs,
+assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
                    const std::vector<BlockVector<FieldVector<double,1> >>& x)
 {
   using namespace boost::fusion;
@@ -102,7 +101,6 @@ assembleScattering(BlockVector<FieldVector<double,1> >& rhs,
 
   const int numS = x.size();
 
-  // Get the grid view from the finite element basis
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
 
@@ -137,10 +135,9 @@ assembleScattering(BlockVector<FieldVector<double,1> >& rhs,
 
   if(!isSaddlepoint) globalTotalTestSize = globalTotalSolutionSize;
 
-  // set rhs to the right size
-  rhs.resize(globalTotalTestSize
-             + (isSaddlepoint?globalTotalSolutionSize:0));
-  rhs = 0;
+  scattering.resize(globalTotalTestSize
+                    + (isSaddlepoint?globalTotalSolutionSize:0));
+  scattering = 0;
 
   // Views on the FE bases on a single element
   auto testLocalView     = as_vector(transform(testSpaces, getLocalView()));
@@ -151,7 +148,6 @@ assembleScattering(BlockVector<FieldVector<double,1> >& rhs,
   auto solutionLocalIndexSet = as_vector(transform(solutionBasisIndexSet,
                                                    getLocalIndexSet()));
 
-  // A loop over all elements of the grid
   for(const auto& e : elements(gridView)) {
 
     // Bind the local FE basis view to the current element
@@ -179,11 +175,8 @@ assembleScattering(BlockVector<FieldVector<double,1> >& rhs,
 
     BlockVector<FieldVector<double,1> >
         localScattering(localFiniteElementTest.localBasis().size());
-
-    // Set all entries to zero
     localScattering = 0;
 
-    // A quadrature rule
     int order = dim*localFiniteElementTest.localBasis().order(); //TODO!!!!!!
     const QuadratureRule<double, dim>& quad =
         QuadratureRules<double, dim>::rule(e.type(), order);
@@ -222,9 +215,8 @@ assembleScattering(BlockVector<FieldVector<double,1> >& rhs,
           uValue += x[scatteringAngle][row] * shapeFunctionValues[j];
         }
 
-        // Actually compute the vector entries
-        const double factor = 1./numS
-                              * uValue * quad[pt].weight() * integrationElement;
+        const double factor = 1./numS * uValue
+                              * quad[pt].weight() * integrationElement;
         for (size_t i=0, i_max=localScattering.size(); i<i_max; i++)
           localScattering[i] += factor * testShapeFunctionValues[i];
       }
@@ -232,7 +224,8 @@ assembleScattering(BlockVector<FieldVector<double,1> >& rhs,
     }
 
     auto rhsCopier = localToGlobalRHSCopier
-                     <typename remove_reference<decltype(rhs)>::type>(rhs);
+                     <typename remove_reference<decltype(scattering)>::type>
+                     (scattering);
     rhsCopier(localScattering,
               at_c<0>(testLocalIndexSet),
               globalTestSpaceOffsets[0]
