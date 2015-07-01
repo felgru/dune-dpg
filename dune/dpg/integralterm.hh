@@ -335,8 +335,9 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 
   // Order for the quadrature rule
   /* TODO: We might need a higher order when factor is a function. */
-  /* TODO: Can probably be one less for gradients. */
-  int order = 2*(dim*lhsLocalFiniteElement.localBasis().order()-1);
+  /* TODO: Assuming β const. */
+  int order = lhsLocalFiniteElement.localBasis().order()
+            + rhsLocalFiniteElement.localBasis().order();
 
   ////////////////////////////
   // Assemble interior terms
