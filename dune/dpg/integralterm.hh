@@ -333,20 +333,18 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
   const int nLhs(lhsLocalFiniteElement.localBasis().size());
   const int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-  // Order for the quadrature rule
   /* TODO: We might need a higher order when factor is a function. */
   /* TODO: Assuming β const. */
-  int order = lhsLocalFiniteElement.localBasis().order()
-            + rhsLocalFiniteElement.localBasis().order();
+  int quadratureOrder = lhsLocalFiniteElement.localBasis().order()
+                      + rhsLocalFiniteElement.localBasis().order();
 
   ////////////////////////////
   // Assemble interior terms
   ////////////////////////////
   if(domain_of_integration == DomainOfIntegration::interior) {
 
-  // Get a quadrature rule
   const QuadratureRule<double, dim>& quad =
-          QuadratureRules<double, dim>::rule(element.type(), order);
+          QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
 
   // Loop over all quadrature points
   for (size_t pt=0; pt < quad.size(); pt++) {
@@ -411,7 +409,8 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
   for (auto&& intersection : intersections(gridView, element))
   {
     const QuadratureRule<double, dim-1>& quadFace =
-            QuadratureRules<double, dim-1>::rule(intersection.type(), order);
+            QuadratureRules<double, dim-1>::rule(intersection.type(),
+                                                 quadratureOrder);
     // Loop over all quadrature points
     for (size_t pt=0; pt < quadFace.size(); pt++) {
 

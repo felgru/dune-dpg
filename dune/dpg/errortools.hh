@@ -93,9 +93,9 @@ namespace Dune {
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
 
-    // Get a quadrature rule
-    int order = 10; // Remark: the quadrature order has to be an even number (nombre pair)!
-    const QuadratureRule<double, dim>& quad = QuadratureRules<double, dim>::rule(element.type(), order);
+    int quadratureOrder = 10; // Remark: the quadrature order has to be an even number (nombre pair)!
+    const QuadratureRule<double, dim>& quad =
+        QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
 
     // Variables employed in the loop
     double errSquare = 0 ;     // we store here the square of the error

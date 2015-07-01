@@ -106,8 +106,9 @@ void getVolumeTerm(const LocalViewTest& localViewTest,
 
   // A quadrature rule
   /* TODO: Quadrature order is only good enough for a constant localVolumeTerm. */
-  int order = localFiniteElementTest.localBasis().order();
-  const QuadratureRule<double, dim>& quad = QuadratureRules<double, dim>::rule(element.type(), order);
+  int quadratureOrder = localFiniteElementTest.localBasis().order();
+  const QuadratureRule<double, dim>& quad =
+      QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
 
 
   // Loop over all quadrature points
@@ -762,7 +763,7 @@ applyWeakBoundaryCondition
 
     const auto& localFiniteElement = localView.tree().finiteElement();
 
-    int order = 2*localFiniteElement.localBasis().order();
+    int quadratureOrder = 2*localFiniteElement.localBasis().order();
 
     size_t n = localFiniteElement.localBasis().size();
 
@@ -781,7 +782,8 @@ applyWeakBoundaryCondition
         if ((beta*centerOuterNormal) > -1e-10) //everywhere except inflow boundary
         {
           const QuadratureRule<double, dim-1>& quadFace =
-                  QuadratureRules<double, dim-1>::rule(intersection.type(), order);
+                  QuadratureRules<double, dim-1>::rule(intersection.type(),
+                                                       quadratureOrder);
 
           for (size_t pt=0; pt < quadFace.size(); pt++)
           {

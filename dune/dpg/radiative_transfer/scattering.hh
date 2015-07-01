@@ -178,10 +178,10 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
     localScattering = 0;
 
     /* TODO: This assumes constant scattering. */
-    int order = localFiniteElementSolution.localBasis().order()
-              + localFiniteElementTest.localBasis().order();
+    int quadratureOrder = localFiniteElementSolution.localBasis().order()
+                        + localFiniteElementTest.localBasis().order();
     const QuadratureRule<double, dim>& quad =
-        QuadratureRules<double, dim>::rule(e.type(), order);
+        QuadratureRules<double, dim>::rule(e.type(), quadratureOrder);
 
 
     // Loop over all quadrature points
