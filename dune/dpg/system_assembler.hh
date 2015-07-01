@@ -105,7 +105,8 @@ void getVolumeTerm(const LocalViewTest& localViewTest,
   localRhs = 0;
 
   // A quadrature rule
-  int order = dim*localFiniteElementTest.localBasis().order(); //TODO!!!!!!
+  /* TODO: Quadrature order is only good enough for a constant localVolumeTerm. */
+  int order = localFiniteElementTest.localBasis().order();
   const QuadratureRule<double, dim>& quad = QuadratureRules<double, dim>::rule(element.type(), order);
 
 
@@ -761,7 +762,7 @@ applyWeakBoundaryCondition
 
     const auto& localFiniteElement = localView.tree().finiteElement();
 
-    int order = 2*(dim*localFiniteElement.localBasis().order()-1);
+    int order = 2*localFiniteElement.localBasis().order();
 
     size_t n = localFiniteElement.localBasis().size();
 

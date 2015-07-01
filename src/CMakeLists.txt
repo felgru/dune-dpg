@@ -15,10 +15,6 @@
 #add_dune_ug_flags(dune_dpg_opt_testspace)
 #target_link_dune_default_libraries("dune_dpg_opt_testspace")
 
-#add_executable("System_Test" System_Test.cc)
-#add_dune_ug_flags(System_Test)
-#target_link_dune_default_libraries("System_Test")
-
 #add_executable("dune_dpg_conv_diff" dune_dpg_conv_diff.cc)
 #add_dune_umfpack_flags(dune_dpg_conv_diff)
 #add_dune_ug_flags(dune_dpg_conv_diff)
