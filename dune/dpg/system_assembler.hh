@@ -110,24 +110,24 @@ void getVolumeTerm(const LocalViewTest& localViewTest,
       QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
 
 
-  // Loop over all quadrature points
   for ( size_t pt=0; pt < quad.size(); pt++ ) {
 
     // Position of the current quadrature point in the reference element
     const FieldVector<double,dim>& quadPos = quad[pt].position();
 
     // The multiplicative factor in the integral transformation formula
-    const double integrationElement = element.geometry().integrationElement(quadPos);
+    const double integrationElement =
+            element.geometry().integrationElement(quadPos);
 
     double functionValue = localVolumeTerm(quadPos);
 
-    // Evaluate all shape function values at this point
     std::vector<FieldVector<double,1> > shapeFunctionValues;
-    localFiniteElementTest.localBasis().evaluateFunction(quadPos, shapeFunctionValues);
+    localFiniteElementTest.localBasis().evaluateFunction(quadPos,
+                                                         shapeFunctionValues);
 
-    // Actually compute the vector entries
     for (size_t i=0; i<localRhs.size(); i++)
-      localRhs[i] += shapeFunctionValues[i] * functionValue * quad[pt].weight() * integrationElement;
+      localRhs[i] += shapeFunctionValues[i] * functionValue
+                   * quad[pt].weight() * integrationElement;
 
   }
 
@@ -357,7 +357,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
            , SaddlepointFormulation
         >::value;
 
-  // Get the grid view from the finite element basis
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
 
@@ -417,8 +416,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       occupationPattern.add(i, i);
     }
   }
-
-  // ... and give it the occupation pattern we want.
   occupationPattern.exportIdx(matrix);
 
   // set rhs to correct length -- the total number of basis vectors in the basis
@@ -437,7 +434,10 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   auto testLocalIndexSet     = as_vector(transform(testBasisIndexSet,
                                                    getLocalIndexSet()));
 
-  /* create sets of index pairs to loop over. */
+  /* create sets of index pairs to loop over.
+   * This will be used later, when copying the local matrices into
+   * the global one.
+   */
   typedef typename boost::mpl::fold<
       typename boost::mpl::transform<
           /* This as_vector is probably not needed for boost::fusion 1.58
@@ -464,10 +464,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   auto bfIndices = BFIndices{};
   auto ipIndices = IPIndices{};
 
-  // A loop over all elements of the grid
   for(const auto& e : elements(gridView)) {
 
-    // Bind the local FE basis view to the current element
     for_each(solutionLocalView, applyBind<decltype(e)>(e));
     for_each(testLocalView, applyBind<decltype(e)>(e));
 
@@ -476,7 +474,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     for_each(zip(testLocalIndexSet, testLocalView),
              make_fused_procedure(bindLocalIndexSet()));
 
-    /* Bind the bilinearForm and the innerProduct to the local views. */
     bilinearForm.bind(testLocalView, solutionLocalView);
     if(isSaddlepoint)
     {
@@ -508,7 +505,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                         isSaddlepoint>
                                         (bfElementMatrix, matrix));
 
-    /* iterate over bfIndices and ipIndices */
+    /* copy every local submatrix indexed by a pair of indices from
+     * bfIndices and ipIndices exactly once. */
     auto testZip = zip(testLocalView,
                        testLocalIndexSet,
                        bilinearForm.getLocalTestSpaceOffsets(),
@@ -738,11 +736,9 @@ applyWeakBoundaryCondition
                 "applyWeakBoundaryConditions not implemented "
                 "for Saddlepointformulation ");
 
-  // Get the grid view from the finite element basis
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
 
-  // get global solution Space Offsets
   auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
                                                      getIndexSet()));
 
@@ -750,7 +746,7 @@ applyWeakBoundaryCondition
   fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
        0, globalOffsetHelper());
   size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
-  // get local view and local index set for the spaceIndex'th solution space
+
   auto localView = std::get<spaceIndex>(solutionSpaces).localView();
   typedef decltype(localView) LocalView;
   auto localIndexSet = at_c<spaceIndex>(solutionBasisIndexSet).localIndexSet();
@@ -769,7 +765,7 @@ applyWeakBoundaryCondition
     Matrix<FieldMatrix<double,1,1> > elementMatrix;
     // Set all matrix entries to zero
     elementMatrix.setSize(n,n);
-    elementMatrix = 0;      // fills the entire matrix with zeroes
+    elementMatrix = 0;
 
     for (auto&& intersection : intersections(gridView, e))
     {
@@ -786,7 +782,7 @@ applyWeakBoundaryCondition
 
           for (size_t pt=0; pt < quadFace.size(); pt++)
           {
-            // Position of the current quadrature point in the reference element (face!)
+            // position of the current quadrature point in the reference element (face!)
             const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
 
             const double integrationElement = intersection.geometry().integrationElement(quadFacePos);
@@ -798,7 +794,7 @@ applyWeakBoundaryCondition
             // values of the shape functions
             std::vector<FieldVector<double,1> > solutionValues;
             localFiniteElement.localBasis().evaluateFunction(elementQuadPos,
-                                                        solutionValues);
+                                                             solutionValues);
             for (size_t i=0; i<n; i++)
             {
               for (size_t j=0; j<n; j++)
@@ -851,11 +847,9 @@ applyMinimization
                 "applyMinimization not implemented "
                 "for Saddlepointformulation ");
 
-  // Get the grid view from the finite element basis
   typedef typename std::tuple_element<spaceIndex,SolutionSpaces>::type::GridView GridView;
   GridView gridView = std::get<spaceIndex>(solutionSpaces).gridView();
 
-  // get global solution Space Offsets
   auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
                                                      getIndexSet()));
 
@@ -866,7 +860,7 @@ applyMinimization
 
   size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-  // get local view for solution space (necessary if we want to use inner product) /TODO inefficient
+  // get local view for solution space (necessary if we want to use inner product) /TODO inefficient (why?)
   auto solutionLocalView = as_vector(transform(solutionSpaces, getLocalView()));
 
   auto localIndexSet = at_c<spaceIndex>(solutionBasisIndexSet).localIndexSet(); //only relevant localIndexSet
@@ -886,9 +880,6 @@ applyMinimization
     size_t n = localFiniteElement.localBasis().size();
 
     Matrix<FieldMatrix<double,1,1> > elementMatrix;
-    // Set all matrix entries to zero
-    //elementMatrix.setSize(n,n);
-    //elementMatrix = 0;      // fills the entire matrix with zeroes
 
     minInnerProduct.bind(solutionLocalView);
     minInnerProduct.getLocalMatrix(elementMatrix);
@@ -915,7 +906,7 @@ applyMinimization
       {
         relevantDOFs[i] = relevantFaces[localFiniteElement.localCoefficients().localKey(i).subEntity()];
       }
-      // vertex DOFs never are relevant because the correspondig basis functions have support on
+      // vertex DOFs are never relevant because the correspondig basis functions have support on
       // at least two edges which can never be both (almost) characteristic
     }
 
@@ -928,8 +919,8 @@ applyMinimization
         {
           auto col = localIndexSet.index(j)[0];
           matrix[row+globalOffset][col+globalOffset]
-                          += elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
-                                          [localSolutionSpaceOffsets[spaceIndex]+j];
+                       += elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                       [localSolutionSpaceOffsets[spaceIndex]+j];
         }
       }
     }

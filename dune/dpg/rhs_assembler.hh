@@ -93,7 +93,6 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   using namespace boost::fusion;
   using namespace Dune::detail;
 
-  // Get the grid view from the finite element basis
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
 
@@ -110,10 +109,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
       fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
            0, globalOffsetHelper());
 
-  // set rhs to correct length -- the total number of basis vectors in the basis
   rhs.resize(globalTotalTestSize);
-
-  // Set all entries to zero
   rhs = 0;
 
   // Views on the FE bases on a single element
@@ -122,12 +118,9 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   auto testLocalIndexSet     = as_vector(transform(testBasisIndexSet,
                                                    getLocalIndexSet()));
 
-  // A loop over all elements of the grid
   for(const auto& e : elements(gridView)) {
 
-    // Bind the local FE basis view to the current element
     for_each(testLocalView, applyBind<decltype(e)>(e));
-
     for_each(zip(testLocalIndexSet, testLocalView),
              make_fused_procedure(bindLocalIndexSet()));
 

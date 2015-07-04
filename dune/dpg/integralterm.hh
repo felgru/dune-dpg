@@ -345,7 +345,6 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
   const QuadratureRule<double, dim>& quad =
           QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
 
-  // Loop over all quadrature points
   for (size_t pt=0; pt < quad.size(); pt++) {
 
     // Position of the current quadrature point in the reference element
@@ -410,7 +409,7 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
     const QuadratureRule<double, dim-1>& quadFace =
             QuadratureRules<double, dim-1>::rule(intersection.type(),
                                                  quadratureOrder);
-    // Loop over all quadrature points
+
     for (size_t pt=0; pt < quadFace.size(); pt++) {
 
     // Position of the current quadrature point in the reference element (face!)
@@ -464,7 +463,6 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
     //////////////////////////////
     // Left Hand Side Functions //
     //////////////////////////////
-    // values of the shape functions
     std::vector<FieldVector<double,1> > lhsValues;
     lhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
                                                         lhsValues);
@@ -472,7 +470,6 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
     ///////////////////////////////
     // Right Hand Side Functions //
     ///////////////////////////////
-    // values of the shape functions
     std::vector<FieldVector<double,1> > rhsValues;
     rhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
                                                         rhsValues);
