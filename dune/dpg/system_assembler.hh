@@ -32,7 +32,6 @@
 #include <boost/fusion/container/generation/make_vector.hpp>
 #include <boost/fusion/include/make_vector.hpp>
 
-#include <dune/common/exceptions.hh> // We use exceptions
 #include <dune/common/function.hh>
 #include <dune/common/bitsetvector.hh>
 

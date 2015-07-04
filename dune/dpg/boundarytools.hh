@@ -5,7 +5,6 @@
 
 #include <vector>
 
-#include <dune/common/exceptions.hh> // We use exceptions
 #include <dune/common/function.hh>
 #include <dune/common/bitsetvector.hh>
 

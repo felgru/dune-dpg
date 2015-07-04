@@ -21,7 +21,6 @@
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
-#include <dune/common/exceptions.hh> // We use exceptions
 #include <dune/common/function.hh>
 #include <dune/common/bitsetvector.hh>
 
