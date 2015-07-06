@@ -21,9 +21,6 @@
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
-#include <dune/common/function.hh>
-#include <dune/common/bitsetvector.hh>
-
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>

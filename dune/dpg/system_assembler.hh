@@ -32,9 +32,6 @@
 #include <boost/fusion/container/generation/make_vector.hpp>
 #include <boost/fusion/include/make_vector.hpp>
 
-#include <dune/common/function.hh>
-#include <dune/common/bitsetvector.hh>
-
 #include <dune/geometry/quadraturerules.hh>
 
 #include <dune/istl/matrix.hh>

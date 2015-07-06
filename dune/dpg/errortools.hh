@@ -6,9 +6,6 @@
 
 #include <vector>
 
-#include <dune/common/function.hh>
-#include <dune/common/bitsetvector.hh>
-
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>

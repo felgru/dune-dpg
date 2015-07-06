@@ -7,9 +7,6 @@
 #include <vector>
 #include <type_traits>
 
-#include <dune/common/function.hh>
-#include <dune/common/bitsetvector.hh>
-
 #include <dune/geometry/quadraturerules.hh>
 
 #include <dune/istl/matrix.hh>
