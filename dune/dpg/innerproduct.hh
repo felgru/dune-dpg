@@ -21,10 +21,6 @@
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-#include <dune/common/function.hh>
-#include <dune/common/bitsetvector.hh>
-
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -84,7 +80,7 @@ namespace Dune {
       // Set all matrix entries to zero
       elementMatrix.setSize(localTotalTestSize,
                             localTotalTestSize);
-      elementMatrix = 0;      // fills the entire matrix with zeroes
+      elementMatrix = 0;
 
       boost::fusion::for_each(terms,
               detail::getLocalMatrixHelper
@@ -178,18 +174,14 @@ getOccupationPattern(MatrixIndexSet& nb) const
 
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-
   fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
        0, globalOffsetHelper());
 
-  // A view on the FE basis on a single element
   auto testLocalView = as_vector(transform(testSpaces,
                                            localViewFromFEBasis()));
-
   auto testLocalIndexSet = as_vector(transform(testBasisIndexSet,
                                                getLocalIndexSet()));
 
-  // Get the grid view from the finite element basis
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
 
@@ -206,10 +198,8 @@ getOccupationPattern(MatrixIndexSet& nb) const
     >::type IndexPairs;
   auto indexPairs = IndexPairs{};
 
-  // Loop over all leaf elements
   for(const auto& e : elements(gridView))
   {
-    // Bind the local FE basis view to the current element
     for_each(testLocalView, applyBind<decltype(e)>(e));
 
     for_each(zip(testLocalIndexSet, testLocalView),

@@ -6,26 +6,13 @@
 
 #include <vector>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-#include <dune/common/function.hh>
-#include <dune/common/bitsetvector.hh>
-
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
 
-#include <dune/istl/io.hh>
-
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
-#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-
 #include <dune/functions/functionspacebases/interpolate.hh>
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
-
-#include <dune/grid/uggrid.hh>   // for triangular meshes that are locally adaptive
-#include <dune/grid/utility/structuredgridfactory.hh> // for triangular meshes that are locally adaptive
 
 
 namespace Dune {
@@ -35,7 +22,7 @@ namespace Dune {
   class ErrorTools
   {
     double errorTol_;
-    std::vector<double> errorElement_ ;
+    std::vector<double> errorElement_;
 
   public:
     ErrorTools(double);
@@ -74,7 +61,7 @@ namespace Dune {
 
 //*******************************************************************
 
-  // computatiton of an L2 error in an element
+  // computation of an L2 error in an element
   template <class LocalView,class VolumeTerms>
   double ErrorTools::computeL2errorElement(
                                 const LocalView& localView,
@@ -98,14 +85,14 @@ namespace Dune {
         QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
 
     // Variables employed in the loop
-    double errSquare = 0 ;     // we store here the square of the error
-    double uQuad = 0 ;         // we store here the value of u at a quadrature point
+    double errSquare = 0;     // we store here the square of the error
+    double uQuad = 0;         // we store here the value of u at a quadrature point
 
     // Loop over all quadrature points
     for (size_t pt=0; pt < quad.size(); pt++) {
 
       //Restart value uQuad
-      uQuad = 0 ;
+      uQuad = 0;
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
@@ -115,25 +102,25 @@ namespace Dune {
       // The multiplicative factor in the integral transformation formula
       const double integrationElement = element.geometry().integrationElement(quadPos);
 
-      // Evaluate all shape function values at mapQuadPos (we do this through quadPos, which is the point correpondind to quadPos in the reference element)
+      // Evaluate all shape function values at quadPos (which is a quadrature point in the reference element)
       std::vector<FieldVector<double,1> > shapeFunctionValues;
       localFiniteElement.localBasis().evaluateFunction(quadPos, shapeFunctionValues);
 
-      // Evaluation of u at the point mapQuadPos, which is the point correpondind to quadPos in the reference element
+      // Evaluation of u at the point mapQuadPos, which is quadPos mapped to the physical domain
       for(int i=0; i<shapeFunctionValues.size(); i++)
       {
-        uQuad += shapeFunctionValues[i]*u[i] ;
+        uQuad += shapeFunctionValues[i]*u[i];
       }
 
       // Value of uRef at mapQuadPos
       double uExactQuad = std::get<0>(uRef)(mapQuadPos);
 
-      // we add the error at the quadrature point
-      errSquare += (uQuad - uExactQuad)*(uQuad - uExactQuad) * quad[pt].weight() * integrationElement ;
+      // we add the squared error at the quadrature point
+      errSquare += (uQuad - uExactQuad)*(uQuad - uExactQuad) * quad[pt].weight() * integrationElement;
 
     }
 
-    return std::sqrt(errSquare) ;
+    return std::sqrt(errSquare);
   }
 
 //*******************************************************************
@@ -152,8 +139,8 @@ namespace Dune {
     GridView gridView = feBasis.gridView();
 
      //   Number of elements
-    const int codimElement = 0 ;   //Element: codim = 0
-    int nElement = gridView.indexSet().size(codimElement) ;
+    const int codimElement = 0;   //Element: codim = 0
+    int nElement = gridView.indexSet().size(codimElement);
 
     // we update the size of errorElement_ where we will store the errors per element
     errorElement_.resize(nElement);
@@ -196,7 +183,7 @@ namespace Dune {
 
       // Now we compute the error inside the element
       errorElement_[indexElement] = computeL2errorElement(localView,uElement,uRef);
-      errSquare += errorElement_[indexElement]*errorElement_[indexElement] ;
+      errSquare += errorElement_[indexElement]*errorElement_[indexElement];
     }
 
     return std::sqrt(errSquare);
@@ -206,33 +193,26 @@ namespace Dune {
   template<class GridType> void ErrorTools::hRefinement( GridType& grid )
   {
 
-  //typedef GridType::LeafGridView GridView;
-  auto gridView = grid->leafGridView();
-  // GridView::Codim<0>::Iterator it = gridView.begin<0>();
-  // GridView::Codim<0>::Iterator endIt = gridView.end<0>();
-  //for (; it != endIt; ++it)
-  for(const auto& e : elements(gridView))
-  {
-    //int idx = mapper.index(*it); // get element index  // Remark, the old method for this is mapper.map(*it);
-
-    int indexElement = gridView.indexSet().index(e);
-    std::cout << "element with index " << indexElement << std::endl ;
-    if ( errorElement_[indexElement] < errorTol_)
+    auto gridView = grid->leafGridView();
+    for(const auto& e : elements(gridView))
     {
-      grid->mark(0, e); // index 0: we do not mark for refinement nor coarsening
-      std::cout << "Error element = " << errorElement_[indexElement] << " --> not h-refinement " << std::endl ;
-    }
-    else if ( errorElement_[indexElement] >= errorTol_)
-    {
-      grid->mark(1, e); // index 1: mark for refinement
-      std::cout << "Error element = " << errorElement_[indexElement] << " -->  h-refinement " << std::endl ;
+      int indexElement = gridView.indexSet().index(e);
+      std::cout << "element with index " << indexElement << std::endl;
+      if ( errorElement_[indexElement] < errorTol_)
+      {
+        grid->mark(0, e); // index 0: we do not mark for refinement nor coarsening
+        std::cout << "Error element = " << errorElement_[indexElement] << " --> not h-refinement" << std::endl;
+      }
+      else if ( errorElement_[indexElement] >= errorTol_)
+      {
+        grid->mark(1, e); // index 1: mark for refinement
+        std::cout << "Error element = " << errorElement_[indexElement] << " -->  h-refinement" << std::endl;
+      }
     }
 
-  }
-
-  grid->preAdapt();
-  grid->adapt();
-  grid->postAdapt();
+    grid->preAdapt();
+    grid->adapt();
+    grid->postAdapt();
 
   }
 
@@ -279,7 +259,7 @@ namespace Dune {
       for_each(localViewTest, applyBind<decltype(e)>(e));
       for_each(localViewSolution, applyBind<decltype(e)>(e));
 
-      // We take the coefficients of our solution (u,theta) that correspond to the current element e. They are stored in uLocal anf thetaLocal.
+      // We take the coefficients of our solution (u,theta) that correspond to the current element e. They are stored in uLocal and thetaLocal.
       // dof of the finite element inside the element
       size_t dofElementTheta = boost::fusion::at_c<0>(localViewSolution)->size();
       size_t dofElementU = boost::fusion::at_c<1>(localViewSolution)->size();
@@ -312,20 +292,20 @@ namespace Dune {
       innerProduct.bind(localViewTest);
       innerProduct.getLocalMatrix(innerProductMatrix);
 
-      // We grab the bilinear form matrix in the bilinearFormMatirx variable
-      Matrix<FieldMatrix<double,1,1> > bilinearFormMatirx;
+      // We grab the bilinear form matrix in the bilinearFormMatrix variable
+      Matrix<FieldMatrix<double,1,1> > bilinearFormMatrix;
       bilinearForm.bind(localViewTest, localViewSolution);
-      bilinearForm.getLocalMatrix(bilinearFormMatirx);
+      bilinearForm.getLocalMatrix(bilinearFormMatrix);
 
       // compute Bu - f (we do f-= Bu so the output is in rhsElement)
-      bilinearFormMatirx.mmv(solutionElement,rhsElement);
+      bilinearFormMatrix.mmv(solutionElement,rhsElement);
 
       //Solve the system
       // We first copy the matrix because it is going to be destroyed by the Cholesky
       Matrix<FieldMatrix<double,1,1> > innerProductMatrixCholesky = innerProductMatrix;
 
       Functions::Cholesky<Matrix<FieldMatrix<double,1,1> > > cholesky(innerProductMatrixCholesky);
-      cholesky.apply(rhsElement); // the solution is overriten in rhsElement
+      cholesky.apply(rhsElement); // the solution is overwritten in rhsElement
 
       // computation of the residual
       BlockVector<FieldVector<double,1> > tmpVector(rhsElement.size());

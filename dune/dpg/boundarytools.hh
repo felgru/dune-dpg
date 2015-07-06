@@ -5,26 +5,15 @@
 
 #include <vector>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-#include <dune/common/function.hh>
-#include <dune/common/bitsetvector.hh>
-
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
 
 #include <dune/istl/io.hh>
 
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
-#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-
 #include <dune/functions/functionspacebases/interpolate.hh>
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
-
-#include <dune/grid/uggrid.hh>   // for triangular meshes that are locally adaptive
-#include <dune/grid/utility/structuredgridfactory.hh> // for triangular meshes that are locally adaptive
 
 
 
