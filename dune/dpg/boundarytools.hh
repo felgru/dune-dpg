@@ -22,8 +22,6 @@ namespace Dune {
   class BoundaryTools
   {
   public:
-    BoundaryTools();
-
     template <class FEBasis>
     void boundaryTreatmentInflow(
                   const FEBasis& ,
@@ -40,11 +38,6 @@ namespace Dune {
 
 
   //*******************************************************************
-  BoundaryTools::BoundaryTools(){
-
-    return;
-  }
-
   template <class FEBasis >
   void BoundaryTools::boundaryTreatmentInflow(
                         const FEBasis& feBasis,
