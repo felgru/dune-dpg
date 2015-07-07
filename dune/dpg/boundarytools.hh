@@ -191,18 +191,9 @@ namespace Dune {
 
     } // end element e
 
-    //std::cout << "Olga inside" << std::endl;
     for(int i=0; i<dirichletNodes.size(); i++)
     {
-
-      if(dirichletNodesInt[i]>0)
-      {
-        dirichletNodes[i]=true;
-      }
-      else{
-        dirichletNodes[i]=false;
-      }
-      //std::cout << dirichletNodes[i] <<std::endl;
+      dirichletNodes[i] = (dirichletNodesInt[i]>0);
     }
 
     return;
