@@ -23,16 +23,15 @@ namespace Dune {
   {
   public:
     template <class FEBasis>
-    void boundaryTreatmentInflow(
+    static void boundaryTreatmentInflow(
                   const FEBasis& ,
                   std::vector<bool>& ,
                   const FieldVector<double,2>&
                   );
   private:
-    std::vector<int> getVertexOfIntersection(
+    static std::vector<int> getVertexOfIntersection(
                         int
                         );
-
 
   };
 
@@ -122,7 +121,7 @@ namespace Dune {
         {
           // We see what are the vertices associated to the current intersection (assumed to be a face)
           // TODO: This is hard coded and works only for triangles so it would be good to implement it better
-          std::vector<int> vertexOfIntersection = this->getVertexOfIntersection(indexIntersection);
+          std::vector<int> vertexOfIntersection = getVertexOfIntersection(indexIntersection);
 
           vertexOnInflowBoundary[ vertexOfIntersection[0] ] += 1;
           vertexOnInflowBoundary[ vertexOfIntersection[1] ] += 1;
