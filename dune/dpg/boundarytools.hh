@@ -115,8 +115,8 @@ namespace Dune {
         // std::cout << "indexIntersection=" << indexIntersection << std::endl;
         // std::cout << "isOnInflowBoundary=" << isOnInflowBoundary << std::endl<< std::endl;
 
-        //if the intersection is on the inflow boundary, we have to update what are the local
-        // verteces that are also on the inflow boundary
+        // if the intersection is on the inflow boundary, we have to update
+        // what are the local vertices that are also on the inflow boundary
         if(isOnInflowBoundary)
         {
           // We see what are the vertices associated to the current intersection (assumed to be a face)
