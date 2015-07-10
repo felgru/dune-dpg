@@ -273,7 +273,7 @@ public:
                       MinInnerProduct minInnerProduct,
                       FieldVector<double, dim> beta,
                       double delta,
-                      double epsilon);
+                      double epsilon = 0);
 
   /**
    * \brief Does exactly what it says on the tin.
@@ -832,7 +832,7 @@ applyMinimization
              MinInnerProduct minInnerProduct,
              FieldVector<double, dim> beta,
              double delta,
-             double epsilon = 0)
+             double epsilon )
 {
   using namespace boost::fusion;
   using namespace Dune::detail;

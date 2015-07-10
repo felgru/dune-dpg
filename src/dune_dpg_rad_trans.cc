@@ -2,6 +2,7 @@
 # include "config.h"
 #endif
 #include <iostream>
+#include <fstream>
 #include <cstdlib> // for std::abort()
 
 #include <vector>
@@ -36,6 +37,7 @@
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/dpg/system_assembler.hh>
+#include <dune/dpg/errortools.hh>
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/radiative_transfer/scattering.hh>
 
@@ -45,10 +47,131 @@
 using namespace Dune;
 
 
+// Value of the analytic solution "for the interior of the domain"
+template <class Domain,class Direction>
+double fInner(const Domain& x,
+              const Direction& s)
+{
+  double value = 1-(x[0]-0.5)*(x[0]-0.5)-(x[1]-0.5)*(x[1]-0.5) ;
+  return value ;
+}
+// Partial derivative of fInner with respect to x[0]
+template <class Domain,class Direction>
+double fInnerD0(const Domain& x,
+                const Direction& s)
+{
+  double value = -2*(x[0]-0.5) ;
+  return value ;
+}
+// Partial derivative of fInner with respect to x[1]
+template <class Domain,class Direction>
+double fInnerD1(const Domain& x,
+                const Direction& s)
+{
+  double value = -2*(x[1]-0.5) ;
+  return value ;
+}
+
+// This function satifies the zero incoming flux bounday conditions
+template <class Domain,class Direction>
+double fBoundary(const Domain& x,
+                 const Direction& s)
+{
+
+  double value = ( (s[0]>0)*x[0] + (s[0]==0)*1. + (s[0]<0)*(1-x[0]) )*
+                 ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) );
+  return value ;
+}
+// Partial derivative of fBoundary with respect to x[0]
+template <class Domain,class Direction>
+double fBoundaryD0(const Domain& x,
+                   const Direction& s)
+{
+
+  double value = ( (s[0]>0)*1 + (s[0]==0)*0. + (s[0]<0)*(-1.) )*
+                 ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) );
+  return value ;
+}
+// Partial derivative of fBoundary with respect to x[1]
+template <class Domain,class Direction>
+double fBoundaryD1(const Domain& x,
+                   const Direction& s)
+{
+
+  double value = ( (s[0]>0)*x[0] + (s[0]==0)*1. + (s[0]<0)*(1-x[0]) )*
+                 ( (s[1]>0)*1 + (s[1]==0)*0. + (s[1]<0)*(-1.) );
+  return value ;
+}
+
+//The analytic solution
+template <class Domain,class Direction>
+double uAnalytic(const Domain& x,
+                 const Direction& s)
+{
+  return fInner(x,s)*fBoundary(x,s);
+}
+// double uAnalytic(const FieldVector<double, 2>& x,
+//                  const FieldVector<double, 2>& s)
+// {
+//   return fInner(x,s)*fBoundary(x,s);
+// }
+
+// Optical parameter: sigma
+template <class Domain,class Direction>
+double sigma(const Domain& x,
+             const Direction& s)
+{
+  return 3.;
+}
+// Optical parameter: kernel
+template <class Domain,class Direction>
+double kernel(const Domain& x,
+              const Direction& sIntegration,
+              const Direction& s)
+{
+  return 0.;
+}
+// The scattering kernel computed with an analytic solution u
+// and a mid-point rule for the quadrature formula
+template <class Domain,class Direction,class lambdaExpr>
+double collisionTerm(const Domain& x,
+                     const Direction& s,
+                     const lambdaExpr& u,
+                     const std::vector< Direction >& sVector)
+{
+  int numS = sVector.size();
+  double sum = 0. ;
+  for(int i=0; i<numS; i++)
+  {
+    sum += kernel(x,sVector[i],s)*u(x,sVector[i]);
+  }
+
+  return sum/numS;
+}
+
+// The right hand-side
+template <class Domain,class Direction,class lambdaExpr>
+double f(const Domain& x,
+         const Direction& s,
+         const lambdaExpr& u,
+         const std::vector< Direction >& sVector)
+{
+  double value = s[0]*( fInnerD0(x,s) * fBoundary(x,s) + fInner(x,s)*fBoundaryD0(x,s)) +
+                 s[1]*( fInnerD1(x,s) * fBoundary(x,s) + fInner(x,s)*fBoundaryD1(x,s)) +
+                 sigma(x,s)*u(x,s) - collisionTerm(x,s,u,sVector) ;
+  return value;
+}
+
 
 int main(int argc, char** argv)
 {
   try{
+
+  ///////////////////////////////////
+  // To print information
+  ///////////////////////////////////
+  std::ofstream ofs("rad_trans_output");
+
   ///////////////////////////////////
   //   Generate the grid
   ///////////////////////////////////
@@ -58,7 +181,7 @@ int main(int argc, char** argv)
 
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
-  array<unsigned int,dim> elements = {10,10};
+  array<unsigned int,dim> elements = {4,4};
 
   //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
@@ -68,6 +191,34 @@ int main(int argc, char** argv)
 
   typedef GridType::LeafGridView GridView;
   GridView gridView = grid->leafGridView();
+
+  ///////////////////////////////////
+  // Get number of discrete ordinates
+  ///////////////////////////////////
+
+  if(argc != 2) {
+      std::cerr << "Usage: " << argv[0] << " <# of ordinates>"
+                << std::endl;
+      std::abort();
+  }
+  // number of discrete ordinates
+  int numS = atoi(argv[1]);
+  // Vector of directions
+  using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
+  using Direction = FieldVector<double, dim> ;
+  std::vector< Direction > sVector(numS) ;
+  for(int i = 0; i < numS; ++i)
+  {
+    using namespace boost::math::constants;
+    sVector[i] = {cos(2*pi<double>()*i/numS),
+                  sin(2*pi<double>()*i/numS)};
+  }
+
+  ///////////////////////////////////////////////
+  // Define the analytical solution (if possible)
+  ///////////////////////////////////////////////
+  //auto uExact = std::make_tuple(uAnalytic);
+  auto uExact = [] (const Domain& x, const Direction& s){ return uAnalytic(x,s);};
 
   /////////////////////////////////////////////////////////
   //   Choose a finite element space
@@ -155,12 +306,9 @@ int main(int argc, char** argv)
   for(int i = 0; i < numS; ++i)
   {
     using namespace boost::math::constants;
-    /* TODO: We slightly rotate s to make sure we are not in the
-     *       characteristic case.
-     *       In the future we have to investigate why the characteristic
-     *       case fails on a quadrilateral mesh. */
-    FieldVector<double, dim> s = {cos(2*pi<double>()*i/numS+0.01),
-                                  sin(2*pi<double>()*i/numS+0.01)};
+    Direction s = sVector[i];
+    // FieldVector<double, dim> s = {cos(2*pi<double>()*i/numS),
+    //                               sin(2*pi<double>()*i/numS)};
     bilinearForms.emplace_back(
       make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
@@ -196,8 +344,6 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
   /////////////////////////////////////////////////////////
-
-
   typedef BlockVector<FieldVector<double,1> > VectorType;
   typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
 
@@ -208,9 +354,10 @@ int main(int argc, char** argv)
   std::vector<std::vector<bool>> dirichletNodesInflow(numS);
   for(int i = 0; i < numS; ++i)
   {
-    using namespace boost::math::constants;
-    FieldVector<double, dim> s = {cos(2*pi<double>()*i/numS),
-                                  sin(2*pi<double>()*i/numS)};
+    Direction s = sVector[i];
+    // using namespace boost::math::constants;
+    // FieldVector<double, dim> s = {cos(2*pi<double>()*i/numS),
+    //                               sin(2*pi<double>()*i/numS)};
     BoundaryTools boundaryTools = BoundaryTools();
     boundaryTools.boundaryTreatmentInflow(std::get<1>(solutionSpaces),
                                           dirichletNodesInflow[i],
@@ -229,27 +376,34 @@ int main(int argc, char** argv)
     x[i] = 0;
   }
 
+  /////////////////////////////////////////////////////////
+  //  Fixed-point iterations
+  /////////////////////////////////////////////////////////
   for(int n = 0; n < N; ++n)
   {
 
     /////////////////////////////////////////////////////////
     //  Assemble the systems
     /////////////////////////////////////////////////////////
-    using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
-    using Direction = FieldVector<double, dim> >;
-    auto f = [] (const Domain& x, const Direction& s) { return 1.;};
+    // using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
+    //auto f = [] (const Domain& x, const Direction& s) { return 1.;};
 
     // loop of the discrete ordinates
     for(int i = 0; i < numS; ++i)
     {
-      FieldVector<double, dim> s = {cos(2*pi<double>()*i/numS),
-                                    sin(2*pi<double>()*i/numS)};
-      auto g = std::make_tuple([s] (const Domain& x) { return f(x,s);});
+      Direction s = sVector[i];
+      // using namespace boost::math::constants;
+      // FieldVector<double, dim> s = {cos(2*pi<double>()*i/numS),
+      //                               sin(2*pi<double>()*i/numS)};
+      //auto g = std::make_tuple([s,&f] (const Domain& x) { return f(x,s);});
+      auto g = std::make_tuple([s,&uExact,&sVector] (const Domain& x) { return f(x,s,uExact,sVector);});
 
       systemAssemblers[i].assembleSystem(stiffnessMatrix[i], rhs[i], g);
       VectorType scattering;
       scatteringAssemblers[i].assembleScattering<0>(scattering, x);
       rhs[i] += scattering;
+      printvector(ofs, scattering, "scatering", "--");
+      printvector(ofs, rhs[i], "rhs", "--");
       systemAssemblers[i].applyDirichletBoundarySolution<1>
           (stiffnessMatrix[i],
            rhs[i],
@@ -278,12 +432,16 @@ int main(int argc, char** argv)
     }
 
 
-    //////////////////////////////////////////////////////////////////////////
-    //  Make a discrete function from the FE basis and the coefficient vector
-    //////////////////////////////////////////////////////////////////////////
 
+    ////////////////////////////////////
+    //  Error computation and print in VTK file
+    ////////////////////////////////////
     for(int i = 0; i < numS; ++i)
     {
+
+      //////////////////////////////////////////////////////////////////////////
+      //  Make a discrete function from the FE basis and the coefficient vector
+      //////////////////////////////////////////////////////////////////////////
       VectorType u(feBasisInterior.indexSet().size());
       u=0;
       for (unsigned int j=0; j<feBasisInterior.indexSet().size(); j++)
@@ -296,22 +454,39 @@ int main(int argc, char** argv)
           uFunction(feBasisInterior,u);
       auto localUFunction = localFunction(uFunction);
 
-      ////////////////////////////////////////////////////////////////////////
-      //  Write result to VTK file
-      //  We need to subsample, because VTK cannot natively display
-      //  real second-order functions
-      ////////////////////////////////////////////////////////////////////////
-      SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
-      vtkWriter.addVertexData(localUFunction,
-                      VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-      std::string name = std::string("solution_rad_trans_n")
-                       + std::to_string(n)
-                       + std::string("_s")
-                       + std::to_string(i);
-      vtkWriter.write(name);
+      // ////////////////////////////////////////////////////////////////////////
+      // //  Write result to VTK file
+      // //  We need to subsample, because VTK cannot natively display
+      // //  real second-order functions
+      // ////////////////////////////////////////////////////////////////////////
+      // SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
+      // vtkWriter.addVertexData(localUFunction,
+      //                 VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
+      // std::string name = std::string("solution_rad_trans_n")
+      //                  + std::to_string(n)
+      //                  + std::string("_s")
+      //                  + std::to_string(i);
+      // vtkWriter.write(name);
 
+      ////////////////////////////////////
+      //  Error wrt exact solution
+      ////////////////////////////////////
+      // Error tolerance to do h-refinement: I guess we will never do this so remove
+      double adaptivityTol = 0.001;
+      //We build an object of type ErrorTools to study errors, residuals and do hp-adaptivity
+      ErrorTools errorTools = ErrorTools(adaptivityTol);
+      //We compute the L2 error between the exact and the fem solutions
+      Direction s = sVector[i];
+      auto uExactSfixed = std::make_tuple([s] (const Domain& x){ return uAnalytic(x,s);});
+      double err = errorTools.computeL2error(std::get<1>(solutionSpaces),u,uExactSfixed);
+      ofs << " 'Exact' error u: || u["<< i << "] - u_fem["<< i <<"] ||_L2 = " << err << std::endl ;
     }
+    ofs << std::endl ;
+
+
   }
+
+  ofs.std::ofstream::close();
 
   return 0;
   }
