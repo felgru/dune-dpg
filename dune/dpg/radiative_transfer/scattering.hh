@@ -114,11 +114,12 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
   size_t globalTotalTestSize = 0;
 
-  if(isSaddlepoint) {
-    globalTotalTestSize =
-      fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
-           0, globalOffsetHelper());
-  } else { /* DPG formulation */
+  globalTotalTestSize =
+    fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
+         0, globalOffsetHelper());
+
+  if(!isSaddlepoint)
+  {
     for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
     {
       globalTestSpaceOffsets[i] = 0;
@@ -132,8 +133,6 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
 
   double globalSolutionSpaceOffset =
       globalSolutionSpaceOffsets[solutionSpaceIndex];
-
-  if(!isSaddlepoint) globalTotalTestSize = globalTotalSolutionSize;
 
   scattering.resize(globalTotalTestSize
                     + (isSaddlepoint?globalTotalSolutionSize:0));
