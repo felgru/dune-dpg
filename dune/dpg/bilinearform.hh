@@ -77,7 +77,7 @@ namespace Dune {
                  terms(terms),
                  testLocalView(nullptr),
                  solutionLocalView(nullptr)
-    { };
+    { }
 
     /**
      * \brief Compute the stiffness matrix for a single element.
@@ -106,7 +106,7 @@ namespace Dune {
                        elementMatrix,
                        localTestSpaceOffsets,
                        localSolutionSpaceOffsets));
-    };
+    }
 
     /**
      * \brief Creates the occupation pattern for the system matrix.
@@ -165,19 +165,19 @@ namespace Dune {
       localTotalSolutionSize =
           fold(zip(localSolutionSpaceOffsets, slv),
                0, offsetHelper());
-    };
+    }
 
     /**
      * \brief Does exactly what it says on the tin.
      */
     const TestSpaces& getTestSpaces() const
-    { return testSpaces; };
+    { return testSpaces; }
 
     /**
      * \brief Does exactly what it says on the tin.
      */
     const SolutionSpaces& getSolutionSpaces() const
-    { return solutionSpaces; };
+    { return solutionSpaces; }
 
     /**
      * \brief Does exactly what it says on the tin.
@@ -185,7 +185,7 @@ namespace Dune {
     const BilinearTerms& getTerms() const
     {
       return terms;
-    };
+    }
 
     using TestSpaceIndexArray = size_t[std::tuple_size<TestSpaces>::value];
     using SolutionSpaceIndexArray
@@ -195,13 +195,13 @@ namespace Dune {
      * \brief Does exactly what it says on the tin.
      */
     const TestSpaceIndexArray& getLocalTestSpaceOffsets() const
-    { return localTestSpaceOffsets; };
+    { return localTestSpaceOffsets; }
 
     /**
      * \brief Does exactly what it says on the tin.
      */
     const SolutionSpaceIndexArray& getLocalSolutionSpaceOffsets() const
-    { return localSolutionSpaceOffsets; };
+    { return localSolutionSpaceOffsets; }
 
   private:
     TestSpaces     testSpaces;
