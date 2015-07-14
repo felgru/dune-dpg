@@ -139,7 +139,7 @@ struct getVolumeTermHelper
     using namespace boost::fusion;
 
     getVolumeTerm(*(at_c<0>(seq)), at_c<1>(seq), at_c<2>(seq));
-    };
+  }
 };
 } // end namespace detail
 
@@ -205,7 +205,7 @@ public:
                                               bilinearForm.getTerms())),
                innerProduct(make_InnerProduct(testSpaces,
                                               innerProduct.getTerms()))
-  { };
+  { }
 
   /**
    * \brief Assemble the DPG system for a given rhs function.
@@ -279,13 +279,13 @@ public:
    * \brief Does exactly what it says on the tin.
    */
   const TestSpaces& getTestSpaces() const
-  { return testSpaces; };
+  { return testSpaces; }
 
   /**
    * \brief Does exactly what it says on the tin.
    */
   const SolutionSpaces& getSolutionSpaces() const
-  { return solutionSpaces; };
+  { return solutionSpaces; }
 
 private:
 
@@ -710,7 +710,7 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     }
 
   }
-};
+}
 
 template<class TestSpaces, class SolutionSpaces,
          class BilinearForm, class InnerProduct,
@@ -818,7 +818,7 @@ applyWeakBoundaryCondition
       }
     }
   }
-};
+}
 
 
 template<class TestSpaces, class SolutionSpaces,
@@ -922,7 +922,7 @@ applyMinimization
       }
     }
   }
-};
+}
 
 
 

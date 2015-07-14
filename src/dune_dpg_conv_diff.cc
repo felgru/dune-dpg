@@ -119,7 +119,7 @@ double epsilon;   //TODO classes for fieldRHS and fielsExact with epsilon as var
 double fieldRHS(const Dune::FieldVector<double, 2>& x) {
   const double pi = boost::math::constants::pi<double>();
   return (-(-pi*pi*epsilon*x[0] + pi*pi*epsilon - 1) * std::sin(pi*x[1]));
-};
+}
 
 // The exact transport solution
 double fieldExact(const Dune::FieldVector<double, 2>& x) {
@@ -127,7 +127,7 @@ double fieldExact(const Dune::FieldVector<double, 2>& x) {
   const double r1 = (-1+std::sqrt(1+4*epsilon*epsilon*pi*pi))/(-2*epsilon);
   const double r2 = (-1-std::sqrt(1+4*epsilon*epsilon*pi*pi))/(-2*epsilon);
   return (((std::exp(r1*(x[0]-1))-std::exp(r2*(x[0]-1)))/(std::exp(-r1)-std::exp(-r2)) - (1-x[0]))* std::sin(pi*x[1]) ) ;
-};
+}
 
 
 int main(int argc, char** argv)

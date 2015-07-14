@@ -29,7 +29,7 @@ public:
    */
   constexpr RhsAssembler (TestSpaces testSpaces)
              : testSpaces(testSpaces)
-  { };
+  { }
 
   /**
    * \brief Assemble the rhs vector of a DPG system for a given rhs function.
@@ -65,7 +65,7 @@ public:
    * \brief Does exactly what it says on the tin.
    */
   const TestSpaces& getTestSpaces() const
-  { return testSpaces; };
+  { return testSpaces; }
 
 private:
   TestSpaces     testSpaces;
@@ -194,7 +194,7 @@ applyDirichletBoundary(BlockVector<FieldVector<double,1> >& rhs,
       rhs[globalOffset+i] = value;
     }
   }
-};
+}
 
 } // end namespace Dune
 

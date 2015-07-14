@@ -65,7 +65,7 @@ namespace Dune {
                : testSpaces(testSpaces),
                  terms(terms),
                  testLocalView(nullptr)
-    { };
+    { }
 
     /**
      * \brief Compute the stiffness matrix for a single element.
@@ -94,7 +94,7 @@ namespace Dune {
                        elementMatrix,
                        localTestSpaceOffsets,
                        localTestSpaceOffsets));
-    };
+    }
 
     /**
      * \brief Creates the occupation pattern for the system matrix.
@@ -123,13 +123,13 @@ namespace Dune {
       /* set up local offsets */
       localTotalTestSize =
           fold(zip(localTestSpaceOffsets, tlv), 0, offsetHelper());
-    };
+    }
 
     /**
      * \brief Does exactly what it says on the tin.
      */
     const TestSpaces& getTestSpaces() const
-    { return testSpaces; };
+    { return testSpaces; }
 
     /**
      * \brief Does exactly what it says on the tin.
@@ -137,7 +137,7 @@ namespace Dune {
     const InnerProductTerms& getTerms() const
     {
       return terms;
-    };
+    }
 
   private:
     TestSpaces         testSpaces;

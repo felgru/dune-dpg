@@ -22,29 +22,21 @@ namespace Dune {
   class BoundaryTools
   {
   public:
-    BoundaryTools();
-
     template <class FEBasis>
-    void boundaryTreatmentInflow(
+    static void boundaryTreatmentInflow(
                   const FEBasis& ,
                   std::vector<bool>& ,
                   const FieldVector<double,2>&
                   );
   private:
-    std::vector<int> getVertexOfIntersection(
+    static std::vector<int> getVertexOfIntersection(
                         int
                         );
-
 
   };
 
 
   //*******************************************************************
-  BoundaryTools::BoundaryTools(){
-
-    return;
-  }
-
   template <class FEBasis >
   void BoundaryTools::boundaryTreatmentInflow(
                         const FEBasis& feBasis,
@@ -72,7 +64,7 @@ namespace Dune {
     // A loop over all elements of the grid
     for(const auto& e : elements(gridView))
     {
-      // std::cout << std::endl << "NEW ELEMENT" << std::endl<< std::endl ;
+      // std::cout << std::endl << "NEW ELEMENT" << std::endl<< std::endl;
 
       // We bind the local view to the current element
       localView.bind(e);
@@ -100,7 +92,7 @@ namespace Dune {
 
       for (auto&& intersection : intersections(gridView, e))
       {
-        // std::cout << "****** New intersection" << std::endl<< std::endl ;
+        // std::cout << "****** New intersection" << std::endl<< std::endl;
 
         //Local index of the intersection
         int indexIntersection = intersection.indexInInside();
@@ -110,48 +102,48 @@ namespace Dune {
                intersection.centerUnitOuterNormal();
 
         // n.beta
-        double scalarProd = centerOuterNormal * beta ;
+        double scalarProd = centerOuterNormal * beta;
 
         // We see whether we are on the inflow boundary
         double tolerance = -1e-8*beta.two_norm();
         bool isOnInflowBoundary = (scalarProd<tolerance)
-                                  && intersection.boundary() ;
+                                  && intersection.boundary();
 
         // We store this information in faceOnInflowBoundary
-        faceOnInflowBoundary[indexIntersection] = isOnInflowBoundary ;
+        faceOnInflowBoundary[indexIntersection] = isOnInflowBoundary;
 
-        // std::cout << "indexIntersection=" << indexIntersection << std::endl ;
-        // std::cout << "isOnInflowBoundary=" << isOnInflowBoundary << std::endl<< std::endl ;
+        // std::cout << "indexIntersection=" << indexIntersection << std::endl;
+        // std::cout << "isOnInflowBoundary=" << isOnInflowBoundary << std::endl<< std::endl;
 
-        //if the intersection is on the inflow boundary, we have to update what are the local
-        // verteces that are also on the inflow boundary
+        // if the intersection is on the inflow boundary, we have to update
+        // what are the local vertices that are also on the inflow boundary
         if(isOnInflowBoundary)
         {
           // We see what are the vertices associated to the current intersection (assumed to be a face)
           // TODO: This is hard coded and works only for triangles so it would be good to implement it better
-          std::vector<int> vertexOfIntersection = this->getVertexOfIntersection(indexIntersection);
+          std::vector<int> vertexOfIntersection = getVertexOfIntersection(indexIntersection);
 
           vertexOnInflowBoundary[ vertexOfIntersection[0] ] += 1;
           vertexOnInflowBoundary[ vertexOfIntersection[1] ] += 1;
 
-          // std::cout << "vertexOfIntersection[" << 0 << "]=" << vertexOfIntersection[0] << std::endl ;
-          // std::cout << "vertexOfIntersection[" << 1 << "]=" << vertexOfIntersection[1] << std::endl ;
+          // std::cout << "vertexOfIntersection[" << 0 << "]=" << vertexOfIntersection[0] << std::endl;
+          // std::cout << "vertexOfIntersection[" << 1 << "]=" << vertexOfIntersection[1] << std::endl;
         }
 
-        // std::cout << "scalarProd=" << scalarProd << " ; isOnInflowBoundary=" << isOnInflowBoundary << std::endl ;
-        // std::cout << "centerOuterNormal[" << 0 << "]=" << centerOuterNormal[0] << std::endl ;
-        // std::cout << "centerOuterNormal[" << 1 << "]=" << centerOuterNormal[1] << std::endl << std::endl ;
+        // std::cout << "scalarProd=" << scalarProd << "; isOnInflowBoundary=" << isOnInflowBoundary << std::endl;
+        // std::cout << "centerOuterNormal[" << 0 << "]=" << centerOuterNormal[0] << std::endl;
+        // std::cout << "centerOuterNormal[" << 1 << "]=" << centerOuterNormal[1] << std::endl << std::endl;
 
       }
 
 
 
       //  for(int i=0;i<vertexOnInflowBoundary.size();i++){
-      // std::cout << "vertexOnInflowBoundary[" << i << "]=" << vertexOnInflowBoundary[i] << std::endl ;
+      // std::cout << "vertexOnInflowBoundary[" << i << "]=" << vertexOnInflowBoundary[i] << std::endl;
 
       //  }
       //  for(int i=0;i<faceOnInflowBoundary.size();i++){
-      // std::cout << "faceOnInflowBoundary[" << i << "]=" << faceOnInflowBoundary[i] << std::endl ;
+      // std::cout << "faceOnInflowBoundary[" << i << "]=" << faceOnInflowBoundary[i] << std::endl;
 
       //  }
 
@@ -181,7 +173,7 @@ namespace Dune {
         //       << " ; global index = " << localIndexSet.index(i)[0]
         //       << " ; codim=" << dofCodim
         //       << " ; subentityIndex=" << dofIndex
-        //       << std::endl ;
+        //       << std::endl;
 
         dirichletNodesInt[ localIndexSet.index(i)[0] ] += dofOnInflowBoundary;
 
@@ -191,18 +183,9 @@ namespace Dune {
 
     } // end element e
 
-    //std::cout << "Olga inside" << std::endl ;
     for(int i=0; i<dirichletNodes.size(); i++)
     {
-
-      if(dirichletNodesInt[i]>0)
-      {
-        dirichletNodes[i]=true;
-      }
-      else{
-        dirichletNodes[i]=false;
-      }
-      //std::cout << dirichletNodes[i] <<std::endl;
+      dirichletNodes[i] = (dirichletNodesInt[i]>0);
     }
 
     return;

@@ -30,7 +30,7 @@ struct getIndexSet
   typename T::IndexSet operator()(T t) const
   {
     return t.indexSet();
-  };
+  }
 };
 
 struct getLocalIndexSet
@@ -52,7 +52,7 @@ struct getLocalIndexSet
     typename T::LocalIndexSet& result =
         const_cast<typename T::LocalIndexSet&>(lis);
     return new typename T::LocalIndexSet(std::move(result));
-  };
+  }
 };
 
 struct getLocalView
@@ -72,7 +72,7 @@ struct getLocalView
     const typename T::LocalView& lv = const_cast<T&>(t).localView();
     typename T::LocalView& result = const_cast<typename T::LocalView&>(lv);
     return new typename T::LocalView(std::move(result));
-  };
+  }
 };
 
 struct localViewFromFEBasis
@@ -94,13 +94,13 @@ struct localViewFromFEBasis
     typename B::LocalView& result =
         const_cast<typename B::LocalView&>(lv);
     return new typename B::LocalView(std::move(result));
-  };
+  }
 };
 
 template<class GridView>
 struct getLocalVolumeTerm
 {
-  getLocalVolumeTerm(const GridView& gridView) : gridView(gridView) {};
+  getLocalVolumeTerm(const GridView& gridView) : gridView(gridView) {}
 
   template<class T>
   struct result;
@@ -122,7 +122,7 @@ struct getLocalVolumeTerm
     auto localVolumeTerm =
         localFunction(Functions::makeGridViewFunction(t, gridView));
     return localVolumeTerm;
-  };
+  }
 
   private:
   const GridView& gridView;
@@ -143,7 +143,7 @@ struct getSize
   size_t operator()(const T& t) const
   {
     return t.size();
-  };
+  }
 };
 
 struct default_deleter
@@ -158,7 +158,7 @@ struct default_deleter
 template<class E>
 struct applyBind
 {
-  applyBind(const E& e) : e(e) {};
+  applyBind(const E& e) : e(e) {}
 
   /* TODO: Is the T& more expensive than T for pointer types T? */
   template<class T>
@@ -169,11 +169,11 @@ struct applyBind
 
   template<class T>
   void bind_impl(T t, std::true_type) const
-  { t->bind(e); };
+  { t->bind(e); }
 
   template<class T>
   void bind_impl(T& t, std::false_type) const
-  { t.bind(e); };
+  { t.bind(e); }
 
 private:
   const E& e;
@@ -212,7 +212,7 @@ struct getLocalMatrixHelper
         elementMatrix(elementMatrix),
         localSolutionSpaceOffsets(localSolutionSpaceOffsets),
         localTestSpaceOffsets(localTestSpaceOffsets)
-  {};
+  {}
 
   /**
    * \tparam Term either a BilinearTerm or an InnerProductTerm
@@ -243,7 +243,7 @@ struct getLocalMatrixHelper
                         elementMatrix,
                         localTestSpaceOffset,
                         localSolutionSpaceOffset);
-  };
+  }
 
 private:
   const TestLocalView& testLocalView;
@@ -283,7 +283,7 @@ struct getOccupationPatternHelper
         globalTestSpaceOffsets(globalTestSpaceOffsets),
         globalSolutionSpaceOffsets(globalSolutionSpaceOffsets),
         nb(nb)
-  {};
+  {}
 
   template <class testSpaceIndex,
             class solutionSpaceIndex>
@@ -325,7 +325,7 @@ struct getOccupationPatternHelper
 
       }
     }
-  };
+  }
 
 private:
   const TestLocalView& testLocalView;
@@ -345,7 +345,7 @@ struct localToGlobalCopier
 {
 
   localToGlobalCopier(const LocalMatrix& lm, GlobalMatrix& gm) :
-      elementMatrix(lm), matrix(gm) {};
+      elementMatrix(lm), matrix(gm) {}
 
   template<class TestLocalView, class SolutionLocalView,
            class TestLocalIndexSet, class SolutionLocalIndexSet>
@@ -377,7 +377,7 @@ struct localToGlobalCopier
         }
       }
     }
-  };
+  }
 
 private:
   const LocalMatrix& elementMatrix;
@@ -397,7 +397,7 @@ struct localToGlobalCopyHelper
       : solutionZip(solutionZip),
         testZip(testZip),
         localToGlobalCopier(localToGlobalCopier)
-  {};
+  {}
 
   template <class testSpaceIndex,
             class solutionSpaceIndex>
@@ -414,7 +414,7 @@ struct localToGlobalCopyHelper
         at_c<testSpaceIndex::value>(testZip);
 
     localToGlobalCopier(join(testData,solutionData));
-  };
+  }
 
 private:
   const SolutionZip& solutionZip;
@@ -428,7 +428,7 @@ struct localToGlobalRHSCopier
 {
 
   localToGlobalRHSCopier(GlobalVector& gv) :
-      rhs(gv) {};
+      rhs(gv) {}
 
   template<class LocalVector, class TestLocalIndexSet>
   void operator()
@@ -470,7 +470,7 @@ struct offsetHelper
     auto const & localView = at_c<1>(t);
     offset = s;
     return s + localView->size();
-  };
+  }
 };
 
 struct globalOffsetHelper
@@ -494,7 +494,7 @@ struct globalOffsetHelper
     auto const & indexSet = at_c<1>(t);
     offset = s;
     return s + indexSet.size();
-  };
+  }
 };
 
 
@@ -512,7 +512,7 @@ struct getIndexSetSize
     std::size_t operator()(T t) const
     {
         return t.indexSet().size();
-    };
+    }
 };
 
 
@@ -531,7 +531,7 @@ struct getLocalViewMaxSize
     std::size_t operator()(T t) const
     {
         return t.localView().maxSize();
-    };
+    }
 };
 
 
@@ -561,7 +561,7 @@ struct getLocalFiniteElement
     typename result<getLocalFiniteElement(T)>::type operator()(const T& t) const
     {
         return t->tree().finiteElement();
-    };
+    }
 };
 
 
