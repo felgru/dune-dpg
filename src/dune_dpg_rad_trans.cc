@@ -39,6 +39,8 @@
 #include <dune/dpg/system_assembler.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/rhs_assembler.hh>
+
 #include <dune/dpg/radiative_transfer/scattering.hh>
 
 #include <boost/math/constants/constants.hpp>
@@ -166,6 +168,22 @@ double f(const Domain& x,
   return value;
 }
 
+// Get solution u or theta out of the solution vector x
+template<class FieldVector>
+void extractSolution(std::vector< FieldVector >& u,
+                     const std::vector< FieldVector >& x,
+                     const int offset
+                     )
+{
+  int numS = x.size();
+  int i_max = u[0].size();
+  for(int iDir=0;iDir<numS;iDir++){
+    for(int i=0;i<i_max;i++){
+      u[iDir][i] = x[iDir][i+offset];
+    }
+  }
+}
+
 
 int main(int argc, char** argv)
 {
@@ -279,22 +297,25 @@ int main(int argc, char** argv)
               std::declval<InnerProduct>(), DPGFormulation()))
           SystemAssembler_t;
 
-  if(argc != 3) {
-      std::cerr << "Usage: " << argv[0] << " <# of ordinates>"
-                << " <# of iterations>" << std::endl;
-      std::abort();
-  }
-  int numS = atoi(argv[1]);
-  int N = atoi(argv[2]);
-
   std::vector<SystemAssembler_t> systemAssemblers;
   systemAssemblers.reserve(numS);
 
+  // Scattering assemblers with optimal test spaces
   std::vector<ScatteringAssembler<std::tuple<FEBasisOptimalTest>,
                                   SolutionSpaces,
                                   DPGFormulation>
              > scatteringAssemblers;
   scatteringAssemblers.reserve(numS);
+
+  // Scattering assemblers with enriched test space
+  ScatteringAssembler<std::tuple<FEBasisTest>,
+                                  SolutionSpaces,
+                                  DPGFormulation
+                      > scatteringAssemblerEnriched
+                          = make_ScatteringAssembler(
+                                testSpaces,
+                                solutionSpaces,
+                                DPGFormulation());
 
   /* create an FEBasisOptimalTest for each direction */
   std::vector<std::tuple<FEBasisOptimalTest> > optimalTestSpaces;
@@ -311,10 +332,8 @@ int main(int argc, char** argv)
 
   for(int i = 0; i < numS; ++i)
   {
-    using namespace boost::math::constants;
     Direction s = sVector[i];
-    // FieldVector<double, dim> s = {cos(2*pi<double>()*i/numS),
-    //                               sin(2*pi<double>()*i/numS)};
+
     bilinearForms.emplace_back(
       make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
@@ -361,9 +380,6 @@ int main(int argc, char** argv)
   for(int i = 0; i < numS; ++i)
   {
     Direction s = sVector[i];
-    // using namespace boost::math::constants;
-    // FieldVector<double, dim> s = {cos(2*pi<double>()*i/numS),
-    //                               sin(2*pi<double>()*i/numS)};
     BoundaryTools boundaryTools = BoundaryTools();
     boundaryTools.boundaryTreatmentInflow(std::get<1>(solutionSpaces),
                                           dirichletNodesInflow[i],
@@ -373,20 +389,65 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////
   //   Choose an initial iterate
   /////////////////////////////////////////////////
-  std::vector<VectorType> x;
+  std::vector<VectorType> x,xPrevious;
   x.reserve(numS);
+  xPrevious.reserve(numS);
   for(int i = 0; i < numS; ++i)
   {
     x.emplace_back(feBasisTrace.indexSet().size()
                    +feBasisInterior.indexSet().size());
+    xPrevious.emplace_back(feBasisTrace.indexSet().size()
+                   +feBasisInterior.indexSet().size());
     x[i] = 0;
+    xPrevious[i] = 0;
   }
+
+  ///////////////////////////////////////////////////
+  // Vector to store solution of previous iteration
+  // (useful to compute error between two iterates)
+  ///////////////////////////////////////////////////
+  std::vector<VectorType> u,uPrevious;
+  u.reserve(numS);
+  uPrevious.reserve(numS);
+  for(int i = 0; i < numS; ++i)
+  {
+    u.emplace_back(feBasisInterior.indexSet().size());
+    u[i] = 0;
+    uPrevious.emplace_back(feBasisInterior.indexSet().size());
+    uPrevious[i] = 0;
+  }
+
+  std::vector<VectorType> theta,thetaPrevious;
+  theta.reserve(numS);
+  thetaPrevious.reserve(numS);
+  for(int i = 0; i < numS; ++i)
+  {
+    theta.emplace_back(feBasisTrace.indexSet().size());
+    theta[i] = 0;
+    thetaPrevious.emplace_back(feBasisTrace.indexSet().size());
+    thetaPrevious[i] = 0;
+  }
+
+  VectorType diffU(feBasisInterior.indexSet().size());
+  diffU = 0;
+
+  VectorType diffTheta(feBasisTrace.indexSet().size());
+  diffTheta = 0;
 
   /////////////////////////////////////////////////////////
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
   for(int n = 0; n < N; ++n)
   {
+    ofs << "Iteration " << n << std::endl ;
+    std::cout << "Iteration " << n << std::endl << std::endl ;
+
+    /////////////////////////////////////////////////////////
+    //  Update solutions
+    /////////////////////////////////////////////////////////
+    xPrevious = x;
+    extractSolution(uPrevious,xPrevious,0);
+    extractSolution(thetaPrevious,xPrevious,feBasisInterior.indexSet().size());
 
     /////////////////////////////////////////////////////////
     //  Assemble the systems
@@ -398,18 +459,16 @@ int main(int argc, char** argv)
     for(int i = 0; i < numS; ++i)
     {
       Direction s = sVector[i];
-      // using namespace boost::math::constants;
-      // FieldVector<double, dim> s = {cos(2*pi<double>()*i/numS),
-      //                               sin(2*pi<double>()*i/numS)};
+
       //auto g = std::make_tuple([s,&f] (const Domain& x) { return f(x,s);});
       auto g = std::make_tuple([s,&uExact,&sVector] (const Domain& x) { return f(x,s,uExact,sVector);});
 
       systemAssemblers[i].assembleSystem(stiffnessMatrix[i], rhs[i], g);
       VectorType scattering;
-      scatteringAssemblers[i].assembleScattering<0>(scattering, x);
+      scatteringAssemblers[i].assembleScattering<0>(scattering, xPrevious);
       rhs[i] += scattering;
-      printvector(ofs, scattering, "scatering", "--");
-      printvector(ofs, rhs[i], "rhs", "--");
+      //printvector(ofs, scattering, "scatering", "--");
+      //printvector(ofs, rhs[i], "rhs", "--");
       systemAssemblers[i].applyDirichletBoundarySolution<1>
           (stiffnessMatrix[i],
            rhs[i],
@@ -432,12 +491,14 @@ int main(int argc, char** argv)
 
     for(int i = 0; i < numS; ++i)
     {
-      UMFPack<MatrixType> umfPack(stiffnessMatrix[i], 2);
+      int verbosity = 0; // 0: not verbose; >0: verbose
+      UMFPack<MatrixType> umfPack(stiffnessMatrix[i], verbosity);
       InverseOperatorResult statistics;
       umfPack.apply(x[i], rhs[i], statistics);
     }
 
-
+    extractSolution(u,x,0);
+    extractSolution(theta,x,feBasisInterior.indexSet().size());
 
     ////////////////////////////////////
     //  Error computation and print in VTK file
@@ -445,26 +506,19 @@ int main(int argc, char** argv)
     for(int i = 0; i < numS; ++i)
     {
 
-      //////////////////////////////////////////////////////////////////////////
-      //  Make a discrete function from the FE basis and the coefficient vector
-      //////////////////////////////////////////////////////////////////////////
-      VectorType u(feBasisInterior.indexSet().size());
-      u=0;
-      for (unsigned int j=0; j<feBasisInterior.indexSet().size(); j++)
-      {
-        u[j] = x[i][j];
-      }
-
-      Dune::Functions::DiscreteScalarGlobalBasisFunction
-          <decltype(feBasisInterior),decltype(u)>
-          uFunction(feBasisInterior,u);
-      auto localUFunction = localFunction(uFunction);
+      std::cout << "Direction " << i << std::endl ;
 
       // ////////////////////////////////////////////////////////////////////////
       // //  Write result to VTK file
       // //  We need to subsample, because VTK cannot natively display
       // //  real second-order functions
       // ////////////////////////////////////////////////////////////////////////
+      //  // - Make a discrete function from the FE basis and the coefficient vector
+      // Dune::Functions::DiscreteScalarGlobalBasisFunction
+      //     <decltype(feBasisInterior),decltype(u)>
+      //     uFunction(feBasisInterior,u);
+      // auto localUFunction = localFunction(uFunction);
+      //  // - VTK writer
       // SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
       // vtkWriter.addVertexData(localUFunction,
       //                 VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
@@ -484,12 +538,36 @@ int main(int argc, char** argv)
       //We compute the L2 error between the exact and the fem solutions
       Direction s = sVector[i];
       auto uExactSfixed = std::make_tuple([s] (const Domain& x){ return uAnalytic(x,s);});
-      double err = errorTools.computeL2error(std::get<1>(solutionSpaces),u,uExactSfixed);
-      ofs << " 'Exact' error u: || u["<< i << "] - u_fem["<< i <<"] ||_L2 = " << err << std::endl ;
+      double err = errorTools.computeL2error(std::get<0>(solutionSpaces),u[i],uExactSfixed);
+      ofs << "'Exact' error u: || u["<< i << "] - u_fem["<< i <<"] ||_L2 = " << err << std::endl;
+      // We compute the a posteriori error
+          // - We compute the rhs with the enriched test space ("rhs[i]=f(v_i)")
+          // -- Contribution of the source term f that has an analytic expression
+      //auto g = std::make_tuple([s,&f] (const Domain& x) { return f(x,s);});
+      auto g = std::make_tuple([s,&uExact,&sVector] (const Domain& x) { return f(x,s,uExact,sVector);});
+      rhsAssembler.assembleRhs(rhs[i], g);
+          // -- Contribution of the scattering term
+      VectorType scattering;
+      scatteringAssemblerEnriched.assembleScattering<0>(scattering, xPrevious);
+      rhs[i] += scattering;
+          // - Computation of the a posteriori error
+      double aposterioriErr = errorTools.aPosterioriError(bilinearForms[i],innerProducts[i],u[i],theta[i],rhs[i]); //change with contribution of scattering rhs[i]
+      ofs << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
+
+      // We compute the L2 error wrt previous iterate
+      for (unsigned int j=0; j<feBasisInterior.indexSet().size(); j++)
+        diffU[j] = u[i][j]-uPrevious[i][j];
+
+      for (unsigned int j=0; j<feBasisTrace.indexSet().size(); j++)
+        diffTheta[j] = theta[i][j]-thetaPrevious[i][j];
+
+      ofs << "Diff wrt previous iteration: " << std::endl ;
+      ofs << "  -> || u["<< i << "] - u_previous["<< i <<"] ||_L2 = " << diffU.two_norm() << std::endl;
+      ofs << "  -> || theta["<< i << "] - theta_previous["<< i <<"] ||_L2 = " << diffTheta.two_norm() << std::endl << std::endl;
+
     }
-    ofs << std::endl ;
-
-
+    ofs << std::endl;
+    std::cout << std::endl;
   }
 
   ofs.std::ofstream::close();
