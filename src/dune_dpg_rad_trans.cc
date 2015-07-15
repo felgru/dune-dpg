@@ -52,7 +52,10 @@ template <class Domain,class Direction>
 double fInner(const Domain& x,
               const Direction& s)
 {
-  double value = 1-(x[0]-0.5)*(x[0]-0.5)-(x[1]-0.5)*(x[1]-0.5) ;
+  double c0 = 1.;
+  double c1 = 1.;
+  double value = (std::exp(c0*x[0])-1)*(std::exp(c1*x[1])-1);//v pure transport
+  //double value = 1-(x[0]-0.5)*(x[0]-0.5)-(x[1]-0.5)*(x[1]-0.5) ; //v RT
   return value ;
 }
 // Partial derivative of fInner with respect to x[0]
@@ -60,7 +63,10 @@ template <class Domain,class Direction>
 double fInnerD0(const Domain& x,
                 const Direction& s)
 {
-  double value = -2*(x[0]-0.5) ;
+  double c0 = 1.;
+  double c1 = 1.;
+  double value = c0*std::exp(c0*x[0])*(std::exp(c1*x[1])-1);//v pure transport
+  //double value = -2*(x[0]-0.5) ;//v RT
   return value ;
 }
 // Partial derivative of fInner with respect to x[1]
@@ -68,7 +74,10 @@ template <class Domain,class Direction>
 double fInnerD1(const Domain& x,
                 const Direction& s)
 {
-  double value = -2*(x[1]-0.5) ;
+  double c0 = 1.;
+  double c1 = 1.;
+  double value = (std::exp(c0*x[0])-1)*std::exp(c1*x[1])*c1;//v pure transport
+  //double value = -2*(x[1]-0.5) ;//v RT
   return value ;
 }
 
@@ -77,9 +86,9 @@ template <class Domain,class Direction>
 double fBoundary(const Domain& x,
                  const Direction& s)
 {
-
+  // double value = 1.;//v pure transport
   double value = ( (s[0]>0)*x[0] + (s[0]==0)*1. + (s[0]<0)*(1-x[0]) )*
-                 ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) );
+                 ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) );//v RT
   return value ;
 }
 // Partial derivative of fBoundary with respect to x[0]
@@ -87,9 +96,9 @@ template <class Domain,class Direction>
 double fBoundaryD0(const Domain& x,
                    const Direction& s)
 {
-
+  //double value = 0.;//v pure transport
   double value = ( (s[0]>0)*1 + (s[0]==0)*0. + (s[0]<0)*(-1.) )*
-                 ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) );
+                 ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) );//v RT
   return value ;
 }
 // Partial derivative of fBoundary with respect to x[1]
@@ -97,9 +106,9 @@ template <class Domain,class Direction>
 double fBoundaryD1(const Domain& x,
                    const Direction& s)
 {
-
+  // double value = 0.;//v pure transport
   double value = ( (s[0]>0)*x[0] + (s[0]==0)*1. + (s[0]<0)*(1-x[0]) )*
-                 ( (s[1]>0)*1 + (s[1]==0)*0. + (s[1]<0)*(-1.) );
+                 ( (s[1]>0)*1 + (s[1]==0)*0. + (s[1]<0)*(-1.) ); //v RT
   return value ;
 }
 
@@ -110,18 +119,13 @@ double uAnalytic(const Domain& x,
 {
   return fInner(x,s)*fBoundary(x,s);
 }
-// double uAnalytic(const FieldVector<double, 2>& x,
-//                  const FieldVector<double, 2>& s)
-// {
-//   return fInner(x,s)*fBoundary(x,s);
-// }
 
 // Optical parameter: sigma
 template <class Domain,class Direction>
 double sigma(const Domain& x,
              const Direction& s)
 {
-  return 3.;
+  return 5.;
 }
 // Optical parameter: kernel
 template <class Domain,class Direction>
@@ -129,7 +133,7 @@ double kernel(const Domain& x,
               const Direction& sIntegration,
               const Direction& s)
 {
-  return 0.;
+  return 1.;
 }
 // The scattering kernel computed with an analytic solution u
 // and a mid-point rule for the quadrature formula
@@ -235,6 +239,8 @@ int main(int argc, char** argv)
   typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v enriched
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
+  auto rhsAssembler = make_RhsAssembler(testSpaces); //olga: not sure if this is going to work
+
   typedef decltype(testSpaces) TestSpaces;
   typedef decltype(solutionSpaces) SolutionSpaces;
 
@@ -313,7 +319,7 @@ int main(int argc, char** argv)
       make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(2.),
+                                    DomainOfIntegration::interior>(5.),
               make_IntegralTerm<0,0,IntegrationType::gradValue,
                                     DomainOfIntegration::interior>(-1., s),
               make_IntegralTerm<0,1,IntegrationType::normalVector,
