@@ -13,7 +13,6 @@
 
 #include <dune/localfunctions/test/test-localfe.hh>
 
-#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 
 using namespace Dune;

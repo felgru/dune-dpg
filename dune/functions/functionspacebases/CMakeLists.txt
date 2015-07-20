@@ -1,7 +1,6 @@
 add_subdirectory("test"  EXCLUDE_FROM_ALL)
 
 install(FILES
-        lagrangedgbasis.hh
         optimaltestbasis.hh
         pqkfacenodalbasis.hh
         pqktracenodalbasis.hh
