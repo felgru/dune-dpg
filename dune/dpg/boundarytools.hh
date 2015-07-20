@@ -30,7 +30,8 @@ namespace Dune {
                   );
   private:
     static std::vector<int> getVertexOfIntersection(
-                        int
+                        int ,
+                        GeometryType
                         );
 
   };
@@ -76,8 +77,10 @@ namespace Dune {
       // dofs in the current finite element
       int dofsLocal = localFEM.localCoefficients().size();
 
-      int nFace = 3;  // todo: grab this generically!
-      int nVertex = nFace;// todo: grab this generically!
+      const int nFace
+          = ReferenceElements<double, dim>::general(e.type()).size(dim-1);
+      const int nVertex
+          = ReferenceElements<double, dim>::general(e.type()).size(dim);
 
       // For every vertex, we have to see whether it is on the inflow boundary
       // If vertex i is on the inflow boundary, we will have vertexOnInflowBoundary[i] >0
@@ -119,9 +122,10 @@ namespace Dune {
         // what are the local vertices that are also on the inflow boundary
         if(isOnInflowBoundary)
         {
-          // We see what are the vertices associated to the current intersection (assumed to be a face)
-          // TODO: This is hard coded and works only for triangles so it would be good to implement it better
-          std::vector<int> vertexOfIntersection = getVertexOfIntersection(indexIntersection);
+          // We see what are the vertices associated to the current
+          // intersection (assumed to be a face)
+          std::vector<int> vertexOfIntersection
+              = getVertexOfIntersection(indexIntersection, e.type());
 
           vertexOnInflowBoundary[ vertexOfIntersection[0] ] += 1;
           vertexOnInflowBoundary[ vertexOfIntersection[1] ] += 1;
@@ -193,25 +197,52 @@ namespace Dune {
 
 //*************************************
   std::vector<int> BoundaryTools::getVertexOfIntersection(
-                              int indexIntersection
+                              int indexIntersection,
+                              GeometryType geometryType
                               )
   {
     std::vector<int> indexVertex(2,0);
 
-    if(indexIntersection==0)
-    {
-      indexVertex[0]=0;
-      indexVertex[1]=1;
-    }
-    if(indexIntersection==1)
-    {
-      indexVertex[0]=0;
-      indexVertex[1]=2;
-    }
-    if(indexIntersection==2)
-    {
-      indexVertex[0]=1;
-      indexVertex[1]=2;
+    if(geometryType.isSimplex()) {
+      if(indexIntersection==0)
+      {
+        indexVertex[0]=0;
+        indexVertex[1]=1;
+      }
+      else if(indexIntersection==1)
+      {
+        indexVertex[0]=0;
+        indexVertex[1]=2;
+      }
+      else if(indexIntersection==2)
+      {
+        indexVertex[0]=1;
+        indexVertex[1]=2;
+      }
+    } else if(geometryType.isCube()) {
+      if(indexIntersection==0)
+      {
+        indexVertex[0]=0;
+        indexVertex[1]=2;
+      }
+      else if(indexIntersection==1)
+      {
+        indexVertex[0]=1;
+        indexVertex[1]=3;
+      }
+      else if(indexIntersection==2)
+      {
+        indexVertex[0]=0;
+        indexVertex[1]=1;
+      }
+      else if(indexIntersection==3)
+      {
+        indexVertex[0]=2;
+        indexVertex[1]=3;
+      }
+    } else {
+      DUNE_THROW(Dune::NotImplemented, "getVertexOfIntersection not "
+              "implemented for geometry type" << geometryType.id());
     }
 
     return indexVertex;
