@@ -259,7 +259,7 @@ int main(int argc, char** argv)
 
   //writeMatrixToMatlab(stiffnessMatrix, "TestMatrix1cell");
 
-  UMFPack<MatrixType> umfPack(stiffnessMatrix, 2);
+  UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
   InverseOperatorResult statistics;
   umfPack.apply(x, rhs, statistics);
 
