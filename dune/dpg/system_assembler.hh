@@ -20,6 +20,7 @@
 #include <boost/fusion/adapted/std_tuple.hpp>
 #include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/adapted/mpl.hpp>
+#include <boost/fusion/container/generation/make_vector.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
 #include <boost/fusion/container/set/convert.hpp>
 #include <boost/fusion/algorithm/auxiliary/copy.hpp>
@@ -29,8 +30,6 @@
 #include <boost/fusion/algorithm/iteration/accumulate.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
-#include <boost/fusion/container/generation/make_vector.hpp>
-#include <boost/fusion/include/make_vector.hpp>
 
 #include <dune/geometry/quadraturerules.hh>
 
