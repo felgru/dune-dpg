@@ -314,6 +314,12 @@ namespace Dune {
 
    }
 
+  /* free memory handled by raw pointers */
+  for_each(testLocalIndexSet,     default_deleter());
+  for_each(solutionLocalIndexSet, default_deleter());
+  for_each(localViewTest,         default_deleter());
+  for_each(localViewSolution,     default_deleter());
+
    return std::sqrt(res);
 
   }
