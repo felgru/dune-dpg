@@ -922,6 +922,9 @@ applyMinimization
       }
     }
   }
+
+  /* free memory handled by raw pointers */
+  for_each(solutionLocalView, default_deleter());
 }
 
 
