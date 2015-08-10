@@ -23,11 +23,13 @@
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
+#include <dune/functions/functionspacebases/pqktestnodalbasis.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 
 #include <dune/dpg/system_assembler.hh>
+
 
 
 using namespace Dune;
@@ -80,11 +82,12 @@ int main(int argc, char** argv)
   const int dim = 2;
   typedef YaspGrid<dim> GridType;
   FieldVector<double,dim> l(1);
-  std::array<int,dim> elements = {30, 30};
+  std::array<int,dim> elements = {5, 5};
   GridType grid(l,elements);
 
   typedef GridType::LeafGridView GridView;
   GridView gridView = grid.leafGridView();
+  FieldVector<double,dim> beta={1.,0.5};
 
   /////////////////////////////////////////////////////////
   //   Choose finite element spaces
@@ -95,15 +98,17 @@ int main(int argc, char** argv)
   auto solutionSpaces = std::make_tuple(FEBasisTrace(gridView),
                                         FEBasisInterior(gridView));
 
-  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v
-  auto testSpaces = std::make_tuple(FEBasisTest(gridView));
+  //typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v
+  //auto testSpaces = std::make_tuple(FEBasisTest(gridView));
+
+  typedef Functions::PQkTestBasis<GridView,4> FEBasisTest;              // v
+  auto testSpaces = std::make_tuple(FEBasisTest(gridView,beta));
 
   /////////////////////////////////////////////////////////
   //   Choose a bilinear form
   /////////////////////////////////////////////////////////
 
 
-  FieldVector<double, dim> beta = {1,1};
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
               make_IntegralTerm<0,1,IntegrationType::valueValue,

@@ -286,6 +286,30 @@ class TestspaceCoefficientMatrix
     geometryBufferIsSet_(false)
   {}
 
+  /* TODO: Can probably be replaced by default move ctor with
+   *       boost::fusion 1.55. */
+  TestspaceCoefficientMatrix(TestspaceCoefficientMatrix&& coeffMatrix)
+  : bilinearForm_(coeffMatrix.bilinearForm_),
+    innerProduct_(coeffMatrix.innerProduct_),
+    gridView_(coeffMatrix.gridView_),
+    geometryBuffer_(std::move(coeffMatrix.geometryBuffer_)),
+    geometryBufferIsSet_(coeffMatrix.geometryBufferIsSet_),
+    coefficientMatrix_(std::move(coeffMatrix.coefficientMatrix_))
+  {
+    using namespace boost::fusion;
+
+    copy(coeffMatrix.localViewSolution_, localViewSolution_);
+    copy(coeffMatrix.localViewTest_, localViewTest_);
+    for_each(coeffMatrix.localViewSolution_, detail::setToNullptr());
+    for_each(coeffMatrix.localViewTest_, detail::setToNullptr());
+  }
+
+  ~TestspaceCoefficientMatrix()
+  {
+    for_each(localViewTest_,     detail::default_deleter());
+    for_each(localViewSolution_, detail::default_deleter());
+  }
+
   typedef decltype(std::declval<typename GridView::template Codim<0>::Entity>().geometry()) Geometry;
   typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
 
