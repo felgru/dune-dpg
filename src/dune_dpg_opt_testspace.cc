@@ -38,44 +38,12 @@
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/dpg/system_assembler.hh>
+#include <dune/dpg/boundarytools.hh>
 
 
 using namespace Dune;
 
 
-
-// This method marks all vertices on the boundary of the grid.
-// In our problem these are precisely the Dirichlet nodes.
-// The result can be found in the 'dirichletNodes' variable.  There, a bit
-// is set precisely when the corresponding vertex is on the grid boundary.
-template <class FEBasis>
-void boundaryTreatmentInflow (const FEBasis& feBasis,
-                        std::vector<bool>& dirichletNodes )
-{
-  const int dim = FEBasis::GridView::dimension;
-
-  // Interpolating the identity function wrt to a Lagrange basis
-  // yields the positions of the Lagrange nodes
-
-  // TODO: We are hacking our way around the fact that interpolation
-  // of vector-value functions is not supported yet.
-  BlockVector<FieldVector<double,dim> > lagrangeNodes;
-  interpolate(feBasis, lagrangeNodes, [](FieldVector<double,dim> x){ return x; });
-
-  dirichletNodes.resize(lagrangeNodes.size());
-
-  // Mark all Lagrange nodes on the bounding box as Dirichlet
-  for (size_t i=0; i<lagrangeNodes.size(); i++)
-  {
-    bool isBoundary = false;
-    for (int j=0; j<dim; j++)
-      isBoundary = isBoundary || lagrangeNodes[i][j] < 1e-8;
-
-    if (isBoundary)
-
-      dirichletNodes[i] = true;
-  }
-}
 
 int main(int argc, char** argv)
 {
@@ -209,8 +177,10 @@ int main(int argc, char** argv)
   // Determine Dirichlet dofs for u^ (inflow boundary)
   {
     std::vector<bool> dirichletNodesInflow;
-    boundaryTreatmentInflow(std::get<1>(solutionSpaces),
-                            dirichletNodesInflow);
+    BoundaryTools boundaryTools = BoundaryTools();
+    boundaryTools.boundaryTreatmentInflow(std::get<1>(solutionSpaces),
+                                          dirichletNodesInflow,
+                                          beta);
     systemAssembler.applyDirichletBoundarySolution<1>
         (stiffnessMatrix,
          rhs,
