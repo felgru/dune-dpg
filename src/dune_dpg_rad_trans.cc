@@ -155,8 +155,12 @@ int main(int argc, char** argv)
   for(int i = 0; i < numS; ++i)
   {
     using namespace boost::math::constants;
-    FieldVector<double, dim> s = {cos(2*pi<double>()*i/numS),
-                                  sin(2*pi<double>()*i/numS)};
+    /* TODO: We slightly rotate s to make sure we are not in the
+     *       characteristic case.
+     *       In the future we have to investigate why the characteristic
+     *       case fails on a quadrilateral mesh. */
+    FieldVector<double, dim> s = {cos(2*pi<double>()*i/numS+0.01),
+                                  sin(2*pi<double>()*i/numS+0.01)};
     bilinearForms.emplace_back(
       make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
