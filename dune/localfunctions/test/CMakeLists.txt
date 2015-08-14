@@ -1,9 +1,11 @@
 # which tests to run
-set(TESTS test-qktrace)
+set(TESTS test-qktrace test-qksubsampled)
 
 # define the programs
 add_executable(test-qktrace test-qktrace.cc)
 target_link_libraries(test-qktrace ${DUNE_LIBS})
+add_executable(test-qksubsampled test-qksubsampled.cc)
+target_link_libraries(test-qksubsampled ${DUNE_LIBS})
 
 foreach(i ${TESTS})
   add_test(${i} ${i})
