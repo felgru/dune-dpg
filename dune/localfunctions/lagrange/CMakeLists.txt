@@ -1,7 +1,15 @@
-set(SUBDIRS  qktrace pktrace2d qkface2d pkface2d)
+set(SUBDIRS  pkface2d pktrace2d qkface2d qksubsampled qktrace)
 
 set(lagrangedir  ${CMAKE_INSTALL_INCLUDEDIR}/dune/localfunctions/lagrange)
-set(lagrange_HEADERS  qktrace.hh)
+set(lagrange_HEADERS
+    pkface2d.hh
+    pktrace2d.hh
+    pqkfacefactory.hh
+    pqksubsampledfactory.hh
+    pqktracefactory.hh
+    qkface2d.hh
+    qksubsampled.hh
+    qktrace.hh)
 
 install(FILES ${lagrange_HEADERS} DESTINATION ${lagrangedir})
 foreach(i ${SUBDIRS})
