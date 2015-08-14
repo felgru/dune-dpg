@@ -1,12 +1,7 @@
-/*
- * testQuadraturerules.hh
- *
- *  Created on: Jun 15, 2015
- *      Author: koenig
- */
-
-#ifndef DUNE_GEOMETRY_TRANSPORTQUADRATURERULES_HH_
-#define DUNE_GEOMETRY_TRANSPORTQUADRATURERULES_HH_
+// -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+// vi: set et ts=4 sw=2 sts=2:
+#ifndef DUNE_GEOMETRY_TRANSPORTQUADRATURERULE_HH_
+#define DUNE_GEOMETRY_TRANSPORTQUADRATURERULE_HH_
 
 #include <dune/geometry/quadraturerules.hh>
 #include <dune/geometry/multilineargeometry.hh>
@@ -15,7 +10,7 @@
 namespace Dune {
 
 template<typename ct, int dim>
-class TestQuadratureRule : public QuadratureRule<ct,dim> {
+class TransportQuadratureRule : public QuadratureRule<ct,dim> {
 
 
 private:
@@ -91,7 +86,7 @@ private:
         }
 
 public:
-        TestQuadratureRule(GeometryType t, int order,FieldVector<ct,dim> beta)
+        TransportQuadratureRule(GeometryType t, int order,FieldVector<ct,dim> beta)
 {
                 this->geometry_type = t;
                 assert(this->geometry_type.isCube());
@@ -103,4 +98,4 @@ public:
 
 
 
-#endif /* SRC_TESTQUADRATURERULES_HH_ */
+#endif /* DUNE_GEOMETRY_TRANSPORTQUADRATURERULE_HH_ */
