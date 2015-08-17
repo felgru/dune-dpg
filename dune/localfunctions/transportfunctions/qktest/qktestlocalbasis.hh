@@ -47,7 +47,7 @@ public:
         if(dim==2)
             return (sizeP+sizeQ-(k+1));
         else
-            assert(dim==2);
+            static_assert(dim==2, "QkTestLocalBasis is only implemented in 2D.");
 
 
     }
