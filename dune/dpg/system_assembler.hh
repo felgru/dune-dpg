@@ -199,7 +199,8 @@ public:
                              InProduct      innerProduct)
              : testSpaces(testSpaces),
                solutionSpaces(solutionSpaces),
-               bilinearForm(detail::make_BilinearForm<FormulationType>(testSpaces,
+               bilinearForm(detail::make_BilinearForm<FormulationType>
+                                             (testSpaces,
                                               solutionSpaces,
                                               bilinearForm.getTerms())),
                innerProduct(make_InnerProduct(testSpaces,
@@ -902,8 +903,9 @@ applyMinimization
       {
         relevantDOFs[i] = relevantFaces[localFiniteElement.localCoefficients().localKey(i).subEntity()];
       }
-      // vertex DOFs are never relevant because the correspondig basis functions have support on
-      // at least two edges which can never be both (almost) characteristic
+      // Vertex DOFs are never relevant because the corresponding
+      // basis functions have support on at least two edges which can
+      // never be both (almost) characteristic.
     }
 
     for (size_t i=0; i<n; i++)
