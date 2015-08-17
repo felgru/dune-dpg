@@ -881,7 +881,7 @@ applyMinimization
     minInnerProduct.bind(solutionLocalView);
     minInnerProduct.getLocalMatrix(elementMatrix);
 
-    std::vector<bool> relevantFaces(e.subEntities(1), 0);
+    std::vector<bool> relevantFaces(e.subEntities(1), false);
 
     for (auto&& intersection : intersections(gridView, e))
     {
@@ -891,13 +891,13 @@ applyMinimization
       relevantFaces[intersection.indexInInside()] = (std::abs(beta*centerOuterNormal) < delta);
     }
 
-    std::vector<bool> relevantDOFs(n, 0);
+    std::vector<bool> relevantDOFs(n, false);
 
     for (unsigned int i=0; i<n; i++)
     {
       if (localFiniteElement.localCoefficients().localKey(i).codim()==0) // interior DOFs
       {
-        relevantDOFs[i] = 1;
+        relevantDOFs[i] = true;
       }
       else if (localFiniteElement.localCoefficients().localKey(i).codim()==1 and epsilonSmallerDelta) // edge DOFs
       {
