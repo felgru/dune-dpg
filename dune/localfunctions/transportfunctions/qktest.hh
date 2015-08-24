@@ -33,13 +33,12 @@ public:
             QkTestLocalInterpolation<dim,QkTestLocalBasis<D,R,dim,k>,k >> Traits;
 
 
-    QkTestLocalFiniteElement (const QkTestLocalFiniteElement & o) : basis(o.basis),coefficients(o.coefficients),interpolation(o.interpolation),gt(o.gt)
-    {}
+    QkTestLocalFiniteElement (const QkTestLocalFiniteElement & o) = default;
 
     QkTestLocalFiniteElement (FieldVector<D,dim> transport): basis(transport),coefficients(transport),interpolation(transport)
     {
         gt.makeCube(dim);
-        assert(dim==2);
+        static_assert(dim==2, "QkTestLocalFiniteElement is only implemented in 2D.");
     }
 
     /** \todo Please doc me !

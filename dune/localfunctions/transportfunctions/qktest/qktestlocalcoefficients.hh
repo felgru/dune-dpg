@@ -37,14 +37,14 @@ class QkTestLocalCoefficients
         assert(k>0);
         unsigned lastIndex=0;
 
-        // LocalKey: entity number , entity codim, dof indices within each entity
+        // LocalKey: entity number, entity codim, dof indices within each entity
         /* edge and vertex numbering
                  2----3----3
-               |         |
-               |         |
+                 |         |
+                 |         |
                  0         1
-               |         |
-               |         |
+                 |         |
+                 |         |
                  0----2----1
          */
         if(beta_[0]==1.){                                                //triangle at bottom
@@ -124,11 +124,8 @@ class QkTestLocalCoefficients
 
 
 public:
-    //! \brief Default constructor
-
-
     QkTestLocalCoefficients (FieldVector<double,d> transport)
-{
+    {
         beta_=transport;
 
         li.resize(size());
@@ -242,7 +239,7 @@ public:
             for (size_t i=0; i<size(); i++)
                 li[i] = LocalKey(subEntity[i], codim[i], index[i]);
         }
-}
+    }
 
     //! number of coefficients
     std::size_t size () const

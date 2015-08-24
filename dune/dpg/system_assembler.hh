@@ -199,7 +199,8 @@ public:
                              InProduct      innerProduct)
              : testSpaces(testSpaces),
                solutionSpaces(solutionSpaces),
-               bilinearForm(detail::make_BilinearForm<FormulationType>(testSpaces,
+               bilinearForm(detail::make_BilinearForm<FormulationType>
+                                             (testSpaces,
                                               solutionSpaces,
                                               bilinearForm.getTerms())),
                innerProduct(make_InnerProduct(testSpaces,
@@ -880,7 +881,7 @@ applyMinimization
     minInnerProduct.bind(solutionLocalView);
     minInnerProduct.getLocalMatrix(elementMatrix);
 
-    std::vector<bool> relevantFaces(e.subEntities(1), 0);
+    std::vector<bool> relevantFaces(e.subEntities(1), false);
 
     for (auto&& intersection : intersections(gridView, e))
     {
@@ -890,20 +891,21 @@ applyMinimization
       relevantFaces[intersection.indexInInside()] = (std::abs(beta*centerOuterNormal) < delta);
     }
 
-    std::vector<bool> relevantDOFs(n, 0);
+    std::vector<bool> relevantDOFs(n, false);
 
     for (unsigned int i=0; i<n; i++)
     {
       if (localFiniteElement.localCoefficients().localKey(i).codim()==0) // interior DOFs
       {
-        relevantDOFs[i] = 1;
+        relevantDOFs[i] = true;
       }
       else if (localFiniteElement.localCoefficients().localKey(i).codim()==1 and epsilonSmallerDelta) // edge DOFs
       {
         relevantDOFs[i] = relevantFaces[localFiniteElement.localCoefficients().localKey(i).subEntity()];
       }
-      // vertex DOFs are never relevant because the correspondig basis functions have support on
-      // at least two edges which can never be both (almost) characteristic
+      // Vertex DOFs are never relevant because the corresponding
+      // basis functions have support on at least two edges which can
+      // never be both (almost) characteristic.
     }
 
     for (size_t i=0; i<n; i++)

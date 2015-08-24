@@ -41,7 +41,7 @@ namespace Dune
       assert(k>0);
       unsigned lastIndex=0;
 
-      // LocalKey: entity number , entity codim, dof indices within each entity
+      // LocalKey: entity number, entity codim, dof indices within each entity
       /* edge and vertex numbering
        2----3----3
        |         |
