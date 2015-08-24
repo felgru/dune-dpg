@@ -32,13 +32,13 @@ namespace Dune
       for (int j=0; j<=k; j++)
         for (int i=0; i<=k-j; i++)
         {
-          if (i==0 or i+j==k)
+          if (i==0 or i+j==k or j==0)
           {
             x[0] = ((D)i)/((D)kdiv); x[1] = ((D)j)/((D)kdiv);
             f.evaluate(x,y);
             out[n] = y;
+            n++;
           }
-          n++;
         }
     }
 
