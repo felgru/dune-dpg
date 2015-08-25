@@ -69,9 +69,6 @@ namespace Dune {
                                             ) const
   {
     y = std::get<0>(g_)(x);
-    // std::cout<< x[0] << " ; "
-    //          << x[1] << " ; "
-    //          << y << std::endl ;
   }
 
   //*******************************************************************
@@ -232,26 +229,12 @@ namespace Dune {
       const int nVertex
           = ReferenceElements<double, dim>::general(e.type()).size(dim);
 
-      // std::cout << "dofsLocal = " << dofsLocal
-      //           << "; nFace = " << nFace
-      //           << "; nVertex = " << nVertex
-      //           << std::endl;
-
       localInterp.interpolate(bc,out);
-      // for(int i=0; i<out.size();i++){
-      //   std::cout << out[i] << std::endl;
-      // }
+
       for(int i=0;i<dofsLocal;i++)
       {
         rhsInflowContrib[ localIndexSet.index(i)[0] ] = out[i];
-        // std::cout << i << " ; " << localIndexSet.index(i)[0] << std::endl;
-        // std::cout << rhsInflowContrib[i] << " ; "<< dirichletNodes[i] << std::endl;
       }
-    }
-
-    for(int i=0;i<dofs;i++)
-    {
-      std::cout << i << " ; " << rhsInflowContrib[i] << std::endl;
     }
 
   return;
