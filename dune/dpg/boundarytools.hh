@@ -5,6 +5,8 @@
 
 #include <vector>
 
+#include <dune/common/fvector.hh>
+
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -19,15 +21,38 @@
 
 namespace Dune {
 
+  template<class Function>
+  class BoundaryCondition{
+
+  Function g_;
+
+  public:
+
+    BoundaryCondition(Function g) : g_(g) {};
+
+    void evaluate(
+      const FieldVector<double,2>& x,
+      FieldVector<double, 1>& y) const; /// Remark: this signature assumes that we have a 2D scalar problem
+
+  };
+
   class BoundaryTools
   {
+
   public:
-    template <class FEBasis>
-    static void boundaryTreatmentInflow(
+    template <class FEBasis,class Direction>
+    static void getInflowBoundaryMask(
                   const FEBasis& ,
                   std::vector<bool>& ,
-                  const FieldVector<double,2>&
+                  const Direction&
                   );
+    template <class FEBasis, class Function>
+    static void getInflowBoundaryValue(
+                  const FEBasis& ,
+                  std::vector<double>& ,
+                  Function&
+                  );
+
   private:
     static std::vector<int> getVertexOfIntersection(
                         int ,
@@ -36,13 +61,25 @@ namespace Dune {
 
   };
 
+  //*******************************************************************
+  template<class Function>
+  void BoundaryCondition<Function>::evaluate(
+                                            const FieldVector<double,2>& x,
+                                            FieldVector<double, 1>& y
+                                            ) const
+  {
+    y = std::get<0>(g_)(x);
+    // std::cout<< x[0] << " ; "
+    //          << x[1] << " ; "
+    //          << y << std::endl ;
+  }
 
   //*******************************************************************
-  template <class FEBasis >
-  void BoundaryTools::boundaryTreatmentInflow(
+  template <class FEBasis,class Direction>
+  void BoundaryTools::getInflowBoundaryMask(
                         const FEBasis& feBasis,
                         std::vector<bool>& dirichletNodes,
-                        const FieldVector<double,2>& beta
+                        const Direction& beta
                         )
   {
     const int dim = FEBasis::GridView::dimension;
@@ -119,7 +156,6 @@ namespace Dune {
         }
       }
 
-
       // For each dof, we check whether it belongs to the inflow boundary
       for(int i=0; i<dofsLocal; i++)
       {
@@ -155,6 +191,71 @@ namespace Dune {
 
     return;
   }
+
+//*************************************
+  template <class FEBasis, class Function>
+  void BoundaryTools::getInflowBoundaryValue(
+                  const FEBasis& feBasis,
+                  std::vector<double>& rhsInflowContrib,
+                  Function& g
+                  )
+{
+    const int dim = FEBasis::GridView::dimension;
+
+    typedef typename FEBasis::GridView GridView;
+    GridView gridView = feBasis.gridView();
+
+    const int dofs = feBasis.indexSet().size();
+    std::cout << "dofs general = " << dofs << std::endl;
+
+    rhsInflowContrib.resize(dofs);
+
+    auto localView = feBasis.localView();
+    auto localIndexSet = feBasis.indexSet().localIndexSet();
+
+    BoundaryCondition<Function> bc = BoundaryCondition<Function>(g);
+    std::vector<double> out;
+
+    for(const auto& e : elements(gridView))
+    {
+      localView.bind(e);
+      const auto& localFEM = localView.tree().finiteElement();
+      const auto& localInterp = localFEM.localInterpolation() ;
+
+      localIndexSet.bind(localView);
+
+      // dofs in the current finite element
+      int dofsLocal = localFEM.localCoefficients().size();
+
+      const int nFace
+          = ReferenceElements<double, dim>::general(e.type()).size(dim-1);
+      const int nVertex
+          = ReferenceElements<double, dim>::general(e.type()).size(dim);
+
+      // std::cout << "dofsLocal = " << dofsLocal
+      //           << "; nFace = " << nFace
+      //           << "; nVertex = " << nVertex
+      //           << std::endl;
+
+      localInterp.interpolate(bc,out);
+      // for(int i=0; i<out.size();i++){
+      //   std::cout << out[i] << std::endl;
+      // }
+      for(int i=0;i<dofsLocal;i++)
+      {
+        rhsInflowContrib[ localIndexSet.index(i)[0] ] = out[i];
+        // std::cout << i << " ; " << localIndexSet.index(i)[0] << std::endl;
+        // std::cout << rhsInflowContrib[i] << " ; "<< dirichletNodes[i] << std::endl;
+      }
+    }
+
+    for(int i=0;i<dofs;i++)
+    {
+      std::cout << i << " ; " << rhsInflowContrib[i] << std::endl;
+    }
+
+  return;
+}
 
 //*************************************
   std::vector<int> BoundaryTools::getVertexOfIntersection(

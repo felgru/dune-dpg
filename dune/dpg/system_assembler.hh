@@ -621,15 +621,15 @@ void SystemAssembler<TestSpaces, SolutionSpaces,
 applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                        BlockVector<FieldVector<double,1> >& rhs,
                        const std::vector<bool>& dirichletNodes,
-                       const ValueType& value,
+                       const ValueType& boundaryValue, //std::vector<double>&
                        const Spaces& spaces)
 {
   using namespace boost::fusion;
   using namespace Dune::detail;
 
-  static_assert(std::is_arithmetic<ValueType>::value,
-                "applyDirichletBoundary not implemented for non arithmetic "
-                "boundary data types.");
+  // static_assert(std::is_arithmetic<ValueType>::value,
+  //               "applyDirichletBoundary not implemented for non arithmetic "
+  //               "boundary data types.");
 
   constexpr bool isSaddlepoint =
         std::is_same<
@@ -678,7 +678,7 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     if (dirichletNodes[i])
     {
       /* TODO: Needs adaptation when value is a function. */
-      rhs[globalOffset+i] = value;
+      rhs[globalOffset+i] = boundaryValue;  //OM: see integral.hh lines 265-277 to distinguish between a scalar and a vector
     }
   }
 
