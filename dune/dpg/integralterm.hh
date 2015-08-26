@@ -63,13 +63,17 @@ namespace Dune {
      *
      * \pre The localViews have to be bound to the same element.
      *
+     * \tparam        LhsSpace        left Function space
+     * \tparam        RhsSpace        right Function space
      * \param[in]     lhsLocalView    local view of the left space
      * \param[in]     lhsLocalView    local view of the right space
      * \param[in,out] elementMatrix   the local system matrix
      * \param         lhsSpaceOffset  row offset for the left space
      * \param         rhsSpaceOffset  column offset for the right space
      */
-    template <class LhsLocalView,
+    template <class LhsSpace,
+              class RhsSpace,
+              class LhsLocalView,
               class RhsLocalView,
               class MatrixType>
     void getLocalMatrix(const LhsLocalView& lhsLocalView,
@@ -282,7 +286,9 @@ inline double evaluateFactor(FactorType factor, PositionType x)
 
 template<IntegrationType type, DomainOfIntegration domain_of_integration,
          class FactorType, class DirectionType>
-template <class LhsLocalView,
+template <class LhsSpace,
+          class RhsSpace,
+          class LhsLocalView,
           class RhsLocalView,
           class MatrixType>
 void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
