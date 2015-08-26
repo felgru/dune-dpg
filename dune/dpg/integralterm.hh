@@ -263,14 +263,16 @@ struct LocalFunctionEvaluation<dim, EvaluationType::grad,
 };
 
 template<class FactorType, class PositionType,
-         EnableIf<std::is_arithmetic<FactorType> >... >
+         typename std::enable_if<std::is_arithmetic<FactorType>::value>
+                              ::type* = nullptr >
 inline double evaluateFactor(FactorType factor, PositionType)
 {
   return factor;
 }
 
 template<class FactorType, class PositionType,
-         EnableIf<std::is_function<FactorType> >... >
+         typename std::enable_if<std::is_function<FactorType>::value>
+                              ::type* = nullptr >
 inline double evaluateFactor(FactorType factor, PositionType x)
 {
   return factor(x);
