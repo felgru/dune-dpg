@@ -8,6 +8,7 @@
 #include <type_traits>
 
 #include <dune/geometry/quadraturerules.hh>
+#include <dune/geometry/quadraturerules/subsampledquadraturerule.hh>
 
 #include <dune/istl/matrix.hh>
 
@@ -385,25 +386,54 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
                       + rhsLocalFiniteElement.localBasis().order();
 
 
+  constexpr bool useSubsampledQuadrature =
+      is_SubsampledFiniteElement<LhsSpace>::value ||
+      is_SubsampledFiniteElement<RhsSpace>::value;
+
   if(domain_of_integration == DomainOfIntegration::interior) {
   ////////////////////////////
   // Assemble interior terms
   ////////////////////////////
 
-    const QuadratureRule<double, dim>& quad =
-          QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
+    if(useSubsampledQuadrature) {
 
-    detail::getLocalMatrix_InteriorImpl<type>
-                                       (lhsLocalView,
-                                        rhsLocalView,
-                                        elementMatrix,
-                                        lhsSpaceOffset,
-                                        rhsSpaceOffset,
-                                        quad,
-                                        element,
-                                        factor,
-                                        lhsBeta,
-                                        rhsBeta);
+      using Slhs = numberOfSamples<LhsSpace>;
+      using Srhs = numberOfSamples<RhsSpace>;
+      constexpr int s =
+          std::conditional<Slhs::value < Srhs::value, Slhs, Srhs>::type::value;
+
+      const QuadratureRule<double, dim>& quadSection =
+            QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
+      const SubsampledQuadratureRule<double, s, dim> quad(quadSection);
+
+      detail::getLocalMatrix_InteriorImpl<type>
+                                         (lhsLocalView,
+                                          rhsLocalView,
+                                          elementMatrix,
+                                          lhsSpaceOffset,
+                                          rhsSpaceOffset,
+                                          quad,
+                                          element,
+                                          factor,
+                                          lhsBeta,
+                                          rhsBeta);
+    } else {
+
+      const QuadratureRule<double, dim>& quad =
+            QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
+
+      detail::getLocalMatrix_InteriorImpl<type>
+                                         (lhsLocalView,
+                                          rhsLocalView,
+                                          elementMatrix,
+                                          lhsSpaceOffset,
+                                          rhsSpaceOffset,
+                                          quad,
+                                          element,
+                                          factor,
+                                          lhsBeta,
+                                          rhsBeta);
+    }
   } else {
   ////////////////////////////
   // Assemble boundary terms
@@ -413,21 +443,47 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 
     for (auto&& intersection : intersections(gridView, element))
     {
-      const QuadratureRule<double, dim-1>& quadFace =
-            QuadratureRules<double, dim-1>::rule(intersection.type(),
-                                                 quadratureOrder);
+      if(useSubsampledQuadrature) {
 
-      detail::getLocalMatrix_FaceImpl<type>
-                                     (lhsLocalView,
-                                      rhsLocalView,
-                                      elementMatrix,
-                                      lhsSpaceOffset,
-                                      rhsSpaceOffset,
-                                      quadFace,
-                                      intersection,
-                                      factor,
-                                      lhsBeta,
-                                      rhsBeta);
+        using Slhs = numberOfSamples<LhsSpace>;
+        using Srhs = numberOfSamples<RhsSpace>;
+        constexpr int s =
+            std::conditional<Slhs::value < Srhs::value, Slhs, Srhs>::type::value;
+
+        const QuadratureRule<double, dim-1>& quadSection =
+              QuadratureRules<double, dim-1>::rule(intersection.type(),
+                                                   quadratureOrder);
+        const SubsampledQuadratureRule<double, s, dim-1> quadFace(quadSection);
+
+        detail::getLocalMatrix_FaceImpl<type>
+                                       (lhsLocalView,
+                                        rhsLocalView,
+                                        elementMatrix,
+                                        lhsSpaceOffset,
+                                        rhsSpaceOffset,
+                                        quadFace,
+                                        intersection,
+                                        factor,
+                                        lhsBeta,
+                                        rhsBeta);
+      } else {
+
+        const QuadratureRule<double, dim-1>& quadFace =
+              QuadratureRules<double, dim-1>::rule(intersection.type(),
+                                                   quadratureOrder);
+
+        detail::getLocalMatrix_FaceImpl<type>
+                                       (lhsLocalView,
+                                        rhsLocalView,
+                                        elementMatrix,
+                                        lhsSpaceOffset,
+                                        rhsSpaceOffset,
+                                        quadFace,
+                                        intersection,
+                                        factor,
+                                        lhsBeta,
+                                        rhsBeta);
+      }
     }
   }
 }
