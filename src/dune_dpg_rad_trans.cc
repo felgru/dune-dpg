@@ -192,7 +192,25 @@ int main(int argc, char** argv)
   ///////////////////////////////////
   // To print information
   ///////////////////////////////////
-  std::ofstream ofs("rad_trans_output");
+  std::ofstream ofs("output_rad_trans");
+
+  ///////////////////////////////////
+  // Get arguments
+  // argv[1]: number of discrete ordinates
+  // argv[2]: number of fixed-point iterations
+  // argv[3]: size of grid
+  ///////////////////////////////////
+
+  if(argc != 4) {
+      std::cerr << "Usage: " << argv[0] << " <# of ordinates>"
+                << " <# of iterations>"
+                << " <size of grid>" << std::endl;
+      std::abort();
+  }
+
+  int numS = atoi(argv[1]);
+  int N = atoi(argv[2]);
+  unsigned int sizeGrid = atoi(argv[3]);
 
   ///////////////////////////////////
   //   Generate the grid
@@ -203,31 +221,21 @@ int main(int argc, char** argv)
 
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
-  array<unsigned int,dim> elements = {4,4};
+  array<unsigned int,dim> elements = {sizeGrid,sizeGrid};
 
   //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
-
   shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
-
   //shared_ptr<GridType> grid = shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh"));
 
   typedef GridType::LeafGridView GridView;
   GridView gridView = grid->leafGridView();
 
   ///////////////////////////////////
-  // Get number of discrete ordinates
+  // Handle directions of discrete ordinates
   ///////////////////////////////////
-
-  if(argc != 2) {
-      std::cerr << "Usage: " << argv[0] << " <# of ordinates>"
-                << std::endl;
-      std::abort();
-  }
-  // number of discrete ordinates
-  int numS = atoi(argv[1]);
-  // Vector of directions
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
   using Direction = FieldVector<double, dim> ;
+  // Vector of directions: sVector
   std::vector< Direction > sVector(numS) ;
   for(int i = 0; i < numS; ++i)
   {
