@@ -51,10 +51,20 @@ public:
    * \param[in]  x           the vectors of the solutions of the
    *                           previous iteration
    */
-  template<size_t solutionSpaceIndex>
+  template<size_t solutionSpaceIndex, class Direction, class Function>
   void assembleScattering
          (BlockVector<FieldVector<double,1> >& scattering,
-          const std::vector<BlockVector<FieldVector<double,1> >>& x);
+          const std::vector<BlockVector<FieldVector<double,1> >>& x,
+          const std::vector<Direction>& sVector,
+                   Function& kernelS);
+
+  template<class Function, class Geometry, class QuadratureRule, class Direction>
+  void evaluateKernelElement
+    (std::vector<std::vector<double>>&,
+    Function&,
+    const Geometry&,
+    const QuadratureRule&,
+    const std::vector<Direction>&);
 
 private:
   TestSpaces     testSpaces;
@@ -85,10 +95,44 @@ auto make_ScatteringAssembler(TestSpaces testSpaces,
 template<class TestSpaces,
          class SolutionSpaces,
          class FormulationType>
-template<size_t solutionSpaceIndex>
+template<class Function, class Geometry, class QuadratureRule, class Direction>
+void ScatteringAssembler<TestSpaces, SolutionSpaces, FormulationType>::
+     evaluateKernelElement(
+                          std::vector<std::vector<double>>& k,
+                          Function& kernelS,
+                          const Geometry& localGeometry,
+                          const QuadratureRule& quad,
+                          const std::vector<Direction>& sVector)
+{
+  k.resize(quad.size());
+
+  for ( size_t iQuad=0; iQuad < quad.size(); iQuad++ ) {
+
+      k[iQuad].resize(sVector.size());
+      // Position of the current quadrature point in the reference element
+      auto quadPos = quad[iQuad].position();
+      // Position of the current quadrature point in the current element
+      auto mapQuadPos = localGeometry.global(quadPos);  // we get the global coordinate of quadPos
+      // loop over the directions
+      for(size_t iS=0; iS < sVector.size(); iS++)
+      {
+        k[iQuad][iS] = std::get<0>(kernelS)(mapQuadPos,sVector[iS]);
+      }
+  }
+
+  return;
+}
+
+
+template<class TestSpaces,
+         class SolutionSpaces,
+         class FormulationType>
+template<size_t solutionSpaceIndex, class Direction, class Function>
 void ScatteringAssembler<TestSpaces, SolutionSpaces, FormulationType>::
 assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
-                   const std::vector<BlockVector<FieldVector<double,1> >>& x)
+                   const std::vector<BlockVector<FieldVector<double,1> >>& x,
+                   const std::vector<Direction>& sVector,
+                   Function& kernelS)
 {
   using namespace boost::fusion;
   using namespace Dune::detail;
@@ -176,12 +220,25 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
         localScattering(localFiniteElementTest.localBasis().size());
     localScattering = 0;
 
-    /* TODO: This assumes constant scattering. */
+    /*TODO:
+    - Find out what quadrature rule we are exactly using
+    - Adapt quadrature to the kernel k also
+    */
     int quadratureOrder = localFiniteElementSolution.localBasis().order()
                         + localFiniteElementTest.localBasis().order();
+    /* Remark:
+    - localFiniteElementTest.localBasis().order() is the degree of the polynomial
+    - quad.size() is the number of quadrature points
+    */
+
     const QuadratureRule<double, dim>& quad =
         QuadratureRules<double, dim>::rule(e.type(), quadratureOrder);
 
+    // We get the values of the kernel at the quad points
+    // and the angular directions. Result stored in kernelVect[iQuad][iS]
+    std::vector<std::vector<double>> kernelVect;
+    evaluateKernelElement(kernelVect,kernelS,
+      at_c<0>(testLocalView)->tree().element().geometry(),quad,sVector);
 
     // Loop over all quadrature points
     for ( size_t pt=0; pt < quad.size(); pt++ ) {
@@ -216,7 +273,8 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
           uValue += x[scatteringAngle][row] * shapeFunctionValues[j];
         }
 
-        const double factor = 1./numS * uValue
+        const double factor = 1./numS * kernelVect[pt][scatteringAngle]
+                              * uValue
                               * quad[pt].weight() * integrationElement;
         for (size_t i=0, i_max=localScattering.size(); i<i_max; i++)
           localScattering[i] += factor * testShapeFunctionValues[i];

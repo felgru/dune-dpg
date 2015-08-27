@@ -135,7 +135,7 @@ double kernel(const Domain& x,
               const Direction& sIntegration,
               const Direction& s)
 {
-  return 1.;
+  return 1.7;
 }
 // The scattering kernel computed with an analytic solution u
 // and a mid-point rule for the quadrature formula
@@ -487,9 +487,11 @@ int main(int argc, char** argv)
       //auto g = std::make_tuple([s,&f] (const Domain& x) { return f(x,s);});
       auto g = std::make_tuple([s,&uExact,&sVector] (const Domain& x) { return f(x,s,uExact,sVector);});
 
+      auto kernelS = std::make_tuple([s] (const Domain& x, const Direction& sIntegration) {return kernel(x,sIntegration,s);});
+
       systemAssemblers[i].assembleSystem(stiffnessMatrix[i], rhs[i], g);
       VectorType scattering;
-      scatteringAssemblers[i].assembleScattering<0>(scattering, xPrevious);
+      scatteringAssemblers[i].assembleScattering<0>(scattering, xPrevious, sVector, kernelS);
       rhs[i] += scattering;
       //printvector(ofs, scattering, "scatering", "--");
       //printvector(ofs, rhs[i], "rhs", "--");
@@ -529,6 +531,7 @@ int main(int argc, char** argv)
     ////////////////////////////////////
     for(int i = 0; i < numS; ++i)
     {
+      Direction s = sVector[i];
 
       std::cout << "Direction " << i << std::endl ;
 
@@ -560,7 +563,6 @@ int main(int argc, char** argv)
       //We build an object of type ErrorTools to study errors, residuals and do hp-adaptivity
       ErrorTools errorTools = ErrorTools(adaptivityTol);
       //We compute the L2 error between the exact and the fem solutions
-      Direction s = sVector[i];
       auto uExactSfixed = std::make_tuple([s] (const Domain& x){ return uAnalytic(x,s);});
       double err = errorTools.computeL2error(std::get<0>(solutionSpaces),u[i],uExactSfixed);
       ofs << "'Exact' error u: || u["<< i << "] - u_fem["<< i <<"] ||_L2 = " << err << std::endl;
@@ -571,8 +573,9 @@ int main(int argc, char** argv)
       auto g = std::make_tuple([s,&uExact,&sVector] (const Domain& x) { return f(x,s,uExact,sVector);});
       rhsAssembler.assembleRhs(rhs[i], g);
           // -- Contribution of the scattering term
+      auto kernelS = std::make_tuple([s] (const Domain& x, const Direction& sIntegration) {return kernel(x,sIntegration,s);});
       VectorType scattering;
-      scatteringAssemblerEnriched.assembleScattering<0>(scattering, xPrevious);
+      scatteringAssemblerEnriched.assembleScattering<0>(scattering, xPrevious, sVector, kernelS);
       rhs[i] += scattering;
           // - Computation of the a posteriori error
       double aposterioriErr = errorTools.aPosterioriError(bilinearForms[i],innerProducts[i],u[i],theta[i],rhs[i]); //change with contribution of scattering rhs[i]
