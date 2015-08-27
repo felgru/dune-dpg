@@ -192,13 +192,23 @@ struct bindLocalIndexSet
 };
 
 template <class MatrixType,
-          class TestLocalView,
-          class SolutionLocalView>
+          class TestSpaces,
+          class SolutionSpaces>
 struct getLocalMatrixHelper
 {
   template<class T, class Seq>
   using array_of_same_size =
       T[boost::fusion::result_of::size<Seq>::type::value];
+
+  //! tuple type for the local views of the test spaces
+  typedef typename boost::fusion::result_of::as_vector<
+      typename boost::fusion::result_of::
+      transform<TestSpaces, detail::getLocalView>::type>::type TestLocalView;
+  //! tuple type for the local views of the solution spaces
+  typedef typename boost::fusion::result_of::as_vector<
+      typename boost::fusion::result_of::
+      transform<SolutionSpaces, detail::getLocalView>::type
+      >::type SolutionLocalView;
 
   getLocalMatrixHelper(const TestLocalView& testLocalView,
                        const SolutionLocalView& solutionLocalView,
@@ -238,7 +248,17 @@ struct getLocalMatrixHelper
         at_c<testSpaceIndex::value>(localTestSpaceOffsets);
     size_t localSolutionSpaceOffset =
         at_c<solutionSpaceIndex::value>(localSolutionSpaceOffsets);
-    term.getLocalMatrix(testLV,
+
+    using TestSpace =
+        typename std::tuple_element<testSpaceIndex::value,
+                                    TestSpaces>::type;
+
+    using SolutionSpace =
+        typename std::tuple_element<solutionSpaceIndex::value,
+                                    SolutionSpaces>::type;
+
+    term.template getLocalMatrix<TestSpace, SolutionSpace>
+                       (testLV,
                         solutionLV,
                         elementMatrix,
                         localTestSpaceOffset,

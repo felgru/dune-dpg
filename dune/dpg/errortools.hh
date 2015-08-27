@@ -231,7 +231,7 @@ namespace Dune {
     using namespace Dune::detail;
 
     typedef typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView GridView;
-    const GridView gridView = std::get<0>(bilinearForm.getSolutionSpaces()).gridView() ;
+    const GridView gridView = std::get<0>(bilinearForm.getSolutionSpaces()).gridView();
 
     typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
     typedef typename BilinearForm::TestSpaces EnrichedTestspaces;
@@ -261,20 +261,20 @@ namespace Dune {
 
       // We take the coefficients of our solution (u,theta) that correspond to the current element e. They are stored in uLocal and thetaLocal.
       // dof of the finite element inside the element
-      size_t dofElementTheta = boost::fusion::at_c<0>(localViewSolution)->size();
-      size_t dofElementU = boost::fusion::at_c<1>(localViewSolution)->size();
+      size_t dofElementU = boost::fusion::at_c<0>(localViewSolution)->size();
+      size_t dofElementTheta = boost::fusion::at_c<1>(localViewSolution)->size();
 
       // We extract the solution on the current element
-      BlockVector<FieldVector<double,1> > solutionElement(dofElementTheta+dofElementU);
-      // We take the coefficients of thetaSolution that correspond to the current element e. They are stored in the first part of solutionElement.
-      for (size_t i=0; i<dofElementTheta; i++)
-      {
-        solutionElement[i] = thetaSolution[ at_c<0>(solutionLocalIndexSet)->index(i)[0] ];
-      }
+      BlockVector<FieldVector<double,1> > solutionElement(dofElementU+dofElementTheta);
       // We take the coefficients of uSolution that correspond to the current element e. They are stored in the second part of solutionElement.
       for (size_t i=0; i<dofElementU; i++)
       {
-        solutionElement[i+dofElementTheta] = uSolution[ at_c<1>(solutionLocalIndexSet)->index(i)[0] ];
+        solutionElement[i] = uSolution[ at_c<0>(solutionLocalIndexSet)->index(i)[0] ];
+      }
+      // We take the coefficients of thetaSolution that correspond to the current element e. They are stored in the first part of solutionElement.
+      for (size_t i=0; i<dofElementTheta; i++)
+      {
+        solutionElement[i+dofElementU] = thetaSolution[ at_c<1>(solutionLocalIndexSet)->index(i)[0] ];
       }
 
       // We get rhsLocal

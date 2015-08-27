@@ -43,48 +43,6 @@
 using namespace Dune;
 
 
-
-// This method marks all vertices on the boundary of the grid.
-// In our problem these are precisely the Dirichlet nodes.
-// The result can be found in the 'dirichletNodes' variable.  There, a bit
-// is set precisely when the corresponding vertex is on the grid boundary.
-template <class FEBasis>
-void boundaryTreatmentInflow (const FEBasis& feBasis,
-                        std::vector<bool>& dirichletNodes )
-{
-  const int dim = FEBasis::GridView::dimension;
-
-  // Interpolating the identity function wrt to a Lagrange basis
-  // yields the positions of the Lagrange nodes
-
-  // TODO: We are hacking our way around the fact that interpolation
-  // of vector-value functions is not supported yet.
-  BlockVector<FieldVector<double,dim> > lagrangeNodes;
-  interpolate(feBasis, lagrangeNodes, [](FieldVector<double,dim> x){ return x; });
-
-  dirichletNodes.resize(lagrangeNodes.size());
-
-  //std::cout<< lagrangeNodes.size() << std::endl;
-
-  // Mark all Lagrange nodes on the bounding box as Dirichlet
-  for (size_t i=0; i<lagrangeNodes.size(); i++)
-  {
-    bool isBoundary = false;
-    for (int j=0; j<dim; j++)
-    {
-      //std::cout << "lagrangeNodes["<<i <<"]["<<j <<"]="<< lagrangeNodes[i][j] << std::endl;
-      isBoundary = isBoundary || lagrangeNodes[i][j] < 1e-8;
-    }
-
-    if (isBoundary)
-      dirichletNodes[i] = true;
-
-    std::cout << dirichletNodes[i] << std::endl;
-  }
-
-}
-
-
 // The right-hand side explicit expression
 double fieldRHS(const Dune::FieldVector<double, 2>& x) {
 
@@ -219,13 +177,10 @@ int main(int argc, char** argv)
     std::vector<bool> dirichletNodesInflow;
     std::vector<bool> dirichletNodesInflowErrorTools;
 
-    // boundaryTreatmentInflow(std::get<0>(solutionSpaces),
-    //                         dirichletNodesInflow);
-
     BoundaryTools boundaryTools = BoundaryTools();
-    boundaryTools.boundaryTreatmentInflow(std::get<0>(solutionSpaces),
-                                          dirichletNodesInflow,
-                                          beta);
+    boundaryTools.getInflowBoundaryMask(std::get<0>(solutionSpaces),
+                                        dirichletNodesInflow,
+                                        beta);
 
 
     systemAssembler.applyDirichletBoundarySolution<0>
@@ -234,20 +189,6 @@ int main(int argc, char** argv)
          dirichletNodesInflow,
          0.);
   }
-
-#if 0
-  // Determine Dirichlet dofs for v (inflow boundary)
-  {
-    std::vector<bool> dirichletNodesInflowTest;
-    boundaryTreatmentInflow(std::get<0>(testSpaces),
-                            dirichletNodesInflowTest);
-    systemAssembler.applyDirichletBoundary<SpaceType::test,0,double>
-        (stiffnessMatrix,
-         rhs,
-         dirichletNodesInflowTest,
-         0);
-  }
-#endif
 
   ////////////////////////////
   //   Compute solution
@@ -294,6 +235,11 @@ int main(int argc, char** argv)
           uFunction(innerSpace,u);
   auto localUFunction = localFunction(uFunction);
 
+  auto feBasisTrace = std::get<0>(solutionSpaces);
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace), decltype(theta)>
+      thetaFunction(feBasisTrace, theta);
+  auto localThetaFunction = localFunction(thetaFunction);
+
 
   ////////////////////////////////////////////////////////////////////////////
   //  Error evaluation
@@ -333,6 +279,10 @@ int main(int argc, char** argv)
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,0);
   vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write("solution_transport");
+
+ SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
+ vtkWriter1.addVertexData(localThetaFunction, VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
+ vtkWriter1.write("solution_trace");
 
     return 0;
   }

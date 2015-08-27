@@ -33,7 +33,7 @@ namespace Dune
     /** \todo Please doc me !
      */
     typedef LocalFiniteElementTraits<LocalBasis,
-                                     QkSubsampledLocalCoefficients<k,s,d>,
+                                     LocalCoefficients,
                                      LocalInterpolation>  Traits;
 
     /** \todo Please doc me !

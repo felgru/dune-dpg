@@ -85,10 +85,8 @@ namespace Dune {
       boost::fusion::for_each(terms,
               detail::getLocalMatrixHelper
                       <MatrixType,
-                       typename std::remove_pointer
-                                <decltype(testLocalView)>::type,
-                       typename std::remove_pointer
-                                <decltype(testLocalView)>::type>
+                       TestSpaces,
+                       TestSpaces>
                       (*testLocalView,
                        *testLocalView,
                        elementMatrix,

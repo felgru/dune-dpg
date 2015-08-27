@@ -178,9 +178,9 @@ int main(int argc, char** argv)
   {
     std::vector<bool> dirichletNodesInflow;
     BoundaryTools boundaryTools = BoundaryTools();
-    boundaryTools.boundaryTreatmentInflow(std::get<1>(solutionSpaces),
-                                          dirichletNodesInflow,
-                                          beta);
+    boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
+                                        dirichletNodesInflow,
+                                        beta);
     systemAssembler.applyDirichletBoundarySolution<1>
         (stiffnessMatrix,
          rhs,
