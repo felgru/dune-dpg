@@ -410,7 +410,6 @@ int main(int argc, char** argv)
                                           gSfixed);
   }
 
-
   /////////////////////////////////////////////////
   //   Choose an initial iterate
   /////////////////////////////////////////////////
@@ -498,7 +497,7 @@ int main(int argc, char** argv)
           (stiffnessMatrix[i],
            rhs[i],
            dirichletNodesInflow[i],
-           0.); //olga: change this with rhsInflowContrib[i]
+           rhsInflowContrib[i]);
     }
 
     // std::ofstream of("stiffnessNew.dat");
