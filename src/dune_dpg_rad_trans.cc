@@ -168,6 +168,15 @@ double f(const Domain& x,
   return value;
 }
 
+
+// The values on the incoming boundary
+template <class Domain,class Direction>
+double gFunction(const Domain& x,
+                 const Direction& s)
+{
+  return 1.5;
+}
+
 // Get solution u or theta out of the solution vector x
 template<class FieldVector>
 void extractSolution(std::vector< FieldVector >& u,
@@ -265,7 +274,7 @@ int main(int argc, char** argv)
   typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v enriched
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
-  auto rhsAssembler = make_RhsAssembler(testSpaces); //olga: not sure if this is going to work
+  auto rhsAssembler = make_RhsAssembler(testSpaces);
 
   typedef decltype(testSpaces) TestSpaces;
   typedef decltype(solutionSpaces) SolutionSpaces;
@@ -385,14 +394,22 @@ int main(int argc, char** argv)
 
   // Determine Dirichlet dofs for u^ (inflow boundary)
   std::vector<std::vector<bool>> dirichletNodesInflow(numS);
+  // Contribution of inflow boundary for the rhs
+  std::vector<std::vector<double>> rhsInflowContrib(numS);
   for(int i = 0; i < numS; ++i)
   {
     Direction s = sVector[i];
     BoundaryTools boundaryTools = BoundaryTools();
-    boundaryTools.boundaryTreatmentInflow(std::get<1>(solutionSpaces),
+    boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
                                           dirichletNodesInflow[i],
                                           s);
+
+    auto gSfixed = std::make_tuple([s] (const Domain& x){ return gFunction(x,s);});
+    boundaryTools.getInflowBoundaryValue(std::get<1>(solutionSpaces),
+                                          rhsInflowContrib[i],
+                                          gSfixed);
   }
+
 
   /////////////////////////////////////////////////
   //   Choose an initial iterate
@@ -481,7 +498,7 @@ int main(int argc, char** argv)
           (stiffnessMatrix[i],
            rhs[i],
            dirichletNodesInflow[i],
-           0.);
+           0.); //olga: change this with rhsInflowContrib[i]
     }
 
     // std::ofstream of("stiffnessNew.dat");
@@ -516,25 +533,25 @@ int main(int argc, char** argv)
 
       std::cout << "Direction " << i << std::endl ;
 
-      // ////////////////////////////////////////////////////////////////////////
-      // //  Write result to VTK file
-      // //  We need to subsample, because VTK cannot natively display
-      // //  real second-order functions
-      // ////////////////////////////////////////////////////////////////////////
-      //  // - Make a discrete function from the FE basis and the coefficient vector
-      // Dune::Functions::DiscreteScalarGlobalBasisFunction
-      //     <decltype(feBasisInterior),decltype(u)>
-      //     uFunction(feBasisInterior,u);
-      // auto localUFunction = localFunction(uFunction);
-      //  // - VTK writer
-      // SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
-      // vtkWriter.addVertexData(localUFunction,
-      //                 VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-      // std::string name = std::string("solution_rad_trans_n")
-      //                  + std::to_string(n)
-      //                  + std::string("_s")
-      //                  + std::to_string(i);
-      // vtkWriter.write(name);
+      ////////////////////////////////////////////////////////////////////////
+      //  Write result to VTK file
+      //  We need to subsample, because VTK cannot natively display
+      //  real second-order functions
+      ////////////////////////////////////////////////////////////////////////
+       // - Make a discrete function from the FE basis and the coefficient vector
+      Dune::Functions::DiscreteScalarGlobalBasisFunction
+          <decltype(feBasisInterior),std::decay<decltype(u[i])>::type>
+          uFunction(feBasisInterior,u[i]);
+      auto localUFunction = localFunction(uFunction);
+       // - VTK writer
+      SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
+      vtkWriter.addVertexData(localUFunction,
+                      VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
+      std::string name = std::string("solution_rad_trans_n")
+                       + std::to_string(n)
+                       + std::string("_s")
+                       + std::to_string(i);
+      vtkWriter.write(name);
 
       ////////////////////////////////////
       //  Error wrt exact solution
