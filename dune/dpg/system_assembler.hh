@@ -3,10 +3,13 @@
 #ifndef DUNE_DPG_SYSTEM_ASSEMBLER_HH
 #define DUNE_DPG_SYSTEM_ASSEMBLER_HH
 
-#include <tuple>
 #include <functional>
+#include <list>
+#include <map>
 #include <memory>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 
 /* 7 would be enough, but better take some more, in case we
  * change our procedures later. */
@@ -266,6 +269,28 @@ public:
                               BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                               FieldVector<double, dim> beta,
                               double mu);
+
+  /**
+   * \brief Linearly interpolate dofs on characteristic faces.
+   *
+   * The inner degrees of freedom on the characteristic faces are
+   * undefined in the DPG formulation.  This function assigns them
+   * a well-defined value by interpolating between the end points of
+   * the face.
+   * This interpolation makes sure that we get a well-posed linear
+   * system.
+   *
+   * \param[in,out] matrix  the matrix of the DPG system
+   * \param[in,out] rhs     the rhs vector of the DPG system
+   * \param[in]     beta    the transport direction
+   * \param         delta   tolerance for numeric definition of
+   *                           characteristic face
+   */
+  template <size_t spaceIndex, unsigned int dim>
+  void defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                                 BlockVector<FieldVector<double,1> >& rhs,
+                                 const FieldVector<double,dim>& beta,
+                                 double delta);
 
   template <size_t spaceIndex, class MinInnerProduct, unsigned int dim>
   void applyMinimization(
@@ -811,6 +836,130 @@ applyWeakBoundaryCondition
         matrix[row+globalOffset][col+globalOffset]
                         += elementMatrix[i][j];
 
+      }
+    }
+  }
+}
+
+
+template<class TestSpaces, class SolutionSpaces,
+         class BilinearForm, class InnerProduct,
+         class FormulationType>
+template<size_t spaceIndex, unsigned int dim>
+void SystemAssembler<TestSpaces, SolutionSpaces,
+                     BilinearForm, InnerProduct, FormulationType>::
+defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                          BlockVector<FieldVector<double,1> >& rhs,
+                          const FieldVector<double,dim>& beta,
+                          double delta = 10e-10)
+{
+  using namespace boost::fusion;
+  using namespace Dune::detail;
+
+  static_assert(std::is_same<
+             typename std::decay<FormulationType>::type
+           , DPGFormulation
+                            >::value,
+                "defineCharacteristicFaces not implemented "
+                "for Saddlepointformulation.");
+
+  typedef typename std::tuple_element<spaceIndex,SolutionSpaces>::type::GridView GridView;
+  GridView gridView = std::get<spaceIndex>(solutionSpaces).gridView();
+
+  auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
+                                                     getIndexSet()));
+
+  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+  fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
+       0, globalOffsetHelper());
+  size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
+
+  size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+
+  auto solutionLocalView = at_c<spaceIndex>(solutionSpaces).localView();
+  auto localIndexSet = at_c<spaceIndex>(solutionBasisIndexSet).localIndexSet();
+
+  for(const auto& e : elements(gridView))
+  {
+    solutionLocalView.bind(e);
+    localIndexSet.bind(solutionLocalView);
+
+    const auto& localFiniteElement = solutionLocalView.tree().finiteElement();
+
+    size_t n = localFiniteElement.localBasis().size();
+
+    std::vector<bool>  characteristicFaces(e.subEntities(1), false);
+    bool characteristicFound = false;
+
+    for (auto&& intersection : intersections(gridView, e))
+    {
+      const bool characteristic =
+          fabs(beta * intersection.centerUnitOuterNormal()) < delta;
+      characteristicFaces[intersection.indexInInside()] = characteristic;
+      characteristicFound = characteristicFound || characteristic;
+    }
+
+    if(characteristicFound)
+    {
+      std::map<size_t,std::list<std::pair<size_t,size_t>>> characteristicDOFs;
+      std::vector<size_t> vertexDOFs(e.subEntities(dim));
+
+      for (unsigned int i=0; i<n; i++)
+      {
+        if (localFiniteElement.localCoefficients().localKey(i).codim()==1)
+            // edge DOFs
+        {
+          const size_t face =
+              localFiniteElement.localCoefficients().localKey(i).subEntity();
+          const size_t localIndex =
+              localFiniteElement.localCoefficients().localKey(i).index();
+          if(characteristicFaces[face])
+            characteristicDOFs[face].emplace_back(i,localIndex);
+        } else if (localFiniteElement.localCoefficients().localKey(i).codim()
+                   == dim)
+        {
+          const size_t vertex =
+              localFiniteElement.localCoefficients().localKey(i).subEntity();
+          vertexDOFs[vertex] = i;
+        }
+        // Vertex DOFs are never characteristic because the corresponding
+        // basis functions have support on at least two edges which can
+        // never be both (almost) characteristic.
+      }
+
+      std::vector<std::pair<size_t,size_t>> endpoints(e.subEntities(1));
+      /* TODO: this code only works on quadrilateral elements: */
+      endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
+      endpoints[1] = std::make_pair(vertexDOFs[1], vertexDOFs[3]);
+      endpoints[2] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
+      endpoints[3] = std::make_pair(vertexDOFs[2], vertexDOFs[3]);
+
+      for (auto&& faceAndDOFs: characteristicDOFs)
+      {
+        size_t face;
+        std::list<std::pair<size_t,size_t>> dofs;
+        std::tie(face, dofs) = faceAndDOFs;
+          size_t left, right;
+          std::tie(left, right) = endpoints[face];
+        for(auto&& dof: dofs)
+        {
+          auto row = localIndexSet.index(dof.first)[0];
+          auto col = row;
+          const size_t k = dofs.size()+1;
+
+          /* replace the row of dof on characteristic face
+           * by an interpolation of the two endpoints of the
+           * characteristic face. */
+          matrix[row+globalOffset][col+globalOffset] = -1;
+          col = localIndexSet.index(left)[0];
+          matrix[row+globalOffset][col+globalOffset]
+              = (double)(k-dof.second-1)/k;
+          col = localIndexSet.index(right)[0];
+          matrix[row+globalOffset][col+globalOffset]
+              = (double)(dof.second+1)/k;
+
+          rhs[row+globalOffset] = 0;
+        }
       }
     }
   }
