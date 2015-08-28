@@ -232,8 +232,10 @@ int main(int argc, char** argv)
   FieldVector<double,dim> upper = {1,1};
   array<unsigned int,dim> elements = {sizeGrid,sizeGrid};
 
-  //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
-  shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+  shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+
+  //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+
   //shared_ptr<GridType> grid = shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh"));
 
   typedef GridType::LeafGridView GridView;
@@ -493,8 +495,8 @@ int main(int argc, char** argv)
       VectorType scattering;
       scatteringAssemblers[i].assembleScattering<0>(scattering, xPrevious, sVector, kernelS);
       rhs[i] += scattering;
-      //printvector(ofs, scattering, "scatering", "--");
-      //printvector(ofs, rhs[i], "rhs", "--");
+      systemAssemblers[i].defineCharacteristicFaces<1,dim>(stiffnessMatrix[i],
+              rhs[i], s);
       systemAssemblers[i].applyDirichletBoundarySolution<1>
           (stiffnessMatrix[i],
            rhs[i],
