@@ -538,25 +538,38 @@ int main(int argc, char** argv)
 
       std::cout << "Direction " << i << std::endl ;
 
-      ////////////////////////////////////////////////////////////////////////
-      //  Write result to VTK file
-      //  We need to subsample, because VTK cannot natively display
-      //  real second-order functions
-      ////////////////////////////////////////////////////////////////////////
+      // ////////////////////////////////////////////////////////////////////////
+      // //  Write result to VTK file
+      // //  We need to subsample, because VTK cannot natively display
+      // //  real second-order functions
+      // ////////////////////////////////////////////////////////////////////////
        // - Make a discrete function from the FE basis and the coefficient vector
       Dune::Functions::DiscreteScalarGlobalBasisFunction
           <decltype(feBasisInterior),std::decay<decltype(u[i])>::type>
           uFunction(feBasisInterior,u[i]);
       auto localUFunction = localFunction(uFunction);
-       // - VTK writer
-      SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
-      vtkWriter.addVertexData(localUFunction,
+
+      Dune::Functions::DiscreteScalarGlobalBasisFunction
+          <decltype(feBasisTrace), std::decay<decltype(theta[i])>::type>
+          thetaFunction(feBasisTrace, theta[i]);
+      auto localThetaFunction = localFunction(thetaFunction);
+      // - VTK writer
+      SubsamplingVTKWriter<GridView> vtkWriterInterior(gridView,0);
+      vtkWriterInterior.addVertexData(localUFunction,
                       VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-      std::string name = std::string("solution_rad_trans_n")
+      std::string name = std::string("u_rad_trans_n")
                        + std::to_string(n)
                        + std::string("_s")
                        + std::to_string(i);
-      vtkWriter.write(name);
+      vtkWriterInterior.write(name);
+
+      SubsamplingVTKWriter<GridView> vtkWriterTrace(gridView,2);
+      vtkWriterTrace.addVertexData(localThetaFunction, VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
+      name = std::string("theta_rad_trans_n")
+                       + std::to_string(n)
+                       + std::string("_s")
+                       + std::to_string(i);
+      vtkWriterTrace.write(name);
 
       ////////////////////////////////////
       //  Error wrt exact solution
