@@ -297,7 +297,7 @@ public:
                       BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                       MinInnerProduct minInnerProduct,
                       FieldVector<double, dim> beta,
-                      double delta,
+                      double delta = 10e-10,
                       double epsilon = 0);
 
   /**
@@ -851,7 +851,7 @@ void SystemAssembler<TestSpaces, SolutionSpaces,
 defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                           BlockVector<FieldVector<double,1> >& rhs,
                           const FieldVector<double,dim>& beta,
-                          double delta = 10e-10)
+                          double delta)
 {
   using namespace boost::fusion;
   using namespace Dune::detail;

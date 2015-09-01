@@ -203,7 +203,6 @@ namespace Dune {
     GridView gridView = feBasis.gridView();
 
     const int dofs = feBasis.indexSet().size();
-    std::cout << "dofs general = " << dofs << std::endl;
 
     rhsInflowContrib.resize(dofs);
 
