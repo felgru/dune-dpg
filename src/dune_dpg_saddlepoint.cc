@@ -93,7 +93,7 @@ int main(int argc, char** argv)
   //   Choose finite element spaces
   /////////////////////////////////////////////////////////
 
-  typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
+  typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
   auto solutionSpaces = std::make_tuple(FEBasisTrace(gridView),
                                         FEBasisInterior(gridView));

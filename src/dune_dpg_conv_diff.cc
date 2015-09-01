@@ -166,9 +166,9 @@ int main(int argc, char** argv)
 
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisSigma; // sigma 1 und 2
-  typedef Functions::PQKNodalBasis<GridView, 2> FEBasisTrace; // u^
-//  typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
-  typedef Functions::PQKFaceNodalBasis<GridView, 2> FEBasisFace; // sigma_n^
+  typedef Functions::PQkNodalBasis<GridView, 2> FEBasisTrace; // u^
+//  typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
+  typedef Functions::PQkFaceNodalBasis<GridView, 2> FEBasisFace; // sigma_n^
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView),
                                         FEBasisSigma(gridView),
                                         FEBasisSigma(gridView),

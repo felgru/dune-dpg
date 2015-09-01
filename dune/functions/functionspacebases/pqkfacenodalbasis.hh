@@ -21,16 +21,16 @@ namespace Dune {
 namespace Functions {
 
 template<typename GV, int k>
-class PQKFaceNodalBasisLocalView;
+class PQkFaceNodalBasisLocalView;
 
 template<typename GV, int k>
-class PQKFaceNodalBasisLeafNode;
+class PQkFaceNodalBasisLeafNode;
 
 template<typename GV, int k>
-class PQKFaceIndexSet;
+class PQkFaceIndexSet;
 
 template<typename GV, int k>
-class PQKFaceLocalIndexSet
+class PQkFaceLocalIndexSet
 {
   enum {dim = GV::dimension};
 
@@ -38,12 +38,12 @@ public:
   typedef std::size_t size_type;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef PQKFaceNodalBasisLocalView<GV,k> LocalView;
+  typedef PQkFaceNodalBasisLocalView<GV,k> LocalView;
 
   /** \brief Type used for global numbering of the basis vectors */
   typedef std::array<size_type, 1> MultiIndex;
 
-  PQKFaceLocalIndexSet(const PQKFaceIndexSet<GV,k> & indexSet)
+  PQkFaceLocalIndexSet(const PQkFaceIndexSet<GV,k> & indexSet)
   : basisIndexSet_(indexSet)
   {}
 
@@ -52,7 +52,7 @@ public:
    * Having to bind the view to an element before being able to actually access any of its data members
    * offers to centralize some expensive setup code in the 'bind' method, which can save a lot of run-time.
    */
-  void bind(const PQKFaceNodalBasisLocalView<GV,k>& localView)
+  void bind(const PQkFaceNodalBasisLocalView<GV,k>& localView)
   {
     localView_ = &localView;
   }
@@ -113,10 +113,10 @@ public:
         DUNE_THROW(Dune::NotImplemented, "faces have no elements of codimension 0");
       } else
       {
-        DUNE_THROW(Dune::NotImplemented, "PQKFaceNodalBasis for 3D grids is not implemented");
+        DUNE_THROW(Dune::NotImplemented, "PQkFaceNodalBasis for 3D grids is not implemented");
       }
     }
-    DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the PQKFaceNodalBasis");
+    DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the PQkFaceNodalBasis");
   }
 
   /** \brief Return the local view that we are attached to
@@ -126,18 +126,18 @@ public:
     return *localView_;
   }
 
-  const PQKFaceNodalBasisLocalView<GV,k>* localView_;
+  const PQkFaceNodalBasisLocalView<GV,k>* localView_;
 
-  const PQKFaceIndexSet<GV,k> basisIndexSet_;
+  const PQkFaceIndexSet<GV,k> basisIndexSet_;
 };
 
 template<typename GV, int k>
-class PQKFaceIndexSet
+class PQkFaceIndexSet
 {
   enum {dim = GV::dimension};
 
   // Needs the mapper
-  friend class PQKFaceLocalIndexSet<GV,k>;
+  friend class PQkFaceLocalIndexSet<GV,k>;
 
   // Precompute the number of dofs per entity type
   const int dofsPerEdge        = k+1;
@@ -145,15 +145,15 @@ class PQKFaceIndexSet
   const int dofsPerQuad        = (k+1)*(k+1);
 public:
 
-  typedef PQKFaceLocalIndexSet<GV,k> LocalIndexSet;
+  typedef PQkFaceLocalIndexSet<GV,k> LocalIndexSet;
 
-  PQKFaceIndexSet(const GV& gridView)
+  PQkFaceIndexSet(const GV& gridView)
   : gridView_(gridView)
   {
     edgeOffset_          = 0;
     if (dim==3)
     {
-      DUNE_THROW(Dune::NotImplemented, "PQKFaceNodalBasis for 3D grids is not implemented");
+      DUNE_THROW(Dune::NotImplemented, "PQkFaceNodalBasis for 3D grids is not implemented");
       triangleOffset_      = 0;
       GeometryType triangle;
       triangle.makeTriangle();
@@ -166,13 +166,13 @@ public:
     switch (dim)
     {
       case 1:
-        DUNE_THROW(Dune::NotImplemented, "PQKFaceNodalBasis for 1D grids is not implemented");
+        DUNE_THROW(Dune::NotImplemented, "PQkFaceNodalBasis for 1D grids is not implemented");
         return 2*gridView_.size(dim)-2;
       case 2:
         return dofsPerEdge*gridView_.size(1);
       case 3:
       {
-        DUNE_THROW(Dune::NotImplemented, "PQKFaceNodalBasis for 3D grids is not implemented");
+        DUNE_THROW(Dune::NotImplemented, "PQkFaceNodalBasis for 3D grids is not implemented");
         GeometryType triangle, quad;
         triangle.makeTriangle();
         quad.makeQuadrilateral();
@@ -208,10 +208,10 @@ private:
  * \tparam k The order of the basis
  */
 template<typename GV, int k>
-class PQKFaceNodalBasis
+class PQkFaceNodalBasis
 : public GridViewFunctionSpaceBasis<GV,
-                                    PQKFaceNodalBasisLocalView<GV,k>,
-                                    PQKFaceIndexSet<GV,k>,
+                                    PQkFaceNodalBasisLocalView<GV,k>,
+                                    PQkFaceIndexSet<GV,k>,
                                     std::array<std::size_t, 1> >
 {
   enum {dim = GV::dimension};
@@ -223,13 +223,13 @@ public:
   typedef std::size_t size_type;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef PQKFaceNodalBasisLocalView<GV,k> LocalView;
+  typedef PQkFaceNodalBasisLocalView<GV,k> LocalView;
 
   /** \brief Type used for global numbering of the basis vectors */
   typedef std::array<size_type, 1> MultiIndex;
 
   /** \brief Constructor for a given grid view object */
-  PQKFaceNodalBasis(const GridView& gv) :
+  PQkFaceNodalBasis(const GridView& gv) :
     gridView_(gv),
     indexSet_(gv)
   {}
@@ -241,7 +241,7 @@ public:
     return gridView_;
   }
 
-  PQKFaceIndexSet<GV,k> indexSet() const
+  PQkFaceIndexSet<GV,k> indexSet() const
   {
     return indexSet_;
   }
@@ -257,17 +257,17 @@ public:
 protected:
   const GridView gridView_;
 
-  PQKFaceIndexSet<GV,k> indexSet_;
+  PQkFaceIndexSet<GV,k> indexSet_;
 };
 
 
 /** \brief The restriction of a finite element basis to a single element */
 template<typename GV, int k>
-class PQKFaceNodalBasisLocalView
+class PQkFaceNodalBasisLocalView
 {
 public:
   /** \brief The global FE basis that this is a view on */
-  typedef PQKFaceNodalBasis<GV,k> GlobalBasis;
+  typedef PQkFaceNodalBasis<GV,k> GlobalBasis;
   typedef typename GlobalBasis::GridView GridView;
 
   /** \brief The type used for sizes */
@@ -288,10 +288,10 @@ public:
    * In the case of a P3 space this tree consists of a single leaf only,
    * i.e., Tree is basically the type of the LocalFiniteElement
    */
-  typedef PQKFaceNodalBasisLeafNode<GV,k> Tree;
+  typedef PQkFaceNodalBasisLeafNode<GV,k> Tree;
 
   /** \brief Construct local view for a given global finite element basis */
-  PQKFaceNodalBasisLocalView(const GlobalBasis* globalBasis) :
+  PQkFaceNodalBasisLocalView(const GlobalBasis* globalBasis) :
     globalBasis_(globalBasis),
     tree_(globalBasis)
   {}
@@ -322,7 +322,7 @@ public:
   /** \brief Unbind from the current element
    *
    * Calling this method should only be a hint that the view can be unbound.
-   * And indeed, in the PQKFaceNodalBasisView implementation this method does nothing.
+   * And indeed, in the PQkFaceNodalBasisView implementation this method does nothing.
    */
   void unbind()
   {}
@@ -372,14 +372,14 @@ protected:
 
 
 template<typename GV, int k>
-class PQKFaceNodalBasisLeafNode :
+class PQkFaceNodalBasisLeafNode :
   public GridFunctionSpaceBasisLeafNodeInterface<
     typename GV::template Codim<0>::Entity,
     typename Dune::PQkFaceLocalFiniteElementCache<typename GV::ctype
                                                    , double, GV::dimension, k>::FiniteElementType,
-    typename PQKFaceNodalBasis<GV,k>::size_type>
+    typename PQkFaceNodalBasis<GV,k>::size_type>
 {
-  typedef PQKFaceNodalBasis<GV,k> GlobalBasis;
+  typedef PQkFaceNodalBasis<GV,k> GlobalBasis;
   enum {dim = GV::dimension};
 
   typedef typename GV::template Codim<0>::Entity E;
@@ -391,7 +391,7 @@ class PQKFaceNodalBasisLeafNode :
   typedef typename GlobalBasis::LocalView LocalView;
 
   friend LocalView;
-  friend class PQKFaceLocalIndexSet<GV,k>;
+  friend class PQkFaceLocalIndexSet<GV,k>;
 
 public:
   typedef GridFunctionSpaceBasisLeafNodeInterface<E,FE,ST> Interface;
@@ -399,7 +399,7 @@ public:
   typedef typename Interface::Element Element;
   typedef typename Interface::FiniteElement FiniteElement;
 
-  PQKFaceNodalBasisLeafNode(const GlobalBasis* globalBasis) :
+  PQkFaceNodalBasisLeafNode(const GlobalBasis* globalBasis) :
     globalBasis_(globalBasis),
     finiteElement_(nullptr),
     element_(nullptr)
@@ -435,7 +435,7 @@ public:
   }
 
   void setLocalIndex(size_type leafindex, size_type localindex) DUNE_FINAL
-  { DUNE_THROW(Dune::NotImplemented, "PQKFaceNodalBasisLeafNode does not support setLocalIndex() yet."); }
+  { DUNE_THROW(Dune::NotImplemented, "PQkFaceNodalBasisLeafNode does not support setLocalIndex() yet."); }
 
 protected:
 

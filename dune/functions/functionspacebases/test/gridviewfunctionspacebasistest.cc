@@ -181,19 +181,19 @@ int main (int argc, char* argv[]) try
   const GridView& gridView = grid.leafGridView();
 
   // Test PQ1NodalBasis
-  PQKTraceNodalBasis<GridView, 1> pq1Basis(gridView);
+  PQkTraceNodalBasis<GridView, 1> pq1Basis(gridView);
   testScalarBasis(pq1Basis);
 
   // Test PQ2NodalBasis
-  PQKTraceNodalBasis<GridView, 2> pq2Basis(gridView);
+  PQkTraceNodalBasis<GridView, 2> pq2Basis(gridView);
   testScalarBasis(pq2Basis);
 
-  // Test PQKNodalBasis for k==3
-  PQKTraceNodalBasis<GridView, 3> pq3Basis(gridView);
+  // Test PQkNodalBasis for k==3
+  PQkTraceNodalBasis<GridView, 3> pq3Basis(gridView);
   testScalarBasis(pq3Basis);
 
-  // Test PQKNodalBasis for k==4
-  PQKTraceNodalBasis<GridView, 4> pq4Basis(gridView);
+  // Test PQkNodalBasis for k==4
+  PQkTraceNodalBasis<GridView, 4> pq4Basis(gridView);
   testScalarBasis(pq4Basis);
 
   return 0;
