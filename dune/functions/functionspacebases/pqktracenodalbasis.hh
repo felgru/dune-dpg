@@ -21,16 +21,16 @@ namespace Dune {
 namespace Functions {
 
 template<typename GV, int k>
-class PQKTraceNodalBasisLocalView;
+class PQkTraceNodalBasisLocalView;
 
 template<typename GV, int k>
-class PQKTraceNodalBasisLeafNode;
+class PQkTraceNodalBasisLeafNode;
 
 template<typename GV, int k>
-class PQKTraceIndexSet;
+class PQkTraceIndexSet;
 
 template<typename GV, int k>
-class PQKTraceLocalIndexSet
+class PQkTraceLocalIndexSet
 {
   enum {dim = GV::dimension};
 
@@ -38,12 +38,12 @@ public:
   typedef std::size_t size_type;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef PQKTraceNodalBasisLocalView<GV,k> LocalView;
+  typedef PQkTraceNodalBasisLocalView<GV,k> LocalView;
 
   /** \brief Type used for global numbering of the basis vectors */
   typedef std::array<size_type, 1> MultiIndex;
 
-  PQKTraceLocalIndexSet(const PQKTraceIndexSet<GV,k> & indexSet)
+  PQkTraceLocalIndexSet(const PQkTraceIndexSet<GV,k> & indexSet)
   : basisIndexSet_(indexSet)
   {}
 
@@ -52,7 +52,7 @@ public:
    * Having to bind the view to an element before being able to actually access any of its data members
    * offers to centralize some expensive setup code in the 'bind' method, which can save a lot of run-time.
    */
-  void bind(const PQKTraceNodalBasisLocalView<GV,k>& localView)
+  void bind(const PQkTraceNodalBasisLocalView<GV,k>& localView)
   {
     localView_ = &localView;
   }
@@ -118,12 +118,12 @@ public:
 
         if (! refElement.type(localKey.subEntity(), localKey.codim()).isTriangle()
             or k>3)
-          DUNE_THROW(Dune::NotImplemented, "PQKTraceNodalBasis for 3D grids is only implemented if k<=3 and if the grid is a simplex grid");
+          DUNE_THROW(Dune::NotImplemented, "PQkTraceNodalBasis for 3D grids is only implemented if k<=3 and if the grid is a simplex grid");
 
         return {{ basisIndexSet_.triangleOffset_ + gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) }};
       }
     }
-    DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the PQKTraceNodalBasis");
+    DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the PQkTraceNodalBasis");
   }
 
   /** \brief Return the local view that we are attached to
@@ -133,18 +133,18 @@ public:
     return *localView_;
   }
 
-  const PQKTraceNodalBasisLocalView<GV,k>* localView_;
+  const PQkTraceNodalBasisLocalView<GV,k>* localView_;
 
-  const PQKTraceIndexSet<GV,k> basisIndexSet_;
+  const PQkTraceIndexSet<GV,k> basisIndexSet_;
 };
 
 template<typename GV, int k>
-class PQKTraceIndexSet
+class PQkTraceIndexSet
 {
   enum {dim = GV::dimension};
 
   // Needs the mapper
-  friend class PQKTraceLocalIndexSet<GV,k>;
+  friend class PQkTraceLocalIndexSet<GV,k>;
 
   // Precompute the number of dofs per entity type
   const int dofsPerEdge        = k-1;
@@ -152,9 +152,9 @@ class PQKTraceIndexSet
   const int dofsPerQuad        = (k-1)*(k-1);
 public:
 
-  typedef PQKTraceLocalIndexSet<GV,k> LocalIndexSet;
+  typedef PQkTraceLocalIndexSet<GV,k> LocalIndexSet;
 
-  PQKTraceIndexSet(const GV& gridView)
+  PQkTraceIndexSet(const GV& gridView)
   : gridView_(gridView)
   {
     vertexOffset_        = 0;
@@ -216,10 +216,10 @@ private:
  * \tparam k The order of the basis
  */
 template<typename GV, int k>
-class PQKTraceNodalBasis
+class PQkTraceNodalBasis
 : public GridViewFunctionSpaceBasis<GV,
-                                    PQKTraceNodalBasisLocalView<GV,k>,
-                                    PQKTraceIndexSet<GV,k>,
+                                    PQkTraceNodalBasisLocalView<GV,k>,
+                                    PQkTraceIndexSet<GV,k>,
                                     std::array<std::size_t, 1> >
 {
   enum {dim = GV::dimension};
@@ -231,13 +231,13 @@ public:
   typedef std::size_t size_type;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef PQKTraceNodalBasisLocalView<GV,k> LocalView;
+  typedef PQkTraceNodalBasisLocalView<GV,k> LocalView;
 
   /** \brief Type used for global numbering of the basis vectors */
   typedef std::array<size_type, 1> MultiIndex;
 
   /** \brief Constructor for a given grid view object */
-  PQKTraceNodalBasis(const GridView& gv) :
+  PQkTraceNodalBasis(const GridView& gv) :
     gridView_(gv),
     indexSet_(gv)
   {}
@@ -249,7 +249,7 @@ public:
     return gridView_;
   }
 
-  PQKTraceIndexSet<GV,k> indexSet() const
+  PQkTraceIndexSet<GV,k> indexSet() const
   {
     return indexSet_;
   }
@@ -265,17 +265,17 @@ public:
 protected:
   const GridView gridView_;
 
-  PQKTraceIndexSet<GV,k> indexSet_;
+  PQkTraceIndexSet<GV,k> indexSet_;
 };
 
 
 /** \brief The restriction of a finite element basis to a single element */
 template<typename GV, int k>
-class PQKTraceNodalBasisLocalView
+class PQkTraceNodalBasisLocalView
 {
 public:
   /** \brief The global FE basis that this is a view on */
-  typedef PQKTraceNodalBasis<GV,k> GlobalBasis;
+  typedef PQkTraceNodalBasis<GV,k> GlobalBasis;
   typedef typename GlobalBasis::GridView GridView;
 
   /** \brief The type used for sizes */
@@ -296,10 +296,10 @@ public:
    * In the case of a P3 space this tree consists of a single leaf only,
    * i.e., Tree is basically the type of the LocalFiniteElement
    */
-  typedef PQKTraceNodalBasisLeafNode<GV,k> Tree;
+  typedef PQkTraceNodalBasisLeafNode<GV,k> Tree;
 
   /** \brief Construct local view for a given global finite element basis */
-  PQKTraceNodalBasisLocalView(const GlobalBasis* globalBasis) :
+  PQkTraceNodalBasisLocalView(const GlobalBasis* globalBasis) :
     globalBasis_(globalBasis),
     tree_(globalBasis)
   {}
@@ -330,7 +330,7 @@ public:
   /** \brief Unbind from the current element
    *
    * Calling this method should only be a hint that the view can be unbound.
-   * And indeed, in the PQKTraceNodalBasisView implementation this method does nothing.
+   * And indeed, in the PQkTraceNodalBasisView implementation this method does nothing.
    */
   void unbind()
   {}
@@ -380,14 +380,14 @@ protected:
 
 
 template<typename GV, int k>
-class PQKTraceNodalBasisLeafNode :
+class PQkTraceNodalBasisLeafNode :
   public GridFunctionSpaceBasisLeafNodeInterface<
     typename GV::template Codim<0>::Entity,
     typename Dune::PQkTraceLocalFiniteElementCache<typename GV::ctype
                                                    , double, GV::dimension, k>::FiniteElementType,
-    typename PQKTraceNodalBasis<GV,k>::size_type>
+    typename PQkTraceNodalBasis<GV,k>::size_type>
 {
-  typedef PQKTraceNodalBasis<GV,k> GlobalBasis;
+  typedef PQkTraceNodalBasis<GV,k> GlobalBasis;
   enum {dim = GV::dimension};
 
   typedef typename GV::template Codim<0>::Entity E;
@@ -399,7 +399,7 @@ class PQKTraceNodalBasisLeafNode :
   typedef typename GlobalBasis::LocalView LocalView;
 
   friend LocalView;
-  friend class PQKTraceLocalIndexSet<GV,k>;
+  friend class PQkTraceLocalIndexSet<GV,k>;
 
 public:
   typedef GridFunctionSpaceBasisLeafNodeInterface<E,FE,ST> Interface;
@@ -407,7 +407,7 @@ public:
   typedef typename Interface::Element Element;
   typedef typename Interface::FiniteElement FiniteElement;
 
-  PQKTraceNodalBasisLeafNode(const GlobalBasis* globalBasis) :
+  PQkTraceNodalBasisLeafNode(const GlobalBasis* globalBasis) :
     globalBasis_(globalBasis),
     finiteElement_(nullptr),
     element_(nullptr)
@@ -443,7 +443,7 @@ public:
   }
 
   void setLocalIndex(size_type leafindex, size_type localindex) DUNE_FINAL
-  { DUNE_THROW(Dune::NotImplemented, "PQKTraceNodalBasisLeafNode does not support setLocalIndex() yet."); }
+  { DUNE_THROW(Dune::NotImplemented, "PQkTraceNodalBasisLeafNode does not support setLocalIndex() yet."); }
 
 protected:
 

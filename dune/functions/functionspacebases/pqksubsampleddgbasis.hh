@@ -19,16 +19,16 @@ namespace Dune {
 namespace Functions {
 
 template<typename GV, int s, int k>
-class PQKSubsampledDGBasisLocalView;
+class PQkSubsampledDGBasisLocalView;
 
 template<typename GV, int s, int k>
-class PQKSubsampledDGBasisLeafNode;
+class PQkSubsampledDGBasisLeafNode;
 
 template<typename GV, int s, int k>
-class PQKSubsampledDGIndexSet;
+class PQkSubsampledDGIndexSet;
 
 template<typename GV, int s, int k>
-class PQKSubsampledDGLocalIndexSet
+class PQkSubsampledDGLocalIndexSet
 {
   enum {dim = GV::dimension};
 
@@ -36,12 +36,12 @@ public:
   typedef std::size_t size_type;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef PQKSubsampledDGBasisLocalView<GV,s,k> LocalView;
+  typedef PQkSubsampledDGBasisLocalView<GV,s,k> LocalView;
 
   /** \brief Type used for global numbering of the basis vectors */
   typedef std::array<size_type, 1> MultiIndex;
 
-  PQKSubsampledDGLocalIndexSet(const PQKSubsampledDGIndexSet<GV,s,k> & indexSet)
+  PQkSubsampledDGLocalIndexSet(const PQkSubsampledDGIndexSet<GV,s,k> & indexSet)
   : basisIndexSet_(indexSet)
   {}
 
@@ -50,7 +50,7 @@ public:
    * Having to bind the view to an element before being able to actually access any of its data members
    * offers to centralize some expensive setup code in the 'bind' method, which can save a lot of run-time.
    */
-  void bind(const PQKSubsampledDGBasisLocalView<GV,s,k>& localView)
+  void bind(const PQkSubsampledDGBasisLocalView<GV,s,k>& localView)
   {
     localView_ = &localView;
   }
@@ -126,18 +126,18 @@ public:
     return *localView_;
   }
 
-  const PQKSubsampledDGBasisLocalView<GV,s,k>* localView_;
+  const PQkSubsampledDGBasisLocalView<GV,s,k>* localView_;
 
-  const PQKSubsampledDGIndexSet<GV,s,k> basisIndexSet_;
+  const PQkSubsampledDGIndexSet<GV,s,k> basisIndexSet_;
 };
 
 template<typename GV, int s, int k>
-class PQKSubsampledDGIndexSet
+class PQkSubsampledDGIndexSet
 {
   enum {dim = GV::dimension};
 
   // Needs the mapper
-  friend class PQKSubsampledDGLocalIndexSet<GV,s,k>;
+  friend class PQkSubsampledDGLocalIndexSet<GV,s,k>;
 
   // Precompute the number of dofs per entity type
   const int dofsPerEdge        = s*k+1;
@@ -150,9 +150,9 @@ class PQKSubsampledDGIndexSet
 
 public:
 
-  typedef PQKSubsampledDGLocalIndexSet<GV,s,k> LocalIndexSet;
+  typedef PQkSubsampledDGLocalIndexSet<GV,s,k> LocalIndexSet;
 
-  PQKSubsampledDGIndexSet(const GV& gridView)
+  PQkSubsampledDGIndexSet(const GV& gridView)
   : gridView_(gridView)
   {
     switch (dim)
@@ -240,10 +240,10 @@ private:
  * \tparam k The order of the basis
  */
 template<typename GV, int s, int k>
-class PQKSubsampledDGBasis
+class PQkSubsampledDGBasis
 : public GridViewFunctionSpaceBasis<GV,
-                                    PQKSubsampledDGBasisLocalView<GV,s,k>,
-                                    PQKSubsampledDGIndexSet<GV,s,k>,
+                                    PQkSubsampledDGBasisLocalView<GV,s,k>,
+                                    PQkSubsampledDGIndexSet<GV,s,k>,
                                     std::array<std::size_t, 1> >
 {
   enum {dim = GV::dimension};
@@ -255,13 +255,13 @@ public:
   typedef std::size_t size_type;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef PQKSubsampledDGBasisLocalView<GV,s,k> LocalView;
+  typedef PQkSubsampledDGBasisLocalView<GV,s,k> LocalView;
 
   /** \brief Type used for global numbering of the basis vectors */
   typedef std::array<size_type, 1> MultiIndex;
 
   /** \brief Constructor for a given grid view object */
-  PQKSubsampledDGBasis(const GridView& gv) :
+  PQkSubsampledDGBasis(const GridView& gv) :
     gridView_(gv),
     indexSet_(gv)
   {}
@@ -273,7 +273,7 @@ public:
     return gridView_;
   }
 
-  PQKSubsampledDGIndexSet<GV,s,k> indexSet() const
+  PQkSubsampledDGIndexSet<GV,s,k> indexSet() const
   {
     return indexSet_;
   }
@@ -289,17 +289,17 @@ public:
 protected:
   const GridView gridView_;
 
-  PQKSubsampledDGIndexSet<GV,s,k> indexSet_;
+  PQkSubsampledDGIndexSet<GV,s,k> indexSet_;
 };
 
 
 /** \brief The restriction of a finite element basis to a single element */
 template<typename GV, int s, int k>
-class PQKSubsampledDGBasisLocalView
+class PQkSubsampledDGBasisLocalView
 {
 public:
   /** \brief The global FE basis that this is a view on */
-  typedef PQKSubsampledDGBasis<GV,s,k> GlobalBasis;
+  typedef PQkSubsampledDGBasis<GV,s,k> GlobalBasis;
   typedef typename GlobalBasis::GridView GridView;
 
   /** \brief The type used for sizes */
@@ -320,10 +320,10 @@ public:
    * In the case of a P3 space this tree consists of a single leaf only,
    * i.e., Tree is basically the type of the LocalFiniteElement
    */
-  typedef PQKSubsampledDGBasisLeafNode<GV,s,k> Tree;
+  typedef PQkSubsampledDGBasisLeafNode<GV,s,k> Tree;
 
   /** \brief Construct local view for a given global finite element basis */
-  PQKSubsampledDGBasisLocalView(const GlobalBasis* globalBasis) :
+  PQkSubsampledDGBasisLocalView(const GlobalBasis* globalBasis) :
     globalBasis_(globalBasis),
     tree_(globalBasis)
   {}
@@ -354,7 +354,7 @@ public:
   /** \brief Unbind from the current element
    *
    * Calling this method should only be a hint that the view can be unbound.
-   * And indeed, in the PQKSubsampledDGBasisView implementation this method does nothing.
+   * And indeed, in the PQkSubsampledDGBasisView implementation this method does nothing.
    */
   void unbind()
   {}
@@ -404,13 +404,13 @@ protected:
 
 
 template<typename GV, int s, int k>
-class PQKSubsampledDGBasisLeafNode :
+class PQkSubsampledDGBasisLeafNode :
   public GridFunctionSpaceBasisLeafNodeInterface<
     typename GV::template Codim<0>::Entity,
     typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, GV::dimension, k>::FiniteElementType,
-    typename PQKSubsampledDGBasis<GV,s,k>::size_type>
+    typename PQkSubsampledDGBasis<GV,s,k>::size_type>
 {
-  typedef PQKSubsampledDGBasis<GV,s,k> GlobalBasis;
+  typedef PQkSubsampledDGBasis<GV,s,k> GlobalBasis;
   enum {dim = GV::dimension};
 
   typedef typename GV::template Codim<0>::Entity E;
@@ -422,7 +422,7 @@ class PQKSubsampledDGBasisLeafNode :
   typedef typename GlobalBasis::LocalView LocalView;
 
   friend LocalView;
-  friend class PQKSubsampledDGLocalIndexSet<GV,s,k>;
+  friend class PQkSubsampledDGLocalIndexSet<GV,s,k>;
 
 public:
   typedef GridFunctionSpaceBasisLeafNodeInterface<E,FE,ST> Interface;
@@ -430,7 +430,7 @@ public:
   typedef typename Interface::Element Element;
   typedef typename Interface::FiniteElement FiniteElement;
 
-  PQKSubsampledDGBasisLeafNode(const GlobalBasis* globalBasis) :
+  PQkSubsampledDGBasisLeafNode(const GlobalBasis* globalBasis) :
     globalBasis_(globalBasis),
     finiteElement_(nullptr),
     element_(nullptr)
@@ -466,7 +466,7 @@ public:
   }
 
   void setLocalIndex(size_type leafindex, size_type localindex) DUNE_FINAL
-  { DUNE_THROW(Dune::NotImplemented, "PQKSubsampledDGBasisLeafNode does not support setLocalIndex() yet."); }
+  { DUNE_THROW(Dune::NotImplemented, "PQkSubsampledDGBasisLeafNode does not support setLocalIndex() yet."); }
 
 protected:
 

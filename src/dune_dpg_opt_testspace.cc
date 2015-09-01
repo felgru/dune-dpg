@@ -82,7 +82,7 @@ int main(int argc, char** argv)
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
   FEBasisInterior feBasisInterior(gridView);
 
-  typedef Functions::PQKNodalBasis<GridView, 2> FEBasisTrace; // bulk term corresponding to u^
+  typedef Functions::PQkNodalBasis<GridView, 2> FEBasisTrace; // bulk term corresponding to u^
   FEBasisTrace feBasisTrace(gridView);
 
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
