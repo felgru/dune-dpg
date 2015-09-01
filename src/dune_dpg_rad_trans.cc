@@ -269,12 +269,12 @@ int main(int argc, char** argv)
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
   FEBasisInterior feBasisInterior(gridView);
 
-  typedef Functions::PQKTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
+  typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
   FEBasisTrace feBasisTrace(gridView);
 
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
-  typedef Functions::PQKSubsampledDGBasis<GridView, 4, 3> FEBasisTest; // v enriched
+  typedef Functions::PQkSubsampledDGBasis<GridView, 4, 3> FEBasisTest; // v enriched
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
   auto rhsAssembler = make_RhsAssembler(testSpaces);
