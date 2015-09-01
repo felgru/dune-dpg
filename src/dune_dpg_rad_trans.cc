@@ -496,13 +496,13 @@ int main(int argc, char** argv)
       VectorType scattering;
       scatteringAssemblers[i].assembleScattering<0>(scattering, xPrevious, sVector, kernelS);
       rhs[i] += scattering;
-      systemAssemblers[i].defineCharacteristicFaces<1,dim>(stiffnessMatrix[i],
-              rhs[i], s);
       systemAssemblers[i].applyDirichletBoundarySolution<1>
           (stiffnessMatrix[i],
            rhs[i],
            dirichletNodesInflow[i],
            rhsInflowContrib[i]);
+      systemAssemblers[i].defineCharacteristicFaces<1,dim>(stiffnessMatrix[i],
+                    rhs[i], s);
     }
 
     // std::ofstream of("stiffnessNew.dat");
