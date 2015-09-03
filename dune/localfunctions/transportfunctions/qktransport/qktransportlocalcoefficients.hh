@@ -1,12 +1,12 @@
 /*
- * qktestlocalcoefficients.hh
+ * qktransportlocalcoefficients.hh
  *
  *  Created on: April 27, 2015
  *      Author: koenig
  */
 
-#ifndef DUNE_QKTESTLOCALCOEFFICIENTS_HH_
-#define DUNE_QKTESTLOCALCOEFFICIENTS_HH_
+#ifndef DUNE_QKTRANSPORTLOCALCOEFFICIENTS_HH_
+#define DUNE_QKTRANSPORTLOCALCOEFFICIENTS_HH_
 
 #include <cstddef>
 #include <iostream>
@@ -26,7 +26,7 @@ namespace Dune
      \implements Dune::LocalCoefficientsVirtualImp
  */
 template <int d,int k>
-class QkTestLocalCoefficients
+class QkTransportLocalCoefficients
 {
 
 
@@ -124,7 +124,7 @@ class QkTestLocalCoefficients
 
 
 public:
-    QkTestLocalCoefficients (FieldVector<double,d> transport)
+    QkTransportLocalCoefficients (FieldVector<double,d> transport)
     {
         beta_=transport;
 
@@ -271,4 +271,4 @@ private:
 
 
 
-#endif /* DUNE_QKTESTLOCALCOEFFICIENTS_HH_ */
+#endif /* DUNE_QKTRANSPORTLOCALCOEFFICIENTS_HH_ */
