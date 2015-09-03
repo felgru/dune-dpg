@@ -325,15 +325,6 @@ inline double evaluateFactor(FactorType factor, PositionType x)
   return factor(x);
 }
 
-template<class T>
-struct is_vector : std::false_type {};
-
-template<class T>
-struct is_vector<std::vector<T>> : std::true_type {};
-
-template<class T, size_t size>
-struct is_vector<Dune::FieldVector<T, size>> : std::true_type {};
-
 template<class FactorType, class PositionType,
          typename std::enable_if<is_vector<FactorType>::value>
                               ::type* = nullptr >
