@@ -79,9 +79,7 @@ save a lot of run-time.
          */
         size_type size() const
         {
-
                 return localView_->tree().finiteElement_->size();
-
         }
 
         //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
@@ -185,7 +183,7 @@ class PQkTransportBasis
                   PQkTransportBasisLocalView<GV,k>,
                   PQkTransportIndexSet<GV,k>,
                   std::array<std::size_t, 1>>
-                  {
+{
         static const int dim = GV::dimension;
 
 public:
@@ -211,14 +209,14 @@ element */
         /** \brief Obtain the grid view that the basis is defined on
          */
         const GridView& gridView() const DUNE_FINAL
-                        {
+        {
                 return gridView_;
-                        }
+        }
 
         PQkTransportIndexSet<GV,k> indexSet() const
-                                                  {
+        {
                 return indexSet_;
-                                                  }
+        }
 
         /** \brief Return local view for basis
          *
@@ -229,9 +227,9 @@ element */
         }
 
         FieldVector<double,dim> transport() const
-                                                {
+        {
                 return beta_;
-                                                }
+        }
 
 protected:
         const GridView gridView_;
@@ -325,11 +323,7 @@ save a lot of run-time.
         size_type size() const
         {
                 // We have subTreeSize==lfe.size() because we're in a leaf node.
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,4)
                 return tree_.finiteElement_->size();
-#else
-                return tree_.finiteElement_->localBasis().size();
-#endif
         }
 
         /**
@@ -397,41 +391,37 @@ public:
 
         //! Return current element, throw if unbound
         const Element& element() const DUNE_FINAL
-                        {
+        {
                 return *element_;
-                        }
+        }
 
-        /* * \brief Return the LocalFiniteElement for the element we are bound to
+        /** \brief Return the LocalFiniteElement for the element we are bound to
          *
-         * The LocalFiniteElement implements the corresponding interfaces of the
-dune-localfunctions module
+         * The LocalFiniteElement implements the corresponding interfaces
+         * of the dune-localfunctions module.
          */
         const FiniteElement& finiteElement() const DUNE_FINAL
-                        {
+        {
                 return *finiteElement_;
-                        }
+        }
 
-        /* * \brief Size of subtree rooted in this node (element-local)
+        /** \brief Size of subtree rooted in this node (element-local)
          */
         size_type size() const DUNE_FINAL
-                        {
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,4)
+        {
                 return finiteElement_->size();
-#else
-                return finiteElement_->localBasis().size();
-#endif
-                        }
+        }
 
         //! Maps from subtree index set [0..subTreeSize-1] into root index set (element-local) [0..localSize-1]
         size_type localIndex(size_type i) const DUNE_FINAL
-                        {
+        {
                 return i;
-                        }
+        }
 
         void setLocalIndex(size_type leafindex, size_type localindex) DUNE_FINAL
-                        {
+        {
                 DUNE_THROW(NotImplemented,"not implemented");
-                        }
+        }
 
 protected:
 
