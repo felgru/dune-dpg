@@ -9,6 +9,7 @@
 
 #include <dune/geometry/quadraturerules.hh>
 #include <dune/geometry/quadraturerules/subsampledquadraturerule.hh>
+#include <dune/geometry/quadraturerules/transportquadraturerule.hh>
 
 #include <dune/istl/matrix.hh>
 
@@ -398,6 +399,10 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
       is_SubsampledFiniteElement<LhsSpace>::value ||
       is_SubsampledFiniteElement<RhsSpace>::value;
 
+  constexpr bool useTransportQuadrature =
+      is_TransportFiniteElement<LhsSpace>::value ||
+      is_TransportFiniteElement<RhsSpace>::value;
+
   if(domain_of_integration == DomainOfIntegration::interior) {
   ////////////////////////////
   // Assemble interior terms
@@ -413,6 +418,22 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
       const QuadratureRule<double, dim>& quadSection =
             QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
       const SubsampledQuadratureRule<double, s, dim> quad(quadSection);
+
+      detail::getLocalMatrix_InteriorImpl<type>
+                                         (lhsLocalView,
+                                          rhsLocalView,
+                                          elementMatrix,
+                                          lhsSpaceOffset,
+                                          rhsSpaceOffset,
+                                          quad,
+                                          element,
+                                          factor,
+                                          lhsBeta,
+                                          rhsBeta);
+    } else if(useTransportQuadrature) {
+      const TransportQuadratureRule<double, dim> quad(element.type(),
+                                                      quadratureOrder,
+                                                      lhsBeta);
 
       detail::getLocalMatrix_InteriorImpl<type>
                                          (lhsLocalView,

@@ -14,6 +14,9 @@ namespace Dune {
 namespace Functions {
   template<class GV, int s, int k>
   class PQkSubsampledDGBasis;
+
+  template<typename GV, int k>
+  class PQkTransportBasis;
 }
 
 template<class T, int size> class FieldVector;
@@ -39,6 +42,10 @@ struct is_vector<std::vector<T, Alloc>> : std::true_type {};
 template<class T, int size>
 struct is_vector<Dune::FieldVector<T, size>> : std::true_type {};
 
+/****************************
+ * Traits for finite elements
+ ****************************/
+
 template <typename FiniteElement>
 struct is_SubsampledFiniteElement : std::false_type {};
 
@@ -52,6 +59,13 @@ struct numberOfSamples : std::integral_constant<int, 1> {};
 template<class GV, int s, int k>
 struct numberOfSamples<Functions::PQkSubsampledDGBasis<GV, s, k> >
                 : std::integral_constant<int, s> {};
+
+template<typename FiniteElement>
+struct is_TransportFiniteElement : std::false_type {};
+
+template<typename GV, int k>
+struct is_TransportFiniteElement<Functions::PQkTransportBasis<GV, k> >
+           : std::true_type {};
 
 } // end namespace Dune
 
