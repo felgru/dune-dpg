@@ -3,12 +3,6 @@
 #ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_OPTIMALTESTBASIS_HH
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_OPTIMALTESTBASIS_HH
 
-
-
-
-
-
-
 #include <tuple>
 #include <functional>
 #include <memory>
@@ -45,6 +39,9 @@
 #include <dune/typetree/leafnode.hh>
 
 #include <dune/functions/functionspacebases/gridviewfunctionspacebasis.hh>
+#include <dune/functions/functionspacebases/nodes.hh>
+#include <dune/functions/functionspacebases/defaultglobalbasis.hh>
+#include <dune/functions/functionspacebases/flatmultiindex.hh>
 #include <dune/dpg/assemble_helper.hh>
 #include <dune/dpg/cholesky.hh>
 
@@ -276,422 +273,191 @@ class TestspaceCoefficientMatrix
 };
 
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
-class OptimalTestBasisLocalView;
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
-class OptimalTestBasisLeafNode;
+// *****************************************************************************
+// This is the reusable part of the basis. It contains
+//
+//   OptimalTestBasisNodeFactory
+//   OptimalTestBasisNodeIndexSet
+//   OptimalTestBasisNode
+//
+// The factory allows to create the others and is the owner of possible shared
+// state. These three components do _not_ depend on the global basis or index
+// set and can be used without a global basis.
+// *****************************************************************************
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
-class OptimalTestIndexSet;
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, typename ST, typename TP>
+class OptimalTestBasisNode;
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, class TP, class ST>
+class OptimalTestBasisNodeIndexSet;
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, class ST>
+class OptimalTestBasisNodeFactory;
 
 
 
-
-
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
-class OptimalTestLocalIndexSet
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, class ST>
+class OptimalTestBasisNodeFactory
 {
-  typedef typename TestspaceCoefficientMatrix::GridView GridView;
-  enum {dim = GridView::dimension};
+  static const int dim =
+      TestspaceCoefficientMatrix::GridView::dimension;
 
 public:
-  typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
 
-  typedef std::size_t size_type;
+  /** \brief The grid view that the FE space is defined on */
+  using GridView = typename TestspaceCoefficientMatrix::GridView;
+  using size_type = ST;
 
-  /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef OptimalTestBasisLocalView<TestspaceCoefficientMatrix, testIndex> LocalView;
+
+  template<class TP>
+  using Node = OptimalTestBasisNode<TestspaceCoefficientMatrix, testIndex, size_type, TP>;
+
+  template<class TP>
+  using IndexSet = OptimalTestBasisNodeIndexSet<TestspaceCoefficientMatrix, testIndex, MI, TP, ST>;
 
   /** \brief Type used for global numbering of the basis vectors */
-  typedef std::array<size_type, 1> MultiIndex;
+  using MultiIndex = MI;
 
-  OptimalTestLocalIndexSet(const SolutionSpaces& solSp)
-  :
-  solutionBasisIndexSet_(boost::fusion::as_vector(
-              boost::fusion::transform(solSp,detail::getIndexSet()))),
-  solutionLocalIndexSet_(boost::fusion::as_vector(
-              transform(solutionBasisIndexSet_,detail::getLocalIndexSet())))
-  {}
+  using SizePrefix = Dune::ReservedVector<size_type, 2>;
 
-  /* TODO: Can probably be replaced by default move ctor with
-   *       boost::fusion 1.55. */
-  OptimalTestLocalIndexSet(OptimalTestLocalIndexSet&& indexSet)
-  : solutionBasisIndexSet_(indexSet.solutionBasisIndexSet_)
-  {
-    using namespace boost::fusion;
+  using EnrichedTestSpaces = typename TestspaceCoefficientMatrix::TestSpaces;
+  using SolutionSpaces = typename TestspaceCoefficientMatrix::SolutionSpaces;
 
-    copy(indexSet.solutionLocalIndexSet_, solutionLocalIndexSet_);
-    for_each(indexSet.solutionLocalIndexSet_, detail::setToNullptr());
-    localView_ = indexSet.localView_;
-    indexSet.localView_ = nullptr;
-  }
-
-  ~OptimalTestLocalIndexSet()
-  {
-      using namespace boost::fusion;
-      for_each(solutionLocalIndexSet_, detail::default_deleter());
-  }
-
-  typedef typename boost::fusion::result_of::as_vector<
+private:
+  using SolutionBasisIndexSet =
+          typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<SolutionSpaces,
                                                           detail::getIndexSet
                                                          >::type
-             >::type SolutionBasisIndexSet;
-  typedef typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<
-                       SolutionBasisIndexSet,
-                       detail::getLocalIndexSet>::type
-             >::type SolutionLocalIndexSet;
+             >::type;
 
-  /** \brief Bind the view to a grid element
-   *
-   * Having to bind the view to an element before being able to actually
-   * access any of its data members offers to centralize some expensive
-   * setup code in the 'bind' method, which can save a lot of run-time costs.
-   */
-  void bind(const OptimalTestBasisLocalView<TestspaceCoefficientMatrix, testIndex>& localView)
+public:
+  /** \brief Constructor for a given test coefficient matrix */
+  OptimalTestBasisNodeFactory(TestspaceCoefficientMatrix& testCoeffMat) :
+    testspaceCoefficientMatrix_(testCoeffMat),
+    // TODO: maybe move initialization of solutionBasisIndexSet_ to initializeIndices()
+    solutionBasisIndexSet_(boost::fusion::as_vector(
+              boost::fusion::transform(testCoeffMat.bilinearForm()
+                                              .getSolutionSpaces(),
+                                       detail::getIndexSet())))
+  {}
+
+
+  void initializeIndices()
   {
-    using namespace Dune::detail;
     using namespace boost::fusion;
-
-    localView_ = &localView;
-
-    for_each(zip(solutionLocalIndexSet_, localView_->tree().localViewSolution),
-             make_fused_procedure(bindLocalIndexSet()));
-  }
-
-  /** \brief Unbind the view
-   */
-  void unbind()
-  {
     using namespace Dune::detail;
 
-    localView_ = nullptr;
-    for_each(solutionLocalIndexSet_, applyUnbind());
-  }
+    //solutionBasisIndexSet_(as_vector(transform(
+    //          testspaceCoefficientMatrix_.bilinearForm().getSolutionSpaces(),
+    //          getIndexSet())));
 
-  /** \brief Size of subtree rooted in this node (element-local)
-   */
-  size_type size() const
-  {
-    return localView_->tree().finiteElement_->size();
-  }
-
-  //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-  const MultiIndex index(size_type i) const
-  {
-    using namespace Dune::detail;
-    using namespace boost::fusion;
-
-    /* set up global offsets*/
-    size_t globalOffsets[std::tuple_size<SolutionSpaces>::value];
+    /* set up global offsets */
     fold(zip(globalOffsets, solutionBasisIndexSet_),
          (size_t)0, globalOffsetHelper());
-
-    size_t space_index=0;
-    size_t index_result=i;
-    bool index_found=false;
-
-    for_each(solutionLocalIndexSet_,
-             computeIndex(space_index, index_result, index_found));
-
-    MultiIndex result;
-    result[0]=(globalOffsets[space_index]+index_result);
-    return result;
-    DUNE_THROW(Dune::NotImplemented, "TEXT");
   }
-
-  /** \brief Return the local view that we are attached to
-   */
-  const LocalView& localView() const
-  {
-    return *localView_;
-  }
-
-  const OptimalTestBasisLocalView<TestspaceCoefficientMatrix, testIndex>*
-                                                                   localView_;
-
-  SolutionBasisIndexSet solutionBasisIndexSet_;
-  SolutionLocalIndexSet solutionLocalIndexSet_;
-};
-
-
-
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
-class OptimalTestIndexSet
-{
-  typedef typename TestspaceCoefficientMatrix::GridView GridView;
-  enum {dim = GridView::dimension};
-
-  // Needs the mapper
-  friend class OptimalTestLocalIndexSet<TestspaceCoefficientMatrix,testIndex>;
-
-public:
-  typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
-
-  typedef OptimalTestLocalIndexSet<TestspaceCoefficientMatrix, testIndex> LocalIndexSet;
-
-  OptimalTestIndexSet(const SolutionSpaces& solSp)
-  : solutionSpaces(solSp),
-    gridView_(std::get<0>(solSp).gridView())
-  {}
-
-  std::size_t size() const
-  {
-    using namespace Dune::detail;
-
-    return boost::fusion::fold(boost::fusion::transform(solutionSpaces,
-                                                        getIndexSetSize()),
-                               0, std::plus<std::size_t>());
-  }
-
-  LocalIndexSet localIndexSet() const
-  {
-    return LocalIndexSet(solutionSpaces);
-  }
-
-private:
-  const SolutionSpaces& solutionSpaces;
-  const GridView gridView_;
-};
-
-
-
-/** \brief Basis for DPG optimal test spaces
- *
- * \note This only works for certain grids.  The following restrictions hold
- * - Grids must be 1d, 2d, or 3d
- * - 3d grids must be simplex grids
- *
- * \tparam TestspaceCoefficentMatrix  caches the computation of local
- *                                    optimal test spaces
- * \tparam testIndex  index of the optimal test space in the test space tuple
- */
-
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex = 0>
-class OptimalTestBasis
-: public GridViewFunctionSpaceBasis<typename TestspaceCoefficientMatrix::GridView,
-                                    OptimalTestBasisLocalView<TestspaceCoefficientMatrix, testIndex>,
-                                    OptimalTestIndexSet<TestspaceCoefficientMatrix, testIndex>,
-                                    std::array<std::size_t, 1> >
-{
-public:
-  /** \brief The grid view that the FE space is defined on */
-  typedef typename TestspaceCoefficientMatrix::GridView GridView;
-
-private:
-  enum {dim = GridView::dimension};
-
-public:
-  typedef std::size_t size_type;
-
-  /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef OptimalTestBasisLocalView<TestspaceCoefficientMatrix, testIndex> LocalView;
-
-  /** \brief Type used for global numbering of the basis vectors */
-  typedef std::array<size_type, 1> MultiIndex;   //TODO: Brauche ich das?
-
-  typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
-  typedef typename TestspaceCoefficientMatrix::TestSpaces EnrichedTestspaces;
-
-  /** \brief Constructor for a given grid view object */
-  OptimalTestBasis(TestspaceCoefficientMatrix& testCoeffMat) :
-    gridView_(testCoeffMat.gridView()),
-    testspaceCoefficientMatrix(testCoeffMat),
-    indexSet_(testCoeffMat.bilinearForm().getSolutionSpaces())
-  {}
 
   /** \brief Obtain the grid view that the basis is defined on
    */
-  const GridView& gridView() const DUNE_FINAL
+  const GridView& gridView() const
   {
-    return gridView_;
+    return testspaceCoefficientMatrix_.gridView();
   }
 
-  OptimalTestIndexSet<TestspaceCoefficientMatrix,testIndex> indexSet() const
+  template<class TP>
+  Node<TP> node(const TP& tp) const
   {
-    return indexSet_;
+    return Node<TP>{tp, testspaceCoefficientMatrix_};
   }
 
-  /** \brief Return local view for basis
-   *
-   */
-  LocalView localView() const
+  template<class TP>
+  IndexSet<TP> indexSet() const
   {
-    return LocalView(this, testspaceCoefficientMatrix);
+    return IndexSet<TP>{*this};
   }
 
-protected:
-  const GridView gridView_;
-  TestspaceCoefficientMatrix& testspaceCoefficientMatrix;
-  OptimalTestIndexSet<TestspaceCoefficientMatrix, testIndex> indexSet_;
-};
-
-
-
-
-/** \brief The restriction of a finite element basis to a single element */
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
-class OptimalTestBasisLocalView
-{
-public:
-
-  typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
-  typedef typename TestspaceCoefficientMatrix::TestSpaces EnrichedTestspaces;
-  /** \brief The global FE basis that this is a view on */
-  typedef OptimalTestBasis<TestspaceCoefficientMatrix, testIndex> GlobalBasis;
-  typedef typename GlobalBasis::GridView GridView;
-
-  /** \brief The type used for sizes */
-  typedef typename GlobalBasis::size_type size_type;
-
-  /** \brief Type used to number the degrees of freedom
-   *
-   * In the case of mixed finite elements this really can be a multi-index, but for a standard
-   * P3 space this is only a single-digit multi-index, i.e., it is an integer.
-   */
-  typedef typename GlobalBasis::MultiIndex MultiIndex;
-
-  /** \brief Type of the grid element we are bound to */
-  typedef typename GridView::template Codim<0>::Entity Element;
-
-  /** \brief Tree of local finite elements / local shape function sets
-   *
-   * In the case of a P3 space this tree consists of a single leaf only,
-   * i.e., Tree is basically the type of the LocalFiniteElement
-   */
-  typedef OptimalTestBasisLeafNode<TestspaceCoefficientMatrix, testIndex> Tree;
-
-  /** \brief Construct local view for a given global finite element basis */
-  OptimalTestBasisLocalView(const GlobalBasis* globalBasis,
-                            TestspaceCoefficientMatrix& testCoeffMat) :
-    globalBasis_(globalBasis),
-    testspaceCoefficientMatrix(testCoeffMat),
-    tree_(globalBasis, testCoeffMat)
-  {}
-
-  /** \brief Bind the view to a grid element
-   *
-   * Having to bind the view to an element before being able to actually
-   * access any of its data members offers to centralize some expensive
-   * setup code in the 'bind' method, which can save a lot of run-time costs.
-   */
-  void bind(const Element& e)
-  {
-    element_ = &e;
-    tree_.bind(e);
-  }
-
-  /** \brief Return the grid element that the view is bound to
-   *
-   * \throws Dune::Exception if the view is not bound to anything
-   */
-  const Element& element() const
-  {
-    if (element_)
-      return *element_;
-    else
-      DUNE_THROW(Dune::Exception, "Can't query element of unbound local view");
-  }
-
-  /** \brief Unbind from the current element
-   *
-   * Calling this method should only be a hint that the view can be unbound.
-   * And indeed, in the OptimalTestBasisView implementation this method does nothing.
-   */
-  void unbind()
-  {}
-
-  /** \brief Return the local ansatz tree associated to the bound entity
-   *
-   * \returns Tree // This is tree
-   */
-  const Tree& tree() const
-  {
-    return tree_;
-  }
-
-  /** \brief Number of degrees of freedom on this element
-   */
   size_type size() const
-  {
-    // We have subTreeSize==lfe.size() because we're in a leaf node.
-    return tree_.finiteElement_->size();
-  }
-
-  /**
-   * \brief Maximum local size for any element on the GridView
-   *
-   * This is the maximal size needed for local matrices
-   * and local vectors, i.e., the result is
-   *
-   * The method returns k^dim, which is the number of degrees of freedom you get for cubes.
-   */
-  size_type maxSize() const
   {
     using namespace boost::fusion;
     using namespace Dune::detail;
 
-    return fold(transform(testspaceCoefficientMatrix.bilinearForm()
-                          .getSolutionSpaces(),
-                          getLocalViewMaxSize()),
+    return fold(transform(testspaceCoefficientMatrix_.bilinearForm()
+                              .getSolutionSpaces(),
+                          getIndexSetSize()),
                 0, std::plus<std::size_t>());
   }
 
-  /** \brief Return the global basis that we are a view on
-   */
-  const GlobalBasis& globalBasis() const
+  //! Return number possible values for next position in multi index
+  size_type size(const SizePrefix prefix) const
   {
-    return *globalBasis_;
+    if (prefix.size() == 0)
+      return size();
+    assert(false);
   }
 
-protected:
-  const GlobalBasis* globalBasis_;
-  TestspaceCoefficientMatrix& testspaceCoefficientMatrix;
-  const Element* element_;
-  Tree tree_;
+  /** \todo This method has been added to the interface without prior discussion. */
+  size_type dimension() const
+  {
+    return size();
+  }
+
+  size_type maxNodeSize() const
+  {
+    using namespace boost::fusion;
+    using namespace Dune::detail;
+
+    return fold(transform(testspaceCoefficientMatrix_.bilinearForm()
+                              .getSolutionSpaces(),
+                          getMaxNodeSize()),
+                0, std::plus<std::size_t>());
+  }
+
+//protected:
+  // TODO: store testspaceCoefficientMatrix_ by reference or by value?
+  TestspaceCoefficientMatrix& testspaceCoefficientMatrix_;
+  SolutionBasisIndexSet solutionBasisIndexSet_;
+
+  size_t globalOffsets[std::tuple_size<SolutionSpaces>::value];
+
 };
 
 
 
-
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
-class OptimalTestBasisLeafNode :
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, typename ST, typename TP>
+class OptimalTestBasisNode :
   public GridFunctionSpaceBasisLeafNodeInterface<
     typename TestspaceCoefficientMatrix::GridView::template Codim<0>::Entity,
-    Dune::OptimalTestLocalFiniteElement<typename TestspaceCoefficientMatrix::GridView::ctype,
-                                        double,
-                                        TestspaceCoefficientMatrix::GridView::dimension,
-                                        typename std::tuple_element<testIndex, typename TestspaceCoefficientMatrix::BilinearForm::TestSpaces>::type::LocalView::Tree::FiniteElement  >,
-    typename OptimalTestBasis<TestspaceCoefficientMatrix,testIndex>::size_type>
+    Dune::OptimalTestLocalFiniteElement<typename TestspaceCoefficientMatrix
+                                           ::GridView::ctype,
+                                  double,
+                                  TestspaceCoefficientMatrix
+                                       ::GridView::dimension,
+                                  typename std::tuple_element<
+                                              testIndex,
+                                              typename TestspaceCoefficientMatrix
+                                                     ::TestSpaces>::type
+                                           ::LocalView::Tree::FiniteElement>,
+    ST,
+    TP>
 {
 public:
   typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
   typedef typename TestspaceCoefficientMatrix::TestSpaces EnrichedTestspaces;
-  typedef typename TestspaceCoefficientMatrix::BilinearForm BilinearForm;
-    typedef typename TestspaceCoefficientMatrix::InnerProduct InnerProduct;
 
 private:
-  typedef OptimalTestBasis<TestspaceCoefficientMatrix,testIndex> GlobalBasis;
-  typedef typename TestspaceCoefficientMatrix::GridView GridView;
-  enum {dim = GridView::dimension};
+  using GridView = typename TestspaceCoefficientMatrix::GridView;
+  static const int dim = GridView::dimension;
+  // TODO: maxSize does not seem to be needed.
+  // static const int maxSize = see NodeFactory::maxNodeSize();
 
   typedef typename GridView::template Codim<0>::Entity E;
-  typedef typename std::tuple_element<testIndex,EnrichedTestspaces>::type::LocalView::Tree::FiniteElement EnrichedFiniteElement;
-  typedef typename Dune::OptimalTestLocalFiniteElement<typename GridView::ctype,double,GridView::dimension,
+  typedef typename std::tuple_element<testIndex,EnrichedTestspaces>::type
+                   ::LocalView::Tree::FiniteElement EnrichedFiniteElement;
+  typedef typename Dune::OptimalTestLocalFiniteElement<typename GridView::ctype,
+                                                       double,
+                                                       GridView::dimension,
                                                        EnrichedFiniteElement> FE;
-
-
-  typedef typename GlobalBasis::size_type ST;
-  typedef typename GlobalBasis::MultiIndex MI;
-
-  typedef typename GlobalBasis::LocalView LocalView;
-
-//  typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
-
-  friend LocalView;
-  friend class OptimalTestLocalIndexSet<TestspaceCoefficientMatrix,testIndex>;
 
   typedef typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<
@@ -707,50 +473,51 @@ private:
              >::type TestLocalView;
 
 public:
-  typedef GridFunctionSpaceBasisLeafNodeInterface<E,FE,ST> Interface;
+  typedef GridFunctionSpaceBasisLeafNodeInterface<E,FE,ST,TP> Interface;
   typedef typename Interface::size_type size_type;
   typedef typename Interface::Element Element;
   typedef typename Interface::FiniteElement FiniteElement;
+  typedef typename Interface::TreePath TreePath;
 
-  OptimalTestBasisLeafNode(const GlobalBasis* globalBasis, TestspaceCoefficientMatrix& testCoeffMat):
-    globalBasis_(globalBasis),
+  OptimalTestBasisNode(const TreePath& treePath,
+                       TestspaceCoefficientMatrix& testCoeffMat) :
+    Interface(treePath),
     testspaceCoefficientMatrix(testCoeffMat),
-    bilinearForm(testspaceCoefficientMatrix.bilinearForm()),
-    innerProduct(testspaceCoefficientMatrix.innerProduct()),
     finiteElement_(nullptr),
     enrichedTestspace_(nullptr),
     element_(nullptr),
-    localViewSolution(boost::fusion::as_vector(
-                boost::fusion::transform(bilinearForm.getSolutionSpaces(),
+    localViewSolution_(boost::fusion::as_vector(
+                boost::fusion::transform(testCoeffMat.bilinearForm()
+                                                .getSolutionSpaces(),
                                          detail::getLocalView()))),
     localViewTest(boost::fusion::as_vector(
-                boost::fusion::transform(bilinearForm.getTestSpaces(),
+                boost::fusion::transform(testCoeffMat.bilinearForm()
+                                                    .getTestSpaces(),
                                          detail::getLocalView())))
-  { }
+  {}
 
   /* TODO: Can probably be replaced by default move ctor with
    *       boost::fusion 1.55. */
-  OptimalTestBasisLeafNode(OptimalTestBasisLeafNode&& ln)
-  : globalBasis_(std::move(ln.globalBasis_)),
-    testspaceCoefficientMatrix(ln.testspaceCoefficientMatrix),
-    bilinearForm(ln.bilinearForm),
-    innerProduct(ln.innerProduct),
-    finiteElement_(std::move(ln.finiteElement_)),
-    enrichedTestspace_(std::move(ln.enrichedTestspace_)),
-    element_(std::move(ln.element_))
+  OptimalTestBasisNode(OptimalTestBasisNode&& node)
+  : Interface(std::move(node)),
+    size_(std::move(node.size_)),
+    testspaceCoefficientMatrix(node.testspaceCoefficientMatrix),
+    finiteElement_(std::move(node.finiteElement_)),
+    enrichedTestspace_(std::move(node.enrichedTestspace_)),
+    element_(std::move(node.element_))
   {
     using namespace boost::fusion;
 
-    copy(ln.localViewSolution, localViewSolution);
-    copy(ln.localViewTest, localViewTest);
-    for_each(ln.localViewSolution, detail::setToNullptr());
-    for_each(ln.localViewTest, detail::setToNullptr());
+    copy(node.localViewSolution_, localViewSolution_);
+    copy(node.localViewTest, localViewTest);
+    for_each(node.localViewSolution_, detail::setToNullptr());
+    for_each(node.localViewTest, detail::setToNullptr());
   }
 
-  ~OptimalTestBasisLeafNode()
+  ~OptimalTestBasisNode()
   {
-    for_each(localViewTest,     detail::default_deleter());
-    for_each(localViewSolution, detail::default_deleter());
+    for_each(localViewTest,      detail::default_deleter());
+    for_each(localViewSolution_, detail::default_deleter());
   }
 
   //! Return current element, throw if unbound
@@ -773,19 +540,8 @@ public:
   size_type size() const DUNE_FINAL
   {
     // We have subTreeSize==lfe.size() because we're in a leaf node.
-    return finiteElement_->size();
+    return size_;
   }
-
-  //! Maps from subtree index set [0..subTreeSize-1] into root index set (element-local) [0..localSize-1]
-  size_type localIndex(size_type i) const DUNE_FINAL
-  {
-    return i;
-  }
-
-  void setLocalIndex(size_type leafindex, size_type localindex) DUNE_FINAL
-  { DUNE_THROW(Dune::NotImplemented, "OptimalTestBasisLeafNode does not support setLocalIndex() yet."); }
-
-protected:
 
   //! Bind to element.
   void bind(const Element& e)
@@ -795,11 +551,12 @@ protected:
 
     element_ = &e;
     for_each(localViewTest, applyBind<decltype(e)>(e));
+    // TODO: Improve memory handling of enrichedTestspace_
     enrichedTestspace_ =
         const_cast<typename std::tuple_element<testIndex,EnrichedTestspaces>
                    ::type::LocalView::Tree::FiniteElement*>
                   (&(at_c<testIndex>(localViewTest)->tree().finiteElement()));
-    for_each(localViewSolution, applyBind<decltype(e)>(e));
+    for_each(localViewSolution_, applyBind<decltype(e)>(e));
 
     testspaceCoefficientMatrix.bind(e);
 
@@ -813,20 +570,163 @@ protected:
     finiteElement_ = Dune::Std::make_unique<FiniteElement>
                         (&(testspaceCoefficientMatrix.coefficientMatrix()),
                          enrichedTestspace_, offset, k);
-
+    size_ = finiteElement_->size();
   }
 
-  const GlobalBasis* globalBasis_;
+  const SolutionLocalView& localViewSolution() const
+  {
+    return localViewSolution_;
+  }
+protected:
+
+  size_type size_;
+
   TestspaceCoefficientMatrix& testspaceCoefficientMatrix;
-  BilinearForm& bilinearForm;
-  InnerProduct& innerProduct;
+  //FiniteElementCache cache_;
   std::unique_ptr<FiniteElement> finiteElement_;
   EnrichedFiniteElement* enrichedTestspace_;
   const Element* element_;
-//  Matrix<FieldMatrix<double,1,1> > coefficientMatrix;
-  SolutionLocalView localViewSolution;
+  SolutionLocalView localViewSolution_;
+  // TODO: localViewTest is only used to get the enrichedTestspace_
   TestLocalView localViewTest;
 };
+
+
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, class TP, class ST>
+class OptimalTestBasisNodeIndexSet
+{
+  using GV = typename TestspaceCoefficientMatrix::GridView;
+  enum {dim = GV::dimension};
+
+public:
+
+  using size_type = ST;
+
+  /** \brief Type used for global numbering of the basis vectors */
+  using MultiIndex = MI;
+
+  using NodeFactory = OptimalTestBasisNodeFactory<TestspaceCoefficientMatrix, testIndex, MI, ST>;
+
+  using Node = typename NodeFactory::template Node<TP>;
+
+  typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
+  typedef typename boost::fusion::result_of::as_vector<
+             typename boost::fusion::result_of::transform<SolutionSpaces,
+                                                          detail::getIndexSet
+                                                         >::type
+             >::type SolutionBasisIndexSet;
+  typedef typename boost::fusion::result_of::as_vector<
+             typename boost::fusion::result_of::transform<
+                       SolutionBasisIndexSet,
+                       detail::getLocalIndexSet>::type
+             >::type SolutionLocalIndexSet;
+
+  OptimalTestBasisNodeIndexSet(const NodeFactory& nodeFactory) :
+    nodeFactory_(&nodeFactory),
+    solutionLocalIndexSet_(boost::fusion::as_vector(
+              transform(nodeFactory.solutionBasisIndexSet_,
+                        detail::getLocalIndexSet())))
+  {}
+
+  constexpr OptimalTestBasisNodeIndexSet(const OptimalTestBasisNodeIndexSet&)
+          = default;
+
+  /* TODO: Can probably be replaced by default move ctor with
+   *       boost::fusion 1.55. */
+  OptimalTestBasisNodeIndexSet(OptimalTestBasisNodeIndexSet&& indexSet)
+  : node_(std::move(indexSet.node_)),
+    nodeFactory_(std::move(indexSet.nodeFactory_))
+  {
+    using namespace boost::fusion;
+
+    copy(indexSet.solutionLocalIndexSet_, solutionLocalIndexSet_);
+    for_each(indexSet.solutionLocalIndexSet_, detail::setToNullptr());
+  }
+
+  ~OptimalTestBasisNodeIndexSet()
+  {
+    using namespace boost::fusion;
+    for_each(solutionLocalIndexSet_, detail::default_deleter());
+  }
+
+  /** \brief Bind the view to a grid element
+   *
+   * Having to bind the view to an element before being able to actually access any of its data members
+   * offers to centralize some expensive setup code in the 'bind' method, which can save a lot of run-time.
+   */
+  void bind(const Node& node)
+  {
+    using namespace boost::fusion;
+
+    node_ = &node;
+
+    for_each(zip(solutionLocalIndexSet_, node.localViewSolution()),
+             make_fused_procedure(detail::bindLocalIndexSet()));
+  }
+
+  /** \brief Unbind the view
+   */
+  void unbind()
+  {
+    node_ = nullptr;
+    for_each(solutionLocalIndexSet_, detail::applyUnbind());
+  }
+
+  /** \brief Size of subtree rooted in this node (element-local)
+   */
+  size_type size() const
+  {
+    return node_->finiteElement().size();
+  }
+
+  //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
+  MultiIndex index(size_type i) const
+  {
+    using namespace Dune::detail;
+    using namespace boost::fusion;
+
+    size_t space_index=0;
+    size_t index_result=i;
+    bool index_found=false;
+
+    for_each(solutionLocalIndexSet_,
+             computeIndex(space_index, index_result, index_found));
+
+    MultiIndex result;
+    result[0]=(nodeFactory_->globalOffsets[space_index]+index_result);
+    return result;
+  }
+
+protected:
+  const NodeFactory* nodeFactory_;
+
+  const Node* node_;
+
+  SolutionLocalIndexSet solutionLocalIndexSet_;
+};
+
+
+
+// *****************************************************************************
+// This is the actual global basis implementation based on the reusable parts.
+// *****************************************************************************
+
+/** \brief Nodal basis of a scalar k-th-order Lagrangean finite element space
+ *
+ * \note This only works for certain grids.  The following restrictions hold
+ * - If k is no larger than 2, then the grids can have any dimension
+ * - If k is larger than 3 then the grid must be two-dimensional
+ * - If k is 3, then the grid can be 3d *if* it is a simplex grid
+ *
+ * \tparam TestspaceCoefficentMatrix  caches the computation of local
+ *                                    optimal test spaces
+ * \tparam testIndex  index of the optimal test space in the test space tuple
+ */
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex = 0, class ST = std::size_t>
+using OptimalTestBasis = DefaultGlobalBasis<OptimalTestBasisNodeFactory<TestspaceCoefficientMatrix, testIndex, FlatMultiIndex<ST>, ST> >;
+
+
 
 } // end namespace Functions
 } // end namespace Dune

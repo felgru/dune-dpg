@@ -537,20 +537,20 @@ struct getIndexSetSize
 
 
 
-struct getLocalViewMaxSize
+struct getMaxNodeSize
 {
     template<class T>
     struct result;
 
     template<class T>
-    struct result<getLocalViewMaxSize(T)>
+    struct result<getMaxNodeSize(T)>
     {
         typedef std::size_t type;
     };
     template<class T>
     std::size_t operator()(T t) const
     {
-        return t.localView().maxSize();
+        return t.nodeFactory().maxNodeSize();
     }
 };
 
