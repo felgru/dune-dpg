@@ -499,7 +499,7 @@ struct globalOffsetHelper
   struct result;
 
   template<class T>
-  struct result<offsetHelper(size_t,T)>
+  struct result<globalOffsetHelper(size_t,T)>
   {
     typedef size_t type;
   };
