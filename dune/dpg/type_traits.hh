@@ -17,6 +17,9 @@ namespace Functions {
 
   template<typename GV, int k>
   class PQkTransportBasis;
+
+  template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
+  class OptimalTestBasis;
 }
 
 template<class T, int size> class FieldVector;
@@ -53,12 +56,30 @@ template<class GV, int s, int k>
 struct is_SubsampledFiniteElement<Functions::PQkSubsampledDGBasis
                                   <GV, s, k> > : std::true_type {};
 
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
+struct is_SubsampledFiniteElement<Functions::OptimalTestBasis
+                                  <TestspaceCoefficientMatrix, testIndex> >
+  : std::integral_constant<bool,
+          is_SubsampledFiniteElement<typename std::tuple_element<testIndex,
+                                     typename Functions::OptimalTestBasis
+                                     <TestspaceCoefficientMatrix, testIndex>
+                                     ::EnrichedTestspaces>::type>::value> {};
+
 template <typename FiniteElement>
 struct numberOfSamples : std::integral_constant<int, 1> {};
 
 template<class GV, int s, int k>
 struct numberOfSamples<Functions::PQkSubsampledDGBasis<GV, s, k> >
                 : std::integral_constant<int, s> {};
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
+struct numberOfSamples<Functions::OptimalTestBasis
+                                  <TestspaceCoefficientMatrix, testIndex> >
+                : std::integral_constant<int, numberOfSamples<
+                                     typename std::tuple_element<testIndex,
+                                     typename Functions::OptimalTestBasis
+                                     <TestspaceCoefficientMatrix, testIndex>
+                                     ::EnrichedTestspaces>::type>::value> {};
 
 template<typename FiniteElement>
 struct is_TransportFiniteElement : std::false_type {};
