@@ -88,6 +88,15 @@ template<typename GV, int k>
 struct is_TransportFiniteElement<Functions::PQkTransportBasis<GV, k> >
            : std::true_type {};
 
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
+struct is_TransportFiniteElement<Functions::OptimalTestBasis
+                                  <TestspaceCoefficientMatrix, testIndex> >
+  : std::integral_constant<bool,
+          is_TransportFiniteElement<typename std::tuple_element<testIndex,
+                                    typename Functions::OptimalTestBasis
+                                    <TestspaceCoefficientMatrix, testIndex>
+                                    ::EnrichedTestspaces>::type>::value> {};
+
 } // end namespace Dune
 
 #endif // DUNE_DPG_TYPE_TRAITS_HH
