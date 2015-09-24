@@ -9,6 +9,7 @@
 
 #include <dune/geometry/quadraturerules.hh>
 #include <dune/geometry/quadraturerules/subsampledquadraturerule.hh>
+#include <dune/geometry/quadraturerules/transportquadraturerule.hh>
 
 #include <dune/istl/matrix.hh>
 
@@ -325,15 +326,6 @@ inline double evaluateFactor(FactorType factor, PositionType x)
   return factor(x);
 }
 
-template<class T>
-struct is_vector : std::false_type {};
-
-template<class T>
-struct is_vector<std::vector<T>> : std::true_type {};
-
-template<class T, size_t size>
-struct is_vector<Dune::FieldVector<T, size>> : std::true_type {};
-
 template<class FactorType, class PositionType,
          typename std::enable_if<is_vector<FactorType>::value>
                               ::type* = nullptr >
@@ -407,6 +399,10 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
       is_SubsampledFiniteElement<LhsSpace>::value ||
       is_SubsampledFiniteElement<RhsSpace>::value;
 
+  constexpr bool useTransportQuadrature =
+      is_TransportFiniteElement<LhsSpace>::value ||
+      is_TransportFiniteElement<RhsSpace>::value;
+
   if(domain_of_integration == DomainOfIntegration::interior) {
   ////////////////////////////
   // Assemble interior terms
@@ -422,6 +418,22 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
       const QuadratureRule<double, dim>& quadSection =
             QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
       const SubsampledQuadratureRule<double, s, dim> quad(quadSection);
+
+      detail::getLocalMatrix_InteriorImpl<type>
+                                         (lhsLocalView,
+                                          rhsLocalView,
+                                          elementMatrix,
+                                          lhsSpaceOffset,
+                                          rhsSpaceOffset,
+                                          quad,
+                                          element,
+                                          factor,
+                                          lhsBeta,
+                                          rhsBeta);
+    } else if(useTransportQuadrature) {
+      const TransportQuadratureRule<double, dim> quad(element.type(),
+                                                      quadratureOrder,
+                                                      lhsBeta);
 
       detail::getLocalMatrix_InteriorImpl<type>
                                          (lhsLocalView,

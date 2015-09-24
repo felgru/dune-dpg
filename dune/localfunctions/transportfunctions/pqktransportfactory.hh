@@ -1,12 +1,12 @@
 /*
- * pqktestfactory.hh
+ * pqktransportfactory.hh
  *
  *  Created on: May 12, 2015
  *      Author: koenig
  */
 
-#ifndef DUNE_PQKTESTFACTORY_HH_
-#define DUNE_PQKTESTFACTORY_HH_
+#ifndef DUNE_PQKTRANSPORTFACTORY_HH_
+#define DUNE_PQKTRANSPORTFACTORY_HH_
 
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
@@ -26,7 +26,7 @@
 #include <dune/localfunctions/lagrange/prismp2.hh>
 #include <dune/localfunctions/lagrange/pyramidp1.hh>
 #include <dune/localfunctions/lagrange/pyramidp2.hh>
-#include <dune/localfunctions/transportfunctions/qktest.hh>
+#include <dune/localfunctions/transportfunctions/qktransport.hh>
 
 namespace Dune
 {
@@ -36,7 +36,7 @@ namespace Dune
  * Empty default implementation
  */
 template<class D, class R, int d, int k>
-struct DimSpecificPQkTestLocalFiniteElementFactory
+struct DimSpecificPQkTransportLocalFiniteElementFactory
 {
     typedef typename FixedOrderLocalBasisTraits<typename P0LocalFiniteElement<D,R,d>::Traits::LocalBasisType::Traits,0>::Traits T;
 
@@ -52,7 +52,7 @@ struct DimSpecificPQkTestLocalFiniteElementFactory
  * Specialization for dim=3
  */
 template<class D, class R, int k>
-struct DimSpecificPQkTestLocalFiniteElementFactory<D,R,3,k>
+struct DimSpecificPQkTransportLocalFiniteElementFactory<D,R,3,k>
 {
     typedef typename FixedOrderLocalBasisTraits<typename P0LocalFiniteElement<D,R,3>::Traits::LocalBasisType::Traits,0>::Traits T;
     typedef PrismP1LocalFiniteElement<D,R> PrismP1;
@@ -76,18 +76,18 @@ struct DimSpecificPQkTestLocalFiniteElementFactory<D,R,3,k>
 };
 
 
-/** \brief Factory to create any kind of QkTest in 2D like element wrapped for the virtual interface
+/** \brief Factory to create any kind of QkTransport in 2D like element wrapped for the virtual interface
  *
  */
 template<class D, class R, int dim, int k>
-struct PQkTestLocalFiniteElementFactory
+struct PQkTransportLocalFiniteElementFactory
 {
     typedef typename FixedOrderLocalBasisTraits<typename P0LocalFiniteElement<D,R,dim>::Traits::LocalBasisType::Traits,0>::Traits T;
     typedef LocalFiniteElementVirtualInterface<T> FiniteElementType;
     typedef P0LocalFiniteElement<D,R,dim> P0;
     typedef PkLocalFiniteElement<D,R,dim,k> Pk;
     typedef QkLocalFiniteElement<D,R,dim,k> Qk;
-    typedef QkTestLocalFiniteElement <D,R,dim,k> QTest;
+    typedef QkTransportLocalFiniteElement <D,R,dim,k> QTransport;
 
 
     //! create finite element for given GeometryType
@@ -101,9 +101,9 @@ struct PQkTestLocalFiniteElementFactory
 
         //NEW ELEMENT with transport direction
         if (gt.isCube())
-            return new LocalFiniteElementVirtualImp<QTest>(QTest(transport));
+            return new LocalFiniteElementVirtualImp<QTransport>(QTransport(transport));
 
-        return DimSpecificPQkTestLocalFiniteElementFactory<D,R,dim,k>::create(gt);
+        return DimSpecificPQkTransportLocalFiniteElementFactory<D,R,dim,k>::create(gt);
     }
 };
 
@@ -120,7 +120,7 @@ struct PQkTestLocalFiniteElementFactory
  * \tparam k Element order
  */
 template<class D, class R, int dim, int k>
-class PQkTestLocalFiniteElementCache
+class PQkTransportLocalFiniteElementCache
 {
 protected:
     typedef typename FixedOrderLocalBasisTraits<typename P0LocalFiniteElement<D,R,dim>::Traits::LocalBasisType::Traits,0>::Traits T;
@@ -133,11 +133,11 @@ public:
 
 
     /** \brief Default constructor */
-    PQkTestLocalFiniteElementCache() {}
+    PQkTransportLocalFiniteElementCache() {}
 
 
     /** \brief Copy constructor */
-    PQkTestLocalFiniteElementCache(const PQkTestLocalFiniteElementCache& other)
+    PQkTransportLocalFiniteElementCache(const PQkTransportLocalFiniteElementCache& other)
     {
         typename FEMap::iterator it = other.cache_.begin();
         typename FEMap::iterator end = other.cache_.end();
@@ -146,7 +146,7 @@ public:
 
     }
 
-    ~PQkTestLocalFiniteElementCache()
+    ~PQkTransportLocalFiniteElementCache()
     {
         typename FEMap::iterator it = cache_.begin();
         typename FEMap::iterator end = cache_.end();
@@ -161,7 +161,7 @@ public:
         typename FEMap::const_iterator it = cache_.find(gt);
         if (it==cache_.end())
         {
-            FiniteElementType* fe = PQkTestLocalFiniteElementFactory<D,R,dim,k>::create(gt,transport);
+            FiniteElementType* fe = PQkTransportLocalFiniteElementFactory<D,R,dim,k>::create(gt,transport);
             if (fe==0)
                 DUNE_THROW(Dune::NotImplemented,"No Pk/Qk like local finite element available for geometry type " << gt << " and order " << k);
 
@@ -184,4 +184,4 @@ protected:
 
 
 
-#endif /* SRC_PQKTESTFACTORY_HH_ */
+#endif /* DUNE_PQKTRANSPORTFACTORY_HH_ */

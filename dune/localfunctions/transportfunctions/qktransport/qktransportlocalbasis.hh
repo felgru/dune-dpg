@@ -1,7 +1,7 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_QkTESTLOCALBASIS_HH
-#define DUNE_QkTESTLOCALBASIS_HH
+#ifndef DUNE_QKTRANSPORTLOCALBASIS_HH
+#define DUNE_QKTRANSPORTLOCALBASIS_HH
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/power.hh>
@@ -27,13 +27,13 @@ namespace Dune
          \nosubgrouping
  */
 template<class D, class R, int dim,int k>
-class QkTestLocalBasis
+class QkTransportLocalBasis
 {
 public:
     typedef LocalBasisTraits<D,dim,Dune::FieldVector<D,dim>,R,1,Dune::FieldVector<R,1>,
             Dune::FieldMatrix<R,1,dim> > Traits;
 
-    QkTestLocalBasis(FieldVector<D,dim> transport):beta_(transport)
+    QkTransportLocalBasis(FieldVector<D,dim> transport):beta_(transport)
     {}
 
 
@@ -47,7 +47,7 @@ public:
         if(dim==2)
             return (sizeP+sizeQ-(k+1));
         else
-            static_assert(dim==2, "QkTestLocalBasis is only implemented in 2D.");
+            static_assert(dim==2, "QkTransportLocalBasis is only implemented in 2D.");
 
 
     }

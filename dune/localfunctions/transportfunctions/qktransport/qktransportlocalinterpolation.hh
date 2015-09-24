@@ -1,12 +1,12 @@
 /*
- * qktestlocalinterpolation.hh
+ * qktransportlocalinterpolation.hh
  *
  *  Created on: April 27, 2015
  *      Author: koenig
  */
 
-#ifndef DUNE_QKTESTLOCALINTERPOLATION_HH_
-#define DUNE_QKTESTLOCALINTERPOLATION_HH_
+#ifndef DUNE_QKTRANSPORTLOCALINTERPOLATION_HH_
+#define DUNE_QKTRANSPORTLOCALINTERPOLATION_HH_
 
 #include <vector>
 #include <dune/common/fvector.hh>
@@ -21,13 +21,13 @@ namespace Dune
 
 /** \todo Please doc me! */
 template<int dim, class LB,int k>
-class QkTestLocalInterpolation
+class QkTransportLocalInterpolation
 {
 public:
     typedef typename LB::Traits::DomainFieldType D;
 
 
-    QkTestLocalInterpolation(FieldVector<D,dim> transport)
+    QkTransportLocalInterpolation(FieldVector<D,dim> transport)
     : beta_(transport)
     {}
 
@@ -166,4 +166,4 @@ private:
 
 
 
-#endif /* DUNE_QKTESTLOCALINTERPOLATION_HH_ */
+#endif /* DUNE_QKTRANSPORTLOCALINTERPOLATION_HH_ */

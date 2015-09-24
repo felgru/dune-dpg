@@ -72,6 +72,14 @@ namespace Dune {
   }
 
   //*******************************************************************
+  /**
+ * \brief Writes in the vector dirichletNodes whether a degree of freedom is in the boundary (value 1) or not (value 0).
+ *        The degrees of freedom are relative to the finite element basis feBasis.
+ *        In the transport problem, the result depends on the direction of propagation beta.
+ * \param feBasis        a finite element basis
+ * \param dirichletNodes the vector where we store the output
+ * \param beta           the direction of propagation
+ */
   template <class FEBasis,class Direction>
   void BoundaryTools::getInflowBoundaryMask(
                         const FEBasis& feBasis,

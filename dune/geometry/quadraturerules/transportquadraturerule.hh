@@ -87,12 +87,11 @@ private:
 
 public:
         TransportQuadratureRule(GeometryType t, int order,FieldVector<ct,dim> beta)
-{
-                this->geometry_type = t;
+            : QuadratureRule<ct,dim>(t, order)
+        {
                 assert(this->geometry_type.isCube());
-                this->delivered_order = order;
                 makeRule(beta);
-}
+        }
 };
 }
 

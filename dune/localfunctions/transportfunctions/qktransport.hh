@@ -3,42 +3,42 @@
 
 
 
-#ifndef DUNE_Qk_TESTLOCALFINITEELEMENT_HH
-#define DUNE_Qk_TESTLOCALFINITEELEMENT_HH
+#ifndef DUNE_QK_TRANSPORTLOCALFINITEELEMENT_HH
+#define DUNE_QK_TRANSPORTLOCALFINITEELEMENT_HH
 
 #include <dune/geometry/type.hh>
 
 #include <dune/localfunctions/common/localfiniteelementtraits.hh>
 #include <dune/localfunctions/common/localtoglobaladaptors.hh>
-#include "qktest/qktestlocalbasis.hh"
-#include "qktest/qktestlocalcoefficients.hh"
-#include "qktest/qktestlocalinterpolation.hh"
+#include "qktransport/qktransportlocalbasis.hh"
+#include "qktransport/qktransportlocalcoefficients.hh"
+#include "qktransport/qktransportlocalinterpolation.hh"
 
 
 namespace Dune
 {
 
-/** \brief The local QkTest finite element on cubes
+/** \brief The local QkTransport finite element on cubes
       \tparam D Domain data type
       \tparam R Range data type
       \tparam dim Dimension of the simplex
  */
 template<class D,class R, int dim,int k>
-class QkTestLocalFiniteElement
+class QkTransportLocalFiniteElement
 {
 public:
     /** \todo Please doc me !
      */
-    typedef LocalFiniteElementTraits<QkTestLocalBasis<D,R,dim,k>,QkTestLocalCoefficients<dim,k>,
-            QkTestLocalInterpolation<dim,QkTestLocalBasis<D,R,dim,k>,k >> Traits;
+    typedef LocalFiniteElementTraits<QkTransportLocalBasis<D,R,dim,k>,QkTransportLocalCoefficients<dim,k>,
+            QkTransportLocalInterpolation<dim,QkTransportLocalBasis<D,R,dim,k>,k >> Traits;
 
 
-    QkTestLocalFiniteElement (const QkTestLocalFiniteElement & o) = default;
+    QkTransportLocalFiniteElement (const QkTransportLocalFiniteElement & o) = default;
 
-    QkTestLocalFiniteElement (FieldVector<D,dim> transport): basis(transport),coefficients(transport),interpolation(transport)
+    QkTransportLocalFiniteElement (FieldVector<D,dim> transport): basis(transport),coefficients(transport),interpolation(transport)
     {
         gt.makeCube(dim);
-        static_assert(dim==2, "QkTestLocalFiniteElement is only implemented in 2D.");
+        static_assert(dim==2, "QkTransportLocalFiniteElement is only implemented in 2D.");
     }
 
     /** \todo Please doc me !
@@ -76,15 +76,16 @@ public:
     }
 
 
-    QkTestLocalFiniteElement* clone () const
+    QkTransportLocalFiniteElement* clone () const
     {
-        return new QkTestLocalFiniteElement(*this);
+        return new QkTransportLocalFiniteElement(*this);
     }
 
 private:
-    QkTestLocalBasis<D,R,dim,k> basis;
-    QkTestLocalCoefficients<dim,k> coefficients;
-    QkTestLocalInterpolation<dim,QkTestLocalBasis<D,R,dim,k>,k> interpolation;
+    QkTransportLocalBasis<D,R,dim,k> basis;
+    QkTransportLocalCoefficients<dim,k> coefficients;
+    QkTransportLocalInterpolation<dim,QkTransportLocalBasis<D,R,dim,k>,k>
+                                        interpolation;
     GeometryType gt;
 
 };

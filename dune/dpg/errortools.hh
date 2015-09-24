@@ -14,6 +14,8 @@
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
+#include <dune/dpg/cholesky.hh>
+
 
 namespace Dune {
 
@@ -304,7 +306,7 @@ namespace Dune {
       // We first copy the matrix because it is going to be destroyed by the Cholesky
       Matrix<FieldMatrix<double,1,1> > innerProductMatrixCholesky = innerProductMatrix;
 
-      Functions::Cholesky<Matrix<FieldMatrix<double,1,1> > > cholesky(innerProductMatrixCholesky);
+      Cholesky<Matrix<FieldMatrix<double,1,1> > > cholesky(innerProductMatrixCholesky);
       cholesky.apply(rhsElement); // the solution is overwritten in rhsElement
 
       // computation of the residual

@@ -21,7 +21,7 @@ namespace Dune
   template<class D, class R, int dim, int s, int k>
   struct PQkSubsampledLocalFiniteElementFactory
   {
-    typedef typename FixedOrderLocalBasisTraits<typename QkSubsampledLocalFiniteElement<D,R,dim,1,0>::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename FixedOrderLocalBasisTraits<typename QkSubsampledLocalFiniteElement<D,R,dim,s,0>::Traits::LocalBasisType::Traits,0>::Traits T;
     typedef LocalFiniteElementVirtualInterface<T> FiniteElementType;
     // typedef PkLocalFiniteElement<D,R,dim,s,k> Pk;
     typedef QkSubsampledLocalFiniteElement<D,R,dim,s,k> Qk;
@@ -51,13 +51,14 @@ namespace Dune
    * \tparam D Type used for domain coordinates
    * \tparam R Type used for shape function values
    * \tparam dim Element dimension
+   * \tparam s number of subsamples
    * \tparam k Element order
    */
   template<class D, class R, int dim, int s, int k>
   class PQkSubsampledLocalFiniteElementCache
   {
   protected:
-    typedef typename FixedOrderLocalBasisTraits<typename QkSubsampledLocalFiniteElement<D,R,0,1,dim>::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename FixedOrderLocalBasisTraits<typename QkSubsampledLocalFiniteElement<D,R,dim,s,0>::Traits::LocalBasisType::Traits,0>::Traits T;
     typedef LocalFiniteElementVirtualInterface<T> FE;
     typedef typename std::map<GeometryType,FE*> FEMap;
 

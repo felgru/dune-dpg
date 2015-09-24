@@ -1,5 +1,6 @@
 #install headers
 install(FILES bilinearform.hh
+              cholesky.hh
               innerproduct.hh
               integralterm.hh
               assemble_helper.hh
