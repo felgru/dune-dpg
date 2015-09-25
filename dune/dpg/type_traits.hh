@@ -15,6 +15,9 @@ namespace Functions {
   template<class GV, int s, int k>
   class PQkSubsampledDGBasis;
 
+  template<class GV, int s, int k>
+  class PQkSubsampledNodalBasis;
+
   template<typename GV, int k>
   class PQkTransportBasis;
 
@@ -56,6 +59,10 @@ template<class GV, int s, int k>
 struct is_SubsampledFiniteElement<Functions::PQkSubsampledDGBasis
                                   <GV, s, k> > : std::true_type {};
 
+template<class GV, int s, int k>
+struct is_SubsampledFiniteElement<Functions::PQkSubsampledNodalBasis
+                                  <GV, s, k> > : std::true_type {};
+
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct is_SubsampledFiniteElement<Functions::OptimalTestBasis
                                   <TestspaceCoefficientMatrix, testIndex> >
@@ -69,6 +76,10 @@ struct numberOfSamples : std::integral_constant<int, 1> {};
 
 template<class GV, int s, int k>
 struct numberOfSamples<Functions::PQkSubsampledDGBasis<GV, s, k> >
+                : std::integral_constant<int, s> {};
+
+template<class GV, int s, int k>
+struct numberOfSamples<Functions::PQkSubsampledNodalBasis<GV, s, k> >
                 : std::integral_constant<int, s> {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
