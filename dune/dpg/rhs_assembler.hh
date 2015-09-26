@@ -107,7 +107,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalTotalTestSize =
       fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
-           0, globalOffsetHelper());
+           (size_t)0, globalOffsetHelper());
 
   rhs.resize(globalTotalTestSize);
   rhs = 0;
@@ -182,7 +182,7 @@ applyDirichletBoundary(BlockVector<FieldVector<double,1> >& rhs,
     /* set up global offsets */
     size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
     fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
-         0, globalOffsetHelper());
+         (size_t)0, globalOffsetHelper());
 
     globalOffset = globalTestSpaceOffsets[spaceIndex];
   }

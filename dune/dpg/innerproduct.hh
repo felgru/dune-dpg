@@ -120,7 +120,7 @@ namespace Dune {
 
       /* set up local offsets */
       localTotalTestSize =
-          fold(zip(localTestSpaceOffsets, tlv), 0, offsetHelper());
+          fold(zip(localTestSpaceOffsets, tlv), (size_t)0, offsetHelper());
     }
 
     /**
@@ -173,7 +173,7 @@ getOccupationPattern(MatrixIndexSet& nb) const
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
-       0, globalOffsetHelper());
+       (size_t)0, globalOffsetHelper());
 
   auto testLocalView = as_vector(transform(testSpaces,
                                            localViewFromFEBasis()));

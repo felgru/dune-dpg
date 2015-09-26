@@ -432,7 +432,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   if(isSaddlepoint) {
     globalTotalTestSize =
         fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
-             0, globalOffsetHelper());
+             (size_t)0, globalOffsetHelper());
   } else { /* DPG formulation */
     for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
     {
@@ -710,7 +710,7 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     if(isSaddlepoint) {
       globalTotalTestSize =
           fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
-               0, globalOffsetHelper());
+               (size_t)0, globalOffsetHelper());
     } else { /* DPG formulation */
       for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
       {
@@ -796,7 +796,7 @@ applyWeakBoundaryCondition
 
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
   fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
-       0, globalOffsetHelper());
+       (size_t)0, globalOffsetHelper());
   size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
 
   auto localView = std::get<spaceIndex>(solutionSpaces).localView();
@@ -905,7 +905,7 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
   fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
-       0, globalOffsetHelper());
+       (size_t)0, globalOffsetHelper());
   size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
 
   size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -1031,7 +1031,7 @@ applyMinimization
 
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
   fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
-       0, globalOffsetHelper());
+       (size_t)0, globalOffsetHelper());
   size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
 
   size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -1049,7 +1049,8 @@ applyMinimization
     localIndexSet.bind(*at_c<spaceIndex>(solutionLocalView));
 
     /* set up local offsets */
-    fold(zip(localSolutionSpaceOffsets, solutionLocalView), 0, offsetHelper());
+    fold(zip(localSolutionSpaceOffsets, solutionLocalView),
+         (size_t)0, offsetHelper());
 
     const auto& localFiniteElement = at_c<spaceIndex>(solutionLocalView)->tree().finiteElement();
 

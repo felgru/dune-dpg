@@ -475,13 +475,13 @@ struct offsetHelper
   struct result;
 
   template<class T>
-  struct result<offsetHelper(size_t,T)>
+  struct result<offsetHelper(const size_t&,T)>
   {
     typedef size_t type;
   };
 
   template<class T>
-  size_t operator()(size_t s, const T& t) const
+  size_t operator()(const size_t& s, const T& t) const
   {
     using namespace boost::fusion;
 
@@ -499,13 +499,13 @@ struct globalOffsetHelper
   struct result;
 
   template<class T>
-  struct result<globalOffsetHelper(size_t,T)>
+  struct result<globalOffsetHelper(const size_t&, T)>
   {
     typedef size_t type;
   };
 
   template<class T>
-  size_t operator()(size_t s, const T& t) const
+  size_t operator()(const size_t& s, const T& t) const
   {
     using namespace boost::fusion;
 
