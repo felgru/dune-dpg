@@ -132,10 +132,12 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     using RHSZipHelper = vector<decltype(testLocalView)&,
                                 decltype(localRhs)&,
-                                decltype(localVolumeTerms)&>;
+                                decltype(localVolumeTerms)&,
+                                decltype(testSpaces)&>;
     for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalView,
                                                  localRhs,
-                                                 localVolumeTerms)),
+                                                 localVolumeTerms,
+                                                 testSpaces)),
              getVolumeTermHelper());
 
     auto cpr = fused_procedure<localToGlobalRHSCopier<

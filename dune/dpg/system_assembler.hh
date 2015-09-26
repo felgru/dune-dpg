@@ -84,10 +84,11 @@ struct replaceTestSpace<InnerProduct<TestSpaces, InnerProductTerms>,
 } // end namespace detail
 
 // Compute the source term for a single element
-template <class LocalViewTest, class LocalVolumeTerm>
+template <class LocalViewTest, class LocalVolumeTerm, class TestSpace>
 void getVolumeTerm(const LocalViewTest& localViewTest,
                    BlockVector<FieldVector<double,1> >& localRhs,
-                   LocalVolumeTerm&& localVolumeTerm)
+                   LocalVolumeTerm&& localVolumeTerm,
+                   TestSpace&)
 {
   // Get the grid element from the local FE basis view
   typedef typename LocalViewTest::Element Element;
@@ -102,32 +103,63 @@ void getVolumeTerm(const LocalViewTest& localViewTest,
   localRhs.resize(localFiniteElementTest.localBasis().size());
   localRhs = 0;
 
-  // A quadrature rule
   /* TODO: Quadrature order is only good enough for a constant localVolumeTerm. */
   int quadratureOrder = localFiniteElementTest.localBasis().order();
-  const QuadratureRule<double, dim>& quad =
-      QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
 
+  constexpr bool useSubsampledQuadrature =
+      is_SubsampledFiniteElement<TestSpace>::value;
 
-  for ( size_t pt=0; pt < quad.size(); pt++ ) {
+  if(useSubsampledQuadrature) {
+    constexpr int s = numberOfSamples<TestSpace>::value;
 
-    // Position of the current quadrature point in the reference element
-    const FieldVector<double,dim>& quadPos = quad[pt].position();
+    const QuadratureRule<double, dim>& quadSection =
+          QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
+    const SubsampledQuadratureRule<double, s, dim> quad(quadSection);
 
-    // The multiplicative factor in the integral transformation formula
-    const double integrationElement =
-            element.geometry().integrationElement(quadPos);
+    for ( size_t pt=0; pt < quad.size(); pt++ ) {
 
-    double functionValue = localVolumeTerm(quadPos);
+      // Position of the current quadrature point in the reference element
+      const FieldVector<double,dim>& quadPos = quad[pt].position();
 
-    std::vector<FieldVector<double,1> > shapeFunctionValues;
-    localFiniteElementTest.localBasis().evaluateFunction(quadPos,
-                                                         shapeFunctionValues);
+      // The multiplicative factor in the integral transformation formula
+      const double integrationElement =
+              element.geometry().integrationElement(quadPos);
 
-    for (size_t i=0; i<localRhs.size(); i++)
-      localRhs[i] += shapeFunctionValues[i] * functionValue
-                   * quad[pt].weight() * integrationElement;
+      double functionValue = localVolumeTerm(quadPos);
 
+      std::vector<FieldVector<double,1> > shapeFunctionValues;
+      localFiniteElementTest.localBasis().evaluateFunction(quadPos,
+                                                           shapeFunctionValues);
+
+      for (size_t i=0; i<localRhs.size(); i++)
+        localRhs[i] += shapeFunctionValues[i] * functionValue
+                     * quad[pt].weight() * integrationElement;
+
+    }
+  } else {
+    const QuadratureRule<double, dim>& quad =
+        QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
+
+    for ( size_t pt=0; pt < quad.size(); pt++ ) {
+
+      // Position of the current quadrature point in the reference element
+      const FieldVector<double,dim>& quadPos = quad[pt].position();
+
+      // The multiplicative factor in the integral transformation formula
+      const double integrationElement =
+              element.geometry().integrationElement(quadPos);
+
+      double functionValue = localVolumeTerm(quadPos);
+
+      std::vector<FieldVector<double,1> > shapeFunctionValues;
+      localFiniteElementTest.localBasis().evaluateFunction(quadPos,
+                                                           shapeFunctionValues);
+
+      for (size_t i=0; i<localRhs.size(); i++)
+        localRhs[i] += shapeFunctionValues[i] * functionValue
+                     * quad[pt].weight() * integrationElement;
+
+    }
   }
 
 }
@@ -140,7 +172,7 @@ struct getVolumeTermHelper
   {
     using namespace boost::fusion;
 
-    getVolumeTerm(*(at_c<0>(seq)), at_c<1>(seq), at_c<2>(seq));
+    getVolumeTerm(*(at_c<0>(seq)), at_c<1>(seq), at_c<2>(seq), at_c<3>(seq));
   }
 };
 } // end namespace detail
@@ -575,10 +607,12 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     using RHSZipHelper = vector<decltype(testLocalView)&,
                                 decltype(localRhs)&,
-                                decltype(localVolumeTerms)&>;
+                                decltype(localVolumeTerms)&,
+                                decltype(testSpaces)&>;
     for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalView,
                                                  localRhs,
-                                                 localVolumeTerms)),
+                                                 localVolumeTerms,
+                                                 testSpaces)),
              getVolumeTermHelper());
 
     /* TODO: This will break with more than 1 test space having a rhs! */
