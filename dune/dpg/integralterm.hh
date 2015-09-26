@@ -477,7 +477,7 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
         using Slhs = numberOfSamples<LhsSpace>;
         using Srhs = numberOfSamples<RhsSpace>;
         constexpr int s =
-            std::conditional<Slhs::value < Srhs::value, Slhs, Srhs>::type::value;
+            std::conditional<Slhs::value < Srhs::value, Srhs, Slhs>::type::value;
 
         const QuadratureRule<double, dim-1>& quadSection =
               QuadratureRules<double, dim-1>::rule(intersection.type(),
