@@ -57,7 +57,9 @@ namespace Dune
               prod *= (k*x-l)/(i-l);
           result += prod;
         }
-      return result;
+      // We need to scale by s to counter the scaling of our lagrange
+      // basis to 1/s of the unit interval.
+      return s*result;
     }
 
     // Return i as a d-digit number in the (k+1)-nary system
