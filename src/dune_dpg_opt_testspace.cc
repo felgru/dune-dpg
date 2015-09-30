@@ -128,8 +128,8 @@ int main(int argc, char** argv)
   TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
 
   typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix> FEBasisOptimalTest;              // v
-  FEBasisOptimalTest feBasisTest(testspaceCoefficientMatrix);
-  auto optimalTestSpaces = make_tuple(feBasisTest);
+  auto optimalTestSpaces
+          = make_tuple(FEBasisOptimalTest(testspaceCoefficientMatrix));
 
   auto systemAssembler = make_SystemAssembler(optimalTestSpaces, solutionSpaces,
           bilinearForm, innerProduct, DPGFormulation());
