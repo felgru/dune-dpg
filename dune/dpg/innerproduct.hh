@@ -111,6 +111,7 @@ namespace Dune {
      */
     void bind(const TestLocalView& tlv)
     {
+      // TODO: Can we make testLocalView a const reference?
       testLocalView = const_cast<TestLocalView*>(std::addressof(tlv));
 
       using namespace boost::fusion;
@@ -167,17 +168,14 @@ getOccupationPattern(MatrixIndexSet& nb) const
   using namespace boost::fusion;
   using namespace Dune::detail;
 
-  // Total number of degrees of freedom
-  auto testBasisIndexSet = as_vector(transform(testSpaces, getIndexSet()));
-
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-  fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
+  fold(zip(globalTestSpaceOffsets, testSpaces),
        (size_t)0, globalOffsetHelper());
 
   auto testLocalView = as_vector(transform(testSpaces,
-                                           localViewFromFEBasis()));
-  auto testLocalIndexSet = as_vector(transform(testBasisIndexSet,
+                                           getLocalView()));
+  auto testLocalIndexSet = as_vector(transform(testSpaces,
                                                getLocalIndexSet()));
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
@@ -218,10 +216,6 @@ getOccupationPattern(MatrixIndexSet& nb) const
     for_each(indexPairs,
         std::ref(gOPH));
   }
-
-  /* free memory handled by raw pointers */
-  for_each(testLocalIndexSet,     default_deleter());
-  for_each(testLocalView,         default_deleter());
 }
 
 } // end namespace Dune

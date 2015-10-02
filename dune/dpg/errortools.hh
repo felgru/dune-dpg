@@ -244,14 +244,17 @@ namespace Dune {
     SolutionLocalView localViewSolution = as_vector(transform(bilinearForm.getSolutionSpaces(),getLocalView()));
     TestLocalView localViewTest = as_vector(transform(bilinearForm.getTestSpaces(),getLocalView()));
 
-    //We get the index set of the test spaces: variable testLocalIndexSet
-    auto testBasisIndexSet = as_vector(transform(bilinearForm.getTestSpaces(), getIndexSet()));
-    auto testLocalIndexSet = as_vector(transform(testBasisIndexSet,getLocalIndexSet()));
-    for_each(zip(testLocalIndexSet, localViewTest),make_fused_procedure(bindLocalIndexSet()));
-    //We get the index set of the solution spaces: variable solutionLocalIndexSet
-    auto solutionBasisIndexSet = as_vector(transform(bilinearForm.getSolutionSpaces(), getIndexSet()));
-    auto solutionLocalIndexSet = as_vector(transform(solutionBasisIndexSet,getLocalIndexSet()));
-    for_each(zip(solutionLocalIndexSet, localViewSolution),make_fused_procedure(bindLocalIndexSet()));
+    // We get the local index sets of the test spaces
+    auto testLocalIndexSet = as_vector(transform(bilinearForm.getTestSpaces(),
+                                                 getLocalIndexSet()));
+    for_each(zip(testLocalIndexSet, localViewTest),
+             make_fused_procedure(bindLocalIndexSet()));
+    // We get the local index sets of the solution spaces
+    auto solutionLocalIndexSet
+            = as_vector(transform(bilinearForm.getSolutionSpaces(),
+                                  getLocalIndexSet()));
+    for_each(zip(solutionLocalIndexSet, localViewSolution),
+             make_fused_procedure(bindLocalIndexSet()));
 
     // Variable where we compute the residual
     double res = 0.;
@@ -263,30 +266,30 @@ namespace Dune {
 
       // We take the coefficients of our solution (u,theta) that correspond to the current element e. They are stored in uLocal and thetaLocal.
       // dof of the finite element inside the element
-      size_t dofElementU = boost::fusion::at_c<0>(localViewSolution)->size();
-      size_t dofElementTheta = boost::fusion::at_c<1>(localViewSolution)->size();
+      size_t dofElementU = boost::fusion::at_c<0>(localViewSolution).size();
+      size_t dofElementTheta = boost::fusion::at_c<1>(localViewSolution).size();
 
       // We extract the solution on the current element
       BlockVector<FieldVector<double,1> > solutionElement(dofElementU+dofElementTheta);
       // We take the coefficients of uSolution that correspond to the current element e. They are stored in the second part of solutionElement.
       for (size_t i=0; i<dofElementU; i++)
       {
-        solutionElement[i] = uSolution[ at_c<0>(solutionLocalIndexSet)->index(i)[0] ];
+        solutionElement[i] = uSolution[ at_c<0>(solutionLocalIndexSet).index(i)[0] ];
       }
       // We take the coefficients of thetaSolution that correspond to the current element e. They are stored in the first part of solutionElement.
       for (size_t i=0; i<dofElementTheta; i++)
       {
-        solutionElement[i+dofElementU] = thetaSolution[ at_c<1>(solutionLocalIndexSet)->index(i)[0] ];
+        solutionElement[i+dofElementU] = thetaSolution[ at_c<1>(solutionLocalIndexSet).index(i)[0] ];
       }
 
       // We get rhsLocal
       // dof of the finite element test space inside the element
-      size_t dofElementTest = boost::fusion::at_c<0>(localViewTest)->size();
+      size_t dofElementTest = boost::fusion::at_c<0>(localViewTest).size();
       // We extract the rhs of the current element
       BlockVector<FieldVector<double,1> > rhsElement(dofElementTest);
       for (size_t i=0; i<dofElementTest; i++)
       {
-        rhsElement[i] = rhs[ at_c<0>(testLocalIndexSet)->index(i)[0] ];
+        rhsElement[i] = rhs[ at_c<0>(testLocalIndexSet).index(i)[0] ];
       }
 
       // We grab the inner product matrix in the innerProductMatrix variable (IP)
@@ -315,12 +318,6 @@ namespace Dune {
       res += rhsElement * tmpVector; // remark: the operation * in vectors of Dune computes the scalar product of two vectors
 
    }
-
-  /* free memory handled by raw pointers */
-  for_each(testLocalIndexSet,     default_deleter());
-  for_each(solutionLocalIndexSet, default_deleter());
-  for_each(localViewTest,         default_deleter());
-  for_each(localViewSolution,     default_deleter());
 
    return std::sqrt(res);
 

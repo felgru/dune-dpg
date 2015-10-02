@@ -158,7 +158,7 @@ namespace Dune {
       }
       localTotalTestSize =
           localTestSpaceOffsets[TestSize::value-1]
-          + at_c<TestSize::value-1>(tlv)->size();
+          + at_c<TestSize::value-1>(tlv).size();
 
       localTotalSolutionSize =
           fold(zip(localSolutionSpaceOffsets, slv),
@@ -267,17 +267,12 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
            , SaddlepointFormulation
         >::value;
 
-  // Total number of degrees of freedom
-  auto testBasisIndexSet = as_vector(transform(testSpaces, getIndexSet()));
-  auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
-                                                   getIndexSet()));
-
 
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
   if(isSaddlepoint) {
-    fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
+    fold(zip(globalTestSpaceOffsets, testSpaces),
          testShift, globalOffsetHelper());
   } else { /* DPG formulation */
     for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
@@ -285,18 +280,18 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
       globalTestSpaceOffsets[i] = 0;
     }
   }
-  fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
+  fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
        solutionShift, globalOffsetHelper());
 
   // A view on the FE basis on a single element
   auto solutionLocalView = as_vector(transform(solutionSpaces,
-                                               localViewFromFEBasis()));
+                                               getLocalView()));
   auto testLocalView     = as_vector(transform(testSpaces,
-                                               localViewFromFEBasis()));
+                                               getLocalView()));
 
-  auto solutionLocalIndexSet = as_vector(transform(solutionBasisIndexSet,
+  auto solutionLocalIndexSet = as_vector(transform(solutionSpaces,
                                                    getLocalIndexSet()));
-  auto testLocalIndexSet     = as_vector(transform(testBasisIndexSet,
+  auto testLocalIndexSet     = as_vector(transform(testSpaces,
                                                    getLocalIndexSet()));
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
@@ -340,12 +335,6 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
     for_each(indexPairs,
         std::ref(gOPH));
   }
-
-  /* free memory handled by raw pointers */
-  for_each(testLocalIndexSet,     default_deleter());
-  for_each(solutionLocalIndexSet, default_deleter());
-  for_each(testLocalView,         default_deleter());
-  for_each(solutionLocalView,     default_deleter());
 }
 
 } // end namespace Dune

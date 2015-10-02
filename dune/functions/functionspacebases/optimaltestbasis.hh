@@ -70,15 +70,15 @@ struct computeIndex
     {
       if (!(*index_found))
       {
-        if (localIndexSet->size()>*index_result)
+        if (localIndexSet.size()>*index_result)
         {
           *index_found=true;
-          *index_result=(localIndexSet->index(*index_result))[0];
+          *index_result=(localIndexSet.index(*index_result))[0];
         }
         else
         {
           *space_index+=1;
-          *index_result-=localIndexSet->size();
+          *index_result-=localIndexSet.size();
         }
       }
     }
@@ -184,30 +184,6 @@ class TestspaceCoefficientMatrix
                                          detail::getLocalView()))),
     geometryBufferIsSet_(false)
   {}
-
-  /* TODO: Can probably be replaced by default move ctor with
-   *       boost::fusion 1.55. */
-  TestspaceCoefficientMatrix(TestspaceCoefficientMatrix&& coeffMatrix)
-  : bilinearForm_(coeffMatrix.bilinearForm_),
-    innerProduct_(coeffMatrix.innerProduct_),
-    gridView_(coeffMatrix.gridView_),
-    geometryBuffer_(std::move(coeffMatrix.geometryBuffer_)),
-    geometryBufferIsSet_(coeffMatrix.geometryBufferIsSet_),
-    coefficientMatrix_(std::move(coeffMatrix.coefficientMatrix_))
-  {
-    using namespace boost::fusion;
-
-    copy(coeffMatrix.localViewSolution_, localViewSolution_);
-    copy(coeffMatrix.localViewTest_, localViewTest_);
-    for_each(coeffMatrix.localViewSolution_, detail::setToNullptr());
-    for_each(coeffMatrix.localViewTest_, detail::setToNullptr());
-  }
-
-  ~TestspaceCoefficientMatrix()
-  {
-    for_each(localViewTest_,     detail::default_deleter());
-    for_each(localViewSolution_, detail::default_deleter());
-  }
 
   typedef decltype(std::declval<typename GridView::template Codim<0>::Entity>().geometry()) Geometry;
   typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
@@ -324,23 +300,10 @@ public:
   using EnrichedTestSpaces = typename TestspaceCoefficientMatrix::TestSpaces;
   using SolutionSpaces = typename TestspaceCoefficientMatrix::SolutionSpaces;
 
-private:
-  using SolutionBasisIndexSet =
-          typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<SolutionSpaces,
-                                                          detail::getIndexSet
-                                                         >::type
-             >::type;
 
-public:
   /** \brief Constructor for a given test coefficient matrix */
   OptimalTestBasisNodeFactory(TestspaceCoefficientMatrix& testCoeffMat) :
-    testspaceCoefficientMatrix_(testCoeffMat),
-    // TODO: maybe move initialization of solutionBasisIndexSet_ to initializeIndices()
-    solutionBasisIndexSet_(boost::fusion::as_vector(
-              boost::fusion::transform(testCoeffMat.bilinearForm()
-                                              .getSolutionSpaces(),
-                                       detail::getIndexSet())))
+    testspaceCoefficientMatrix_(testCoeffMat)
   {}
 
 
@@ -349,12 +312,9 @@ public:
     using namespace boost::fusion;
     using namespace Dune::detail;
 
-    //solutionBasisIndexSet_(as_vector(transform(
-    //          testspaceCoefficientMatrix_.bilinearForm().getSolutionSpaces(),
-    //          getIndexSet())));
-
     /* set up global offsets */
-    fold(zip(globalOffsets, solutionBasisIndexSet_),
+    fold(zip(globalOffsets,
+             testspaceCoefficientMatrix_.bilinearForm().getSolutionSpaces()),
          (size_t)0, globalOffsetHelper());
   }
 
@@ -384,7 +344,7 @@ public:
 
     return fold(transform(testspaceCoefficientMatrix_.bilinearForm()
                               .getSolutionSpaces(),
-                          getIndexSetSize()),
+                          getSize()),
                 0, std::plus<std::size_t>());
   }
 
@@ -416,7 +376,6 @@ public:
 //protected:
   // TODO: store testspaceCoefficientMatrix_ by reference or by value?
   TestspaceCoefficientMatrix& testspaceCoefficientMatrix_;
-  SolutionBasisIndexSet solutionBasisIndexSet_;
 
   size_t globalOffsets[std::tuple_size<SolutionSpaces>::value];
 
@@ -496,30 +455,6 @@ public:
                                          detail::getLocalView())))
   {}
 
-  /* TODO: Can probably be replaced by default move ctor with
-   *       boost::fusion 1.55. */
-  OptimalTestBasisNode(OptimalTestBasisNode&& node)
-  : Interface(std::move(node)),
-    size_(std::move(node.size_)),
-    testspaceCoefficientMatrix(node.testspaceCoefficientMatrix),
-    finiteElement_(std::move(node.finiteElement_)),
-    enrichedTestspace_(std::move(node.enrichedTestspace_)),
-    element_(std::move(node.element_))
-  {
-    using namespace boost::fusion;
-
-    copy(node.localViewSolution_, localViewSolution_);
-    copy(node.localViewTest, localViewTest);
-    for_each(node.localViewSolution_, detail::setToNullptr());
-    for_each(node.localViewTest, detail::setToNullptr());
-  }
-
-  ~OptimalTestBasisNode()
-  {
-    for_each(localViewTest,      detail::default_deleter());
-    for_each(localViewSolution_, detail::default_deleter());
-  }
-
   //! Return current element, throw if unbound
   const Element& element() const DUNE_FINAL
   {
@@ -555,14 +490,14 @@ public:
     enrichedTestspace_ =
         const_cast<typename std::tuple_element<testIndex,EnrichedTestspaces>
                    ::type::LocalView::Tree::FiniteElement*>
-                  (&(at_c<testIndex>(localViewTest)->tree().finiteElement()));
+                  (&(at_c<testIndex>(localViewTest).tree().finiteElement()));
     for_each(localViewSolution_, applyBind<decltype(e)>(e));
 
     testspaceCoefficientMatrix.bind(e);
 
     // coefficientMatrix = testspaceCoefficientMatrix.coefficientMatrix();
 
-    size_t k = at_c<testIndex>(localViewTest)->tree().finiteElement().size();
+    size_t k = at_c<testIndex>(localViewTest).tree().finiteElement().size();
     size_t localTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
     fold(zip(localTestSpaceOffsets, localViewTest), (size_t)0, offsetHelper());
     size_t offset = at_c<testIndex>(localTestSpaceOffsets);
@@ -612,43 +547,25 @@ public:
 
   typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
   typedef typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<SolutionSpaces,
-                                                          detail::getIndexSet
-                                                         >::type
-             >::type SolutionBasisIndexSet;
-  typedef typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<
-                       SolutionBasisIndexSet,
+                       SolutionSpaces,
                        detail::getLocalIndexSet>::type
              >::type SolutionLocalIndexSet;
 
   OptimalTestBasisNodeIndexSet(const NodeFactory& nodeFactory) :
     nodeFactory_(&nodeFactory),
     solutionLocalIndexSet_(boost::fusion::as_vector(
-              transform(nodeFactory.solutionBasisIndexSet_,
-                        detail::getLocalIndexSet())))
+              boost::fusion::transform(
+                      nodeFactory.testspaceCoefficientMatrix_
+                          .bilinearForm().getSolutionSpaces(),
+                      detail::getLocalIndexSet())))
   {}
 
   constexpr OptimalTestBasisNodeIndexSet(const OptimalTestBasisNodeIndexSet&)
           = default;
 
-  /* TODO: Can probably be replaced by default move ctor with
-   *       boost::fusion 1.55. */
   OptimalTestBasisNodeIndexSet(OptimalTestBasisNodeIndexSet&& indexSet)
-  : node_(std::move(indexSet.node_)),
-    nodeFactory_(std::move(indexSet.nodeFactory_))
-  {
-    using namespace boost::fusion;
-
-    copy(indexSet.solutionLocalIndexSet_, solutionLocalIndexSet_);
-    for_each(indexSet.solutionLocalIndexSet_, detail::setToNullptr());
-  }
-
-  ~OptimalTestBasisNodeIndexSet()
-  {
-    using namespace boost::fusion;
-    for_each(solutionLocalIndexSet_, detail::default_deleter());
-  }
+          = default;
 
   /** \brief Bind the view to a grid element
    *

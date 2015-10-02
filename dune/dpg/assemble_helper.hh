@@ -15,24 +15,6 @@ namespace Dune {
 
 namespace detail {
 
-struct getIndexSet
-{
-  template<class T>
-  struct result;
-
-  template<class T>
-  struct result<getIndexSet(T)>
-  {
-    typedef typename T::IndexSet type;
-  };
-
-  template<class T>
-  typename T::IndexSet operator()(T t) const
-  {
-    return t.indexSet();
-  }
-};
-
 struct getLocalIndexSet
 {
   template<class T>
@@ -41,17 +23,13 @@ struct getLocalIndexSet
   template<class T>
   struct result<getLocalIndexSet(T)>
   {
-    typedef typename std::add_pointer<typename T::LocalIndexSet>::type type;
+    typedef typename T::LocalIndexSet type;
   };
 
   template<class T>
   typename result<getLocalIndexSet(T)>::type operator()(const T& t) const
   {
-    const typename T::LocalIndexSet& lis =
-        const_cast<T&>(t).localIndexSet();
-    typename T::LocalIndexSet& result =
-        const_cast<typename T::LocalIndexSet&>(lis);
-    return new typename T::LocalIndexSet(std::move(result));
+    return t.localIndexSet();
   }
 };
 
@@ -63,37 +41,13 @@ struct getLocalView
   template<class T>
   struct result<getLocalView(T)>
   {
-    typedef typename T::LocalView* type;
+    typedef typename T::LocalView type;
   };
 
   template<class T>
   typename result<getLocalView(T)>::type operator()(const T& t) const
   {
-    const typename T::LocalView& lv = const_cast<T&>(t).localView();
-    typename T::LocalView& result = const_cast<typename T::LocalView&>(lv);
-    return new typename T::LocalView(std::move(result));
-  }
-};
-
-struct localViewFromFEBasis
-{
-  template<class R>
-  struct result;
-
-  template<class B>
-  struct result<localViewFromFEBasis(B)>
-  {
-    typedef typename B::LocalView* type;
-  };
-
-  template<class B>
-  typename result<localViewFromFEBasis(B)>::type
-  operator()(const B& b) const
-  {
-    const typename B::LocalView& lv = b.localView();
-    typename B::LocalView& result =
-        const_cast<typename B::LocalView&>(lv);
-    return new typename B::LocalView(std::move(result));
+    return t.localView();
   }
 };
 
@@ -146,34 +100,16 @@ struct getSize
   }
 };
 
-struct default_deleter
-{
-  template<class T>
-  void operator()(T* t) const
-  {
-    delete t;
-  }
-};
-
 template<class E>
 struct applyBind
 {
   applyBind(const E& e) : e(e) {}
 
-  /* TODO: Is the T& more expensive than T for pointer types T? */
   template<class T>
   void operator()(T& t) const
   {
-    bind_impl(t, std::is_pointer<T>());
+    t.bind(e);
   }
-
-  template<class T>
-  void bind_impl(T t, std::true_type) const
-  { t->bind(e); }
-
-  template<class T>
-  void bind_impl(T& t, std::false_type) const
-  { t.bind(e); }
 
 private:
   const E& e;
@@ -182,12 +118,12 @@ private:
 struct bindLocalIndexSet
 {
   template<class LIS, class LV>
-  void operator()(const LIS& lis, const LV* lv) const
+  void operator()(const LIS& lis, const LV& lv) const
   {
     /* TODO: I feel uncomfortable casting away the const, but
      * I do not know how else to work around the fact that many
      * boost::fusion functions only take const sequences. */
-    const_cast<LIS&>(lis)->bind(*lv);
+    const_cast<LIS&>(lis).bind(lv);
   }
 };
 
@@ -225,7 +161,7 @@ struct getLocalMatrixHelper
   {}
 
   /**
-   * \tparam Term either a BilinearTerm or an InnerProductTerm
+   * \tparam Term an IntegralTerm
    */
   template <class solutionSpaceIndex,
             class testSpaceIndex,
@@ -327,13 +263,13 @@ struct getOccupationPatternHelper
     size_t globalSolutionSpaceOffset =
         at_c<solutionSpaceIndex::value>(globalSolutionSpaceOffsets);
 
-    for (size_t i=0, i_max=testLV->size(); i<i_max; i++) {
+    for (size_t i=0, i_max=testLV.size(); i<i_max; i++) {
 
-      auto iIdx = testLIS->index(i)[0];
+      auto iIdx = testLIS.index(i)[0];
 
-      for (size_t j=0, j_max=solutionLV->size(); j<j_max; j++) {
+      for (size_t j=0, j_max=solutionLV.size(); j<j_max; j++) {
 
-        auto jIdx = solutionLIS->index(j)[0];
+        auto jIdx = solutionLIS.index(j)[0];
 
         // Add a nonzero entry to the matrix
         nb.add(iIdx+globalTestSpaceOffset,
@@ -370,24 +306,24 @@ struct localToGlobalCopier
   template<class TestLocalView, class SolutionLocalView,
            class TestLocalIndexSet, class SolutionLocalIndexSet>
   void operator()
-         (TestLocalView const * testLocalView,
-          TestLocalIndexSet const * testLocalIndexSet,
+         (TestLocalView const & testLocalView,
+          TestLocalIndexSet const & testLocalIndexSet,
           size_t testLocalOffset, size_t testGlobalOffset,
-          SolutionLocalView const * solutionLocalView,
-          SolutionLocalIndexSet const * solutionLocalIndexSet,
+          SolutionLocalView const & solutionLocalView,
+          SolutionLocalIndexSet const & solutionLocalIndexSet,
           size_t solutionLocalOffset, size_t solutionGlobalOffset
          )
   {
-    const size_t nTest(testLocalView->size());
-    const size_t nSolution(solutionLocalView->size());
+    const size_t nTest(testLocalView.size());
+    const size_t nSolution(solutionLocalView.size());
 
     for (size_t i=0; i<nTest; i++)
     {
-      auto row = testLocalIndexSet->index(i)[0]+testGlobalOffset;
+      auto row = testLocalIndexSet.index(i)[0]+testGlobalOffset;
 
       for (size_t j=0; j<nSolution; j++)
       {
-        auto col = solutionLocalIndexSet->index(j)[0]
+        auto col = solutionLocalIndexSet.index(j)[0]
                     +solutionGlobalOffset;
         matrix[row][col] += elementMatrix[i+testLocalOffset]
                                          [j+solutionLocalOffset];
@@ -453,13 +389,13 @@ struct localToGlobalRHSCopier
   template<class LocalVector, class TestLocalIndexSet>
   void operator()
          (LocalVector& localRhs,
-          TestLocalIndexSet const * testLocalIndexSet,
+          TestLocalIndexSet const & testLocalIndexSet,
           size_t testGlobalOffset
          )
   {
     for (size_t i=0, i_max=localRhs.size(); i<i_max; i++) {
       // The global index of the i-th vertex of the element 'it'
-      auto row = testLocalIndexSet->index(i)[0]
+      auto row = testLocalIndexSet.index(i)[0]
                  + testGlobalOffset;
       rhs[row] += localRhs[i];
     }
@@ -475,7 +411,7 @@ struct offsetHelper
   struct result;
 
   template<class T>
-  struct result<offsetHelper(const size_t&,T)>
+  struct result<offsetHelper(const size_t&, T)>
   {
     typedef size_t type;
   };
@@ -486,10 +422,11 @@ struct offsetHelper
     using namespace boost::fusion;
 
     /* offset and localView are assumed to be reference_wrappers */
+    // TODO: böser const_cast!
     size_t & offset = const_cast<size_t&>(at_c<0>(t));
     auto const & localView = at_c<1>(t);
     offset = s;
-    return s + localView->size();
+    return s + localView.size();
   }
 };
 
@@ -510,31 +447,13 @@ struct globalOffsetHelper
     using namespace boost::fusion;
 
     /* offset and localView are assumed to be reference_wrappers */
+    // TODO: böser const_cast!
     size_t & offset = const_cast<size_t&>(at_c<0>(t));
-    auto const & indexSet = at_c<1>(t);
+    auto const & space = at_c<1>(t);
     offset = s;
-    return s + indexSet.size();
+    return s + space.size();
   }
 };
-
-
-struct getIndexSetSize
-{
-    template<class T>
-    struct result;
-
-    template<class T>
-    struct result<getIndexSetSize(T)>
-    {
-        typedef std::size_t type;
-    };
-    template<class T>
-    std::size_t operator()(T t) const
-    {
-        return t.indexSet().size();
-    }
-};
-
 
 
 struct getMaxNodeSize
@@ -561,7 +480,7 @@ struct applyUnbind
     template<class T>
     void operator()(T t) const
     {
-        t->unbind();
+        t.unbind();
     }
 };
 
@@ -574,23 +493,13 @@ struct getLocalFiniteElement
     template<class T>
     struct result<getLocalFiniteElement(T)>
     {
-        typedef const typename std::remove_pointer<T>::type::Tree::FiniteElement& type;
+        typedef const typename T::Tree::FiniteElement& type;
     };
 
     template<class T>
     typename result<getLocalFiniteElement(T)>::type operator()(const T& t) const
     {
-        return t->tree().finiteElement();
-    }
-};
-
-
-struct setToNullptr
-{
-    template<class T>
-    void operator()(T* const & t) const
-    {
-        const_cast<T*&>(t) = nullptr;
+        return t.tree().finiteElement();
     }
 };
 

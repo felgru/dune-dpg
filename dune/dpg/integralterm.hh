@@ -377,14 +377,14 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 
   // Get the grid element from the local FE basis view
   using Element = typename std::remove_pointer<LhsLocalView>::type::Element;
-  const Element& element = lhsLocalView->element();
+  const Element& element = lhsLocalView.element();
 
   const int dim = Element::dimension;
   auto geometry = element.geometry();
 
   // Get set of shape functions for this element
-  const auto& lhsLocalFiniteElement = lhsLocalView->tree().finiteElement();
-  const auto& rhsLocalFiniteElement = rhsLocalView->tree().finiteElement();
+  const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
+  const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
 
   const int nLhs(lhsLocalFiniteElement.localBasis().size());
   const int nRhs(rhsLocalFiniteElement.localBasis().size());
@@ -468,7 +468,7 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
   // Assemble boundary terms
   ////////////////////////////
 
-    const auto& gridView = lhsLocalView->globalBasis().gridView();
+    const auto& gridView = lhsLocalView.globalBasis().gridView();
 
     for (auto&& intersection : intersections(gridView, element))
     {
@@ -542,8 +542,8 @@ detail::getLocalMatrix_InteriorImpl(const LhsLocalView& lhsLocalView,
   auto geometry = element.geometry();
 
   // Get set of shape functions for this element
-  const auto& lhsLocalFiniteElement = lhsLocalView->tree().finiteElement();
-  const auto& rhsLocalFiniteElement = rhsLocalView->tree().finiteElement();
+  const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
+  const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
 
   const int nLhs(lhsLocalFiniteElement.localBasis().size());
   const int nRhs(rhsLocalFiniteElement.localBasis().size());
@@ -627,8 +627,8 @@ detail::getLocalMatrix_FaceImpl(const LhsLocalView& lhsLocalView,
   const int dim = Intersection::dimension;
 
   // Get set of shape functions for this element
-  const auto& lhsLocalFiniteElement = lhsLocalView->tree().finiteElement();
-  const auto& rhsLocalFiniteElement = rhsLocalView->tree().finiteElement();
+  const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
+  const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
 
   const int nLhs(lhsLocalFiniteElement.localBasis().size());
   const int nRhs(rhsLocalFiniteElement.localBasis().size());
