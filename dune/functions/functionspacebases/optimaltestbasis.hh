@@ -386,7 +386,8 @@ public:
 
     /* set up global offsets*/
     size_t globalOffsets[std::tuple_size<SolutionSpaces>::value];
-    fold(zip(globalOffsets, solutionBasisIndexSet_), 0, globalOffsetHelper());
+    fold(zip(globalOffsets, solutionBasisIndexSet_),
+         (size_t)0, globalOffsetHelper());
 
     size_t space_index=0;
     size_t index_result=i;
@@ -806,7 +807,7 @@ protected:
 
     size_t k = at_c<testIndex>(localViewTest)->tree().finiteElement().size();
     size_t localTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
-    fold(zip(localTestSpaceOffsets, localViewTest), 0, offsetHelper());
+    fold(zip(localTestSpaceOffsets, localViewTest), (size_t)0, offsetHelper());
     size_t offset = at_c<testIndex>(localTestSpaceOffsets);
 
     finiteElement_ = Dune::Std::make_unique<FiniteElement>

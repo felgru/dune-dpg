@@ -149,7 +149,7 @@ namespace Dune {
 
       /* set up local offsets */
       if(isSaddlepoint) {
-        fold(zip(localTestSpaceOffsets, tlv), 0, offsetHelper());
+        fold(zip(localTestSpaceOffsets, tlv), (size_t)0, offsetHelper());
       } else { /* DPG formulation */
         for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
         {
@@ -162,7 +162,7 @@ namespace Dune {
 
       localTotalSolutionSize =
           fold(zip(localSolutionSpaceOffsets, slv),
-               0, offsetHelper());
+               (size_t)0, offsetHelper());
     }
 
     /**
