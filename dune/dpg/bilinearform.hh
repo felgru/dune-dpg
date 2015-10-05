@@ -69,9 +69,9 @@ namespace Dune {
      *
      * \note For your convenience, use make_BilinearForm() instead.
      */
-    constexpr BilinearForm (TestSpaces     testSpaces,
-                            SolutionSpaces solutionSpaces,
-                            BilinearTerms  terms)
+    constexpr BilinearForm (const TestSpaces&     testSpaces,
+                            const SolutionSpaces& solutionSpaces,
+                            const BilinearTerms&  terms)
                : testSpaces(testSpaces),
                  solutionSpaces(solutionSpaces),
                  terms(terms),
