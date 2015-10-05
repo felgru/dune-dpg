@@ -60,8 +60,8 @@ namespace Dune {
      *
      * \note For your convenience, use make_InnerProduct() instead.
      */
-    constexpr InnerProduct (TestSpaces        testSpaces,
-                            InnerProductTerms terms)
+    constexpr InnerProduct (const TestSpaces&        testSpaces,
+                            const InnerProductTerms& terms)
                : testSpaces(testSpaces),
                  terms(terms),
                  testLocalView(nullptr)
