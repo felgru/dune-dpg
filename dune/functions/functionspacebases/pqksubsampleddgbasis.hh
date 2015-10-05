@@ -368,6 +368,35 @@ protected:
 
 
 
+namespace BasisBuilder {
+
+namespace Imp {
+
+template<std::size_t s, std::size_t k>
+struct PQkSubsampledDGNodeFactoryBuilder
+{
+  static const std::size_t requiredMultiIndexSize=1;
+
+  template<class MultiIndex, class GridView, class size_type=std::size_t>
+  auto build(const GridView& gridView)
+    -> PQkSubsampledDGNodeFactory<GridView, s, k, MultiIndex, size_type>
+  {
+    return {gridView};
+  }
+};
+
+} // end namespace BasisBuilder::Imp
+
+template<std::size_t s, std::size_t k>
+Imp::PQkSubsampledDGNodeFactoryBuilder<s, k> pqSubsampledDG()
+{
+  return{};
+}
+
+} // end namespace BasisBuilder
+
+
+
 // *****************************************************************************
 // This is the actual global basis implementation based on the reusable parts.
 // *****************************************************************************

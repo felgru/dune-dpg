@@ -336,6 +336,35 @@ protected:
 
 
 
+namespace BasisBuilder {
+
+namespace Imp {
+
+template<std::size_t k>
+struct PQkFaceNodeFactoryBuilder
+{
+  static const std::size_t requiredMultiIndexSize=1;
+
+  template<class MultiIndex, class GridView, class size_type=std::size_t>
+  auto build(const GridView& gridView)
+    -> PQkFaceNodeFactory<GridView, k, MultiIndex, size_type>
+  {
+    return {gridView};
+  }
+};
+
+} // end namespace BasisBuilder::Imp
+
+template<std::size_t k>
+Imp::PQkFaceNodeFactoryBuilder<k> pqFace()
+{
+  return{};
+}
+
+} // end namespace BasisBuilder
+
+
+
 // *****************************************************************************
 // This is the actual global basis implementation based on the reusable parts.
 // *****************************************************************************
