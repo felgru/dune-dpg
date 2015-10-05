@@ -34,8 +34,8 @@ public:
    *
    * \note For your convenience, use make_ScatteringAssembler() instead.
    */
-  constexpr ScatteringAssembler (TestSpaces testSpaces,
-                                 SolutionSpaces solutionSpaces)
+  constexpr ScatteringAssembler (const TestSpaces& testSpaces,
+                                 const SolutionSpaces& solutionSpaces)
              : testSpaces(testSpaces),
                solutionSpaces(solutionSpaces)
   { };
@@ -82,8 +82,8 @@ private:
 template<class TestSpaces,
          class SolutionSpaces,
          class FormulationType>
-auto make_ScatteringAssembler(TestSpaces testSpaces,
-                              SolutionSpaces solutionSpaces,
+auto make_ScatteringAssembler(const TestSpaces& testSpaces,
+                              const SolutionSpaces& solutionSpaces,
                               FormulationType)
      -> ScatteringAssembler<TestSpaces, SolutionSpaces, FormulationType>
 {
@@ -148,18 +148,13 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
 
-  auto testBasisIndexSet     = as_vector(transform(testSpaces,
-                                                   getIndexSet()));
-  auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
-                                                   getIndexSet()));
-
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
   size_t globalTotalTestSize = 0;
 
   globalTotalTestSize =
-    fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
+    fold(zip(globalTestSpaceOffsets, testSpaces),
          (size_t)0, globalOffsetHelper());
 
   if(!isSaddlepoint)
@@ -171,7 +166,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
   }
 
   size_t globalTotalSolutionSize =
-    fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
+    fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
          isSaddlepoint?globalTotalTestSize:0, globalOffsetHelper());
   globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
 
@@ -186,9 +181,9 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
   auto testLocalView     = as_vector(transform(testSpaces, getLocalView()));
   auto solutionLocalView = as_vector(transform(solutionSpaces, getLocalView()));
 
-  auto testLocalIndexSet     = as_vector(transform(testBasisIndexSet,
+  auto testLocalIndexSet     = as_vector(transform(testSpaces,
                                                    getLocalIndexSet()));
-  auto solutionLocalIndexSet = as_vector(transform(solutionBasisIndexSet,
+  auto solutionLocalIndexSet = as_vector(transform(solutionSpaces,
                                                    getLocalIndexSet()));
 
   for(const auto& e : elements(gridView)) {
@@ -212,9 +207,9 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
 
     // Get set of shape functions for this element
     const auto& localFiniteElementTest =
-        at_c<0>(testLocalView)->tree().finiteElement();
+        at_c<0>(testLocalView).tree().finiteElement();
     const auto& localFiniteElementSolution =
-        at_c<solutionSpaceIndex>(solutionLocalView)->tree().finiteElement();
+        at_c<solutionSpaceIndex>(solutionLocalView).tree().finiteElement();
 
     BlockVector<FieldVector<double,1> >
         localScattering(localFiniteElementTest.localBasis().size());
@@ -238,7 +233,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
     // and the angular directions. Result stored in kernelVect[iQuad][iS]
     std::vector<std::vector<double>> kernelVect;
     evaluateKernelElement(kernelVect,kernelS,
-      at_c<0>(testLocalView)->tree().element().geometry(),quad,sVector);
+      at_c<0>(testLocalView).tree().element().geometry(),quad,sVector);
 
     // Loop over all quadrature points
     for ( size_t pt=0; pt < quad.size(); pt++ ) {
@@ -268,7 +263,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
            * scattering angles.
            */
           auto row =
-              at_c<solutionSpaceIndex>(solutionLocalIndexSet)->index(j)[0]
+              at_c<solutionSpaceIndex>(solutionLocalIndexSet).index(j)[0]
             + globalSolutionSpaceOffset;
           uValue += x[scatteringAngle][row] * shapeFunctionValues[j];
         }
@@ -291,12 +286,6 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
              );
 
   }
-
-  /* free memory handled by raw pointers */
-  for_each(solutionLocalIndexSet, default_deleter());
-  for_each(testLocalIndexSet,     default_deleter());
-  for_each(solutionLocalView,     default_deleter());
-  for_each(testLocalView,         default_deleter());
 }
 
 } // end namespace Dune
