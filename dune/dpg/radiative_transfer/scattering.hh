@@ -160,7 +160,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
 
   globalTotalTestSize =
     fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
-         0, globalOffsetHelper());
+         (size_t)0, globalOffsetHelper());
 
   if(!isSaddlepoint)
   {
