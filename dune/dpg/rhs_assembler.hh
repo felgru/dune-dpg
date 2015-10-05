@@ -101,12 +101,10 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
       as_vector(transform(volumeTerms,
                           getLocalVolumeTerm<GridView>(gridView)));
 
-  auto testBasisIndexSet = as_vector(transform(testSpaces, getIndexSet()));
-
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalTotalTestSize =
-      fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
+      fold(zip(globalTestSpaceOffsets, testSpaces),
            (size_t)0, globalOffsetHelper());
 
   rhs.resize(globalTotalTestSize);
@@ -115,7 +113,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   // Views on the FE bases on a single element
   auto testLocalView     = as_vector(transform(testSpaces, getLocalView()));
 
-  auto testLocalIndexSet     = as_vector(transform(testBasisIndexSet,
+  auto testLocalIndexSet     = as_vector(transform(testSpaces,
                                                    getLocalIndexSet()));
 
   for(const auto& e : elements(gridView)) {
@@ -150,10 +148,6 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
              std::ref(cpr));
 
   }
-
-  /* free memory handled by raw pointers */
-  for_each(testLocalIndexSet,     default_deleter());
-  for_each(testLocalView,         default_deleter());
 }
 
 
@@ -176,12 +170,9 @@ applyDirichletBoundary(BlockVector<FieldVector<double,1> >& rhs,
 
   size_t globalOffset;
   {
-    // Total number of degrees of freedom
-    auto testBasisIndexSet = as_vector(transform(testSpaces, getIndexSet()));
-
     /* set up global offsets */
     size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-    fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
+    fold(zip(globalTestSpaceOffsets, testSpaces),
          (size_t)0, globalOffsetHelper());
 
     globalOffset = globalTestSpaceOffsets[spaceIndex];

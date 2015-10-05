@@ -172,7 +172,8 @@ struct getVolumeTermHelper
   {
     using namespace boost::fusion;
 
-    getVolumeTerm(*(at_c<0>(seq)), at_c<1>(seq), at_c<2>(seq), at_c<3>(seq));
+    // TODO: this can probably be done more elegantly by sequence fusion.
+    getVolumeTerm(at_c<0>(seq), at_c<1>(seq), at_c<2>(seq), at_c<3>(seq));
   }
 };
 } // end namespace detail
@@ -419,10 +420,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       as_vector(transform(volumeTerms,
                           getLocalVolumeTerm<GridView>(gridView)));
 
-  auto testBasisIndexSet = as_vector(transform(testSpaces, getIndexSet()));
-  auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
-                                                   getIndexSet()));
-
 
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
@@ -431,7 +428,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
   if(isSaddlepoint) {
     globalTotalTestSize =
-        fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
+        fold(zip(globalTestSpaceOffsets, testSpaces),
              (size_t)0, globalOffsetHelper());
   } else { /* DPG formulation */
     for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
@@ -441,7 +438,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   }
 
   size_t globalTotalSolutionSize =
-      fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
+      fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
            isSaddlepoint?globalTotalTestSize:0, globalOffsetHelper());
 
   globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
@@ -483,9 +480,9 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   auto solutionLocalView = as_vector(transform(solutionSpaces, getLocalView()));
   auto testLocalView     = as_vector(transform(testSpaces, getLocalView()));
 
-  auto solutionLocalIndexSet = as_vector(transform(solutionBasisIndexSet,
+  auto solutionLocalIndexSet = as_vector(transform(solutionSpaces,
                                                    getLocalIndexSet()));
-  auto testLocalIndexSet     = as_vector(transform(testBasisIndexSet,
+  auto testLocalIndexSet     = as_vector(transform(testSpaces,
                                                    getLocalIndexSet()));
 
   /* create sets of index pairs to loop over.
@@ -626,12 +623,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
              std::ref(cpr));
 
   }
-
-  /* free memory handled by raw pointers */
-  for_each(testLocalIndexSet,     default_deleter());
-  for_each(solutionLocalIndexSet, default_deleter());
-  for_each(testLocalView,         default_deleter());
-  for_each(solutionLocalView,     default_deleter());
 }
 
 
@@ -697,11 +688,6 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
   size_t globalOffset;
   {
-    // Total number of degrees of freedom
-    auto testBasisIndexSet = as_vector(transform(testSpaces, getIndexSet()));
-    auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
-                                                     getIndexSet()));
-
     /* set up global offsets */
     size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
     size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -709,7 +695,7 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     if(isSaddlepoint) {
       globalTotalTestSize =
-          fold(zip(globalTestSpaceOffsets, testBasisIndexSet),
+          fold(zip(globalTestSpaceOffsets, testSpaces),
                (size_t)0, globalOffsetHelper());
     } else { /* DPG formulation */
       for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
@@ -718,7 +704,7 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       }
     }
 
-    fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
+    fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
          isSaddlepoint?globalTotalTestSize:0, globalOffsetHelper());
 
     if(spaceType==SpaceType::test)
@@ -791,17 +777,14 @@ applyWeakBoundaryCondition
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
 
-  auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
-                                                     getIndexSet()));
-
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
+  fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
        (size_t)0, globalOffsetHelper());
   size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
 
   auto localView = std::get<spaceIndex>(solutionSpaces).localView();
   typedef decltype(localView) LocalView;
-  auto localIndexSet = at_c<spaceIndex>(solutionBasisIndexSet).localIndexSet();
+  auto localIndexSet = at_c<spaceIndex>(solutionSpaces).localIndexSet();
 
   for(const auto& e : elements(gridView))
   {
@@ -900,18 +883,15 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   typedef typename std::tuple_element<spaceIndex,SolutionSpaces>::type::GridView GridView;
   GridView gridView = std::get<spaceIndex>(solutionSpaces).gridView();
 
-  auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
-                                                     getIndexSet()));
-
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
+  fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
        (size_t)0, globalOffsetHelper());
   size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
 
   size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
   auto solutionLocalView = at_c<spaceIndex>(solutionSpaces).localView();
-  auto localIndexSet = at_c<spaceIndex>(solutionBasisIndexSet).localIndexSet();
+  auto localIndexSet = at_c<spaceIndex>(solutionSpaces).localIndexSet();
 
   for(const auto& e : elements(gridView))
   {
@@ -1026,11 +1006,8 @@ applyMinimization
   typedef typename std::tuple_element<spaceIndex,SolutionSpaces>::type::GridView GridView;
   GridView gridView = std::get<spaceIndex>(solutionSpaces).gridView();
 
-  auto solutionBasisIndexSet = as_vector(transform(solutionSpaces,
-                                                     getIndexSet()));
-
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  fold(zip(globalSolutionSpaceOffsets, solutionBasisIndexSet),
+  fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
        (size_t)0, globalOffsetHelper());
   size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
 
@@ -1039,20 +1016,20 @@ applyMinimization
   // get local view for solution space (necessary if we want to use inner product) /TODO inefficient (why?)
   auto solutionLocalView = as_vector(transform(solutionSpaces, getLocalView()));
 
-  auto localIndexSet = at_c<spaceIndex>(solutionBasisIndexSet).localIndexSet(); //only relevant localIndexSet
+  auto localIndexSet = at_c<spaceIndex>(solutionSpaces).localIndexSet();
 
   bool epsilonSmallerDelta(epsilon<delta);
 
   for(const auto& e : elements(gridView))
   {
     for_each(solutionLocalView, applyBind<decltype(e)>(e));
-    localIndexSet.bind(*at_c<spaceIndex>(solutionLocalView));
+    localIndexSet.bind(at_c<spaceIndex>(solutionLocalView));
 
     /* set up local offsets */
     fold(zip(localSolutionSpaceOffsets, solutionLocalView),
          (size_t)0, offsetHelper());
 
-    const auto& localFiniteElement = at_c<spaceIndex>(solutionLocalView)->tree().finiteElement();
+    const auto& localFiniteElement = at_c<spaceIndex>(solutionLocalView).tree().finiteElement();
 
     size_t n = localFiniteElement.localBasis().size();
 
@@ -1103,9 +1080,6 @@ applyMinimization
       }
     }
   }
-
-  /* free memory handled by raw pointers */
-  for_each(solutionLocalView, default_deleter());
 }
 
 
