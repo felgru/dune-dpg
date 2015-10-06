@@ -17,10 +17,10 @@ namespace Dune
    * \tparam d dimension of the reference element
    * \tparam k polynomial order
    */
-  template<class D, class R, int d, class EnrichedTestspace>
+  template<class D, class R, int d, class TestSearchSpace>
   class OptimalTestLocalFiniteElement {
 
-    typedef OptimalTestLocalBasis<D,R,d,EnrichedTestspace> LocalBasis;
+    typedef OptimalTestLocalBasis<D,R,d,TestSearchSpace> LocalBasis;
     typedef OptimalTestLocalCoefficients<d> LocalCoefficients;
     typedef OptimalTestLocalInterpolation<d,LocalBasis> LocalInterpolation;
     typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
@@ -36,31 +36,31 @@ namespace Dune
     OptimalTestLocalFiniteElement () = delete;
 
     OptimalTestLocalFiniteElement (MatrixType* coeffMat,
-                                   EnrichedTestspace* enrtest,
+                                   TestSearchSpace* testSearchSpace,
                                    std::vector<LocalKey>* localKeyList)
-    :enrichedTestspace(enrtest),
-    basis(enrichedTestspace, coeffMat, 0, coeffMat->N()),
+    :testSearchSpace(testSearchSpace),
+    basis(testSearchSpace, coeffMat, 0, coeffMat->N()),
     coefficients(localKeyList)
     {
-      gt=enrichedTestspace->type();
+      gt=testSearchSpace->type();
     }
 
     OptimalTestLocalFiniteElement (MatrixType* coeffMat,
-                                   EnrichedTestspace* enrtest)
-    :enrichedTestspace(enrtest),
-    basis(enrichedTestspace, coeffMat, 0, coeffMat->N())
+                                   TestSearchSpace* testSearchSpace)
+    :testSearchSpace(testSearchSpace),
+    basis(testSearchSpace, coeffMat, 0, coeffMat->N())
     {
-      gt=enrichedTestspace->type();
+      gt=testSearchSpace->type();
     }
 
     OptimalTestLocalFiniteElement (MatrixType* coeffMat,
-                                   EnrichedTestspace* enrtest,
+                                   TestSearchSpace* testSearchSpace,
                                    size_t offset,
                                    size_t k)
-    :enrichedTestspace(enrtest),
-    basis(enrichedTestspace, coeffMat, offset, k)
+    :testSearchSpace(testSearchSpace),
+    basis(testSearchSpace, coeffMat, offset, k)
     {
-      gt=enrichedTestspace->type();
+      gt=testSearchSpace->type();
     }
 
     /** \todo Please doc me !
@@ -103,7 +103,7 @@ namespace Dune
     }
 
   private:
-    EnrichedTestspace* enrichedTestspace;
+    TestSearchSpace* testSearchSpace;
     MatrixType* coefficientMatrix;
     LocalBasis basis;
     LocalCoefficients coefficients;

@@ -87,7 +87,7 @@ int main(int argc, char** argv)
 
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
-  typedef Functions::LagrangeDGBasis<GridView, 5> FEBasisTest;     // v enriched
+  typedef Functions::LagrangeDGBasis<GridView, 5> FEBasisTest;     // v search space
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
     typedef decltype(testSpaces) TestSpaces;

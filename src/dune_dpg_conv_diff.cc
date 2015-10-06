@@ -175,8 +175,8 @@ int main(int argc, char** argv)
                                         FEBasisTrace(gridView),
                                         FEBasisFace(gridView));
 
-  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestV;   // v enriched
-  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestTau; // tau enriched
+  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestV;   // v search space
+  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestTau; // tau search space
   auto testSpaces = std::make_tuple(FEBasisTestV(gridView),
                                     FEBasisTestTau(gridView),
                                     FEBasisTestTau(gridView));
