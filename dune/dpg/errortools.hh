@@ -150,11 +150,9 @@ namespace Dune {
     // Variables where we will store the errors
     double errSquare = 0.;
 
-    // Get index set of the finite element basis
-    auto basisIndexSet = feBasis.indexSet();
     // A view on the FE basis on a single element
     auto localView = feBasis.localView();
-    auto localIndexSet = basisIndexSet.localIndexSet();
+    auto localIndexSet = feBasis.localIndexSet();
 
     // Position of the coefficients
     int posBegin = 0;

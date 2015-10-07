@@ -166,7 +166,7 @@ applyDirichletBoundary(BlockVector<FieldVector<double,1> >& rhs,
                 "boundary data types.");
 
   const size_t spaceSize =
-        std::get<spaceIndex>(testSpaces).indexSet().size();
+        std::get<spaceIndex>(testSpaces).size();
 
   size_t globalOffset;
   {

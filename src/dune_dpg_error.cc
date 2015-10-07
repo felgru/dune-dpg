@@ -208,9 +208,9 @@ int main(int argc, char** argv)
   //  Make a discrete function from the FE basis and the coefficient vector
   ////////////////////////////////////////////////////////////////////////////
 
-  size_t nTest = std::get<0>(testSpaces).indexSet().size();
-  size_t nFace = std::get<0>(solutionSpaces).indexSet().size();
-  size_t nInner = std::get<1>(solutionSpaces).indexSet().size();
+  size_t nTest = std::get<0>(testSpaces).size();
+  size_t nFace = std::get<0>(solutionSpaces).size();
+  size_t nInner = std::get<1>(solutionSpaces).size();
   VectorType u(nInner);
   VectorType theta(nFace);
   u=0;

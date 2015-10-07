@@ -481,15 +481,15 @@ int main(int argc, char** argv)
   //  Make a discrete function from the FE basis and the coefficient vector
   ////////////////////////////////////////////////////////////////////////////
 
-  size_t nu = std::get<0>(solutionSpaces).indexSet().size();
-  size_t nsigma1 = std::get<1>(solutionSpaces).indexSet().size();
-  size_t nsigma2 = std::get<2>(solutionSpaces).indexSet().size();
-  size_t nuhat = std::get<3>(solutionSpaces).indexSet().size();
-  size_t nsigmahat = std::get<4>(solutionSpaces).indexSet().size();
+  size_t nu = std::get<0>(solutionSpaces).size();
+  size_t nsigma1 = std::get<1>(solutionSpaces).size();
+  size_t nsigma2 = std::get<2>(solutionSpaces).size();
+  size_t nuhat = std::get<3>(solutionSpaces).size();
+  size_t nsigmahat = std::get<4>(solutionSpaces).size();
 
-  size_t ntestv = std::get<0>(testSpaces).indexSet().size();
-  size_t ntesttau1 = std::get<1>(testSpaces).indexSet().size();
-  size_t ntesttau2 = std::get<2>(testSpaces).indexSet().size();
+  size_t ntestv = std::get<0>(testSpaces).size();
+  size_t ntesttau1 = std::get<1>(testSpaces).size();
+  size_t ntesttau2 = std::get<2>(testSpaces).size();
   unsigned int shift = 0;
 
   VectorType u(nu);
@@ -617,8 +617,8 @@ int main(int argc, char** argv)
 //#endif
 
 # if 0
-  VectorType sol(feBasisTest.indexSet().size());
-  for(unsigned int idx = 0; idx<feBasisTest.indexSet().size(); idx++)
+  VectorType sol(feBasisTest.size());
+  for(unsigned int idx = 0; idx<feBasisTest.size(); idx++)
   {
     sol=0;
   //int idx = 1;
@@ -639,8 +639,8 @@ int main(int argc, char** argv)
 # endif
 
 # if 0
-  VectorType sol(feBasisTrace.indexSet().size());
-  for(unsigned int idx = 0; idx<feBasisTrace.indexSet().size(); idx++)
+  VectorType sol(feBasisTrace.size());
+  for(unsigned int idx = 0; idx<feBasisTrace.size(); idx++)
   {
     sol=0;
   //int idx = 1;

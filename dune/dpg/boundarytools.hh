@@ -92,13 +92,13 @@ namespace Dune {
     typedef typename FEBasis::GridView GridView;
     GridView gridView = feBasis.gridView();
 
-    const int dofs = feBasis.indexSet().size();
+    const int dofs = feBasis.size();
 
     dirichletNodes.resize(dofs);
     std::vector<int> dirichletNodesInt(dofs,0);
 
     auto localView = feBasis.localView();
-    auto localIndexSet = feBasis.indexSet().localIndexSet();
+    auto localIndexSet = feBasis.localIndexSet();
 
 
     for(const auto& e : elements(gridView))
@@ -210,12 +210,12 @@ namespace Dune {
     typedef typename FEBasis::GridView GridView;
     GridView gridView = feBasis.gridView();
 
-    const int dofs = feBasis.indexSet().size();
+    const int dofs = feBasis.size();
 
     rhsInflowContrib.resize(dofs);
 
     auto localView = feBasis.localView();
-    auto localIndexSet = feBasis.indexSet().localIndexSet();
+    auto localIndexSet = feBasis.localIndexSet();
 
     BoundaryCondition<Function> bc = BoundaryCondition<Function>(g);
     std::vector<double> out;
