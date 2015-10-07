@@ -84,12 +84,13 @@ struct numberOfSamples<Functions::DefaultGlobalBasis<
        : std::integral_constant<int, s> {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class ST>
-struct numberOfSamples<Functions::OptimalTestBasis
-                                  <TestspaceCoefficientMatrix, testIndex, ST> >
-                : numberOfSamples<typename std::tuple_element<testIndex,
-                                    typename TestspaceCoefficientMatrix
-                                             ::TestSpaces
-                                  >::type> {};
+struct numberOfSamples<Functions::DefaultGlobalBasis<
+            Functions::OptimalTestBasisNodeFactory<
+                TestspaceCoefficientMatrix, testIndex,
+                Functions::FlatMultiIndex<ST>, ST> > >
+  : numberOfSamples<typename std::tuple_element<testIndex,
+                      typename TestspaceCoefficientMatrix::TestSpaces
+                    >::type> {};
 
 template<typename FiniteElement>
 struct is_TransportFiniteElement : std::false_type {};
@@ -101,8 +102,10 @@ struct is_TransportFiniteElement<Functions::DefaultGlobalBasis<
            : std::true_type {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class ST>
-struct is_TransportFiniteElement<Functions::OptimalTestBasis
-                                  <TestspaceCoefficientMatrix, testIndex, ST> >
+struct is_TransportFiniteElement<Functions::DefaultGlobalBasis<
+            Functions::OptimalTestBasisNodeFactory<
+                TestspaceCoefficientMatrix, testIndex,
+                Functions::FlatMultiIndex<ST>, ST> > >
   : is_TransportFiniteElement<typename std::tuple_element<testIndex,
                                 typename TestspaceCoefficientMatrix::TestSpaces
                               >::type> {};
