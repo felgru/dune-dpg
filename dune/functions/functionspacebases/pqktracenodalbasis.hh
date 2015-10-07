@@ -5,13 +5,11 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
-#include <dune/common/std/final.hh>
 
 #include <dune/localfunctions/lagrange/pqktracefactory.hh>
 
 #include <dune/typetree/leafnode.hh>
 
-#include <dune/functions/functionspacebases/gridviewfunctionspacebasis.hh>
 #include <dune/functions/functionspacebases/nodes.hh>
 #include <dune/functions/functionspacebases/defaultglobalbasis.hh>
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
@@ -167,38 +165,31 @@ public:
 
 template<typename GV, int k, typename ST, typename TP>
 class PQkTraceNode :
-  public GridFunctionSpaceBasisLeafNodeInterface<
-    typename GV::template Codim<0>::Entity,
-    typename Dune::PQkTraceLocalFiniteElementCache
-             < typename GV::ctype
-             , double, GV::dimension, k >::FiniteElementType,
-    ST,
-    TP>
+  public LeafBasisNode<ST, TP>
 {
   static const int dim = GV::dimension;
   static const int maxSize = StaticPower<(k+1),GV::dimension>::power
                              - StaticPower<(k-1),GV::dimension>::power;
 
-  typedef typename GV::template Codim<0>::Entity E;
-  typedef typename Dune::PQkTraceLocalFiniteElementCache
-                   <typename GV::ctype, double, dim, k> FiniteElementCache;
-  typedef typename FiniteElementCache::FiniteElementType FE;
+  using Base = LeafBasisNode<ST,TP>;
+  using FiniteElementCache = typename Dune::PQkTraceLocalFiniteElementCache
+                                        <typename GV::ctype, double, dim, k>;
 
 public:
-  typedef GridFunctionSpaceBasisLeafNodeInterface<E,FE,ST,TP> Interface;
-  typedef typename Interface::size_type size_type;
-  typedef typename Interface::Element Element;
-  typedef typename Interface::FiniteElement FiniteElement;
-  typedef typename Interface::TreePath TreePath;
+
+  using size_type = ST;
+  using TreePath = TP;
+  using Element = typename GV::template Codim<0>::Entity;
+  using FiniteElement = typename FiniteElementCache::FiniteElementType;
 
   PQkTraceNode(const TreePath& treePath) :
-    Interface(treePath),
+    Base(treePath),
     finiteElement_(nullptr),
     element_(nullptr)
   {}
 
   //! Return current element, throw if unbound
-  const Element& element() const DUNE_FINAL
+  const Element& element() const
   {
     return *element_;
   }
@@ -207,17 +198,9 @@ public:
    *
    * The LocalFiniteElement implements the corresponding interfaces of the dune-localfunctions module
    */
-  const FiniteElement& finiteElement() const DUNE_FINAL
+  const FiniteElement& finiteElement() const
   {
     return *finiteElement_;
-  }
-
-  /** \brief Size of subtree rooted in this node (element-local)
-   */
-  size_type size() const DUNE_FINAL
-  {
-    // We have subTreeSize==lfe.size() because we're in a leaf node.
-    return size_;
   }
 
   //! Bind to element.
@@ -225,12 +208,10 @@ public:
   {
     element_ = &e;
     finiteElement_ = &(cache_.get(element_->type()));
-    size_ = finiteElement_->size();
+    this->setSize(finiteElement_->size());
   }
 
 protected:
-
-  size_type size_;
 
   FiniteElementCache cache_;
   const FiniteElement* finiteElement_;

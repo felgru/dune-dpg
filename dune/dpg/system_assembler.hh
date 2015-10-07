@@ -684,7 +684,7 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
         >::value;
 
   const size_t spaceSize =
-        std::get<spaceIndex>(spaces).indexSet().size();
+        std::get<spaceIndex>(spaces).size();
 
   size_t globalOffset;
   {

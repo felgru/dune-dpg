@@ -100,8 +100,8 @@ int main(int argc, char** argv)
 
   typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
-  auto solutionSpaces = std::make_tuple(FEBasisTrace(gridView),
-                                        FEBasisInterior(gridView));
+  auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView),
+                                        FEBasisTrace(gridView));
 
   typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
@@ -115,11 +115,11 @@ int main(int argc, char** argv)
   FieldVector<double, dim> beta = {beta0,beta1};
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
-              make_IntegralTerm<0,1,IntegrationType::valueValue,
+              make_IntegralTerm<0,0,IntegrationType::valueValue,
                                     DomainOfIntegration::interior>(1.),
-              make_IntegralTerm<0,1,IntegrationType::gradValue,
+              make_IntegralTerm<0,0,IntegrationType::gradValue,
                                     DomainOfIntegration::interior>(-1., beta),
-              make_IntegralTerm<0,0,IntegrationType::normalVector,
+              make_IntegralTerm<0,1,IntegrationType::normalVector,
                                     DomainOfIntegration::face>(1., beta)));
   auto innerProduct = make_InnerProduct(testSpaces,
           make_tuple(
@@ -178,12 +178,12 @@ int main(int argc, char** argv)
     std::vector<bool> dirichletNodesInflowErrorTools;
 
     BoundaryTools boundaryTools = BoundaryTools();
-    boundaryTools.getInflowBoundaryMask(std::get<0>(solutionSpaces),
+    boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
                                         dirichletNodesInflow,
                                         beta);
 
 
-    systemAssembler.applyDirichletBoundarySolution<0>
+    systemAssembler.applyDirichletBoundarySolution<1>
         (stiffnessMatrix,
          rhs,
          dirichletNodesInflow,
@@ -208,9 +208,9 @@ int main(int argc, char** argv)
   //  Make a discrete function from the FE basis and the coefficient vector
   ////////////////////////////////////////////////////////////////////////////
 
-  size_t nTest = std::get<0>(testSpaces).indexSet().size();
-  size_t nFace = std::get<0>(solutionSpaces).indexSet().size();
-  size_t nInner = std::get<1>(solutionSpaces).indexSet().size();
+  size_t nTest = std::get<0>(testSpaces).size();
+  size_t nFace = std::get<1>(solutionSpaces).size();
+  size_t nInner = std::get<0>(solutionSpaces).size();
   VectorType u(nInner);
   VectorType theta(nFace);
   u=0;
@@ -219,23 +219,22 @@ int main(int argc, char** argv)
   //We extract the solution vector u
   for (size_t i=0; i<nInner; i++)
   {
-    /* TODO: use a precomputed solution space offset. */
-    u[i] = x[nFace+i];
+    u[i] = x[i];
   }
 
   //We extract the solution vector theta of the faces
   for (size_t i=0; i<nFace; i++)
   {
-    theta[i] = x[i];
+    theta[i] = x[nInner+i];
   }
 
-  auto innerSpace = std::get<1>(solutionSpaces);
+  auto innerSpace = std::get<0>(solutionSpaces);
   Dune::Functions::DiscreteScalarGlobalBasisFunction
       <typename std::remove_reference<decltype(innerSpace)>::type, decltype(u)>
           uFunction(innerSpace,u);
   auto localUFunction = localFunction(uFunction);
 
-  auto feBasisTrace = std::get<0>(solutionSpaces);
+  auto feBasisTrace = std::get<1>(solutionSpaces);
   Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace), decltype(theta)>
       thetaFunction(feBasisTrace, theta);
   auto localThetaFunction = localFunction(thetaFunction);

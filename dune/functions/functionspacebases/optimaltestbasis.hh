@@ -32,13 +32,11 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
-#include <dune/common/std/final.hh>
 
 #include <dune/localfunctions/optimaltestfunctions/optimaltest.hh>
 
 #include <dune/typetree/leafnode.hh>
 
-#include <dune/functions/functionspacebases/gridviewfunctionspacebasis.hh>
 #include <dune/functions/functionspacebases/nodes.hh>
 #include <dune/functions/functionspacebases/defaultglobalbasis.hh>
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
@@ -385,62 +383,52 @@ public:
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, typename ST, typename TP>
 class OptimalTestBasisNode :
-  public GridFunctionSpaceBasisLeafNodeInterface<
-    typename TestspaceCoefficientMatrix::GridView::template Codim<0>::Entity,
-    Dune::OptimalTestLocalFiniteElement<typename TestspaceCoefficientMatrix
-                                           ::GridView::ctype,
-                                  double,
-                                  TestspaceCoefficientMatrix
-                                       ::GridView::dimension,
-                                  typename std::tuple_element<
-                                              testIndex,
-                                              typename TestspaceCoefficientMatrix
-                                                     ::TestSpaces>::type
-                                           ::LocalView::Tree::FiniteElement>,
-    ST,
-    TP>
+  public LeafBasisNode<ST, TP>
 {
 public:
-  typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
-  typedef typename TestspaceCoefficientMatrix::TestSpaces EnrichedTestspaces;
+  using SolutionSpaces = typename TestspaceCoefficientMatrix::SolutionSpaces;
+  using EnrichedTestspaces = typename TestspaceCoefficientMatrix::TestSpaces;
 
 private:
-  using GridView = typename TestspaceCoefficientMatrix::GridView;
-  static const int dim = GridView::dimension;
+  using GV = typename TestspaceCoefficientMatrix::GridView;
+  static const int dim = GV::dimension;
   // TODO: maxSize does not seem to be needed.
   // static const int maxSize = see NodeFactory::maxNodeSize();
 
-  typedef typename GridView::template Codim<0>::Entity E;
-  typedef typename std::tuple_element<testIndex,EnrichedTestspaces>::type
-                   ::LocalView::Tree::FiniteElement EnrichedFiniteElement;
-  typedef typename Dune::OptimalTestLocalFiniteElement<typename GridView::ctype,
-                                                       double,
-                                                       GridView::dimension,
-                                                       EnrichedFiniteElement> FE;
+  using Base = LeafBasisNode<ST,TP>;
+  using EnrichedFiniteElement
+      = typename std::tuple_element<testIndex,EnrichedTestspaces>::type
+                   ::LocalView::Tree::FiniteElement;
 
-  typedef typename boost::fusion::result_of::as_vector<
+  using SolutionLocalView
+        = typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<
                          SolutionSpaces,
                          detail::getLocalView
                       >::type
-             >::type SolutionLocalView;
-  typedef typename boost::fusion::result_of::as_vector<
+             >::type;
+  using TestLocalView
+        = typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<
                          EnrichedTestspaces,
                          detail::getLocalView
                       >::type
-             >::type TestLocalView;
+             >::type;
 
 public:
-  typedef GridFunctionSpaceBasisLeafNodeInterface<E,FE,ST,TP> Interface;
-  typedef typename Interface::size_type size_type;
-  typedef typename Interface::Element Element;
-  typedef typename Interface::FiniteElement FiniteElement;
-  typedef typename Interface::TreePath TreePath;
+
+  using size_type = ST;
+  using TreePath = TP;
+  using Element = typename GV::template Codim<0>::Entity;
+  using FiniteElement = typename Dune::OptimalTestLocalFiniteElement
+                                  <typename GV::ctype,
+                                   double,
+                                   GV::dimension,
+                                   EnrichedFiniteElement>;
 
   OptimalTestBasisNode(const TreePath& treePath,
                        TestspaceCoefficientMatrix& testCoeffMat) :
-    Interface(treePath),
+    Base(treePath),
     testspaceCoefficientMatrix(testCoeffMat),
     finiteElement_(nullptr),
     enrichedTestspace_(nullptr),
@@ -456,7 +444,7 @@ public:
   {}
 
   //! Return current element, throw if unbound
-  const Element& element() const DUNE_FINAL
+  const Element& element() const
   {
     return *element_;
   }
@@ -465,17 +453,9 @@ public:
    *
    * The LocalFiniteElement implements the corresponding interfaces of the dune-localfunctions module
    */
-  const FiniteElement& finiteElement() const DUNE_FINAL
+  const FiniteElement& finiteElement() const
   {
     return *finiteElement_;
-  }
-
-  /** \brief Size of subtree rooted in this node (element-local)
-   */
-  size_type size() const DUNE_FINAL
-  {
-    // We have subTreeSize==lfe.size() because we're in a leaf node.
-    return size_;
   }
 
   //! Bind to element.
@@ -505,7 +485,7 @@ public:
     finiteElement_ = Dune::Std::make_unique<FiniteElement>
                         (&(testspaceCoefficientMatrix.coefficientMatrix()),
                          enrichedTestspace_, offset, k);
-    size_ = finiteElement_->size();
+    this->setSize(finiteElement_->size());
   }
 
   const SolutionLocalView& localViewSolution() const
@@ -513,8 +493,6 @@ public:
     return localViewSolution_;
   }
 protected:
-
-  size_type size_;
 
   TestspaceCoefficientMatrix& testspaceCoefficientMatrix;
   //FiniteElementCache cache_;

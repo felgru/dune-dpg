@@ -157,8 +157,8 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////
   //   Choose an initial iterate
   /////////////////////////////////////////////////
-  VectorType x(feBasisTrace.indexSet().size()
-               +feBasisInterior.indexSet().size());
+  VectorType x(feBasisTrace.size()
+               +feBasisInterior.size());
   x = 0;
   //printmatrix(std::cout , stiffnessMatrix, "stiffnessMatrixWithoutBV", "--");
   //std::cout <<"rhsWithoutBV" <<std::endl;
@@ -240,18 +240,18 @@ int main(int argc, char** argv)
 
 
 
-  VectorType u(feBasisInterior.indexSet().size());
+  VectorType u(feBasisInterior.size());
   u=0;
-  for (unsigned int i=0; i<feBasisInterior.indexSet().size(); i++)
+  for (unsigned int i=0; i<feBasisInterior.size(); i++)
   {
     u[i] = x[i];
   }
 
-  VectorType uhat(feBasisTrace.indexSet().size());
+  VectorType uhat(feBasisTrace.size());
   uhat=0;
-  for (unsigned int i=0; i<feBasisTrace.indexSet().size(); i++)
+  for (unsigned int i=0; i<feBasisTrace.size(); i++)
   {
-    uhat[i] = x[i+feBasisInterior.indexSet().size()];
+    uhat[i] = x[i+feBasisInterior.size()];
   }
 
 //  std::cout << u << std::endl;
@@ -277,8 +277,8 @@ int main(int argc, char** argv)
 //#endif
 
 # if 0
-  VectorType sol(feBasisTest.indexSet().size());
-  for(unsigned int idx = 0; idx<feBasisTest.indexSet().size(); idx++)
+  VectorType sol(feBasisTest.size());
+  for(unsigned int idx = 0; idx<feBasisTest.size(); idx++)
   {
     sol=0;
   //int idx = 1;

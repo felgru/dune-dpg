@@ -43,8 +43,6 @@ void testScalarBasis(const Basis& feBasis)
   }
 
 
-  auto indexSet = feBasis.indexSet();
-
   // Check whether the basis exports a type 'MultiIndex'
   typedef typename Basis::MultiIndex MultiIndex;
 
@@ -56,10 +54,10 @@ void testScalarBasis(const Basis& feBasis)
   //  and whether each global index appears at least once.
   ///////////////////////////////////////////////////////////////////////////////////
 
-  std::vector<bool> seen(indexSet.size());
+  std::vector<bool> seen(feBasis.size());
   std::fill(seen.begin(), seen.end(), false);
 
-  auto localIndexSet = indexSet.localIndexSet();
+  auto localIndexSet = feBasis.localIndexSet();
 
   // Loop over all leaf elements
   for (auto it = gridView.template begin<0>(); it!=gridView.template end<0>(); ++it)
@@ -88,7 +86,7 @@ void testScalarBasis(const Basis& feBasis)
   // If we use that as the coefficients of a finite element function,
   // we know its integral and can check whether quadrature returns
   // the correct result
-  std::vector<double> x(indexSet.size());
+  std::vector<double> x(feBasis.size());
 
   // TODO: Implement interpolation properly using the global basis.
   const int dim = Basis::GridView::dimension;
@@ -96,7 +94,7 @@ void testScalarBasis(const Basis& feBasis)
     x[gridView.indexSet().index(*it)] = it->geometry().corner(0)[0];
 
   // Objects required in the local context
-  auto localIndexSet2 = feBasis.indexSet().localIndexSet();
+  auto localIndexSet2 = feBasis.localIndexSet();
   std::vector<double> coefficients(localView.maxSize());
 
   // Loop over elements and integrate over the function
