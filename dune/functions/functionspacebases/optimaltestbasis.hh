@@ -424,7 +424,7 @@ public:
                                   <typename GV::ctype,
                                    double,
                                    GV::dimension,
-                                   TestSearchFiniteElement>;
+                                   EnrichedFiniteElement>;
 
   OptimalTestBasisNode(const TreePath& treePath,
                        TestspaceCoefficientMatrix& testCoeffMat) :
