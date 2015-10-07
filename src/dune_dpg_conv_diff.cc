@@ -365,7 +365,7 @@ printmatrix(file , testMatrix, "testmatrix", "--");
     std::vector<bool> dirichletNodesInflow;
     boundaryTreatmentInflow(std::get<3>(solutionSpaces),
                             dirichletNodesInflow);
-    systemAssembler.applyDirichletBoundarySolution<3,double>
+    systemAssembler.applyDirichletBoundary<3,double>
         (stiffnessMatrix,
          rhs,
          dirichletNodesInflow,

@@ -18,6 +18,16 @@ enum class IntegrationType {
     travelDistanceWeighted
 };
 
+enum class LinearIntegrationType {
+    valueFunction,           //!< v f where f is an explicit function known at every point of the domain
+    gradFunction,            //!< ∇v · f where f is an explicit function known at every point of the domain
+    valueValueScattering,    //!< v Scattering where Scattering is $\int_{sphere} collision_kernel density function$
+                             //!<              and density function is a FE polynomial
+    valueFunctionScattering, //!< v Scattering where Scattering is $\int_{sphere} collision_kernel density function$
+                             //!<              and density function has an explicit formula
+    normalVectorFunction     //!< v f n · β, where n is the outer unit normal vector and f is an explicit function known at every point of the domain
+};
+
 enum class EvaluationType {
     value,   //!< v
     grad,    //!< ∇v

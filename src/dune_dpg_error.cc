@@ -184,7 +184,7 @@ int main()
                                           beta);
 
 
-      systemAssembler.applyDirichletBoundarySolution<1>
+      systemAssembler.applyDirichletBoundary<1>
           (stiffnessMatrix,
            rhs,
            dirichletNodesInflow,

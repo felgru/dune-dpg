@@ -38,13 +38,12 @@ public:
    * this assembles the right hand side vector of the corresponding
    * DPG system. \p rhs will be overwritten by this function.
    *
-   * \param[out] rhs         the rhs vector of the DPG system
-   * \param[in]  volumeTerms the rhs functions describing the DPG system
-   * \tparam     VolumeTerms a tuple type of rhs functions
+   * \param[out] rhs           the rhs vector of the DPG system
+   * \param[in]  rhsLinearForm the linear form describing the rhs
    */
-  template <class VolumeTerms>
+  template <class LinearForm>
   void assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
-                   VolumeTerms&& volumeTerms);
+                   LinearForm& rhsLinearForm);
 
   /**
    * \brief Apply Dirichlet boundary values to the rhs vector
@@ -85,10 +84,10 @@ make_RhsAssembler(TestSpaces testSpaces)
 }
 
 template<class TestSpaces>
-template <class VolumeTerms>
+template <class LinearForm>
 void RhsAssembler<TestSpaces>::
 assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
-            VolumeTerms&& volumeTerms)
+            LinearForm& rhsLinearForm)
 {
   using namespace boost::fusion;
   using namespace Dune::detail;
@@ -98,11 +97,14 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-  size_t globalTotalTestSize =
+  const size_t globalTotalTestSize =
       fold(zip(globalTestSpaceOffsets, testSpaces),
            (size_t)0, globalOffsetHelper());
 
+  // set rhs to correct length -- the total number of basis vectors in the basis
   rhs.resize(globalTotalTestSize);
+
+  // Set all entries to zero
   rhs = 0;
 
   // Views on the FE bases on a single element
@@ -114,32 +116,37 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   for(const auto& e : elements(gridView)) {
 
     for_each(testLocalViews, applyBind<decltype(e)>(e));
+
     for_each(zip(testLocalIndexSets, testLocalViews),
              make_fused_procedure(bindLocalIndexSet()));
 
     // Now get the local contribution to the right-hand side vector
-    BlockVector<FieldVector<double,1> >
-        localRhs[std::tuple_size<
-                 typename std::remove_reference<VolumeTerms>::type>::value];
+    BlockVector<FieldVector<double,1> > localRhs;
 
-    using RHSZipHelper = vector<decltype(testLocalViews)&,
-                                decltype(localRhs)&,
-                                decltype(volumeTerms)&>;
-    for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalViews,
-                                                 localRhs,
-                                                 volumeTerms)),
-             getVolumeTermHelper());
+    rhsLinearForm.bind(testLocalViews);
+    rhsLinearForm.getLocalVector(localRhs);
 
-    /* TODO: This will break with more than 1 test space having a rhs! */
-    auto cpr = fused_procedure<localToGlobalRHSCopier<
-                    typename std::remove_reference<decltype(rhs)>::type> >
-                 (localToGlobalRHSCopier<
-                    typename std::remove_reference<decltype(rhs)>::type>(rhs));
-    for_each(zip(localRhs,
-                 testLocalIndexSets,
-                 globalTestSpaceOffsets),
-             std::ref(cpr));
+    auto cp = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
+                   typename std::remove_reference<decltype(rhs)>::type> >
+                (localToGlobalRHSCopier<decltype(localRhs),
+                   typename std::remove_reference<decltype(rhs)>::type>
+                                        (localRhs, rhs));
 
+    /* copy every local subvector indexed by a pair of indices from
+     * lfIndices exactly once. */
+    auto testZip = zip(testLocalViews,
+                       testLocalIndexSets,
+                       rhsLinearForm.getLocalSpaceOffsets(),
+                       globalTestSpaceOffsets);
+    typedef
+        typename boost::fusion::vector<std::integral_constant<size_t, 0> >
+            LFIndices;
+
+    auto lfIndices = LFIndices{};
+    for_each(lfIndices,
+             localToGlobalRHSCopyHelper<decltype(testZip),
+                                        decltype(cp)>
+                                       (testZip, cp));
   }
 }
 
