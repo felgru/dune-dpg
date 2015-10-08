@@ -134,10 +134,8 @@ namespace Dune {
               , SaddlepointFormulation
             >::value;
 
-      testLocalView     = const_cast<TestLocalView*>
-                              (std::addressof(tlv));
-      solutionLocalView = const_cast<SolutionLocalView*>
-                              (std::addressof(slv));
+      testLocalView     = std::addressof(tlv);
+      solutionLocalView = std::addressof(slv);
 
       using namespace boost::fusion;
       using namespace Dune::detail;
@@ -209,8 +207,8 @@ namespace Dune {
     size_t localTotalTestSize,
            localTotalSolutionSize;
 
-    TestLocalView*     testLocalView;
-    SolutionLocalView* solutionLocalView;
+    const TestLocalView*     testLocalView;
+    const SolutionLocalView* solutionLocalView;
   };
 
 /**
