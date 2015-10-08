@@ -13,8 +13,6 @@
 
 #include <dune/istl/matrix.hh>
 
-#include <dune/common/std/final.hh>
-
 #include <dune/functions/functionspacebases/interpolate.hh>
 
 #include "assemble_types.hh"
