@@ -34,7 +34,7 @@
 #include <dune/functions/functionspacebases/pqksubsampleddgbasis.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
+#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/dpg/system_assembler.hh>
@@ -544,14 +544,14 @@ int main(int argc, char** argv)
       // //  real second-order functions
       // ////////////////////////////////////////////////////////////////////////
        // - Make a discrete function from the FE basis and the coefficient vector
-      Dune::Functions::DiscreteScalarGlobalBasisFunction
-          <decltype(feBasisInterior),std::decay<decltype(u[i])>::type>
-          uFunction(feBasisInterior,u[i]);
+      auto uFunction
+          = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+                (feBasisInterior, Dune::TypeTree::hybridTreePath(), u[i]);
       auto localUFunction = localFunction(uFunction);
 
-      Dune::Functions::DiscreteScalarGlobalBasisFunction
-          <decltype(feBasisTrace), std::decay<decltype(theta[i])>::type>
-          thetaFunction(feBasisTrace, theta[i]);
+      auto thetaFunction
+          = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+                (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta[i]);
       auto localThetaFunction = localFunction(thetaFunction);
       // - VTK writer
       SubsamplingVTKWriter<GridView> vtkWriterInterior(gridView,0);
