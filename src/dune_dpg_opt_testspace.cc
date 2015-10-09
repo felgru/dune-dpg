@@ -34,7 +34,7 @@
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
+#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/dpg/system_assembler.hh>
@@ -87,7 +87,7 @@ int main(int argc, char** argv)
 
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
-  typedef Functions::LagrangeDGBasis<GridView, 5> FEBasisTest;     // v enriched
+  typedef Functions::LagrangeDGBasis<GridView, 5> FEBasisTest;     // v search space
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
     typedef decltype(testSpaces) TestSpaces;
@@ -256,10 +256,14 @@ int main(int argc, char** argv)
 
 //  std::cout << u << std::endl;
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisInterior),decltype(u)> uFunction(feBasisInterior,u);
+  auto uFunction
+      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+            (feBasisInterior, Dune::TypeTree::hybridTreePath(), u);
   auto localUFunction = localFunction(uFunction);
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace),decltype(uhat)> uhatFunction(feBasisTrace,uhat);
+  auto uhatFunction
+      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+            (feBasisTrace, Dune::TypeTree::hybridTreePath(), uhat);
   auto localUhatFunction = localFunction(uhatFunction);
 
   //////////////////////////////////////////////////////////////////////////////////////////////
@@ -286,7 +290,9 @@ int main(int argc, char** argv)
     sol[idx]=1;
 
   //std::cout << u << std::endl;
-    Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTest),decltype(sol)> uFunction(feBasisTest,sol);
+    auto uFunction
+        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+              (feBasisTest, Dune::TypeTree::hybridTreePath(), sol);
     auto localUFunction = localFunction(uFunction);
   //////////////////////////////////////////////////////////////////////////////////////////////
   //  Write result to VTK file

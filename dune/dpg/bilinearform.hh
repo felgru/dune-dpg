@@ -25,10 +25,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
 
-#include <dune/common/std/final.hh>
-
 #include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include "assemble_helper.hh"
@@ -136,10 +133,8 @@ namespace Dune {
               , SaddlepointFormulation
             >::value;
 
-      testLocalView     = const_cast<TestLocalView*>
-                              (std::addressof(tlv));
-      solutionLocalView = const_cast<SolutionLocalView*>
-                              (std::addressof(slv));
+      testLocalView     = std::addressof(tlv);
+      solutionLocalView = std::addressof(slv);
 
       using namespace boost::fusion;
       using namespace Dune::detail;
@@ -211,8 +206,8 @@ namespace Dune {
     size_t localTotalTestSize,
            localTotalSolutionSize;
 
-    TestLocalView*     testLocalView;
-    SolutionLocalView* solutionLocalView;
+    const TestLocalView*     testLocalView;
+    const SolutionLocalView* solutionLocalView;
   };
 
 /**

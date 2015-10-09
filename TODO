@@ -3,11 +3,6 @@ technical debt that needs to be paid off sooner or later:
 * The EnableIf construct seems to use behaviour of the compiler that is
   not strictly adhering to the C++ standard. We should replace EnableIf
   with proper std::enable_if invocations.
-* Functions in assemble_helper.hh that return boost::fusion::vectors of
-  *pointers* to local views and local index sets.
-  Beginning with version 1.55 boost::fusion supports move semantics.
-  Then we can probably manage our code with unique_pointers which prevents
-  memory leaks when forgetting to clean up afterwards.
 * Beginning with version 1.58 boost::fusion has better support for std::tuple,
   thus we can maybe get rid of those boost::fusion::vectors.
 * Find a proper way to handle transport problems on characteristic

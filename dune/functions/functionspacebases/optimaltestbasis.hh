@@ -295,7 +295,7 @@ public:
 
   using SizePrefix = Dune::ReservedVector<size_type, 2>;
 
-  using EnrichedTestSpaces = typename TestspaceCoefficientMatrix::TestSpaces;
+  using TestSearchSpaces = typename TestspaceCoefficientMatrix::TestSpaces;
   using SolutionSpaces = typename TestspaceCoefficientMatrix::SolutionSpaces;
 
 
@@ -387,7 +387,7 @@ class OptimalTestBasisNode :
 {
 public:
   using SolutionSpaces = typename TestspaceCoefficientMatrix::SolutionSpaces;
-  using EnrichedTestspaces = typename TestspaceCoefficientMatrix::TestSpaces;
+  using TestSearchSpaces = typename TestspaceCoefficientMatrix::TestSpaces;
 
 private:
   using GV = typename TestspaceCoefficientMatrix::GridView;
@@ -396,8 +396,8 @@ private:
   // static const int maxSize = see NodeFactory::maxNodeSize();
 
   using Base = LeafBasisNode<ST,TP>;
-  using EnrichedFiniteElement
-      = typename std::tuple_element<testIndex,EnrichedTestspaces>::type
+  using TestSearchFiniteElement
+      = typename std::tuple_element<testIndex,TestSearchSpaces>::type
                    ::LocalView::Tree::FiniteElement;
 
   using SolutionLocalView
@@ -410,7 +410,7 @@ private:
   using TestLocalView
         = typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<
-                         EnrichedTestspaces,
+                         TestSearchSpaces,
                          detail::getLocalView
                       >::type
              >::type;
@@ -424,14 +424,14 @@ public:
                                   <typename GV::ctype,
                                    double,
                                    GV::dimension,
-                                   EnrichedFiniteElement>;
+                                   TestSearchFiniteElement>;
 
   OptimalTestBasisNode(const TreePath& treePath,
                        TestspaceCoefficientMatrix& testCoeffMat) :
     Base(treePath),
     testspaceCoefficientMatrix(testCoeffMat),
     finiteElement_(nullptr),
-    enrichedTestspace_(nullptr),
+    testSearchSpace_(nullptr),
     element_(nullptr),
     localViewSolution_(boost::fusion::as_vector(
                 boost::fusion::transform(testCoeffMat.bilinearForm()
@@ -466,9 +466,9 @@ public:
 
     element_ = &e;
     for_each(localViewTest, applyBind<decltype(e)>(e));
-    // TODO: Improve memory handling of enrichedTestspace_
-    enrichedTestspace_ =
-        const_cast<typename std::tuple_element<testIndex,EnrichedTestspaces>
+    // TODO: Improve memory handling of testSearchSpace_
+    testSearchSpace_ =
+        const_cast<typename std::tuple_element<testIndex,TestSearchSpaces>
                    ::type::LocalView::Tree::FiniteElement*>
                   (&(at_c<testIndex>(localViewTest).tree().finiteElement()));
     for_each(localViewSolution_, applyBind<decltype(e)>(e));
@@ -478,13 +478,13 @@ public:
     // coefficientMatrix = testspaceCoefficientMatrix.coefficientMatrix();
 
     size_t k = at_c<testIndex>(localViewTest).tree().finiteElement().size();
-    size_t localTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
+    size_t localTestSpaceOffsets[std::tuple_size<TestSearchSpaces>::value];
     fold(zip(localTestSpaceOffsets, localViewTest), (size_t)0, offsetHelper());
     size_t offset = at_c<testIndex>(localTestSpaceOffsets);
 
     finiteElement_ = Dune::Std::make_unique<FiniteElement>
                         (&(testspaceCoefficientMatrix.coefficientMatrix()),
-                         enrichedTestspace_, offset, k);
+                         testSearchSpace_, offset, k);
     this->setSize(finiteElement_->size());
   }
 
@@ -497,10 +497,10 @@ protected:
   TestspaceCoefficientMatrix& testspaceCoefficientMatrix;
   //FiniteElementCache cache_;
   std::unique_ptr<FiniteElement> finiteElement_;
-  EnrichedFiniteElement* enrichedTestspace_;
+  TestSearchFiniteElement* testSearchSpace_;
   const Element* element_;
   SolutionLocalView localViewSolution_;
-  // TODO: localViewTest is only used to get the enrichedTestspace_
+  // TODO: localViewTest is only used to get the testSearchSpace_
   TestLocalView localViewTest;
 };
 

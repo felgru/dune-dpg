@@ -14,7 +14,6 @@
 #include <dune/istl/io.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 

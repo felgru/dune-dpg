@@ -25,10 +25,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
 
-#include <dune/common/std/final.hh>
-
 #include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include "assemble_helper.hh"
@@ -112,7 +109,7 @@ namespace Dune {
     void bind(const TestLocalView& tlv)
     {
       // TODO: Can we make testLocalView a const reference?
-      testLocalView = const_cast<TestLocalView*>(std::addressof(tlv));
+      testLocalView = std::addressof(tlv);
 
       using namespace boost::fusion;
       using namespace Dune::detail;
@@ -143,7 +140,7 @@ namespace Dune {
     InnerProductTerms  terms;
     size_t localTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
     size_t localTotalTestSize;
-    TestLocalView*     testLocalView;
+    const TestLocalView* testLocalView;
   };
 
 /**

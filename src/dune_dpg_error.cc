@@ -28,7 +28,7 @@
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 #include <dune/functions/functionspacebases/optimaltestbasis.hh>
-#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
+#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
 #include <dune/dpg/system_assembler.hh>
 #include <dune/dpg/errortools.hh>
@@ -229,14 +229,15 @@ int main(int argc, char** argv)
   }
 
   auto innerSpace = std::get<0>(solutionSpaces);
-  Dune::Functions::DiscreteScalarGlobalBasisFunction
-      <typename std::remove_reference<decltype(innerSpace)>::type, decltype(u)>
-          uFunction(innerSpace,u);
+  auto uFunction
+      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+            (innerSpace, Dune::TypeTree::hybridTreePath(), u);
   auto localUFunction = localFunction(uFunction);
 
   auto feBasisTrace = std::get<1>(solutionSpaces);
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace), decltype(theta)>
-      thetaFunction(feBasisTrace, theta);
+  auto thetaFunction
+      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+            (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta);
   auto localThetaFunction = localFunction(thetaFunction);
 
 

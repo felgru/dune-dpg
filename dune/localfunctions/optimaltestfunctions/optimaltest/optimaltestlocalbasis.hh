@@ -32,7 +32,7 @@ namespace Dune
 
      \nosubgrouping
    */
-  template<class D, class R, int d, class EnrichedTestspace>
+  template<class D, class R, int d, class TestSearchSpace>
   class OptimalTestLocalBasis
   {
     typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
@@ -40,13 +40,12 @@ namespace Dune
   public:
     typedef LocalBasisTraits<D,d,Dune::FieldVector<D,d>,R,1,Dune::FieldVector<R,1>,Dune::FieldMatrix<R,1,d> > Traits;
 
-    OptimalTestLocalBasis (EnrichedTestspace* enrTest, MatrixType* coeffMat, size_t offset, size_t k):
-      offset(offset),
-      k(k)
-    {
-      enrichedTestspace=enrTest;
-      coefficientMatrix=coeffMat;
-    }
+    OptimalTestLocalBasis (TestSearchSpace* testSearchSpace,
+                           MatrixType* coeffMat, size_t offset, size_t k)
+        : testSearchSpace(testSearchSpace),
+          coefficientMatrix(coeffMat),
+          offset(offset),
+          k(k) { }
 
     //! \brief number of shape functions
     unsigned int size () const
@@ -59,14 +58,14 @@ namespace Dune
                                   std::vector<typename Traits::RangeType>& out) const
     {
       out.resize(size());
-      std::vector<FieldVector<double,1> > valuesEnrichedTestspace(k);
-      enrichedTestspace->localBasis().evaluateFunction(in, valuesEnrichedTestspace);
+      std::vector<FieldVector<double,1> > valuesTestSearchSpace(k);
+      testSearchSpace->localBasis().evaluateFunction(in, valuesTestSearchSpace);
       for (size_t i=0; i<size(); i++)
       {
         out[i] = 0;
         for (size_t j=0; j<k; ++j)
         {
-          out[i]+=((*coefficientMatrix)[offset+j][i][0]*valuesEnrichedTestspace[j][0]);
+          out[i]+=((*coefficientMatrix)[offset+j][i][0]*valuesTestSearchSpace[j][0]);
         }
       }
     }
@@ -80,8 +79,8 @@ namespace Dune
                       std::vector<typename Traits::JacobianType>& out) const
     {
       out.resize(size());
-      std::vector<typename Traits::JacobianType> JacobianEnrichedTestspace(k);
-      enrichedTestspace->localBasis().evaluateJacobian(in, JacobianEnrichedTestspace);
+      std::vector<typename Traits::JacobianType> JacobianTestSearchSpace(k);
+      testSearchSpace->localBasis().evaluateJacobian(in, JacobianTestSearchSpace);
       // Loop over all shape functions
       for (size_t i=0; i<size(); i++)
       {
@@ -93,7 +92,7 @@ namespace Dune
           out[i][0][b] = 0;
           for (size_t j=0; j<k; ++j)
           {
-            out[i][0][b]+=((*coefficientMatrix)[offset+j][i][0]*JacobianEnrichedTestspace[j][0][b]);
+            out[i][0][b]+=((*coefficientMatrix)[offset+j][i][0]*JacobianTestSearchSpace[j][0][b]);
           }
         }
       }
@@ -102,10 +101,10 @@ namespace Dune
     //! \brief Polynomial order of the shape functions
     unsigned int order () const
     {
-      return enrichedTestspace->localBasis().order();
+      return testSearchSpace->localBasis().order();
     }
   private:
-    EnrichedTestspace* enrichedTestspace;
+    TestSearchSpace* testSearchSpace;
     MatrixType* coefficientMatrix;
     size_t offset;
     size_t k;
