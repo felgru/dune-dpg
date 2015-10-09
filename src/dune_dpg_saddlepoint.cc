@@ -26,7 +26,7 @@
 #include <dune/functions/functionspacebases/pqktransportnodalbasis.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
+#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
 #include <dune/dpg/system_assembler.hh>
 
@@ -210,9 +210,9 @@ int main(int argc, char** argv)
   }
 
   auto innerSpace = std::get<1>(solutionSpaces);
-  Dune::Functions::DiscreteScalarGlobalBasisFunction
-      <typename std::remove_reference<decltype(innerSpace)>::type, decltype(u)>
-          uFunction(innerSpace,u);
+  auto uFunction
+      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+            (innerSpace, Dune::TypeTree::hybridTreePath(), u);
   auto localUFunction = localFunction(uFunction);
 
   //////////////////////////////////////////////////////////////////////////////////////////////

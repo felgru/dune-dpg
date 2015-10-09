@@ -36,7 +36,7 @@
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
+#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/dpg/system_assembler.hh>
@@ -579,19 +579,29 @@ int main(int argc, char** argv)
   //  We need to subsample, because VTK cannot natively display real second-order functions
   //////////////////////////////////////////////////////////////////////////////////////////////
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisInterior),decltype(u)> uFunction(feBasisInterior,u);
+  auto uFunction
+      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+            (feBasisInterior, Dune::TypeTree::hybridTreePath(), u);
   auto localUFunction = localFunction(uFunction);
 
-//  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace),decltype(uhat)> uhatFunction(feBasisTrace,uhat);
+//  auto uhatFunction
+//      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+//            (feBasisTrace, Dune::TypeTree::hybridTreePath(), uhat);
 //  auto localUhatFunction = localFunction(uhatFunction);
 
-//  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisSigma1),decltype(sigma1)> sigma1Function(feBasisSigma1,sigma1);
+//  auto sigma1Function
+//      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+//            (feBasisSigma1, Dune::TypeTree::hybridTreePath(), sigma1);
 //  auto localSigma1Function = localFunction(sigma1Function);
 
-//  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisSigma2),decltype(sigma2)> sigma2Function(feBasisSigma2,sigma2);
+//  auto sigma2Function
+//      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+//            (feBasisSigma2, Dune::TypeTree::hybridTreePath(), sigma2);
 //  auto localSigma2Function = localFunction(sigma2Function);
 
-//  Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisFace),decltype(sigmahat)> sigmahatFunction(feBasisFace,sigmahat);
+//  auto sigmahatFunction
+//      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+//            (feBasisFace, Dune::TypeTree::hybridTreePath(), sigmahat);
 //  auto localSigmahatFunction = localFunction(sigmahatFunction);
 
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
@@ -626,7 +636,9 @@ int main(int argc, char** argv)
     sol[idx]=1;
 
   //std::cout << u << std::endl;
-    Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTest),decltype(sol)> uFunction(feBasisTest,sol);
+    auto uFunction
+        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+              (feBasisTest, Dune::TypeTree::hybridTreePath(), sol);
     auto localUFunction = localFunction(uFunction);
   //////////////////////////////////////////////////////////////////////////////////////////////
   //  Write result to VTK file
@@ -648,7 +660,9 @@ int main(int argc, char** argv)
     sol[idx]=1;
 
   //std::cout << u << std::endl;
-    Dune::Functions::DiscreteScalarGlobalBasisFunction<decltype(feBasisTrace),decltype(sol)> uhatbasisFunction(feBasisTrace,sol);
+    auto uhatbasisFunction
+        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+              (feBasisTrace, Dune::TypeTree::hybridTreePath(), sol);
     auto localUhatbasisFunction = localFunction(uhatbasisFunction);
   //////////////////////////////////////////////////////////////////////////////////////////////
   //  Write result to VTK file
