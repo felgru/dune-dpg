@@ -4,7 +4,15 @@ Preparing the Sources
 Additional to the software mentioned in README you'll need the
 following programs installed on your system:
 
+  a C++11-compatible compiler (e.g. GCC >= 4.9)
   cmake >= 2.8.6
+
+In addition to the DUNE libraries mentioned in dune.module, you'll
+need the following libraries:
+
+  Boost Fusion >= 1.54
+  ug
+  UMFPACK
 
 Getting started
 ---------------
@@ -45,13 +53,6 @@ If you save this information into example.opts you can pass the opts file to
 dunecontrol via the --opts option, e. g.
 
   dunecontrol --opts=example.opts all
-
-To get a full list of available configure flags just run
-
-  dunecontrol configure --help
-
-after running at least
-  dunecontrol autogen
 
 More info
 ---------

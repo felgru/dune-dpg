@@ -10,6 +10,6 @@ Name: @PACKAGE_NAME@
 Version: @VERSION@
 Description: Dune module for Discontinuous Petrov-Galerkin
 URL: https://www.igpm.rwth-aachen.de/git/dune-dpg
-Requires: dune-geometry dune-grid dune-localfunctions dune-istl
+Requires: dune-geometry dune-grid dune-localfunctions dune-istl dune-functions
 Libs: -L${libdir}
 Cflags: -I${includedir}
