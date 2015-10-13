@@ -2,7 +2,7 @@
 // vi: set et ts=4 sw=2 sts=2:
 
 #ifndef DUNE_LOCALFUNCTIONS_QKSUBSAMPLEDLOCALBASIS_HH
-#define DUNE_LOCALFUNCTIONS_QKLSUBSAMPLEDOCALBASIS_HH
+#define DUNE_LOCALFUNCTIONS_QKSUBSAMPLEDLOCALBASIS_HH
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
