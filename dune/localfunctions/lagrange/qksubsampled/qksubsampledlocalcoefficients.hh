@@ -17,11 +17,11 @@ namespace Dune
 {
   /** \brief Attaches a shape function to an entity
    *
-   * \tparam k Polynomial order
    * \tparam s number of samples
+   * \tparam k Polynomial order
    * \tparam d Dimension of the reference cube
    */
-  template<int k, int s, int d>
+  template<int s, int k, int d>
   class QkSubsampledLocalCoefficients {
 
     // Return i as a d-digit number in the (s*k+1)-nary system

@@ -24,9 +24,9 @@ namespace Dune
   template<class D, class R, int d, int s, int k>
   class QkSubsampledLocalFiniteElement {
 
-    typedef QkSubsampledLocalBasis<D,R,k,s,d> LocalBasis;
-    typedef QkSubsampledLocalCoefficients<k,s,d> LocalCoefficients;
-    typedef QkSubsampledLocalInterpolation<k,s,d,LocalBasis> LocalInterpolation;
+    typedef QkSubsampledLocalBasis<D,R,s,k,d> LocalBasis;
+    typedef QkSubsampledLocalCoefficients<s,k,d> LocalCoefficients;
+    typedef QkSubsampledLocalInterpolation<s,k,d,LocalBasis> LocalInterpolation;
 
   public:
 

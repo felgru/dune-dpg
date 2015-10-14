@@ -23,13 +23,13 @@ namespace Dune
    *
    * \tparam D Type to represent the field in the domain.
    * \tparam R Type to represent the field in the range.
-   * \tparam k Polynomial degree
    * \tparam s number of samples
+   * \tparam k Polynomial degree
    * \tparam d Dimension of the cube
    *
    * \nosubgrouping
    */
-  template<class D, class R, int k, int s, int d>
+  template<class D, class R, int s, int k, int d>
   class QkSubsampledLocalBasis
   {
     enum { n = StaticPower<(s*k)+1,d>::power };
