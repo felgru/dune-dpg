@@ -45,30 +45,75 @@ namespace Dune {
     SubsampledQuadratureRule(const Dune::QuadratureRule<ctype,dim>& quad)
       : QuadratureRule<ctype,dim>(quad.type(), quad.order())
     {
-      // Currently only works for cubes
-      assert(quad.type().isCube());
+      if(quad.type().isCube()) {
+        unsigned int numSections = StaticPower<s,dim>::power;
+        ctype volumeFraction = 1./(ctype)numSections;
 
-      unsigned int numSections = StaticPower<s,dim>::power;
-      ctype volumeFraction = 1./(ctype)numSections;
+        this->reserve(numSections*quad.size());
 
-      this->reserve(numSections*quad.size());
+        for (unsigned int i=0; i<numSections; i++) {
+          auto alpha = multiindex(i);
 
-      for (unsigned int i=0; i<numSections; i++) {
-        auto alpha = multiindex(i);
+          for (size_t q=0; q<quad.size(); q++) {
 
-        for (size_t q=0; q<quad.size(); q++) {
+            Dune::FieldVector<ctype,dim> position = quad[q].position();
+            for(unsigned int d=0; d<dim; d++) {
+              position[d] += alpha[d];
+              position[d] /= (ctype)s;
+            }
+            // TODO: use emplace_back
+            this->push_back(Dune::QuadraturePoint<ctype,dim>(position,
+                        volumeFraction*quad[q].weight()));
 
-          Dune::FieldVector<ctype,dim> position = quad[q].position();
-          for(unsigned int d=0; d<dim; d++) {
-            position[d] += alpha[d];
-            position[d] /= (ctype)s;
           }
-          // TODO: use emplace_back
-          this->push_back(Dune::QuadraturePoint<ctype,dim>(position,
-                      volumeFraction*quad[q].weight()));
 
         }
 
+      } else if(quad.type().isTriangle()) {
+        unsigned int numSections = StaticPower<s,dim>::power;
+        ctype volumeFraction = 1./(ctype)numSections;
+
+        this->reserve(numSections*quad.size());
+
+        for (unsigned int line=0; line<s; ++line) {
+          for(unsigned int i=0; i<2*(s-line-1)+1; ++i) {
+            if(i%2) { // mirrored triangle
+              for (size_t q=0; q<quad.size(); q++) {
+
+                // mirror position accordingly
+                Dune::FieldVector<ctype,dim> position = quad[q].position();
+                ctype tmp = position[0];
+                position[0] = 1 - position[1] + i/2;
+                position[0] /= (ctype)s;
+                position[1] = 1 - tmp + line;
+                position[1] /= (ctype)s;
+
+                // TODO: use emplace_back
+                this->push_back(Dune::QuadraturePoint<ctype,dim>(position,
+                            volumeFraction*quad[q].weight()));
+
+              }
+            } else {
+              for (size_t q=0; q<quad.size(); q++) {
+
+                Dune::FieldVector<ctype,dim> position = quad[q].position();
+                position[0] += i/2;
+                position[0] /= (ctype)s;
+                position[1] += line;
+                position[1] /= (ctype)s;
+
+                // TODO: use emplace_back
+                this->push_back(Dune::QuadraturePoint<ctype,dim>(position,
+                            volumeFraction*quad[q].weight()));
+
+              }
+            }
+          }
+        }
+      } else {
+        DUNE_THROW(Dune::NotImplemented,
+                   "SubsampledQuadratureRule only implemented on "
+                   "cubes and triangles!");
       }
 
     }
