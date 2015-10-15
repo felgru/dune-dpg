@@ -19,6 +19,9 @@ namespace Functions {
   class DefaultGlobalBasis;
 
   template<typename GV, int s, int k, class MI, class ST>
+  class PQkDGSubsampledDGNodeFactory;
+
+  template<typename GV, int s, int k, class MI, class ST>
   class PQkSubsampledDGNodeFactory;
 
   template<typename GV, int k, class MI, class ST>
@@ -61,6 +64,12 @@ struct is_SubsampledFiniteElement : std::false_type {};
 
 template<class GV, int s, int k, class ST>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
+             Functions::PQkDGSubsampledDGNodeFactory
+                 <GV, s, k, Functions::FlatMultiIndex<ST>, ST> > >
+       : std::true_type {};
+
+template<class GV, int s, int k, class ST>
+struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
              Functions::PQkSubsampledDGNodeFactory
                  <GV, s, k, Functions::FlatMultiIndex<ST>, ST> > >
        : std::true_type {};
@@ -76,6 +85,12 @@ struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
 
 template <typename FiniteElement>
 struct numberOfSamples : std::integral_constant<int, 1> {};
+
+template<class GV, int s, int k, class ST>
+struct numberOfSamples<Functions::DefaultGlobalBasis<
+             Functions::PQkDGSubsampledDGNodeFactory
+                 <GV, s, k, Functions::FlatMultiIndex<ST>, ST> > >
+       : std::integral_constant<int, s> {};
 
 template<class GV, int s, int k, class ST>
 struct numberOfSamples<Functions::DefaultGlobalBasis<

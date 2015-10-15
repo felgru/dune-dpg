@@ -16,7 +16,7 @@
 namespace Dune
 {
   /** \todo Please doc me! */
-  template<int k, int s, int d, class LB>
+  template<int s, int k, int d, class LB>
   class QkSubsampledLocalInterpolation
   {
 
@@ -59,7 +59,7 @@ namespace Dune
 
   /** \todo Please doc me! */
   template<int d, class LB>
-  class QkSubsampledLocalInterpolation<0,1,d,LB>
+  class QkSubsampledLocalInterpolation<1,0,d,LB>
   {
   public:
     //! \brief Local interpolation of a function
