@@ -1,3 +1,5 @@
+add_subdirectory(radiative_transfer)
+
 install(FILES assemble_helper.hh
               assemble_types.hh
               bilinearform.hh
