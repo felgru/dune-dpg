@@ -940,11 +940,20 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       }
 
       std::vector<std::pair<size_t,size_t>> endpoints(e.subEntities(1));
-      /* TODO: this code only works on quadrilateral elements: */
-      endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
-      endpoints[1] = std::make_pair(vertexDOFs[1], vertexDOFs[3]);
-      endpoints[2] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
-      endpoints[3] = std::make_pair(vertexDOFs[2], vertexDOFs[3]);
+      if(e.type().isQuadrilateral()) {
+        endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
+        endpoints[1] = std::make_pair(vertexDOFs[1], vertexDOFs[3]);
+        endpoints[2] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
+        endpoints[3] = std::make_pair(vertexDOFs[2], vertexDOFs[3]);
+      } else if(e.type().isTriangle()) {
+        endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
+        endpoints[1] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
+        endpoints[2] = std::make_pair(vertexDOFs[1], vertexDOFs[2]);
+      } else {
+        DUNE_THROW(Dune::NotImplemented,
+                   "defineCharacteristicFaces not implemented for element type"
+                   << e.type().id());
+      }
 
       for (auto&& faceAndDOFs: characteristicDOFs)
       {
