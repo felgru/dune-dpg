@@ -1,4 +1,3 @@
-#install headers
 install(FILES bilinearform.hh
               cholesky.hh
               innerproduct.hh
