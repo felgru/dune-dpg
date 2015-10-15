@@ -61,9 +61,8 @@ namespace Dune {
               position[d] += alpha[d];
               position[d] /= (ctype)s;
             }
-            // TODO: use emplace_back
-            this->push_back(Dune::QuadraturePoint<ctype,dim>(position,
-                        volumeFraction*quad[q].weight()));
+            this->emplace_back(position,
+                               volumeFraction*quad[q].weight());
 
           }
 
@@ -88,9 +87,8 @@ namespace Dune {
                 position[1] = 1 - tmp + line;
                 position[1] /= (ctype)s;
 
-                // TODO: use emplace_back
-                this->push_back(Dune::QuadraturePoint<ctype,dim>(position,
-                            volumeFraction*quad[q].weight()));
+                this->emplace_back(position,
+                                   volumeFraction*quad[q].weight());
 
               }
             } else {
@@ -102,9 +100,8 @@ namespace Dune {
                 position[1] += line;
                 position[1] /= (ctype)s;
 
-                // TODO: use emplace_back
-                this->push_back(Dune::QuadraturePoint<ctype,dim>(position,
-                            volumeFraction*quad[q].weight()));
+                this->emplace_back(position,
+                                   volumeFraction*quad[q].weight());
 
               }
             }
