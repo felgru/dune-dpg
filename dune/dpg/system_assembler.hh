@@ -780,9 +780,8 @@ applyWeakBoundaryCondition
        (size_t)0, globalOffsetHelper());
   size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
 
-  auto localView = std::get<spaceIndex>(solutionSpaces).localView();
-  typedef decltype(localView) LocalView;
-  auto localIndexSet = at_c<spaceIndex>(solutionSpaces).localIndexSet();
+  auto localView     = std::get<spaceIndex>(solutionSpaces).localView();
+  auto localIndexSet = std::get<spaceIndex>(solutionSpaces).localIndexSet();
 
   for(const auto& e : elements(gridView))
   {
