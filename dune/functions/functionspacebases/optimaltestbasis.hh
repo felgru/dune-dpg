@@ -171,9 +171,9 @@ class TestspaceCoefficientMatrix
 
   public:
   TestspaceCoefficientMatrix(BilinearForm& bilinForm, InnerProduct& innerProd) :
-    gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
+    gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
     localViewSolution_(boost::fusion::as_vector(
                 boost::fusion::transform(bilinearForm_.getSolutionSpaces(),
                                          detail::getLocalView()))),
