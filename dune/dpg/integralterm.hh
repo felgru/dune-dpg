@@ -543,8 +543,8 @@ detail::getLocalMatrix_InteriorImpl(const LhsLocalView& lhsLocalView,
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
   const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
 
-  const int nLhs(lhsLocalFiniteElement.localBasis().size());
-  const int nRhs(rhsLocalFiniteElement.localBasis().size());
+  const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
+  const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
   for (size_t pt=0; pt < quad.size(); pt++) {
 
@@ -590,9 +590,9 @@ detail::getLocalMatrix_InteriorImpl(const LhsLocalView& lhsLocalView,
                        rhsBeta);
 
     // Compute the actual matrix entries
-    for (size_t i=0; i<nLhs; i++)
+    for (unsigned int i=0; i<nLhs; i++)
     {
-      for (size_t j=0; j<nRhs; j++)
+      for (unsigned int j=0; j<nRhs; j++)
       {
         elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
                 += (lhsValues[i] * rhsValues[j]) * integrationWeight;
