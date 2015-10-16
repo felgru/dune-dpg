@@ -21,18 +21,7 @@ namespace Dune
    */
   template<class D, class R, int dim, int s, int k>
   struct DimSpecificPQkDGSubsampledLocalFiniteElementFactory
-  {
-    // TODO: remove the following lines
-#if 0
-    typedef typename FixedOrderLocalBasisTraits<typename PkDGSubsampled2DLocalFiniteElement<D,R,s,0>::Traits::LocalBasisType::Traits,0>::Traits T;
-
-    //! create finite element for given GeometryType
-    static LocalFiniteElementVirtualInterface<T>* create(const GeometryType& gt)
-    {
-      return nullptr;
-    }
-#endif
-  };
+  { };
 
   /** \brief Factory that only creates dimension specific local finite elements
    *
