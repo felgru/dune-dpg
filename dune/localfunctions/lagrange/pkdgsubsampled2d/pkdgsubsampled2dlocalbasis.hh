@@ -127,7 +127,7 @@ namespace Dune
       if(mirrored) {
         for(size_t i=0, i_max=outInSection.size(); i<i_max; ++i)
           for(unsigned int d=0; d<2; ++d)
-            out[sectionOffset+i][0][d] = -s*outInSection[i][0][1-d];
+            out[sectionOffset+i][0][d] = -(double)s*outInSection[i][0][1-d];
       } else {
         for(size_t i=0, i_max=outInSection.size(); i<i_max; ++i)
           for(unsigned int d=0; d<2; ++d)
