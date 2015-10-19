@@ -29,8 +29,8 @@ int main(int argc, char** argv) try
             DisableLocalInterpolation | DisableEvaluate);
   }
   {
-    const unsigned int order=3;
-    const unsigned int samples=3;
+    const unsigned int order=1;
+    const unsigned int samples=2;
     std::cout << "order : " << order
               << ", samples : " << samples << std::endl;
     Dune::PkDGSubsampled2DLocalFiniteElement<double,double,samples,order>
