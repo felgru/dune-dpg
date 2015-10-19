@@ -54,7 +54,7 @@ namespace Dune {
         for (unsigned int i=0; i<numSections; i++) {
           auto alpha = multiindex(i);
 
-          for (size_t q=0; q<quad.size(); q++) {
+          for (size_t q=0, qsize=quad.size(); q<qsize; q++) {
 
             Dune::FieldVector<ctype,dim> position = quad[q].position();
             for(unsigned int d=0; d<dim; d++) {
@@ -77,7 +77,7 @@ namespace Dune {
         for (unsigned int line=0; line<s; ++line) {
           for(unsigned int i=0; i<2*(s-line-1)+1; ++i) {
             if(i%2) { // mirrored triangle
-              for (size_t q=0; q<quad.size(); q++) {
+              for (size_t q=0, qsize=quad.size(); q<qsize; q++) {
 
                 // mirror position accordingly
                 Dune::FieldVector<ctype,dim> position = quad[q].position();
@@ -92,7 +92,7 @@ namespace Dune {
 
               }
             } else {
-              for (size_t q=0; q<quad.size(); q++) {
+              for (size_t q=0, qsize=quad.size(); q<qsize; q++) {
 
                 Dune::FieldVector<ctype,dim> position = quad[q].position();
                 position[0] += i/2;
