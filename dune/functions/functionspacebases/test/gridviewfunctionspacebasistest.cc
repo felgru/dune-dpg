@@ -28,7 +28,7 @@ void testScalarBasis(const Basis& feBasis)
   typedef typename Basis::GridView GridView;
   GridView gridView = feBasis.gridView();
 
-  typename Basis::LocalView localView(&feBasis);
+  typename Basis::LocalView localView(feBasis);
 
 
   // Test the LocalFiniteElement
@@ -40,6 +40,9 @@ void testScalarBasis(const Basis& feBasis)
     // The general LocalFiniteElement unit test from dune/localfunctions/test/test-localfe.hh
     const auto& lFE = localView.tree().finiteElement();
     testFE(lFE);
+
+    if (lFE.size() != localView.size())
+      DUNE_THROW(Exception, "Size of leaf node and finite element do not coincide");
   }
 
 
@@ -72,7 +75,9 @@ void testScalarBasis(const Basis& feBasis)
         DUNE_THROW(Exception, "Index is negative, which is not allowed");
 
       if (localIndexSet.index(i)[0] >= seen.size())
-        DUNE_THROW(Exception, "Index larger than allowed");
+        DUNE_THROW(Exception, "Local index " << i
+                           << " is mapped to global index " << localIndexSet.index(i)
+                           << ", which is larger than allowed");
 
       seen[localIndexSet.index(i)[0]] = true;
     }
@@ -123,8 +128,7 @@ void testScalarBasis(const Basis& feBasis)
 
     // get access to the finite element
     typedef typename Basis::LocalView::Tree Tree;
-    auto& treeImp = localView.tree();
-    const typename Tree::Interface& tree = treeImp;
+    const Tree& tree = localView.tree();
 
     auto& localFiniteElement = tree.finiteElement();
 
@@ -174,23 +178,18 @@ int main (int argc, char* argv[]) try
   std::array<int,dim> elements = {{10, 10}};
   GridType grid(l,elements);
 
-  // Test whether PQ1FunctionSpaceBasis.hh can be instantiated on the leaf view
   typedef GridType::LeafGridView GridView;
   const GridView& gridView = grid.leafGridView();
 
-  // Test PQ1NodalBasis
   PQkTraceNodalBasis<GridView, 1> pq1Basis(gridView);
   testScalarBasis(pq1Basis);
 
-  // Test PQ2NodalBasis
   PQkTraceNodalBasis<GridView, 2> pq2Basis(gridView);
   testScalarBasis(pq2Basis);
 
-  // Test PQkNodalBasis for k==3
   PQkTraceNodalBasis<GridView, 3> pq3Basis(gridView);
   testScalarBasis(pq3Basis);
 
-  // Test PQkNodalBasis for k==4
   PQkTraceNodalBasis<GridView, 4> pq4Basis(gridView);
   testScalarBasis(pq4Basis);
 
@@ -199,8 +198,10 @@ int main (int argc, char* argv[]) try
 } catch ( Dune::Exception &e )
 {
   std::cerr << "Dune reported error: " << e << std::endl;
+  return 1;
 }
 catch(...)
 {
   std::cerr << "Unknown exception thrown!" << std::endl;
+  return 1;
 }

@@ -47,7 +47,11 @@ namespace Dune
       return n;
     }
 
-    //! \brief Evaluate all shape functions
+    /** \brief Evaluate all shape functions
+     *
+     * \note This might not work as expected if you evaluate exactly on
+     *       the edge between two subcells.
+     */
     inline void evaluateFunction (const typename Traits::DomainType& in,
                                   std::vector<typename Traits::RangeType>& out) const
     {
@@ -55,17 +59,17 @@ namespace Dune
       for(size_t i=0, i_max=size(); i<i_max; i++)
         out[i] = 0;
       // In which section of the subgrid are we?
-      /* TODO: This does not work if we end up exactly on a vertex or an edge. */
-      Dune::FieldVector<int,d> section;
-      size_t sectionOffset = 0;
       typename Traits::DomainType inInSection;
-      size_t line = (size_t)(in[1]*s);
-      sectionOffset = (size_t)(in[0]*s);
+      size_t line          = (size_t)(in[1]*s);
+      if(line>=s) line = s-1;
+      size_t sectionOffset = (size_t)(in[0]*s);
+      if(sectionOffset>=s-line) sectionOffset = s-line-1;
       inInSection[0] = in[0]*s - sectionOffset;
       inInSection[1] = in[1]*s - line;
+      bool mirrored = (inInSection[0] + inInSection[1] > 1)
+                    && (sectionOffset < s-line-1);
       sectionOffset *= 2;
       sectionOffset += (2*s-line)*line; // = s^2 - (s-line)^2
-      bool mirrored = inInSection[0] + inInSection[1] > 1;
       if(mirrored) {
         sectionOffset += 1;
         auto tmp = inInSection[0];
@@ -81,8 +85,12 @@ namespace Dune
     }
 
     /** \brief Evaluate Jacobian of all shape functions
+     *
      * \param in position where to evaluate
      * \param out The return value
+     *
+     * \note This might not work as expected if you evaluate exactly on
+     *       the edge between two subcells.
      */
     inline void
     evaluateJacobian (const typename Traits::DomainType& in,
@@ -92,17 +100,17 @@ namespace Dune
       for(size_t i=0, i_max=size(); i<i_max; i++)
         out[i] = 0;
       // In which section of the subgrid are we?
-      /* TODO: This does not work if we end up exactly on a vertex or an edge. */
-      Dune::FieldVector<int,d> section;
-      size_t sectionOffset = 0;
       typename Traits::DomainType inInSection;
-      size_t line = (size_t)(in[1]*s);
-      sectionOffset = (size_t)(in[0]*s);
+      size_t line          = (size_t)(in[1]*s);
+      if(line>=s) line = s-1;
+      size_t sectionOffset = (size_t)(in[0]*s);
+      if(sectionOffset>=s-line) sectionOffset = s-line-1;
       inInSection[0] = in[0]*s - sectionOffset;
       inInSection[1] = in[1]*s - line;
+      bool mirrored = (inInSection[0] + inInSection[1] > 1)
+                    && (sectionOffset < s-line-1);
       sectionOffset *= 2;
       sectionOffset += (2*s-line)*line; // = s^2 - (s-line)^2
-      bool mirrored = inInSection[0] + inInSection[1] > 1;
       if(mirrored) {
         sectionOffset += 1;
         size_t tmp = inInSection[0];
@@ -113,9 +121,16 @@ namespace Dune
 
       std::vector<typename Traits::JacobianType> outInSection;
       SubBasis().evaluateJacobian(inInSection, outInSection);
-      for(size_t i=0, i_max=outInSection.size(); i<i_max; ++i)
-        for(unsigned int d=0; d<2; ++d)
-          out[sectionOffset+i][0][d] = s*outInSection[i][0][d];
+      // Transform Jacobian if mirrored
+      if(mirrored) {
+        for(size_t i=0, i_max=outInSection.size(); i<i_max; ++i)
+          for(unsigned int d=0; d<2; ++d)
+            out[sectionOffset+i][0][d] = -(double)s*outInSection[i][0][1-d];
+      } else {
+        for(size_t i=0, i_max=outInSection.size(); i<i_max; ++i)
+          for(unsigned int d=0; d<2; ++d)
+            out[sectionOffset+i][0][d] = s*outInSection[i][0][d];
+      }
     }
 
     /** \brief Evaluate derivative in a given direction

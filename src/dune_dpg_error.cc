@@ -67,7 +67,7 @@ double fieldExact(const Dune::FieldVector<double, 2>& x) {
   return (std::exp(c0*x[0])-std::exp(1.))*(std::exp(c1*x[1])-std::exp(1.)) ;
 }
 
-int main(int argc, char** argv)
+int main()
 {
   try{
 
@@ -208,7 +208,6 @@ int main(int argc, char** argv)
   //  Make a discrete function from the FE basis and the coefficient vector
   ////////////////////////////////////////////////////////////////////////////
 
-  size_t nTest = std::get<0>(testSpaces).size();
   size_t nFace = std::get<1>(solutionSpaces).size();
   size_t nInner = std::get<0>(solutionSpaces).size();
   VectorType u(nInner);
