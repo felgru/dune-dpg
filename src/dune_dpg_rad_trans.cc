@@ -407,7 +407,7 @@ int main(int argc, char** argv)
                                           dirichletNodesInflow[i],
                                           s);
 
-    auto gSfixed = std::make_tuple([s] (const Domain& x){ return gFunction(x,s);});
+    auto gSfixed = std::make_tuple([s] (const Domain& x){ return 0.;});
     boundaryTools.getInflowBoundaryValue(std::get<1>(solutionSpaces),
                                           rhsInflowContrib[i],
                                           gSfixed);
