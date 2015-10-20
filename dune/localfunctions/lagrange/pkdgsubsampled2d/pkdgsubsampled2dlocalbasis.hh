@@ -59,7 +59,6 @@ namespace Dune
       for(size_t i=0, i_max=size(); i<i_max; i++)
         out[i] = 0;
       // In which section of the subgrid are we?
-      Dune::FieldVector<int,d> section;
       typename Traits::DomainType inInSection;
       size_t line          = (size_t)(in[1]*s);
       if(line>=s) line = s-1;
@@ -101,7 +100,6 @@ namespace Dune
       for(size_t i=0, i_max=size(); i<i_max; i++)
         out[i] = 0;
       // In which section of the subgrid are we?
-      Dune::FieldVector<int,d> section;
       typename Traits::DomainType inInSection;
       size_t line          = (size_t)(in[1]*s);
       if(line>=s) line = s-1;
