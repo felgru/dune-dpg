@@ -148,9 +148,9 @@ template<size_t lhsSpaceIndex,
          IntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
          class FactorType,
-         EnableIf<std::integral_constant<bool,
+         std::enable_if<
                      integrationType == IntegrationType::valueValue
-                  || integrationType == IntegrationType::normalSign> >...
+                  || integrationType == IntegrationType::normalSign>* = nullptr
         >
 auto make_IntegralTerm(FactorType c)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
@@ -184,11 +184,12 @@ template<size_t lhsSpaceIndex,
          IntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
          class FactorType, class DirectionType,
-         EnableIf<std::integral_constant<bool,
+         std::enable_if<
                      integrationType == IntegrationType::gradValue
                   || integrationType == IntegrationType::valueGrad
                   || integrationType == IntegrationType::gradGrad
-                  || integrationType == IntegrationType::normalVector> >...
+                  || integrationType == IntegrationType::normalVector>*
+           = nullptr
         >
 auto make_IntegralTerm(FactorType c, DirectionType beta)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
@@ -224,8 +225,8 @@ template<size_t lhsSpaceIndex,
          IntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
          class FactorType, class DirectionType,
-         EnableIf<std::integral_constant<bool,
-                     integrationType == IntegrationType::gradGrad> >...
+         std::enable_if<
+                     integrationType == IntegrationType::gradGrad>* = nullptr
         >
 auto make_IntegralTerm(FactorType c,
                        DirectionType lhsBeta,

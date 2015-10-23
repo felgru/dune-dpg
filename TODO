@@ -1,8 +1,5 @@
 technical debt that needs to be paid off sooner or later:
 
-* The EnableIf construct seems to use behaviour of the compiler that is
-  not strictly adhering to the C++ standard. We should replace EnableIf
-  with proper std::enable_if invocations.
 * Beginning with version 1.58 boost::fusion has better support for std::tuple,
   thus we can maybe get rid of those boost::fusion::vectors.
 * Find a proper way to handle transport problems on characteristic
