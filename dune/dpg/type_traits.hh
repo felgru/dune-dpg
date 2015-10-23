@@ -7,6 +7,7 @@
 
 namespace std {
   template<class T, class Alloc> class vector;
+  template< std::size_t I, class T > class tuple_element;
 }
 
 namespace Dune {
@@ -17,6 +18,9 @@ namespace Functions {
 
   template<class NF>
   class DefaultGlobalBasis;
+
+  template<typename GV, int level, int k, class MI, class ST>
+  class PQkDGRefinedDGNodeFactory;
 
   template<typename GV, int s, int k, class MI, class ST>
   class PQkDGSubsampledDGNodeFactory;
@@ -47,6 +51,15 @@ struct is_vector<Dune::FieldVector<T, size>> : std::true_type {};
 /****************************
  * Traits for finite elements
  ****************************/
+
+template <typename FiniteElement>
+struct is_RefinedFiniteElement : std::false_type {};
+
+template<typename GV, int level, int k, class ST>
+struct is_RefinedFiniteElement<Functions::DefaultGlobalBasis<
+               Functions::PQkDGRefinedDGNodeFactory
+                   <GV, level, k, Functions::FlatMultiIndex<ST>, ST> > >
+       : std::true_type {};
 
 template <typename FiniteElement>
 struct is_SubsampledFiniteElement : std::false_type {};
