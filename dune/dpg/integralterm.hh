@@ -7,16 +7,13 @@
 #include <vector>
 #include <type_traits>
 
-#include <dune/geometry/quadraturerules.hh>
-#include <dune/geometry/quadraturerules/subsampledquadraturerule.hh>
-#include <dune/geometry/quadraturerules/transportquadraturerule.hh>
-
 #include <dune/istl/matrix.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 
 #include "assemble_types.hh"
 #include "type_traits.hh"
+#include "quadrature.hh"
 
 namespace Dune {
 
@@ -335,6 +332,7 @@ inline double evaluateFactor(const FactorType& factor, PositionType x)
 
 }
 
+
 template<IntegrationType type, DomainOfIntegration domain_of_integration,
          class FactorType, class DirectionType>
 template <class LhsSpace,
@@ -378,9 +376,6 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
   using Element = typename std::remove_pointer<LhsLocalView>::type::Element;
   const Element& element = lhsLocalView.element();
 
-  const int dim = Element::dimension;
-  auto geometry = element.geometry();
-
   // Get set of shape functions for this element
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
   const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
@@ -394,74 +389,26 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
                       + rhsLocalFiniteElement.localBasis().order();
 
 
-  constexpr bool useSubsampledQuadrature =
-      is_SubsampledFiniteElement<LhsSpace>::value ||
-      is_SubsampledFiniteElement<RhsSpace>::value;
-
-  constexpr bool useTransportQuadrature =
-      is_TransportFiniteElement<LhsSpace>::value ||
-      is_TransportFiniteElement<RhsSpace>::value;
-
   if(domain_of_integration == DomainOfIntegration::interior) {
   ////////////////////////////
   // Assemble interior terms
   ////////////////////////////
 
-    if(useSubsampledQuadrature) {
+    typename detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>::type quad
+      = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
+        ::Quadrature(element, quadratureOrder, lhsBeta);
 
-      using Slhs = numberOfSamples<LhsSpace>;
-      using Srhs = numberOfSamples<RhsSpace>;
-      constexpr int s =
-          std::conditional<Slhs::value < Srhs::value, Srhs, Slhs>::type::value;
-
-      const QuadratureRule<double, dim>& quadSection =
-            QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
-      const SubsampledQuadratureRule<double, s, dim> quad(quadSection);
-
-      detail::getLocalMatrix_InteriorImpl<type>
-                                         (lhsLocalView,
-                                          rhsLocalView,
-                                          elementMatrix,
-                                          lhsSpaceOffset,
-                                          rhsSpaceOffset,
-                                          quad,
-                                          element,
-                                          factor,
-                                          lhsBeta,
-                                          rhsBeta);
-    } else if(useTransportQuadrature) {
-      const TransportQuadratureRule<double, dim> quad(element.type(),
-                                                      quadratureOrder,
-                                                      lhsBeta);
-
-      detail::getLocalMatrix_InteriorImpl<type>
-                                         (lhsLocalView,
-                                          rhsLocalView,
-                                          elementMatrix,
-                                          lhsSpaceOffset,
-                                          rhsSpaceOffset,
-                                          quad,
-                                          element,
-                                          factor,
-                                          lhsBeta,
-                                          rhsBeta);
-    } else {
-
-      const QuadratureRule<double, dim>& quad =
-            QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
-
-      detail::getLocalMatrix_InteriorImpl<type>
-                                         (lhsLocalView,
-                                          rhsLocalView,
-                                          elementMatrix,
-                                          lhsSpaceOffset,
-                                          rhsSpaceOffset,
-                                          quad,
-                                          element,
-                                          factor,
-                                          lhsBeta,
-                                          rhsBeta);
-    }
+    detail::getLocalMatrix_InteriorImpl<type>
+                                       (lhsLocalView,
+                                        rhsLocalView,
+                                        elementMatrix,
+                                        lhsSpaceOffset,
+                                        rhsSpaceOffset,
+                                        quad,
+                                        element,
+                                        factor,
+                                        lhsBeta,
+                                        rhsBeta);
   } else {
   ////////////////////////////
   // Assemble boundary terms
@@ -471,47 +418,27 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 
     for (auto&& intersection : intersections(gridView, element))
     {
-      if(useSubsampledQuadrature) {
+      using intersectionType
+        = typename std::decay<decltype(intersection)>::type;
+      // TODO: Doe we really want to have a transport quadrature rule
+      //       on the faces, if one of the FE spaces is a transport space?
+      typename detail::ChooseQuadrature<LhsSpace,
+                                        RhsSpace,
+                                        intersectionType>::type quadFace
+        = detail::ChooseQuadrature<LhsSpace, RhsSpace, intersectionType>
+          ::Quadrature(intersection, quadratureOrder, lhsBeta);
 
-        using Slhs = numberOfSamples<LhsSpace>;
-        using Srhs = numberOfSamples<RhsSpace>;
-        constexpr int s =
-            std::conditional<Slhs::value < Srhs::value, Srhs, Slhs>::type::value;
-
-        const QuadratureRule<double, dim-1>& quadSection =
-              QuadratureRules<double, dim-1>::rule(intersection.type(),
-                                                   quadratureOrder);
-        const SubsampledQuadratureRule<double, s, dim-1> quadFace(quadSection);
-
-        detail::getLocalMatrix_FaceImpl<type>
-                                       (lhsLocalView,
-                                        rhsLocalView,
-                                        elementMatrix,
-                                        lhsSpaceOffset,
-                                        rhsSpaceOffset,
-                                        quadFace,
-                                        intersection,
-                                        factor,
-                                        lhsBeta,
-                                        rhsBeta);
-      } else {
-
-        const QuadratureRule<double, dim-1>& quadFace =
-              QuadratureRules<double, dim-1>::rule(intersection.type(),
-                                                   quadratureOrder);
-
-        detail::getLocalMatrix_FaceImpl<type>
-                                       (lhsLocalView,
-                                        rhsLocalView,
-                                        elementMatrix,
-                                        lhsSpaceOffset,
-                                        rhsSpaceOffset,
-                                        quadFace,
-                                        intersection,
-                                        factor,
-                                        lhsBeta,
-                                        rhsBeta);
-      }
+      detail::getLocalMatrix_FaceImpl<type>
+                                     (lhsLocalView,
+                                      rhsLocalView,
+                                      elementMatrix,
+                                      lhsSpaceOffset,
+                                      rhsSpaceOffset,
+                                      quadFace,
+                                      intersection,
+                                      factor,
+                                      lhsBeta,
+                                      rhsBeta);
     }
   }
 }
