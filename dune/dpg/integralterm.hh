@@ -547,7 +547,7 @@ detail::getLocalMatrix_InteriorImpl(const LhsLocalView& lhsLocalView,
   const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
   const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-  for (size_t pt=0; pt < quad.size(); pt++) {
+  for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
 
     // Position of the current quadrature point in the reference element
     const FieldVector<double,dim>& quadPos = quad[pt].position();
@@ -632,7 +632,7 @@ detail::getLocalMatrix_FaceImpl(const LhsLocalView& lhsLocalView,
   const int nLhs(lhsLocalFiniteElement.localBasis().size());
   const int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-  for (size_t pt=0; pt < quadFace.size(); pt++) {
+  for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
 
     // Position of the current quadrature point in the reference element (face!)
     const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();

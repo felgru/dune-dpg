@@ -114,7 +114,7 @@ void getVolumeTerm(const LocalViewTest& localViewTest,
           QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
     const SubsampledQuadratureRule<double, s, dim> quad(quadSection);
 
-    for ( size_t pt=0; pt < quad.size(); pt++ ) {
+    for ( size_t pt=0, qsize=quad.size(); pt < qsize; pt++ ) {
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
@@ -138,7 +138,7 @@ void getVolumeTerm(const LocalViewTest& localViewTest,
     const QuadratureRule<double, dim>& quad =
         QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
 
-    for ( size_t pt=0; pt < quad.size(); pt++ ) {
+    for ( size_t pt=0, qsize=quad.size(); pt < qsize; pt++ ) {
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
