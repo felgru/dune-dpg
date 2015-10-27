@@ -2,4 +2,4 @@ add_subdirectory(lagrange)
 add_subdirectory(optimaltestfunctions)
 add_subdirectory(transportfunctions)
 
-add_subdirectory(test EXCLUDE_FROM_ALL)
+add_subdirectory(test)
