@@ -89,10 +89,11 @@ namespace Dune {
 
 namespace detail {
   template <IntegrationType type,
+            class LhsSpace,
+            class RhsSpace,
             class LhsLocalView,
             class RhsLocalView,
             class MatrixType,
-            class QuadratureRule,
             class Element,
             class FactorType,
             class DirectionType>
@@ -101,17 +102,18 @@ namespace detail {
                                           MatrixType&,
                                           size_t,
                                           size_t,
-                                          const QuadratureRule&,
+                                          unsigned int,
                                           const Element&,
                                           const FactorType&,
                                           const DirectionType&,
                                           const DirectionType&);
 
   template <IntegrationType type,
+            class LhsSpace,
+            class RhsSpace,
             class LhsLocalView,
             class RhsLocalView,
             class MatrixType,
-            class QuadratureRule,
             class Intersection,
             class FactorType,
             class DirectionType>
@@ -120,7 +122,7 @@ namespace detail {
                                       MatrixType&,
                                       size_t,
                                       size_t,
-                                      const QuadratureRule&,
+                                      unsigned int,
                                       const Intersection&,
                                       const FactorType&,
                                       const DirectionType&,
@@ -385,70 +387,45 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 
   /* TODO: We might need a higher order when factor is a function. */
   /* TODO: Assuming β const. */
-  int quadratureOrder = lhsLocalFiniteElement.localBasis().order()
-                      + rhsLocalFiniteElement.localBasis().order();
+  unsigned int quadratureOrder = lhsLocalFiniteElement.localBasis().order()
+                               + rhsLocalFiniteElement.localBasis().order();
 
 
   if(domain_of_integration == DomainOfIntegration::interior) {
-  ////////////////////////////
-  // Assemble interior terms
-  ////////////////////////////
-
-    typename detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>::type quad
-      = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
-        ::Quadrature(element, quadratureOrder, lhsBeta);
-
-    detail::getLocalMatrix_InteriorImpl<type>
+    detail::getLocalMatrix_InteriorImpl<type, LhsSpace, RhsSpace>
                                        (lhsLocalView,
                                         rhsLocalView,
                                         elementMatrix,
                                         lhsSpaceOffset,
                                         rhsSpaceOffset,
-                                        quad,
+                                        quadratureOrder,
                                         element,
                                         factor,
                                         lhsBeta,
                                         rhsBeta);
   } else {
-  ////////////////////////////
-  // Assemble boundary terms
-  ////////////////////////////
+    detail::getLocalMatrix_FaceImpl<type, LhsSpace, RhsSpace>
+                                   (lhsLocalView,
+                                    rhsLocalView,
+                                    elementMatrix,
+                                    lhsSpaceOffset,
+                                    rhsSpaceOffset,
+                                    quadratureOrder,
+                                    element,
+                                    factor,
+                                    lhsBeta,
+                                    rhsBeta);
 
-    const auto& gridView = lhsLocalView.globalBasis().gridView();
-
-    for (auto&& intersection : intersections(gridView, element))
-    {
-      using intersectionType
-        = typename std::decay<decltype(intersection)>::type;
-      // TODO: Doe we really want to have a transport quadrature rule
-      //       on the faces, if one of the FE spaces is a transport space?
-      typename detail::ChooseQuadrature<LhsSpace,
-                                        RhsSpace,
-                                        intersectionType>::type quadFace
-        = detail::ChooseQuadrature<LhsSpace, RhsSpace, intersectionType>
-          ::Quadrature(intersection, quadratureOrder, lhsBeta);
-
-      detail::getLocalMatrix_FaceImpl<type>
-                                     (lhsLocalView,
-                                      rhsLocalView,
-                                      elementMatrix,
-                                      lhsSpaceOffset,
-                                      rhsSpaceOffset,
-                                      quadFace,
-                                      intersection,
-                                      factor,
-                                      lhsBeta,
-                                      rhsBeta);
-    }
   }
 }
 
 
 template <IntegrationType type,
+          class LhsSpace,
+          class RhsSpace,
           class LhsLocalView,
           class RhsLocalView,
           class MatrixType,
-          class QuadratureRule,
           class Element,
           class FactorType,
           class DirectionType>
@@ -458,7 +435,7 @@ detail::getLocalMatrix_InteriorImpl(const LhsLocalView& lhsLocalView,
                                     MatrixType& elementMatrix,
                                     size_t lhsSpaceOffset,
                                     size_t rhsSpaceOffset,
-                                    const QuadratureRule& quad,
+                                    unsigned int quadratureOrder,
                                     const Element& element,
                                     const FactorType& factor,
                                     const DirectionType& lhsBeta,
@@ -473,6 +450,10 @@ detail::getLocalMatrix_InteriorImpl(const LhsLocalView& lhsLocalView,
 
   const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
   const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
+
+  typename detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>::type quad
+    = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
+      ::Quadrature(element, quadratureOrder, lhsBeta);
 
   for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
 
@@ -531,11 +512,12 @@ detail::getLocalMatrix_InteriorImpl(const LhsLocalView& lhsLocalView,
 
 
 template <IntegrationType type,
+          class LhsSpace,
+          class RhsSpace,
           class LhsLocalView,
           class RhsLocalView,
           class MatrixType,
-          class QuadratureRule,
-          class Intersection,
+          class Element,
           class FactorType,
           class DirectionType>
 inline void
@@ -544,13 +526,13 @@ detail::getLocalMatrix_FaceImpl(const LhsLocalView& lhsLocalView,
                                 MatrixType& elementMatrix,
                                 size_t lhsSpaceOffset,
                                 size_t rhsSpaceOffset,
-                                const QuadratureRule& quadFace,
-                                const Intersection& intersection,
+                                unsigned int quadratureOrder,
+                                const Element& element,
                                 const FactorType& factor,
                                 const DirectionType& lhsBeta,
                                 const DirectionType& rhsBeta)
 {
-  const int dim = Intersection::dimension;
+  const int dim = Element::dimension;
 
   // Get set of shape functions for this element
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
@@ -559,77 +541,92 @@ detail::getLocalMatrix_FaceImpl(const LhsLocalView& lhsLocalView,
   const int nLhs(lhsLocalFiniteElement.localBasis().size());
   const int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-  for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
+  const auto& gridView = lhsLocalView.globalBasis().gridView();
 
-    // Position of the current quadrature point in the reference element (face!)
-    const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
+  for (auto&& intersection : intersections(gridView, element))
+  {
+    using intersectionType
+      = typename std::decay<decltype(intersection)>::type;
+    // TODO: Doe we really want to have a transport quadrature rule
+    //       on the faces, if one of the FE spaces is a transport space?
+    typename detail::ChooseQuadrature<LhsSpace,
+                                      RhsSpace,
+                                      intersectionType>::type quadFace
+      = detail::ChooseQuadrature<LhsSpace, RhsSpace, intersectionType>
+        ::Quadrature(intersection, quadratureOrder, lhsBeta);
 
-    // The multiplicative factor in the integral transformation formula multiplied with outer normal
-    const FieldVector<double,dim>& integrationOuterNormal =
-            intersection.integrationOuterNormal(quadFacePos);
+    for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
 
-    // The multiplicative factor in the integral transformation formula -
+      // Position of the current quadrature point in the reference element (face!)
+      const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
 
-    double integrationWeight;
-    if(type == IntegrationType::normalVector) {
-      integrationWeight = (lhsBeta*integrationOuterNormal)
-                        * detail::evaluateFactor(factor, quadFacePos)
-                        * quadFace[pt].weight();
-    } else if(type == IntegrationType::normalSign) {
-      const double integrationElement =
-          intersection.geometry().integrationElement(quadFacePos);
+      // The multiplicative factor in the integral transformation formula multiplied with outer normal
+      const FieldVector<double,dim>& integrationOuterNormal =
+              intersection.integrationOuterNormal(quadFacePos);
 
-      const FieldVector<double,dim>& centerOuterNormal =
-          intersection.centerUnitOuterNormal();
+      // The multiplicative factor in the integral transformation formula -
 
-      int sign = 1;
-      bool signfound = false;
-      for (unsigned int i=0;
-         i<centerOuterNormal.size() and signfound == false;
-         i++)
-      {
-        if (centerOuterNormal[i]<(-1e-10))
+      double integrationWeight;
+      if(type == IntegrationType::normalVector) {
+        integrationWeight = (lhsBeta*integrationOuterNormal)
+                          * detail::evaluateFactor(factor, quadFacePos)
+                          * quadFace[pt].weight();
+      } else if(type == IntegrationType::normalSign) {
+        const double integrationElement =
+            intersection.geometry().integrationElement(quadFacePos);
+
+        const FieldVector<double,dim>& centerOuterNormal =
+            intersection.centerUnitOuterNormal();
+
+        int sign = 1;
+        bool signfound = false;
+        for (unsigned int i=0;
+           i<centerOuterNormal.size() and signfound == false;
+           i++)
         {
-          sign = -1;
-          signfound = true;
+          if (centerOuterNormal[i]<(-1e-10))
+          {
+            sign = -1;
+            signfound = true;
+          }
+          else if (centerOuterNormal[i]>(1e-10))
+          {
+            sign = 1;
+            signfound = true;
+          }
         }
-        else if (centerOuterNormal[i]>(1e-10))
-        {
-          sign = 1;
-          signfound = true;
-        }
+
+        integrationWeight = sign * detail::evaluateFactor(factor, quadFacePos)
+                          * quadFace[pt].weight() * integrationElement;
       }
 
-      integrationWeight = sign * detail::evaluateFactor(factor, quadFacePos)
-                        * quadFace[pt].weight() * integrationElement;
-    }
-
-    // position of the quadrature point within the element
-    const FieldVector<double,dim> elementQuadPos =
-            intersection.geometryInInside().global(quadFacePos);
+      // position of the quadrature point within the element
+      const FieldVector<double,dim> elementQuadPos =
+              intersection.geometryInInside().global(quadFacePos);
 
 
-    //////////////////////////////
-    // Left Hand Side Functions //
-    //////////////////////////////
-    std::vector<FieldVector<double,1> > lhsValues;
-    lhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
-                                                        lhsValues);
+      //////////////////////////////
+      // Left Hand Side Functions //
+      //////////////////////////////
+      std::vector<FieldVector<double,1> > lhsValues;
+      lhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
+                                                          lhsValues);
 
-    ///////////////////////////////
-    // Right Hand Side Functions //
-    ///////////////////////////////
-    std::vector<FieldVector<double,1> > rhsValues;
-    rhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
-                                                        rhsValues);
+      ///////////////////////////////
+      // Right Hand Side Functions //
+      ///////////////////////////////
+      std::vector<FieldVector<double,1> > rhsValues;
+      rhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
+                                                          rhsValues);
 
-    // Compute the actual matrix entries
-    for (size_t i=0; i<nLhs; i++)
-    {
-      for (size_t j=0; j<nRhs; j++)
+      // Compute the actual matrix entries
+      for (size_t i=0; i<nLhs; i++)
       {
-        elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += (lhsValues[i] * rhsValues[j]) * integrationWeight;
+        for (size_t j=0; j<nRhs; j++)
+        {
+          elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
+                  += (lhsValues[i] * rhsValues[j]) * integrationWeight;
+        }
       }
     }
   }
