@@ -32,6 +32,7 @@
 #include <dune/functions/functionspacebases/pqkfacenodalbasis.hh>
 #include <dune/functions/functionspacebases/optimaltestbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
+#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
@@ -87,7 +88,7 @@ int main(int argc, char** argv)
 
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
-  typedef Functions::LagrangeDGBasis<GridView, 5> FEBasisTest;     // v search space
+  typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;     // v search space
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
     typedef decltype(testSpaces) TestSpaces;
