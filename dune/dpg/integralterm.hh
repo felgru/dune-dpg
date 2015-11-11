@@ -60,17 +60,13 @@ namespace Dune {
      *
      * \pre The localViews have to be bound to the same element.
      *
-     * \tparam        LhsSpace        left Function space
-     * \tparam        RhsSpace        right Function space
      * \param[in]     lhsLocalView    local view of the left space
      * \param[in]     lhsLocalView    local view of the right space
      * \param[in,out] elementMatrix   the local system matrix
      * \param         lhsSpaceOffset  row offset for the left space
      * \param         rhsSpaceOffset  column offset for the right space
      */
-    template <class LhsSpace,
-              class RhsSpace,
-              class LhsLocalView,
+    template <class LhsLocalView,
               class RhsLocalView,
               class MatrixType>
     void getLocalMatrix(const LhsLocalView& lhsLocalView,
@@ -89,8 +85,6 @@ namespace Dune {
 
 namespace detail {
   template <IntegrationType type,
-            class LhsSpace,
-            class RhsSpace,
             class LhsLocalView,
             class RhsLocalView,
             class MatrixType,
@@ -109,8 +103,6 @@ namespace detail {
                                           const DirectionType&);
 
   template <IntegrationType type,
-            class LhsSpace,
-            class RhsSpace,
             class LhsLocalView,
             class RhsLocalView,
             class MatrixType,
@@ -339,9 +331,7 @@ inline double evaluateFactor(const FactorType& factor, PositionType x)
 
 template<IntegrationType type, DomainOfIntegration domain_of_integration,
          class FactorType, class DirectionType>
-template <class LhsSpace,
-          class RhsSpace,
-          class LhsLocalView,
+template <class LhsLocalView,
           class RhsLocalView,
           class MatrixType>
 void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
@@ -357,23 +347,23 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
                             >::value,
              "getLocalMatrix only implemented for constant flow!");
 
-   static_assert(type == IntegrationType::valueValue
-              || type == IntegrationType::gradValue
-              || type == IntegrationType::valueGrad
-              || type == IntegrationType::gradGrad
-              || type == IntegrationType::normalVector
-              || type == IntegrationType::normalSign,
-              "Use of unknown IntegrationType.");
-   static_assert(domain_of_integration != DomainOfIntegration::interior
-                 || type == IntegrationType::valueValue
-                 || type == IntegrationType::gradValue
-                 || type == IntegrationType::valueGrad
-                 || type == IntegrationType::gradGrad,
-                 "IntegrationType not implemented on interior.");
-   static_assert(domain_of_integration != DomainOfIntegration::face
-                 || type == IntegrationType::normalVector
-                 || type == IntegrationType::normalSign,
-                 "IntegrationType not implemented on boundary.");
+  static_assert(type == IntegrationType::valueValue
+             || type == IntegrationType::gradValue
+             || type == IntegrationType::valueGrad
+             || type == IntegrationType::gradGrad
+             || type == IntegrationType::normalVector
+             || type == IntegrationType::normalSign,
+             "Use of unknown IntegrationType.");
+  static_assert(domain_of_integration != DomainOfIntegration::interior
+                || type == IntegrationType::valueValue
+                || type == IntegrationType::gradValue
+                || type == IntegrationType::valueGrad
+                || type == IntegrationType::gradGrad,
+                "IntegrationType not implemented on interior.");
+  static_assert(domain_of_integration != DomainOfIntegration::face
+                || type == IntegrationType::normalVector
+                || type == IntegrationType::normalSign,
+                "IntegrationType not implemented on boundary.");
 
 
   // Get the grid element from the local FE basis view
@@ -394,7 +384,7 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 
 
   if(domain_of_integration == DomainOfIntegration::interior) {
-    detail::getLocalMatrix_InteriorImpl<type, LhsSpace, RhsSpace>
+    detail::getLocalMatrix_InteriorImpl<type>
                                        (lhsLocalView,
                                         rhsLocalView,
                                         elementMatrix,
@@ -406,7 +396,7 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
                                         lhsBeta,
                                         rhsBeta);
   } else {
-    detail::getLocalMatrix_FaceImpl<type, LhsSpace, RhsSpace>
+    detail::getLocalMatrix_FaceImpl<type>
                                    (lhsLocalView,
                                     rhsLocalView,
                                     elementMatrix,
@@ -423,8 +413,6 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 
 
 template <IntegrationType type,
-          class LhsSpace,
-          class RhsSpace,
           class LhsLocalView,
           class RhsLocalView,
           class MatrixType,
@@ -443,6 +431,9 @@ detail::getLocalMatrix_InteriorImpl(const LhsLocalView& lhsLocalView,
                                     const DirectionType& lhsBeta,
                                     const DirectionType& rhsBeta)
 {
+  using LhsSpace = typename LhsLocalView::GlobalBasis;
+  using RhsSpace = typename RhsLocalView::GlobalBasis;
+
   const int dim = Element::dimension;
   auto geometry = element.geometry();
 
@@ -514,8 +505,6 @@ detail::getLocalMatrix_InteriorImpl(const LhsLocalView& lhsLocalView,
 
 
 template <IntegrationType type,
-          class LhsSpace,
-          class RhsSpace,
           class LhsLocalView,
           class RhsLocalView,
           class MatrixType,
@@ -534,6 +523,9 @@ detail::getLocalMatrix_FaceImpl(const LhsLocalView& lhsLocalView,
                                 const DirectionType& lhsBeta,
                                 const DirectionType& rhsBeta)
 {
+  using LhsSpace = typename LhsLocalView::GlobalBasis;
+  using RhsSpace = typename RhsLocalView::GlobalBasis;
+
   const int dim = Element::dimension;
 
   // Get set of shape functions for this element
