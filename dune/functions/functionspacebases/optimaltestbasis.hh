@@ -477,7 +477,7 @@ public:
     fold(zip(localTestSpaceOffsets, localViewTest), (size_t)0, offsetHelper());
     size_t offset = at_c<testIndex>(localTestSpaceOffsets);
 
-    finiteElement_ = Dune::Std::make_unique<FiniteElement>
+    finiteElement_ = std::make_unique<FiniteElement>
                         (testspaceCoefficientMatrix.coefficientMatrix(),
                          *testSearchSpace_, offset, k);
     this->setSize(finiteElement_->size());
