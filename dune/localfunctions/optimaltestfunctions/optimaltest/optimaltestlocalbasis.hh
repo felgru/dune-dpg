@@ -32,7 +32,7 @@ namespace Dune
 
      \nosubgrouping
    */
-  template<class D, class R, int d, class TestSearchSpace>
+  template<class D, class R, int d, class TestSearchLocalBasis>
   class OptimalTestLocalBasis
   {
     typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
@@ -40,9 +40,9 @@ namespace Dune
   public:
     typedef LocalBasisTraits<D,d,Dune::FieldVector<D,d>,R,1,Dune::FieldVector<R,1>,Dune::FieldMatrix<R,1,d> > Traits;
 
-    OptimalTestLocalBasis (TestSearchSpace* testSearchSpace,
+    OptimalTestLocalBasis (const TestSearchLocalBasis& testSearchLocalBasis,
                            MatrixType* coeffMat, size_t offset, size_t k)
-        : testSearchSpace(testSearchSpace),
+        : testSearchLocalBasis(testSearchLocalBasis),
           coefficientMatrix(coeffMat),
           offset(offset),
           k(k) { }
@@ -58,14 +58,15 @@ namespace Dune
                                   std::vector<typename Traits::RangeType>& out) const
     {
       out.resize(size());
-      std::vector<FieldVector<double,1> > valuesTestSearchSpace(k);
-      testSearchSpace->localBasis().evaluateFunction(in, valuesTestSearchSpace);
+      std::vector<FieldVector<double,1> > valuesTestSearchLocalBasis(k);
+      testSearchLocalBasis.evaluateFunction(in, valuesTestSearchLocalBasis);
       for (size_t i=0; i<size(); i++)
       {
         out[i] = 0;
         for (size_t j=0; j<k; ++j)
         {
-          out[i]+=((*coefficientMatrix)[offset+j][i][0]*valuesTestSearchSpace[j][0]);
+          out[i]+=((*coefficientMatrix)[offset+j][i][0]
+                   *valuesTestSearchLocalBasis[j][0]);
         }
       }
     }
@@ -79,8 +80,8 @@ namespace Dune
                       std::vector<typename Traits::JacobianType>& out) const
     {
       out.resize(size());
-      std::vector<typename Traits::JacobianType> JacobianTestSearchSpace(k);
-      testSearchSpace->localBasis().evaluateJacobian(in, JacobianTestSearchSpace);
+      std::vector<typename Traits::JacobianType> JacobianTestSearchLocalBasis(k);
+      testSearchLocalBasis.evaluateJacobian(in, JacobianTestSearchLocalBasis);
       // Loop over all shape functions
       for (size_t i=0; i<size(); i++)
       {
@@ -92,7 +93,8 @@ namespace Dune
           out[i][0][b] = 0;
           for (size_t j=0; j<k; ++j)
           {
-            out[i][0][b]+=((*coefficientMatrix)[offset+j][i][0]*JacobianTestSearchSpace[j][0][b]);
+            out[i][0][b]+=((*coefficientMatrix)[offset+j][i][0]
+                           *JacobianTestSearchLocalBasis[j][0][b]);
           }
         }
       }
@@ -101,10 +103,10 @@ namespace Dune
     //! \brief Polynomial order of the shape functions
     unsigned int order () const
     {
-      return testSearchSpace->localBasis().order();
+      return testSearchLocalBasis.order();
     }
   private:
-    TestSearchSpace* testSearchSpace;
+    const TestSearchLocalBasis& testSearchLocalBasis;
     MatrixType* coefficientMatrix;
     size_t offset;
     size_t k;

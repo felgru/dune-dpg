@@ -20,7 +20,8 @@ namespace Dune
   template<class D, class R, int d, class TestSearchSpace>
   class OptimalTestLocalFiniteElement {
 
-    typedef OptimalTestLocalBasis<D,R,d,TestSearchSpace> LocalBasis;
+    typedef OptimalTestLocalBasis<D,R,d,
+              typename TestSearchSpace::Traits::LocalBasisType> LocalBasis;
     typedef OptimalTestLocalCoefficients<d> LocalCoefficients;
     typedef OptimalTestLocalInterpolation<d,LocalBasis> LocalInterpolation;
     typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
@@ -38,30 +39,27 @@ namespace Dune
     OptimalTestLocalFiniteElement (MatrixType* coeffMat,
                                    TestSearchSpace* testSearchSpace,
                                    std::vector<LocalKey>* localKeyList)
-    :testSearchSpace(testSearchSpace),
-    basis(testSearchSpace, coeffMat, 0, coeffMat->N()),
-    coefficients(localKeyList)
-    {
-      gt=testSearchSpace->type();
-    }
+    : testSearchSpace(testSearchSpace),
+      basis(testSearchSpace->localBasis(), coeffMat, 0, coeffMat->N()),
+      coefficients(localKeyList),
+      gt(testSearchSpace->type())
+    { }
 
     OptimalTestLocalFiniteElement (MatrixType* coeffMat,
                                    TestSearchSpace* testSearchSpace)
-    :testSearchSpace(testSearchSpace),
-    basis(testSearchSpace, coeffMat, 0, coeffMat->N())
-    {
-      gt=testSearchSpace->type();
-    }
+    : testSearchSpace(testSearchSpace),
+      basis(testSearchSpace->localBasis(), coeffMat, 0, coeffMat->N()),
+      gt(testSearchSpace->type())
+    { }
 
     OptimalTestLocalFiniteElement (MatrixType* coeffMat,
                                    TestSearchSpace* testSearchSpace,
                                    size_t offset,
                                    size_t k)
-    :testSearchSpace(testSearchSpace),
-    basis(testSearchSpace, coeffMat, offset, k)
-    {
-      gt=testSearchSpace->type();
-    }
+    : testSearchSpace(testSearchSpace),
+      basis(testSearchSpace->localBasis(), coeffMat, offset, k),
+      gt(testSearchSpace->type())
+    { }
 
     /** \todo Please doc me !
      */
