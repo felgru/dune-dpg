@@ -36,26 +36,26 @@ namespace Dune
      */
     OptimalTestLocalFiniteElement () = delete;
 
-    OptimalTestLocalFiniteElement (MatrixType* coeffMat,
-                                   const TestSearchSpace* testSearchSpace,
-                                   std::vector<LocalKey>* localKeyList)
-    : basis(testSearchSpace->localBasis(), coeffMat, 0, coeffMat->N()),
+    OptimalTestLocalFiniteElement (MatrixType& coeffMat,
+                                   const TestSearchSpace& testSearchSpace,
+                                   std::vector<LocalKey>& localKeyList)
+    : basis(testSearchSpace.localBasis(), coeffMat, 0, coeffMat.N()),
       coefficients(localKeyList),
-      gt(testSearchSpace->type())
+      gt(testSearchSpace.type())
     { }
 
-    OptimalTestLocalFiniteElement (MatrixType* coeffMat,
-                                   const TestSearchSpace* testSearchSpace)
-    : basis(testSearchSpace->localBasis(), coeffMat, 0, coeffMat->N()),
-      gt(testSearchSpace->type())
+    OptimalTestLocalFiniteElement (MatrixType& coeffMat,
+                                   const TestSearchSpace& testSearchSpace)
+    : basis(testSearchSpace.localBasis(), coeffMat, 0, coeffMat.N()),
+      gt(testSearchSpace.type())
     { }
 
-    OptimalTestLocalFiniteElement (MatrixType* coeffMat,
-                                   const TestSearchSpace* testSearchSpace,
+    OptimalTestLocalFiniteElement (MatrixType& coeffMat,
+                                   const TestSearchSpace& testSearchSpace,
                                    size_t offset,
                                    size_t k)
-    : basis(testSearchSpace->localBasis(), coeffMat, offset, k),
-      gt(testSearchSpace->type())
+    : basis(testSearchSpace.localBasis(), coeffMat, offset, k),
+      gt(testSearchSpace.type())
     { }
 
     /** \todo Please doc me !
@@ -98,7 +98,6 @@ namespace Dune
     }
 
   private:
-    MatrixType* coefficientMatrix;
     LocalBasis basis;
     LocalCoefficients coefficients;
     LocalInterpolation interpolation;

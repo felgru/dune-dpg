@@ -41,7 +41,7 @@ namespace Dune
     typedef LocalBasisTraits<D,d,Dune::FieldVector<D,d>,R,1,Dune::FieldVector<R,1>,Dune::FieldMatrix<R,1,d> > Traits;
 
     OptimalTestLocalBasis (const TestSearchLocalBasis& testSearchLocalBasis,
-                           MatrixType* coeffMat, size_t offset, size_t k)
+                           MatrixType& coeffMat, size_t offset, size_t k)
         : testSearchLocalBasis(testSearchLocalBasis),
           coefficientMatrix(coeffMat),
           offset(offset),
@@ -50,7 +50,7 @@ namespace Dune
     //! \brief number of shape functions
     unsigned int size () const
     {
-      return coefficientMatrix->M();
+      return coefficientMatrix.M();
     }
 
     //! \brief Evaluate all shape functions
@@ -65,8 +65,8 @@ namespace Dune
         out[i] = 0;
         for (size_t j=0; j<k; ++j)
         {
-          out[i]+=((*coefficientMatrix)[offset+j][i][0]
-                   *valuesTestSearchLocalBasis[j][0]);
+          out[i] += coefficientMatrix[offset+j][i][0]
+                    * valuesTestSearchLocalBasis[j][0];
         }
       }
     }
@@ -93,8 +93,8 @@ namespace Dune
           out[i][0][b] = 0;
           for (size_t j=0; j<k; ++j)
           {
-            out[i][0][b]+=((*coefficientMatrix)[offset+j][i][0]
-                           *JacobianTestSearchLocalBasis[j][0][b]);
+            out[i][0][b] += coefficientMatrix[offset+j][i][0]
+                            * JacobianTestSearchLocalBasis[j][0][b];
           }
         }
       }
@@ -107,7 +107,7 @@ namespace Dune
     }
   private:
     const TestSearchLocalBasis& testSearchLocalBasis;
-    MatrixType* coefficientMatrix;
+    MatrixType& coefficientMatrix;
     size_t offset;
     size_t k;
   };
