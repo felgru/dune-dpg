@@ -466,16 +466,11 @@ public:
 
     element_ = &e;
     for_each(localViewTest, applyBind<decltype(e)>(e));
-    // TODO: Improve memory handling of testSearchSpace_
     testSearchSpace_ =
-        const_cast<typename std::tuple_element<testIndex,TestSearchSpaces>
-                   ::type::LocalView::Tree::FiniteElement*>
-                  (&(at_c<testIndex>(localViewTest).tree().finiteElement()));
+        &(at_c<testIndex>(localViewTest).tree().finiteElement());
     for_each(localViewSolution_, applyBind<decltype(e)>(e));
 
     testspaceCoefficientMatrix.bind(e);
-
-    // coefficientMatrix = testspaceCoefficientMatrix.coefficientMatrix();
 
     size_t k = at_c<testIndex>(localViewTest).tree().finiteElement().size();
     size_t localTestSpaceOffsets[std::tuple_size<TestSearchSpaces>::value];
@@ -497,7 +492,7 @@ protected:
   TestspaceCoefficientMatrix& testspaceCoefficientMatrix;
   //FiniteElementCache cache_;
   std::unique_ptr<FiniteElement> finiteElement_;
-  TestSearchFiniteElement* testSearchSpace_;
+  const TestSearchFiniteElement* testSearchSpace_;
   const Element* element_;
   SolutionLocalView localViewSolution_;
   // TODO: localViewTest is only used to get the testSearchSpace_

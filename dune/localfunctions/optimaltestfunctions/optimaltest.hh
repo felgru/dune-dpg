@@ -37,7 +37,7 @@ namespace Dune
     OptimalTestLocalFiniteElement () = delete;
 
     OptimalTestLocalFiniteElement (MatrixType* coeffMat,
-                                   TestSearchSpace* testSearchSpace,
+                                   const TestSearchSpace* testSearchSpace,
                                    std::vector<LocalKey>* localKeyList)
     : basis(testSearchSpace->localBasis(), coeffMat, 0, coeffMat->N()),
       coefficients(localKeyList),
@@ -45,13 +45,13 @@ namespace Dune
     { }
 
     OptimalTestLocalFiniteElement (MatrixType* coeffMat,
-                                   TestSearchSpace* testSearchSpace)
+                                   const TestSearchSpace* testSearchSpace)
     : basis(testSearchSpace->localBasis(), coeffMat, 0, coeffMat->N()),
       gt(testSearchSpace->type())
     { }
 
     OptimalTestLocalFiniteElement (MatrixType* coeffMat,
-                                   TestSearchSpace* testSearchSpace,
+                                   const TestSearchSpace* testSearchSpace,
                                    size_t offset,
                                    size_t k)
     : basis(testSearchSpace->localBasis(), coeffMat, offset, k),
