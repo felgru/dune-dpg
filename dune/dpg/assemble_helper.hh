@@ -339,8 +339,7 @@ struct localToGlobalCopyHelper
   localToGlobalCopyHelper(
                        const SolutionZip& solutionZip,
                        const TestZip& testZip,
-                       const std::reference_wrapper<LocalToGlobalCopier>&
-                           localToGlobalCopier)
+                       LocalToGlobalCopier& localToGlobalCopier)
       : solutionZip(solutionZip),
         testZip(testZip),
         localToGlobalCopier(localToGlobalCopier)
@@ -367,7 +366,7 @@ private:
   const SolutionZip& solutionZip;
   const TestZip& testZip;
 
-  const std::reference_wrapper<LocalToGlobalCopier>& localToGlobalCopier;
+  LocalToGlobalCopier& localToGlobalCopier;
 };
 
 template<class GlobalVector>
