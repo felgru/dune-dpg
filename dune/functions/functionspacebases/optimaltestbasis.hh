@@ -58,33 +58,33 @@ namespace Functions {
 struct computeIndex
 {
     computeIndex(size_t& space_index, size_t& index_result, bool& index_found)
-    : space_index(&space_index),
-    index_result(&index_result),
-    index_found(&index_found)
-    {};
+    : space_index(space_index),
+      index_result(index_result),
+      index_found(index_found)
+    {}
 
     template<class LIS>
     void operator()(LIS& localIndexSet) const
     {
-      if (!(*index_found))
+      if (!index_found)
       {
-        if (localIndexSet.size()>*index_result)
+        if (localIndexSet.size() > index_result)
         {
-          *index_found=true;
-          *index_result=(localIndexSet.index(*index_result))[0];
+          index_found  = true;
+          index_result = (localIndexSet.index(index_result))[0];
         }
         else
         {
-          *space_index+=1;
-          *index_result-=localIndexSet.size();
+          space_index  += 1;
+          index_result -= localIndexSet.size();
         }
       }
     }
 
 private:
-    size_t* space_index;
-    size_t* index_result;
-    bool* index_found;
+    size_t& space_index;
+    size_t& index_result;
+    bool&   index_found;
 };
 
 
