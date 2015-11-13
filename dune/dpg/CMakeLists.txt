@@ -8,6 +8,7 @@ install(FILES assemble_helper.hh
               errortools.hh
               innerproduct.hh
               integralterm.hh
+              quadrature.hh
               system_assembler.hh
               type_traits.hh
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/dpg)

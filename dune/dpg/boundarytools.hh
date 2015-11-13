@@ -27,11 +27,14 @@ namespace Dune {
 
   public:
 
+    using DomainType = FieldVector<double, 2>;
+    using RangeType  = FieldVector<double, 1>;
+
     BoundaryCondition(Function g) : g_(g) {};
 
     void evaluate(
-      const FieldVector<double,2>& x,
-      FieldVector<double, 1>& y) const; /// Remark: this signature assumes that we have a 2D scalar problem
+      const DomainType& x,
+      RangeType& y) const; /// Remark: this signature assumes that we have a 2D scalar problem
 
   };
 
@@ -63,8 +66,8 @@ namespace Dune {
   //*******************************************************************
   template<class Function>
   void BoundaryCondition<Function>::evaluate(
-                                            const FieldVector<double,2>& x,
-                                            FieldVector<double, 1>& y
+                                            const DomainType& x,
+                                            RangeType& y
                                             ) const
   {
     y = std::get<0>(g_)(x);

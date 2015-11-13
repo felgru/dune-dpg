@@ -34,8 +34,6 @@
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
-#include <dune/geometry/quadraturerules.hh>
-
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -51,6 +49,7 @@
 #include "assemble_types.hh"
 #include "bilinearform.hh"
 #include "innerproduct.hh"
+#include "quadrature.hh"
 
 namespace Dune {
 
@@ -104,60 +103,32 @@ void getVolumeTerm(const LocalViewTest& localViewTest,
   /* TODO: Quadrature order is only good enough for a constant localVolumeTerm. */
   int quadratureOrder = localFiniteElementTest.localBasis().order();
 
-  constexpr bool useSubsampledQuadrature =
-      is_SubsampledFiniteElement<TestSpace>::value;
+  // TODO: This does not work with transport elements, as we do not know
+  //       the transport direction.
+  typename detail::ChooseQuadrature<TestSpace, TestSpace, Element>::type quad
+    = detail::ChooseQuadrature<TestSpace, TestSpace, Element>
+      ::Quadrature(element, quadratureOrder, nullptr);
 
-  if(useSubsampledQuadrature) {
-    constexpr int s = numberOfSamples<TestSpace>::value;
 
-    const QuadratureRule<double, dim>& quadSection =
-          QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
-    const SubsampledQuadratureRule<double, s, dim> quad(quadSection);
+  for ( size_t pt=0, qsize=quad.size(); pt < qsize; pt++ ) {
 
-    for ( size_t pt=0; pt < quad.size(); pt++ ) {
+    // Position of the current quadrature point in the reference element
+    const FieldVector<double,dim>& quadPos = quad[pt].position();
 
-      // Position of the current quadrature point in the reference element
-      const FieldVector<double,dim>& quadPos = quad[pt].position();
+    // The multiplicative factor in the integral transformation formula
+    const double integrationElement =
+            element.geometry().integrationElement(quadPos);
 
-      // The multiplicative factor in the integral transformation formula
-      const double integrationElement =
-              element.geometry().integrationElement(quadPos);
+    double functionValue = localVolumeTerm(quadPos);
 
-      double functionValue = localVolumeTerm(quadPos);
+    std::vector<FieldVector<double,1> > shapeFunctionValues;
+    localFiniteElementTest.localBasis().evaluateFunction(quadPos,
+                                                         shapeFunctionValues);
 
-      std::vector<FieldVector<double,1> > shapeFunctionValues;
-      localFiniteElementTest.localBasis().evaluateFunction(quadPos,
-                                                           shapeFunctionValues);
+    for (size_t i=0; i<localRhs.size(); i++)
+      localRhs[i] += shapeFunctionValues[i] * functionValue
+                   * quad[pt].weight() * integrationElement;
 
-      for (size_t i=0; i<localRhs.size(); i++)
-        localRhs[i] += shapeFunctionValues[i] * functionValue
-                     * quad[pt].weight() * integrationElement;
-
-    }
-  } else {
-    const QuadratureRule<double, dim>& quad =
-        QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
-
-    for ( size_t pt=0; pt < quad.size(); pt++ ) {
-
-      // Position of the current quadrature point in the reference element
-      const FieldVector<double,dim>& quadPos = quad[pt].position();
-
-      // The multiplicative factor in the integral transformation formula
-      const double integrationElement =
-              element.geometry().integrationElement(quadPos);
-
-      double functionValue = localVolumeTerm(quadPos);
-
-      std::vector<FieldVector<double,1> > shapeFunctionValues;
-      localFiniteElementTest.localBasis().evaluateFunction(quadPos,
-                                                           shapeFunctionValues);
-
-      for (size_t i=0; i<localRhs.size(); i++)
-        localRhs[i] += shapeFunctionValues[i] * functionValue
-                     * quad[pt].weight() * integrationElement;
-
-    }
   }
 
 }

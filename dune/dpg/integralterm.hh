@@ -7,16 +7,13 @@
 #include <vector>
 #include <type_traits>
 
-#include <dune/geometry/quadraturerules.hh>
-#include <dune/geometry/quadraturerules/subsampledquadraturerule.hh>
-#include <dune/geometry/quadraturerules/transportquadraturerule.hh>
-
 #include <dune/istl/matrix.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 
 #include "assemble_types.hh"
 #include "type_traits.hh"
+#include "quadrature.hh"
 
 namespace Dune {
 
@@ -63,17 +60,13 @@ namespace Dune {
      *
      * \pre The localViews have to be bound to the same element.
      *
-     * \tparam        LhsSpace        left Function space
-     * \tparam        RhsSpace        right Function space
      * \param[in]     lhsLocalView    local view of the left space
      * \param[in]     lhsLocalView    local view of the right space
      * \param[in,out] elementMatrix   the local system matrix
      * \param         lhsSpaceOffset  row offset for the left space
      * \param         rhsSpaceOffset  column offset for the right space
      */
-    template <class LhsSpace,
-              class RhsSpace,
-              class LhsLocalView,
+    template <class LhsLocalView,
               class RhsLocalView,
               class MatrixType>
     void getLocalMatrix(const LhsLocalView& lhsLocalView,
@@ -95,7 +88,6 @@ namespace detail {
             class LhsLocalView,
             class RhsLocalView,
             class MatrixType,
-            class QuadratureRule,
             class Element,
             class FactorType,
             class DirectionType>
@@ -104,7 +96,7 @@ namespace detail {
                                           MatrixType&,
                                           size_t,
                                           size_t,
-                                          const QuadratureRule&,
+                                          unsigned int,
                                           const Element&,
                                           const FactorType&,
                                           const DirectionType&,
@@ -114,7 +106,6 @@ namespace detail {
             class LhsLocalView,
             class RhsLocalView,
             class MatrixType,
-            class QuadratureRule,
             class Intersection,
             class FactorType,
             class DirectionType>
@@ -123,7 +114,7 @@ namespace detail {
                                       MatrixType&,
                                       size_t,
                                       size_t,
-                                      const QuadratureRule&,
+                                      unsigned int,
                                       const Intersection&,
                                       const FactorType&,
                                       const DirectionType&,
@@ -148,9 +139,10 @@ template<size_t lhsSpaceIndex,
          IntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
          class FactorType,
-         EnableIf<std::integral_constant<bool,
+         typename std::enable_if<
                      integrationType == IntegrationType::valueValue
-                  || integrationType == IntegrationType::normalSign> >...
+                  || integrationType == IntegrationType::normalSign>::type*
+                = nullptr
         >
 auto make_IntegralTerm(FactorType c)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
@@ -184,11 +176,12 @@ template<size_t lhsSpaceIndex,
          IntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
          class FactorType, class DirectionType,
-         EnableIf<std::integral_constant<bool,
+         typename std::enable_if<
                      integrationType == IntegrationType::gradValue
                   || integrationType == IntegrationType::valueGrad
                   || integrationType == IntegrationType::gradGrad
-                  || integrationType == IntegrationType::normalVector> >...
+                  || integrationType == IntegrationType::normalVector>::type*
+           = nullptr
         >
 auto make_IntegralTerm(FactorType c, DirectionType beta)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
@@ -224,8 +217,9 @@ template<size_t lhsSpaceIndex,
          IntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
          class FactorType, class DirectionType,
-         EnableIf<std::integral_constant<bool,
-                     integrationType == IntegrationType::gradGrad> >...
+         typename std::enable_if<
+                     integrationType == IntegrationType::gradGrad>::type*
+                = nullptr
         >
 auto make_IntegralTerm(FactorType c,
                        DirectionType lhsBeta,
@@ -334,11 +328,10 @@ inline double evaluateFactor(const FactorType& factor, PositionType x)
 
 }
 
+
 template<IntegrationType type, DomainOfIntegration domain_of_integration,
          class FactorType, class DirectionType>
-template <class LhsSpace,
-          class RhsSpace,
-          class LhsLocalView,
+template <class LhsLocalView,
           class RhsLocalView,
           class MatrixType>
 void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
@@ -354,31 +347,28 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
                             >::value,
              "getLocalMatrix only implemented for constant flow!");
 
-   static_assert(type == IntegrationType::valueValue
-              || type == IntegrationType::gradValue
-              || type == IntegrationType::valueGrad
-              || type == IntegrationType::gradGrad
-              || type == IntegrationType::normalVector
-              || type == IntegrationType::normalSign,
-              "Use of unknown IntegrationType.");
-   static_assert(domain_of_integration != DomainOfIntegration::interior
-                 || type == IntegrationType::valueValue
-                 || type == IntegrationType::gradValue
-                 || type == IntegrationType::valueGrad
-                 || type == IntegrationType::gradGrad,
-                 "IntegrationType not implemented on interior.");
-   static_assert(domain_of_integration != DomainOfIntegration::face
-                 || type == IntegrationType::normalVector
-                 || type == IntegrationType::normalSign,
-                 "IntegrationType not implemented on boundary.");
+  static_assert(type == IntegrationType::valueValue
+             || type == IntegrationType::gradValue
+             || type == IntegrationType::valueGrad
+             || type == IntegrationType::gradGrad
+             || type == IntegrationType::normalVector
+             || type == IntegrationType::normalSign,
+             "Use of unknown IntegrationType.");
+  static_assert(domain_of_integration != DomainOfIntegration::interior
+                || type == IntegrationType::valueValue
+                || type == IntegrationType::gradValue
+                || type == IntegrationType::valueGrad
+                || type == IntegrationType::gradGrad,
+                "IntegrationType not implemented on interior.");
+  static_assert(domain_of_integration != DomainOfIntegration::face
+                || type == IntegrationType::normalVector
+                || type == IntegrationType::normalSign,
+                "IntegrationType not implemented on boundary.");
 
 
   // Get the grid element from the local FE basis view
   using Element = typename std::remove_pointer<LhsLocalView>::type::Element;
   const Element& element = lhsLocalView.element();
-
-  const int dim = Element::dimension;
-  auto geometry = element.geometry();
 
   // Get set of shape functions for this element
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
@@ -389,129 +379,35 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 
   /* TODO: We might need a higher order when factor is a function. */
   /* TODO: Assuming β const. */
-  int quadratureOrder = lhsLocalFiniteElement.localBasis().order()
-                      + rhsLocalFiniteElement.localBasis().order();
+  unsigned int quadratureOrder = lhsLocalFiniteElement.localBasis().order()
+                               + rhsLocalFiniteElement.localBasis().order();
 
-
-  constexpr bool useSubsampledQuadrature =
-      is_SubsampledFiniteElement<LhsSpace>::value ||
-      is_SubsampledFiniteElement<RhsSpace>::value;
-
-  constexpr bool useTransportQuadrature =
-      is_TransportFiniteElement<LhsSpace>::value ||
-      is_TransportFiniteElement<RhsSpace>::value;
 
   if(domain_of_integration == DomainOfIntegration::interior) {
-  ////////////////////////////
-  // Assemble interior terms
-  ////////////////////////////
-
-    if(useSubsampledQuadrature) {
-
-      using Slhs = numberOfSamples<LhsSpace>;
-      using Srhs = numberOfSamples<RhsSpace>;
-      constexpr int s =
-          std::conditional<Slhs::value < Srhs::value, Srhs, Slhs>::type::value;
-
-      const QuadratureRule<double, dim>& quadSection =
-            QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
-      const SubsampledQuadratureRule<double, s, dim> quad(quadSection);
-
-      detail::getLocalMatrix_InteriorImpl<type>
-                                         (lhsLocalView,
-                                          rhsLocalView,
-                                          elementMatrix,
-                                          lhsSpaceOffset,
-                                          rhsSpaceOffset,
-                                          quad,
-                                          element,
-                                          factor,
-                                          lhsBeta,
-                                          rhsBeta);
-    } else if(useTransportQuadrature) {
-      const TransportQuadratureRule<double, dim> quad(element.type(),
-                                                      quadratureOrder,
-                                                      lhsBeta);
-
-      detail::getLocalMatrix_InteriorImpl<type>
-                                         (lhsLocalView,
-                                          rhsLocalView,
-                                          elementMatrix,
-                                          lhsSpaceOffset,
-                                          rhsSpaceOffset,
-                                          quad,
-                                          element,
-                                          factor,
-                                          lhsBeta,
-                                          rhsBeta);
-    } else {
-
-      const QuadratureRule<double, dim>& quad =
-            QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
-
-      detail::getLocalMatrix_InteriorImpl<type>
-                                         (lhsLocalView,
-                                          rhsLocalView,
-                                          elementMatrix,
-                                          lhsSpaceOffset,
-                                          rhsSpaceOffset,
-                                          quad,
-                                          element,
-                                          factor,
-                                          lhsBeta,
-                                          rhsBeta);
-    }
+    detail::getLocalMatrix_InteriorImpl<type>
+                                       (lhsLocalView,
+                                        rhsLocalView,
+                                        elementMatrix,
+                                        lhsSpaceOffset,
+                                        rhsSpaceOffset,
+                                        quadratureOrder,
+                                        element,
+                                        factor,
+                                        lhsBeta,
+                                        rhsBeta);
   } else {
-  ////////////////////////////
-  // Assemble boundary terms
-  ////////////////////////////
+    detail::getLocalMatrix_FaceImpl<type>
+                                   (lhsLocalView,
+                                    rhsLocalView,
+                                    elementMatrix,
+                                    lhsSpaceOffset,
+                                    rhsSpaceOffset,
+                                    quadratureOrder,
+                                    element,
+                                    factor,
+                                    lhsBeta,
+                                    rhsBeta);
 
-    const auto& gridView = lhsLocalView.globalBasis().gridView();
-
-    for (auto&& intersection : intersections(gridView, element))
-    {
-      if(useSubsampledQuadrature) {
-
-        using Slhs = numberOfSamples<LhsSpace>;
-        using Srhs = numberOfSamples<RhsSpace>;
-        constexpr int s =
-            std::conditional<Slhs::value < Srhs::value, Srhs, Slhs>::type::value;
-
-        const QuadratureRule<double, dim-1>& quadSection =
-              QuadratureRules<double, dim-1>::rule(intersection.type(),
-                                                   quadratureOrder);
-        const SubsampledQuadratureRule<double, s, dim-1> quadFace(quadSection);
-
-        detail::getLocalMatrix_FaceImpl<type>
-                                       (lhsLocalView,
-                                        rhsLocalView,
-                                        elementMatrix,
-                                        lhsSpaceOffset,
-                                        rhsSpaceOffset,
-                                        quadFace,
-                                        intersection,
-                                        factor,
-                                        lhsBeta,
-                                        rhsBeta);
-      } else {
-
-        const QuadratureRule<double, dim-1>& quadFace =
-              QuadratureRules<double, dim-1>::rule(intersection.type(),
-                                                   quadratureOrder);
-
-        detail::getLocalMatrix_FaceImpl<type>
-                                       (lhsLocalView,
-                                        rhsLocalView,
-                                        elementMatrix,
-                                        lhsSpaceOffset,
-                                        rhsSpaceOffset,
-                                        quadFace,
-                                        intersection,
-                                        factor,
-                                        lhsBeta,
-                                        rhsBeta);
-      }
-    }
   }
 }
 
@@ -520,7 +416,6 @@ template <IntegrationType type,
           class LhsLocalView,
           class RhsLocalView,
           class MatrixType,
-          class QuadratureRule,
           class Element,
           class FactorType,
           class DirectionType>
@@ -530,12 +425,15 @@ detail::getLocalMatrix_InteriorImpl(const LhsLocalView& lhsLocalView,
                                     MatrixType& elementMatrix,
                                     size_t lhsSpaceOffset,
                                     size_t rhsSpaceOffset,
-                                    const QuadratureRule& quad,
+                                    unsigned int quadratureOrder,
                                     const Element& element,
                                     const FactorType& factor,
                                     const DirectionType& lhsBeta,
                                     const DirectionType& rhsBeta)
 {
+  using LhsSpace = typename LhsLocalView::GlobalBasis;
+  using RhsSpace = typename RhsLocalView::GlobalBasis;
+
   const int dim = Element::dimension;
   auto geometry = element.geometry();
 
@@ -546,7 +444,11 @@ detail::getLocalMatrix_InteriorImpl(const LhsLocalView& lhsLocalView,
   const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
   const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-  for (size_t pt=0; pt < quad.size(); pt++) {
+  typename detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>::type quad
+    = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
+      ::Quadrature(element, quadratureOrder, lhsBeta);
+
+  for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
 
     // Position of the current quadrature point in the reference element
     const FieldVector<double,dim>& quadPos = quad[pt].position();
@@ -606,8 +508,7 @@ template <IntegrationType type,
           class LhsLocalView,
           class RhsLocalView,
           class MatrixType,
-          class QuadratureRule,
-          class Intersection,
+          class Element,
           class FactorType,
           class DirectionType>
 inline void
@@ -616,13 +517,16 @@ detail::getLocalMatrix_FaceImpl(const LhsLocalView& lhsLocalView,
                                 MatrixType& elementMatrix,
                                 size_t lhsSpaceOffset,
                                 size_t rhsSpaceOffset,
-                                const QuadratureRule& quadFace,
-                                const Intersection& intersection,
+                                unsigned int quadratureOrder,
+                                const Element& element,
                                 const FactorType& factor,
                                 const DirectionType& lhsBeta,
                                 const DirectionType& rhsBeta)
 {
-  const int dim = Intersection::dimension;
+  using LhsSpace = typename LhsLocalView::GlobalBasis;
+  using RhsSpace = typename RhsLocalView::GlobalBasis;
+
+  const int dim = Element::dimension;
 
   // Get set of shape functions for this element
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
@@ -631,77 +535,92 @@ detail::getLocalMatrix_FaceImpl(const LhsLocalView& lhsLocalView,
   const int nLhs(lhsLocalFiniteElement.localBasis().size());
   const int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-  for (size_t pt=0; pt < quadFace.size(); pt++) {
+  const auto& gridView = lhsLocalView.globalBasis().gridView();
 
-    // Position of the current quadrature point in the reference element (face!)
-    const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
+  for (auto&& intersection : intersections(gridView, element))
+  {
+    using intersectionType
+      = typename std::decay<decltype(intersection)>::type;
+    // TODO: Doe we really want to have a transport quadrature rule
+    //       on the faces, if one of the FE spaces is a transport space?
+    typename detail::ChooseQuadrature<LhsSpace,
+                                      RhsSpace,
+                                      intersectionType>::type quadFace
+      = detail::ChooseQuadrature<LhsSpace, RhsSpace, intersectionType>
+        ::Quadrature(intersection, quadratureOrder, lhsBeta);
 
-    // The multiplicative factor in the integral transformation formula multiplied with outer normal
-    const FieldVector<double,dim>& integrationOuterNormal =
-            intersection.integrationOuterNormal(quadFacePos);
+    for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
 
-    // The multiplicative factor in the integral transformation formula -
+      // Position of the current quadrature point in the reference element (face!)
+      const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
 
-    double integrationWeight;
-    if(type == IntegrationType::normalVector) {
-      integrationWeight = (lhsBeta*integrationOuterNormal)
-                        * detail::evaluateFactor(factor, quadFacePos)
-                        * quadFace[pt].weight();
-    } else if(type == IntegrationType::normalSign) {
-      const double integrationElement =
-          intersection.geometry().integrationElement(quadFacePos);
+      // The multiplicative factor in the integral transformation formula multiplied with outer normal
+      const FieldVector<double,dim>& integrationOuterNormal =
+              intersection.integrationOuterNormal(quadFacePos);
 
-      const FieldVector<double,dim>& centerOuterNormal =
-          intersection.centerUnitOuterNormal();
+      // The multiplicative factor in the integral transformation formula -
 
-      int sign = 1;
-      bool signfound = false;
-      for (unsigned int i=0;
-         i<centerOuterNormal.size() and signfound == false;
-         i++)
-      {
-        if (centerOuterNormal[i]<(-1e-10))
+      double integrationWeight;
+      if(type == IntegrationType::normalVector) {
+        integrationWeight = (lhsBeta*integrationOuterNormal)
+                          * detail::evaluateFactor(factor, quadFacePos)
+                          * quadFace[pt].weight();
+      } else if(type == IntegrationType::normalSign) {
+        const double integrationElement =
+            intersection.geometry().integrationElement(quadFacePos);
+
+        const FieldVector<double,dim>& centerOuterNormal =
+            intersection.centerUnitOuterNormal();
+
+        int sign = 1;
+        bool signfound = false;
+        for (unsigned int i=0;
+           i<centerOuterNormal.size() and signfound == false;
+           i++)
         {
-          sign = -1;
-          signfound = true;
+          if (centerOuterNormal[i]<(-1e-10))
+          {
+            sign = -1;
+            signfound = true;
+          }
+          else if (centerOuterNormal[i]>(1e-10))
+          {
+            sign = 1;
+            signfound = true;
+          }
         }
-        else if (centerOuterNormal[i]>(1e-10))
-        {
-          sign = 1;
-          signfound = true;
-        }
+
+        integrationWeight = sign * detail::evaluateFactor(factor, quadFacePos)
+                          * quadFace[pt].weight() * integrationElement;
       }
 
-      integrationWeight = sign * detail::evaluateFactor(factor, quadFacePos)
-                        * quadFace[pt].weight() * integrationElement;
-    }
-
-    // position of the quadrature point within the element
-    const FieldVector<double,dim> elementQuadPos =
-            intersection.geometryInInside().global(quadFacePos);
+      // position of the quadrature point within the element
+      const FieldVector<double,dim> elementQuadPos =
+              intersection.geometryInInside().global(quadFacePos);
 
 
-    //////////////////////////////
-    // Left Hand Side Functions //
-    //////////////////////////////
-    std::vector<FieldVector<double,1> > lhsValues;
-    lhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
-                                                        lhsValues);
+      //////////////////////////////
+      // Left Hand Side Functions //
+      //////////////////////////////
+      std::vector<FieldVector<double,1> > lhsValues;
+      lhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
+                                                          lhsValues);
 
-    ///////////////////////////////
-    // Right Hand Side Functions //
-    ///////////////////////////////
-    std::vector<FieldVector<double,1> > rhsValues;
-    rhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
-                                                        rhsValues);
+      ///////////////////////////////
+      // Right Hand Side Functions //
+      ///////////////////////////////
+      std::vector<FieldVector<double,1> > rhsValues;
+      rhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
+                                                          rhsValues);
 
-    // Compute the actual matrix entries
-    for (size_t i=0; i<nLhs; i++)
-    {
-      for (size_t j=0; j<nRhs; j++)
+      // Compute the actual matrix entries
+      for (size_t i=0; i<nLhs; i++)
       {
-        elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += (lhsValues[i] * rhsValues[j]) * integrationWeight;
+        for (size_t j=0; j<nRhs; j++)
+        {
+          elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
+                  += (lhsValues[i] * rhsValues[j]) * integrationWeight;
+        }
       }
     }
   }

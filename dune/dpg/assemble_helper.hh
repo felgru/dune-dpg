@@ -185,16 +185,7 @@ struct getLocalMatrixHelper
     size_t localSolutionSpaceOffset =
         at_c<solutionSpaceIndex::value>(localSolutionSpaceOffsets);
 
-    using TestSpace =
-        typename std::tuple_element<testSpaceIndex::value,
-                                    TestSpaces>::type;
-
-    using SolutionSpace =
-        typename std::tuple_element<solutionSpaceIndex::value,
-                                    SolutionSpaces>::type;
-
-    term.template getLocalMatrix<TestSpace, SolutionSpace>
-                       (testLV,
+    term.getLocalMatrix(testLV,
                         solutionLV,
                         elementMatrix,
                         localTestSpaceOffset,
