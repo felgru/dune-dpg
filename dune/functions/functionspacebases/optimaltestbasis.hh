@@ -108,7 +108,7 @@ class GeometryBuffer
     {
       cornerVector[i]=geometry.corner(i);
     }
-  };
+  }
 
   bool isSame(Geometry geometry)
   {
@@ -131,10 +131,10 @@ class GeometryBuffer
     }
     std::cout << "different number of corners" <<std::endl;
     return false;
-  };
+  }
 
   private:
-  int corners;
+  unsigned int corners;
   std::vector<GlobalCoordinate> cornerVector;
 };
 
@@ -218,17 +218,17 @@ class TestspaceCoefficientMatrix
   MatrixType& coefficientMatrix()
   {
     return coefficientMatrix_;
-  };
+  }
 
   BilinearForm& bilinearForm() const
   {
     return bilinearForm_;
-  };
+  }
 
   InnerProduct& innerProduct() const
   {
     return innerProduct_;
-  };
+  }
 
   const GridView& gridView() const
   {
@@ -495,7 +495,6 @@ protected:
   const TestSearchFiniteElement* testSearchSpace_;
   const Element* element_;
   SolutionLocalView localViewSolution_;
-  // TODO: localViewTest is only used to get the testSearchSpace_
   TestLocalView localViewTest;
 };
 
