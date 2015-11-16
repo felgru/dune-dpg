@@ -15,7 +15,7 @@ namespace Dune
    * \tparam D type used for domain coordinates
    * \tparam R type used for function values
    * \tparam d dimension of the reference element
-   * \tparam k polynomial order
+   * \tparam TestSearchSpace
    */
   template<class D, class R, int d, class TestSearchSpace>
   class OptimalTestLocalFiniteElement {
