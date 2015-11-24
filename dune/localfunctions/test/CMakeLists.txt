@@ -1,19 +1,8 @@
-# which tests to run
-set(TESTS test-pkdgsubsampled test-qktrace test-qksubsampled)
+dune_add_test(SOURCES test-pkdgsubsampled.cc
+              LINK_LIBRARIES ${DUNE_LIBS})
 
-# define the programs
-add_executable(test-pkdgsubsampled test-pkdgsubsampled.cc)
-target_link_libraries(test-pkdgsubsampled ${DUNE_LIBS})
-add_executable(test-qktrace test-qktrace.cc)
-target_link_libraries(test-qktrace ${DUNE_LIBS})
-add_executable(test-qksubsampled test-qksubsampled.cc)
-target_link_libraries(test-qksubsampled ${DUNE_LIBS})
+dune_add_test(SOURCES test-qktrace.cc
+              LINK_LIBRARIES ${DUNE_LIBS})
 
-foreach(i ${TESTS})
-  add_test(${i} ${i})
-endforeach(i ${TESTS})
-
-# We do not want to build the tests during make all
-# but just build them on demand
-add_directory_test_target(_test_target)
-add_dependencies(${_test_target} ${TESTS} ${COMPILE_XFAIL_TESTS})
+dune_add_test(SOURCES test-qksubsampled.cc
+              LINK_LIBRARIES ${DUNE_LIBS})

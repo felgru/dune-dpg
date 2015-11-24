@@ -541,12 +541,12 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                localToGlobalCopyHelper<decltype(testZip),
                                        decltype(testZip),
                                        decltype(cp)>
-                                      (testZip, testZip, std::ref(cp)));
+                                      (testZip, testZip, cp));
       for_each(bfIndices,
                localToGlobalCopyHelper<decltype(solutionZip),
                                        decltype(testZip),
                                        decltype(cpm)>
-                                      (solutionZip, testZip, std::ref(cpm)));
+                                      (solutionZip, testZip, cpm));
     } else {
       typedef
           typename boost::mpl::transform<
@@ -562,7 +562,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                localToGlobalCopyHelper<decltype(solutionZip),
                                        decltype(testZip),
                                        decltype(cpm)>
-                                      (solutionZip, testZip, std::ref(cpm)));
+                                      (solutionZip, testZip, cpm));
     }
 
     // Now get the local contribution to the right-hand side vector

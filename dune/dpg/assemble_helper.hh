@@ -339,8 +339,7 @@ struct localToGlobalCopyHelper
   localToGlobalCopyHelper(
                        const SolutionZip& solutionZip,
                        const TestZip& testZip,
-                       const std::reference_wrapper<LocalToGlobalCopier>&
-                           localToGlobalCopier)
+                       LocalToGlobalCopier& localToGlobalCopier)
       : solutionZip(solutionZip),
         testZip(testZip),
         localToGlobalCopier(localToGlobalCopier)
@@ -367,7 +366,7 @@ private:
   const SolutionZip& solutionZip;
   const TestZip& testZip;
 
-  const std::reference_wrapper<LocalToGlobalCopier>& localToGlobalCopier;
+  LocalToGlobalCopier& localToGlobalCopier;
 };
 
 template<class GlobalVector>
@@ -412,8 +411,8 @@ struct offsetHelper
   {
     using namespace boost::fusion;
 
-    /* offset and localView are assumed to be reference_wrappers */
     // TODO: böser const_cast!
+    //       Can we put offset into a reference_wrappers to fix this?
     size_t & offset = const_cast<size_t&>(at_c<0>(t));
     auto const & localView = at_c<1>(t);
     offset = s;
@@ -437,8 +436,8 @@ struct globalOffsetHelper
   {
     using namespace boost::fusion;
 
-    /* offset and localView are assumed to be reference_wrappers */
     // TODO: böser const_cast!
+    //       Can we put offset into a reference_wrappers to fix this?
     size_t & offset = const_cast<size_t&>(at_c<0>(t));
     auto const & space = at_c<1>(t);
     offset = s;

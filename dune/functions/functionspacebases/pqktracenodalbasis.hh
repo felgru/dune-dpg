@@ -274,7 +274,7 @@ public:
     // The dimension of the entity that the current dof is related to
     size_t dofDim = dim - localKey.codim();
     if (dofDim==0) {  // vertex dof
-      return {{ gridIndexSet.subIndex(element,localKey.subEntity(),dim) }};
+      return { gridIndexSet.subIndex(element,localKey.subEntity(),dim) };
     }
 
     if (dofDim==1)
@@ -293,9 +293,9 @@ public:
         size_t v0 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),0,dim),dim);
         size_t v1 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
         bool flip = (v0 > v1);
-        return {{ (flip)
+        return { (flip)
           ? nodeFactory_->edgeOffset_ + (k-1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + (k-2)-localKey.index()
-              : nodeFactory_->edgeOffset_ + (k-1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + localKey.index() }} ;
+              : nodeFactory_->edgeOffset_ + (k-1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + localKey.index() };
       }
     }
 
@@ -313,7 +313,7 @@ public:
             or k>3)
           DUNE_THROW(Dune::NotImplemented, "PQkTraceNodalBasis for 3D grids is only implemented if k<=3 and if the grid is a simplex grid");
 
-        return {{ nodeFactory_->triangleOffset_ + gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) }};
+        return { nodeFactory_->triangleOffset_ + gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) };
       }
     }
     DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the PQkTraceNodalBasis");

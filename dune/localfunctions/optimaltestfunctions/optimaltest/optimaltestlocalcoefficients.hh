@@ -17,7 +17,6 @@ namespace Dune
 {
   /** \brief Attaches a shape function to an entity
    *
-   * \tparam k Polynomial order
    * \tparam d Dimension of the reference cube
    */
   template<int d>

@@ -21,14 +21,16 @@
 namespace Dune
 {
   /**@ingroup LocalBasisImplementation
-     \brief Lagrange shape functions of order k on the reference cube.
+     \brief Optimal test space shape functions of order k on the
+            reference element.
 
-     Also known as \f$Q^k\f$.
+     The shape functions are defined by the shape functions of the given
+     test search space and a coefficient matrix.
 
      \tparam D Type to represent the field in the domain.
      \tparam R Type to represent the field in the range.
-     \tparam k Polynomial degree
      \tparam d Dimension of the cube
+     \tparam TestSearchLocalBasis
 
      \nosubgrouping
    */
