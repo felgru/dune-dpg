@@ -11,7 +11,6 @@
 #include <dune/common/power.hh>
 
 #include <dune/geometry/quadraturerules.hh>
-#include <dune/geometry/virtualrefinement.hh>
 
 namespace Dune {
 
