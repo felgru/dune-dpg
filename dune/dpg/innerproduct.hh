@@ -108,13 +108,10 @@ namespace Dune {
      */
     void bind(const TestLocalView& tlv)
     {
-      // TODO: Can we make testLocalView a const reference?
       testLocalView = std::addressof(tlv);
 
       using namespace boost::fusion;
       using namespace Dune::detail;
-
-      using TestSize = typename result_of::size<TestLocalView>::type;
 
       /* set up local offsets */
       localTotalTestSize =
