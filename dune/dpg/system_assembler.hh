@@ -81,12 +81,13 @@ struct replaceTestSpace<InnerProduct<TestSpaces, InnerProductTerms>,
 } // end namespace detail
 
 // Compute the source term for a single element
-template <class LocalViewTest, class LocalVolumeTerm, class TestSpace>
+template <class LocalViewTest, class LocalVolumeTerm>
 void getVolumeTerm(const LocalViewTest& localViewTest,
                    BlockVector<FieldVector<double,1> >& localRhs,
-                   LocalVolumeTerm&& localVolumeTerm,
-                   TestSpace&)
+                   LocalVolumeTerm&& localVolumeTerm)
 {
+  using TestSpace = typename LocalViewTest::GlobalBasis;
+
   // Get the grid element from the local FE basis view
   typedef typename LocalViewTest::Element Element;
   const Element& element = localViewTest.element();
@@ -142,7 +143,7 @@ struct getVolumeTermHelper
     using namespace boost::fusion;
 
     // TODO: this can probably be done more elegantly by sequence fusion.
-    getVolumeTerm(at_c<0>(seq), at_c<1>(seq), at_c<2>(seq), at_c<3>(seq));
+    getVolumeTerm(at_c<0>(seq), at_c<1>(seq), at_c<2>(seq));
   }
 };
 } // end namespace detail
@@ -573,12 +574,10 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     using RHSZipHelper = vector<decltype(testLocalView)&,
                                 decltype(localRhs)&,
-                                decltype(localVolumeTerms)&,
-                                decltype(testSpaces)&>;
+                                decltype(localVolumeTerms)&>;
     for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalView,
                                                  localRhs,
-                                                 localVolumeTerms,
-                                                 testSpaces)),
+                                                 localVolumeTerms)),
              getVolumeTermHelper());
 
     /* TODO: This will break with more than 1 test space having a rhs! */
