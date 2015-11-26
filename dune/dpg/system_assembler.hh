@@ -119,15 +119,15 @@ void getVolumeTerm(const LocalViewTest& localViewTest,
     const double integrationElement =
             element.geometry().integrationElement(quadPos);
 
-    double functionValue = localVolumeTerm(quadPos);
+    const double weightedfunctionValue =
+            localVolumeTerm(quadPos) * quad[pt].weight() * integrationElement;
 
     std::vector<FieldVector<double,1> > shapeFunctionValues;
     localFiniteElementTest.localBasis().evaluateFunction(quadPos,
                                                          shapeFunctionValues);
 
-    for (size_t i=0; i<localRhs.size(); i++)
-      localRhs[i] += shapeFunctionValues[i] * functionValue
-                   * quad[pt].weight() * integrationElement;
+    for (size_t i=0, rhsSize=localRhs.size(); i<rhsSize; i++)
+      localRhs[i] += shapeFunctionValues[i] * weightedfunctionValue;
 
   }
 
@@ -788,7 +788,9 @@ applyWeakBoundaryCondition
             // position of the current quadrature point in the reference element (face!)
             const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
 
-            const double integrationElement = intersection.geometry().integrationElement(quadFacePos);
+            const double integrationWeight
+              = intersection.geometry().integrationElement(quadFacePos)
+              * quadFace[pt].weight();
 
             // position of the quadrature point within the element
             const FieldVector<double,dim> elementQuadPos =
@@ -804,7 +806,7 @@ applyWeakBoundaryCondition
               {
                 elementMatrix[i][j]
                         += (mu * solutionValues[i] * solutionValues[j])
-                           * quadFace[pt].weight() * integrationElement;
+                           * integrationWeight;
               }
             }
 
