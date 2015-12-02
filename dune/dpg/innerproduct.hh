@@ -6,8 +6,9 @@
 #include <tuple>
 #include <vector>
 #include <functional>
-#include <memory>
 #include <type_traits>
+
+#include <dune/dpg/common/memory.hh>
 
 #include <boost/mpl/set.hpp>
 #include <boost/mpl/transform.hpp>

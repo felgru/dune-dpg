@@ -6,10 +6,11 @@
 #include <functional>
 #include <list>
 #include <map>
-#include <memory>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+
+#include <dune/dpg/common/memory.hh>
 
 #include <boost/mpl/empty_sequence.hpp>
 #include <boost/mpl/identity.hpp>

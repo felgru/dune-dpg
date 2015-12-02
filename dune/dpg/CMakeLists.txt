@@ -1,3 +1,4 @@
+add_subdirectory(common)
 add_subdirectory(functions)
 
 install(FILES applylocalfunctional_ru_impl.hh

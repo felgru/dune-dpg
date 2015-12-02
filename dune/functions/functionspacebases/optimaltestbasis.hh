@@ -5,8 +5,9 @@
 
 #include <tuple>
 #include <functional>
-#include <memory>
 #include <type_traits>
+
+#include <dune/dpg/common/memory.hh>
 
 #include <boost/fusion/adapted/std_tuple.hpp>
 #include <boost/fusion/adapted/array.hpp>

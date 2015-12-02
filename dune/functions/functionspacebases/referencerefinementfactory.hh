@@ -4,8 +4,9 @@
 #define DUNE_REFERENCE_REFINEMENTFACTORY_HH
 
 #include <map>
-#include <memory>
 #include <utility>
+
+#include <dune/dpg/common/memory.hh>
 
 #include <dune/geometry/referenceelements.hh>
 #include <dune/geometry/type.hh>
