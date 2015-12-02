@@ -5,8 +5,9 @@
 
 #include <tuple>
 #include <functional>
-#include <memory>
 #include <type_traits>
+
+#include <dune/dpg/common/memory.hh>
 
 /* 7 would be enought, but better take some more, in case we
  * change our procedures later. */
