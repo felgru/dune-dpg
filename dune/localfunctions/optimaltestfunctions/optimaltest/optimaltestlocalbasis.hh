@@ -46,8 +46,8 @@ namespace Dune
         : testSearchLocalBasis(testSearchLocalBasis),
           coefficientMatrix(coeffMat),
           offset(offset),
-          k(testSearchLocalBasis.size())
-    { assert(coeffMat.N() >= offset + k); }
+          numTestSearchDOFs(testSearchLocalBasis.size())
+    { assert(coeffMat.N() >= offset + numTestSearchDOFs); }
 
     //! \brief number of shape functions
     unsigned int size () const
@@ -60,12 +60,12 @@ namespace Dune
                                   std::vector<typename Traits::RangeType>& out) const
     {
       out.resize(size());
-      std::vector<FieldVector<double,1> > valuesTestSearchLocalBasis(k);
+      std::vector<FieldVector<double,1> > valuesTestSearchLocalBasis(numTestSearchDOFs);
       testSearchLocalBasis.evaluateFunction(in, valuesTestSearchLocalBasis);
       for (size_t i=0; i<size(); i++)
       {
         out[i] = 0;
-        for (size_t j=0; j<k; ++j)
+        for (size_t j=0; j<numTestSearchDOFs; ++j)
         {
           out[i] += coefficientMatrix[offset+j][i][0]
                     * valuesTestSearchLocalBasis[j][0];
@@ -82,7 +82,7 @@ namespace Dune
                       std::vector<typename Traits::JacobianType>& out) const
     {
       out.resize(size());
-      std::vector<typename Traits::JacobianType> JacobianTestSearchLocalBasis(k);
+      std::vector<typename Traits::JacobianType> JacobianTestSearchLocalBasis(numTestSearchDOFs);
       testSearchLocalBasis.evaluateJacobian(in, JacobianTestSearchLocalBasis);
       // Loop over all shape functions
       for (size_t i=0; i<size(); i++)
@@ -93,7 +93,7 @@ namespace Dune
           // Initialize: the overall expression is a product
           // if j-th bit of i is set to -1, else 1
           out[i][0][b] = 0;
-          for (size_t j=0; j<k; ++j)
+          for (size_t j=0; j<numTestSearchDOFs; ++j)
           {
             out[i][0][b] += coefficientMatrix[offset+j][i][0]
                             * JacobianTestSearchLocalBasis[j][0][b];
@@ -111,7 +111,7 @@ namespace Dune
     const TestSearchLocalBasis& testSearchLocalBasis;
     MatrixType& coefficientMatrix;
     size_t offset;
-    size_t k;
+    size_t numTestSearchDOFs;
   };
 }
 
