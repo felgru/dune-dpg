@@ -472,14 +472,13 @@ public:
 
     testspaceCoefficientMatrix.bind(e);
 
-    size_t k = at_c<testIndex>(localViewTest).tree().finiteElement().size();
     size_t localTestSpaceOffsets[std::tuple_size<TestSearchSpaces>::value];
     fold(zip(localTestSpaceOffsets, localViewTest), (size_t)0, offsetHelper());
     size_t offset = at_c<testIndex>(localTestSpaceOffsets);
 
     finiteElement_ = std::make_unique<FiniteElement>
                         (testspaceCoefficientMatrix.coefficientMatrix(),
-                         *testSearchSpace_, offset, k);
+                         *testSearchSpace_, offset);
     this->setSize(finiteElement_->size());
   }
 
