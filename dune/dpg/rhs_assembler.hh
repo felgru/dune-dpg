@@ -139,9 +139,9 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
              getVolumeTermHelper());
 
     auto cpr = fused_procedure<localToGlobalRHSCopier<
-                        typename remove_reference<decltype(rhs)>::type> >
-                    (localToGlobalRHSCopier<
-                        typename remove_reference<decltype(rhs)>::type>(rhs));
+                    typename std::remove_reference<decltype(rhs)>::type> >
+                 (localToGlobalRHSCopier<
+                    typename std::remove_reference<decltype(rhs)>::type>(rhs));
     for_each(zip(localRhs,
                  testLocalIndexSet,
                  globalTestSpaceOffsets),

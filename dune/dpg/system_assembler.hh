@@ -514,16 +514,16 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     // Add element stiffness matrix onto the global stiffness matrix
     auto cp = fused_procedure<localToGlobalCopier<decltype(ipElementMatrix),
-                        typename remove_reference<decltype(matrix)>::type> >
-                    (localToGlobalCopier<decltype(ipElementMatrix),
-                        typename remove_reference<decltype(matrix)>::type>
+                   typename std::remove_reference<decltype(matrix)>::type> >
+                (localToGlobalCopier<decltype(ipElementMatrix),
+                   typename std::remove_reference<decltype(matrix)>::type>
                                         (ipElementMatrix, matrix));
     auto cpm = fused_procedure<localToGlobalCopier<decltype(bfElementMatrix),
-                        typename remove_reference<decltype(matrix)>::type,
-                        isSaddlepoint> >
-                    (localToGlobalCopier<decltype(bfElementMatrix),
-                        typename remove_reference<decltype(matrix)>::type,
-                        isSaddlepoint>
+                    typename std::remove_reference<decltype(matrix)>::type,
+                    isSaddlepoint> >
+                 (localToGlobalCopier<decltype(bfElementMatrix),
+                    typename std::remove_reference<decltype(matrix)>::type,
+                    isSaddlepoint>
                                         (bfElementMatrix, matrix));
 
     /* copy every local submatrix indexed by a pair of indices from
@@ -582,9 +582,9 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     /* TODO: This will break with more than 1 test space having a rhs! */
     auto cpr = fused_procedure<localToGlobalRHSCopier<
-                        typename remove_reference<decltype(rhs)>::type> >
-                    (localToGlobalRHSCopier<
-                        typename remove_reference<decltype(rhs)>::type>(rhs));
+                    typename std::remove_reference<decltype(rhs)>::type> >
+                 (localToGlobalRHSCopier<
+                    typename std::remove_reference<decltype(rhs)>::type>(rhs));
     for_each(zip(localRhs,
                  testLocalIndexSet,
                  globalTestSpaceOffsets),
