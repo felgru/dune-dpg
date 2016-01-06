@@ -197,7 +197,8 @@ public:
   /**
    * \brief constructor for SystemAssembler
    *
-   * \note For your convenience, use make_SystemAssembler() instead.
+   * \note For your convenience, use make_DPG_SystemAssembler() or
+   *       make_Saddlepoint_SystemAssembler() instead.
    */
   constexpr SystemAssembler (TestSpaces     testSpaces,
                              SolutionSpaces solutionSpaces,
@@ -333,30 +334,55 @@ private:
 };
 
 /**
- * \brief Creates a SystemAssembler,
+ * \brief Creates a SystemAssembler for a DPG formulation,
  *        deducing the target type from the types of arguments.
  *
  * \param testSpaces     a tuple of test spaces
  * \param solutionSpaces a tuple of solution spaces
  * \param bilinearForm   the bilinear form describing the DPG system
  * \param innerProduct   the inner product of the test spaces
- * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
  */
 template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct,
-         class FormulationType>
-auto make_SystemAssembler(TestSpaces     testSpaces,
-                          SolutionSpaces solutionSpaces,
-                          BilinearForm   bilinearForm,
-                          InnerProduct   innerProduct,
-                          FormulationType)
+         class BilinearForm, class InnerProduct>
+auto make_DPG_SystemAssembler(TestSpaces     testSpaces,
+                              SolutionSpaces solutionSpaces,
+                              BilinearForm   bilinearForm,
+                              InnerProduct   innerProduct)
     -> SystemAssembler<TestSpaces, SolutionSpaces,
                        BilinearForm, InnerProduct,
-                       FormulationType>
+                       DPGFormulation>
 {
   return SystemAssembler<TestSpaces, SolutionSpaces,
                          BilinearForm, InnerProduct,
-                         FormulationType>
+                         DPGFormulation>
+                      (testSpaces,
+                       solutionSpaces,
+                       bilinearForm,
+                       innerProduct);
+}
+
+/**
+ * \brief Creates a SystemAssembler for a saddlepoint formulation,
+ *        deducing the target type from the types of arguments.
+ *
+ * \param testSpaces     a tuple of test spaces
+ * \param solutionSpaces a tuple of solution spaces
+ * \param bilinearForm   the bilinear form describing the DPG system
+ * \param innerProduct   the inner product of the test spaces
+ */
+template<class TestSpaces, class SolutionSpaces,
+         class BilinearForm, class InnerProduct>
+auto make_Saddlepoint_SystemAssembler(TestSpaces     testSpaces,
+                                      SolutionSpaces solutionSpaces,
+                                      BilinearForm   bilinearForm,
+                                      InnerProduct   innerProduct)
+    -> SystemAssembler<TestSpaces, SolutionSpaces,
+                       BilinearForm, InnerProduct,
+                       SaddlepointFormulation>
+{
+  return SystemAssembler<TestSpaces, SolutionSpaces,
+                         BilinearForm, InnerProduct,
+                         SaddlepointFormulation>
                       (testSpaces,
                        solutionSpaces,
                        bilinearForm,

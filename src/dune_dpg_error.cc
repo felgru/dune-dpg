@@ -140,8 +140,9 @@ int main()
   FEBasisOptimalTest feBasisTest(testspaceCoefficientMatrix);
   auto optimalTestSpaces = make_tuple(feBasisTest);
 
-  auto systemAssembler = make_SystemAssembler(optimalTestSpaces, solutionSpaces,
-          bilinearForm, innerProduct, DPGFormulation());
+  auto systemAssembler
+     = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
+                                bilinearForm, innerProduct);
 
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
