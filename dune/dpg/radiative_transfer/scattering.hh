@@ -72,23 +72,38 @@ private:
 };
 
 /**
- * \brief Creates an ScatteringAssembler,
+ * \brief Creates a ScatteringAssembler for a DPG discretization,
  *        deducing the target type from the types of arguments.
  *
  * \param  testSpaces       a tuple of test spaces
  * \param  solutionSpaces   a tuple of solution spaces
- * \tparam FormulationType  either SaddlepointFormulation or DPGFormulation
  */
 template<class TestSpaces,
-         class SolutionSpaces,
-         class FormulationType>
-auto make_ScatteringAssembler(const TestSpaces& testSpaces,
-                              const SolutionSpaces& solutionSpaces,
-                              FormulationType)
-     -> ScatteringAssembler<TestSpaces, SolutionSpaces, FormulationType>
+         class SolutionSpaces>
+auto make_DPG_ScatteringAssembler(const TestSpaces& testSpaces,
+                                  const SolutionSpaces& solutionSpaces)
+     -> ScatteringAssembler<TestSpaces, SolutionSpaces, DPGFormulation>
 {
   return ScatteringAssembler<TestSpaces, SolutionSpaces,
-                             FormulationType>
+                             DPGFormulation>
+                            (testSpaces, solutionSpaces);
+}
+
+/**
+ * \brief Creates a ScatteringAssembler for a saddlepoint discretization,
+ *        deducing the target type from the types of arguments.
+ *
+ * \param  testSpaces       a tuple of test spaces
+ * \param  solutionSpaces   a tuple of solution spaces
+ */
+template<class TestSpaces,
+         class SolutionSpaces>
+auto make_Saddlepoint_ScatteringAssembler(const TestSpaces& testSpaces,
+                                          const SolutionSpaces& solutionSpaces)
+     -> ScatteringAssembler<TestSpaces, SolutionSpaces, SaddlepointFormulation>
+{
+  return ScatteringAssembler<TestSpaces, SolutionSpaces,
+                             SaddlepointFormulation>
                             (testSpaces, solutionSpaces);
 }
 

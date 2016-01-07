@@ -327,15 +327,14 @@ int main(int argc, char** argv)
              > scatteringAssemblers;
   scatteringAssemblers.reserve(numS);
 
-  // Scattering assemblers with enriched test space
+  // Scattering assembler with enriched test space
   ScatteringAssembler<std::tuple<FEBasisTest>,
                                   SolutionSpaces,
                                   DPGFormulation
                       > scatteringAssemblerEnriched
-                          = make_ScatteringAssembler(
+                          = make_DPG_ScatteringAssembler(
                                 testSpaces,
-                                solutionSpaces,
-                                DPGFormulation());
+                                solutionSpaces);
 
   /* create an FEBasisOptimalTest for each direction */
   std::vector<std::tuple<FEBasisOptimalTest> > optimalTestSpaces;
@@ -380,9 +379,8 @@ int main(int argc, char** argv)
         make_DPG_SystemAssembler(optimalTestSpaces[i], solutionSpaces,
                                  bilinearForms[i], innerProducts[i]));
     scatteringAssemblers.emplace_back(
-        make_ScatteringAssembler(optimalTestSpaces[i],
-                                 solutionSpaces,
-                                 DPGFormulation()));
+        make_DPG_ScatteringAssembler(optimalTestSpaces[i],
+                                     solutionSpaces));
   }
 
   /////////////////////////////////////////////////////////
