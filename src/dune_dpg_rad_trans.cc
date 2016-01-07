@@ -307,14 +307,14 @@ int main(int argc, char** argv)
   typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix>
       FEBasisOptimalTest;              // v
 
-  typedef decltype(make_SystemAssembler(
+  typedef decltype(make_DPG_SystemAssembler(
 #if 1
               std::declval<std::tuple<FEBasisOptimalTest>>(), solutionSpaces,
 #else
               testSpaces, solutionSpaces,
 #endif
               std::declval<BilinearForm>(),
-              std::declval<InnerProduct>(), DPGFormulation()))
+              std::declval<InnerProduct>()))
           SystemAssembler_t;
 
   std::vector<SystemAssembler_t> systemAssemblers;
@@ -377,9 +377,8 @@ int main(int argc, char** argv)
             make_tuple(FEBasisOptimalTest(coefficientMatrices[i])));
 
     systemAssemblers.emplace_back(
-        make_SystemAssembler(optimalTestSpaces[i], solutionSpaces,
-                             bilinearForms[i], innerProducts[i],
-                             DPGFormulation()));
+        make_DPG_SystemAssembler(optimalTestSpaces[i], solutionSpaces,
+                                 bilinearForms[i], innerProducts[i]));
     scatteringAssemblers.emplace_back(
         make_ScatteringAssembler(optimalTestSpaces[i],
                                  solutionSpaces,
