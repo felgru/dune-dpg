@@ -293,7 +293,7 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using SizePrefix = Dune::ReservedVector<size_type, 2>;
+  using SizePrefix = Dune::ReservedVector<size_type, 1>;
 
   using TestSearchSpaces = typename TestspaceCoefficientMatrix::TestSpaces;
   using SolutionSpaces = typename TestspaceCoefficientMatrix::SolutionSpaces;
@@ -349,9 +349,8 @@ public:
   //! Return number possible values for next position in multi index
   size_type size(const SizePrefix prefix) const
   {
-    if (prefix.size() == 0)
-      return size();
-    assert(false);
+    assert(prefix.size() == 0 || prefix.size() == 1);
+    return (prefix.size() == 0) ? size() : 0;
   }
 
   /** \todo This method has been added to the interface without prior discussion. */
@@ -472,14 +471,13 @@ public:
 
     testspaceCoefficientMatrix.bind(e);
 
-    size_t k = at_c<testIndex>(localViewTest).tree().finiteElement().size();
     size_t localTestSpaceOffsets[std::tuple_size<TestSearchSpaces>::value];
     fold(zip(localTestSpaceOffsets, localViewTest), (size_t)0, offsetHelper());
     size_t offset = at_c<testIndex>(localTestSpaceOffsets);
 
     finiteElement_ = std::make_unique<FiniteElement>
                         (testspaceCoefficientMatrix.coefficientMatrix(),
-                         *testSearchSpace_, offset, k);
+                         *testSearchSpace_, offset);
     this->setSize(finiteElement_->size());
   }
 

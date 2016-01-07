@@ -139,8 +139,7 @@ namespace Dune {
       using namespace boost::fusion;
       using namespace Dune::detail;
 
-      using TestSize     = typename result_of::size<TestLocalView>::type;
-      using SolutionSize = typename result_of::size<SolutionLocalView>::type;
+      constexpr size_t testSize = result_of::size<TestLocalView>::value;
 
       /* set up local offsets */
       if(isSaddlepoint) {
@@ -152,8 +151,8 @@ namespace Dune {
         }
       }
       localTotalTestSize =
-          localTestSpaceOffsets[TestSize::value-1]
-          + at_c<TestSize::value-1>(tlv).size();
+          localTestSpaceOffsets[testSize-1]
+          + at_c<testSize-1>(tlv).size();
 
       localTotalSolutionSize =
           fold(zip(localSolutionSpaceOffsets, slv),

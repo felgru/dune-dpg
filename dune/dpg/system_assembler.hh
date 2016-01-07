@@ -81,12 +81,13 @@ struct replaceTestSpace<InnerProduct<TestSpaces, InnerProductTerms>,
 } // end namespace detail
 
 // Compute the source term for a single element
-template <class LocalViewTest, class LocalVolumeTerm, class TestSpace>
+template <class LocalViewTest, class LocalVolumeTerm>
 void getVolumeTerm(const LocalViewTest& localViewTest,
                    BlockVector<FieldVector<double,1> >& localRhs,
-                   LocalVolumeTerm&& localVolumeTerm,
-                   TestSpace&)
+                   LocalVolumeTerm&& localVolumeTerm)
 {
+  using TestSpace = typename LocalViewTest::GlobalBasis;
+
   // Get the grid element from the local FE basis view
   typedef typename LocalViewTest::Element Element;
   const Element& element = localViewTest.element();
@@ -119,15 +120,15 @@ void getVolumeTerm(const LocalViewTest& localViewTest,
     const double integrationElement =
             element.geometry().integrationElement(quadPos);
 
-    double functionValue = localVolumeTerm(quadPos);
+    const double weightedfunctionValue =
+            localVolumeTerm(quadPos) * quad[pt].weight() * integrationElement;
 
     std::vector<FieldVector<double,1> > shapeFunctionValues;
     localFiniteElementTest.localBasis().evaluateFunction(quadPos,
                                                          shapeFunctionValues);
 
-    for (size_t i=0; i<localRhs.size(); i++)
-      localRhs[i] += shapeFunctionValues[i] * functionValue
-                   * quad[pt].weight() * integrationElement;
+    for (size_t i=0, rhsSize=localRhs.size(); i<rhsSize; i++)
+      localRhs[i] += shapeFunctionValues[i] * weightedfunctionValue;
 
   }
 
@@ -142,7 +143,7 @@ struct getVolumeTermHelper
     using namespace boost::fusion;
 
     // TODO: this can probably be done more elegantly by sequence fusion.
-    getVolumeTerm(at_c<0>(seq), at_c<1>(seq), at_c<2>(seq), at_c<3>(seq));
+    getVolumeTerm(at_c<0>(seq), at_c<1>(seq), at_c<2>(seq));
   }
 };
 } // end namespace detail
@@ -196,7 +197,8 @@ public:
   /**
    * \brief constructor for SystemAssembler
    *
-   * \note For your convenience, use make_SystemAssembler() instead.
+   * \note For your convenience, use make_DPG_SystemAssembler() or
+   *       make_Saddlepoint_SystemAssembler() instead.
    */
   constexpr SystemAssembler (TestSpaces     testSpaces,
                              SolutionSpaces solutionSpaces,
@@ -332,30 +334,55 @@ private:
 };
 
 /**
- * \brief Creates a SystemAssembler,
+ * \brief Creates a SystemAssembler for a DPG formulation,
  *        deducing the target type from the types of arguments.
  *
  * \param testSpaces     a tuple of test spaces
  * \param solutionSpaces a tuple of solution spaces
  * \param bilinearForm   the bilinear form describing the DPG system
  * \param innerProduct   the inner product of the test spaces
- * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
  */
 template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct,
-         class FormulationType>
-auto make_SystemAssembler(TestSpaces     testSpaces,
-                          SolutionSpaces solutionSpaces,
-                          BilinearForm   bilinearForm,
-                          InnerProduct   innerProduct,
-                          FormulationType)
+         class BilinearForm, class InnerProduct>
+auto make_DPG_SystemAssembler(TestSpaces     testSpaces,
+                              SolutionSpaces solutionSpaces,
+                              BilinearForm   bilinearForm,
+                              InnerProduct   innerProduct)
     -> SystemAssembler<TestSpaces, SolutionSpaces,
                        BilinearForm, InnerProduct,
-                       FormulationType>
+                       DPGFormulation>
 {
   return SystemAssembler<TestSpaces, SolutionSpaces,
                          BilinearForm, InnerProduct,
-                         FormulationType>
+                         DPGFormulation>
+                      (testSpaces,
+                       solutionSpaces,
+                       bilinearForm,
+                       innerProduct);
+}
+
+/**
+ * \brief Creates a SystemAssembler for a saddlepoint formulation,
+ *        deducing the target type from the types of arguments.
+ *
+ * \param testSpaces     a tuple of test spaces
+ * \param solutionSpaces a tuple of solution spaces
+ * \param bilinearForm   the bilinear form describing the DPG system
+ * \param innerProduct   the inner product of the test spaces
+ */
+template<class TestSpaces, class SolutionSpaces,
+         class BilinearForm, class InnerProduct>
+auto make_Saddlepoint_SystemAssembler(TestSpaces     testSpaces,
+                                      SolutionSpaces solutionSpaces,
+                                      BilinearForm   bilinearForm,
+                                      InnerProduct   innerProduct)
+    -> SystemAssembler<TestSpaces, SolutionSpaces,
+                       BilinearForm, InnerProduct,
+                       SaddlepointFormulation>
+{
+  return SystemAssembler<TestSpaces, SolutionSpaces,
+                         BilinearForm, InnerProduct,
+                         SaddlepointFormulation>
                       (testSpaces,
                        solutionSpaces,
                        bilinearForm,
@@ -513,16 +540,16 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     // Add element stiffness matrix onto the global stiffness matrix
     auto cp = fused_procedure<localToGlobalCopier<decltype(ipElementMatrix),
-                        typename remove_reference<decltype(matrix)>::type> >
-                    (localToGlobalCopier<decltype(ipElementMatrix),
-                        typename remove_reference<decltype(matrix)>::type>
+                   typename std::remove_reference<decltype(matrix)>::type> >
+                (localToGlobalCopier<decltype(ipElementMatrix),
+                   typename std::remove_reference<decltype(matrix)>::type>
                                         (ipElementMatrix, matrix));
     auto cpm = fused_procedure<localToGlobalCopier<decltype(bfElementMatrix),
-                        typename remove_reference<decltype(matrix)>::type,
-                        isSaddlepoint> >
-                    (localToGlobalCopier<decltype(bfElementMatrix),
-                        typename remove_reference<decltype(matrix)>::type,
-                        isSaddlepoint>
+                    typename std::remove_reference<decltype(matrix)>::type,
+                    isSaddlepoint> >
+                 (localToGlobalCopier<decltype(bfElementMatrix),
+                    typename std::remove_reference<decltype(matrix)>::type,
+                    isSaddlepoint>
                                         (bfElementMatrix, matrix));
 
     /* copy every local submatrix indexed by a pair of indices from
@@ -573,19 +600,17 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     using RHSZipHelper = vector<decltype(testLocalView)&,
                                 decltype(localRhs)&,
-                                decltype(localVolumeTerms)&,
-                                decltype(testSpaces)&>;
+                                decltype(localVolumeTerms)&>;
     for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalView,
                                                  localRhs,
-                                                 localVolumeTerms,
-                                                 testSpaces)),
+                                                 localVolumeTerms)),
              getVolumeTermHelper());
 
     /* TODO: This will break with more than 1 test space having a rhs! */
     auto cpr = fused_procedure<localToGlobalRHSCopier<
-                        typename remove_reference<decltype(rhs)>::type> >
-                    (localToGlobalRHSCopier<
-                        typename remove_reference<decltype(rhs)>::type>(rhs));
+                    typename std::remove_reference<decltype(rhs)>::type> >
+                 (localToGlobalRHSCopier<
+                    typename std::remove_reference<decltype(rhs)>::type>(rhs));
     for_each(zip(localRhs,
                  testLocalIndexSet,
                  globalTestSpaceOffsets),
@@ -788,7 +813,9 @@ applyWeakBoundaryCondition
             // position of the current quadrature point in the reference element (face!)
             const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
 
-            const double integrationElement = intersection.geometry().integrationElement(quadFacePos);
+            const double integrationWeight
+              = intersection.geometry().integrationElement(quadFacePos)
+              * quadFace[pt].weight();
 
             // position of the quadrature point within the element
             const FieldVector<double,dim> elementQuadPos =
@@ -804,7 +831,7 @@ applyWeakBoundaryCondition
               {
                 elementMatrix[i][j]
                         += (mu * solutionValues[i] * solutionValues[j])
-                           * quadFace[pt].weight() * integrationElement;
+                           * integrationWeight;
               }
             }
 

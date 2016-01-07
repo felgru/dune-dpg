@@ -370,17 +370,12 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
   using Element = typename std::remove_pointer<LhsLocalView>::type::Element;
   const Element& element = lhsLocalView.element();
 
-  // Get set of shape functions for this element
-  const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
-  const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
-
-  const int nLhs(lhsLocalFiniteElement.localBasis().size());
-  const int nRhs(rhsLocalFiniteElement.localBasis().size());
+  const auto lhsOrder = lhsLocalView.tree().finiteElement().localBasis().order();
+  const auto rhsOrder = rhsLocalView.tree().finiteElement().localBasis().order();
 
   /* TODO: We might need a higher order when factor is a function. */
   /* TODO: Assuming β const. */
-  unsigned int quadratureOrder = lhsLocalFiniteElement.localBasis().order()
-                               + rhsLocalFiniteElement.localBasis().order();
+  unsigned int quadratureOrder = lhsOrder + rhsOrder;
 
 
   if(domain_of_integration == DomainOfIntegration::interior) {

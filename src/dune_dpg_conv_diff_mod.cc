@@ -319,10 +319,12 @@ int main(int argc, char** argv)
 
   auto optimalTestSpaces = make_tuple(feBasisTest0, feBasisTest1, feBasisTest2, feBasisTest3);
 
-  auto systemAssembler = make_SystemAssembler(optimalTestSpaces, solutionSpaces,    //DPG
-          bilinearForm, innerProduct, DPGFormulation());
-//  auto systemAssembler = make_SystemAssembler(testSpaces, solutionSpaces,    //Saddlepoint
-//          bilinearForm, innerProduct, SaddlepointFormulation());
+  auto systemAssembler
+     = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
+                                bilinearForm, innerProduct);
+//  auto systemAssembler
+//     = make_Saddlepoint_SystemAssembler(testSpaces, solutionSpaces,
+//                                        bilinearForm, innerProduct);
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
   /////////////////////////////////////////////////////////
