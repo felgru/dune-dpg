@@ -171,11 +171,22 @@ faceImpl(const LhsLocalView& lhsLocalView,
       using intersectionType
         = typename std::decay<decltype(intersection)>::type;
 
+      const FieldVector<double,dim> globalCorner0
+        = geometry.global(intersection.geometry().global({0}));
+      const FieldVector<double,dim> globalCorner1
+        = geometry.global(intersection.geometry().global({1}));
       // compute integration element for interface
       const double integrationElement
-        = (   geometry.global(intersection.geometry().global({1}))
-            - geometry.global(intersection.geometry().global({0})) )
-          .two_norm();
+        = (globalCorner1 - globalCorner0).two_norm();
+
+      static_assert(dim==2, "Computation of unit outer normal for subcell"
+                            " only implemented in 2d!");
+      /* This won't work for curvilinear elements, but they don't seem
+       * to be supported by UG anyway. */
+      FieldVector<double,dim> unitOuterNormal
+        = { (globalCorner1[1] - globalCorner0[1])
+          , (globalCorner0[0] - globalCorner1[0]) };
+      unitOuterNormal /= unitOuterNormal.two_norm();
 
       // TODO: Do we really want to have a transport quadrature rule
       //       on the faces, if one of the FE spaces is a transport space?
@@ -192,38 +203,28 @@ faceImpl(const LhsLocalView& lhsLocalView,
         const FieldVector<double,dim>& quadFacePosInReferenceElement
           = intersection.geometry().global(quadFacePos);
 
-        // The multiplicative factor in the integral transformation formula multiplied with outer normal
-        // TODO: needs global geometry
-        const FieldVector<double,dim>& integrationOuterNormal =
-              // TODO: This is missing the reference → physical domain transformation (is missing factor 1/n; do we apply this later?):
-              intersection.integrationOuterNormal(quadFacePos);
-
         // The multiplicative factor in the integral transformation formula -
 
         double integrationWeight;
         if(type == IntegrationType::normalVector) {
-          integrationWeight = (lhsBeta*integrationOuterNormal)
+          integrationWeight = (lhsBeta*unitOuterNormal)
                             // TODO: needs global geometry
                             * detail::evaluateFactor(factor, quadFacePos)
                             * quadFace[pt].weight()
                             * integrationElement;
         } else if(type == IntegrationType::normalSign) {
-          const FieldVector<double,dim>& centerOuterNormal =
-              // TODO: needs global geometry
-              intersection.centerUnitOuterNormal();
-
           int sign = 1;
           bool signfound = false;
           for (unsigned int i=0;
-             i<centerOuterNormal.size() and signfound == false;
+             i < unitOuterNormal.size() and signfound == false;
              i++)
           {
-            if (centerOuterNormal[i]<(-1e-10))
+            if (unitOuterNormal[i]<(-1e-10))
             {
               sign = -1;
               signfound = true;
             }
-            else if (centerOuterNormal[i]>(1e-10))
+            else if (unitOuterNormal[i]>(1e-10))
             {
               sign = 1;
               signfound = true;
