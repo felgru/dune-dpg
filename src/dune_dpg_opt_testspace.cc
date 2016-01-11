@@ -159,12 +159,14 @@ int main(int argc, char** argv)
   //  std::cout <<rhs[i] <<std::endl;
   //}
 
+#if 0
   double delta = 1e-8;
   systemAssembler.defineCharacteristicFaces<1,2>
                     (stiffnessMatrix,
                      rhs,
                      beta,
                      delta);
+#endif
 
   // Determine Dirichlet dofs for u^ (inflow boundary)
   {
