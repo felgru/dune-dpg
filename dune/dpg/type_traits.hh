@@ -53,13 +53,34 @@ struct is_vector<Dune::FieldVector<T, size>> : std::true_type {};
  ****************************/
 
 template <typename FiniteElement>
-struct is_RefinedFiniteElement : std::false_type {};
+struct is_RefinedFiniteElement;
+
+template <typename FiniteElement>
+struct is_DGRefinedFiniteElement : std::false_type {};
 
 template<typename GV, int level, int k, class ST>
-struct is_RefinedFiniteElement<Functions::DefaultGlobalBasis<
+struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
                Functions::PQkDGRefinedDGNodeFactory
                    <GV, level, k, Functions::FlatMultiIndex<ST>, ST> > >
        : std::true_type {};
+
+template <typename FiniteElement>
+struct is_ContinuouslyRefinedFiniteElement : std::false_type {};
+
+template <typename FiniteElement>
+struct is_RefinedFiniteElement
+  : std::integral_constant<bool,
+         is_DGRefinedFiniteElement<FiniteElement>::value
+      || is_ContinuouslyRefinedFiniteElement<FiniteElement>::value> {};
+
+template <typename FiniteElement>
+struct levelOfFE : std::integral_constant<int, 0> {};
+
+template<class GV, int level, int k, class ST>
+struct levelOfFE<Functions::DefaultGlobalBasis<
+             Functions::PQkDGRefinedDGNodeFactory
+                 <GV, level, k, Functions::FlatMultiIndex<ST>, ST> > >
+       : std::integral_constant<int, level> {};
 
 template <typename FiniteElement>
 struct is_SubsampledFiniteElement : std::false_type {};

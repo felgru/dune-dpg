@@ -13,6 +13,7 @@
 #include <dune/functions/functionspacebases/nodes.hh>
 #include <dune/functions/functionspacebases/defaultglobalbasis.hh>
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
+#include <dune/functions/functionspacebases/refinednode.hh>
 
 
 
@@ -43,6 +44,7 @@ class PQkDGRefinedDGNodeIndexSet;
 
 template<typename GV, int level, int k, class MI, class ST>
 class PQkDGRefinedDGNodeFactory
+  : public DGRefinedNodeFactoryConstants<GV::dimension, level, k>
 {
   static const int dim = GV::dimension;
 
@@ -52,19 +54,15 @@ public:
   using GridView = GV;
   using size_type = ST;
 
+  using RefinementConstants = DGRefinedNodeFactoryConstants<dim, level, k>;
 
   // Precompute the number of dofs per entity type
-  const static int dofsPerSubEdge        = k+1;
-  const static int dofsPerSubTriangle    = (k+1)*(k+2)/2;
-  const static int dofsPerSubQuad        = (k+1)*(k+1);
-
-  const static int numberOfSubEdges        = StaticPower<2,level>::power;
-  const static int numberOfSubTriangles    = StaticPower<4,level>::power;
-  const static int numberOfSubQuads        = StaticPower<4,level>::power;
-
-  const static int dofsPerEdge        = numberOfSubEdges*dofsPerSubEdge;
-  const static int dofsPerTriangle    = numberOfSubTriangles*dofsPerSubTriangle;
-  const static int dofsPerQuad        = numberOfSubQuads*dofsPerSubQuad;
+  const static int dofsPerEdge     = RefinementConstants::numberOfSubEdges
+                                   * RefinementConstants::dofsPerSubEdge;
+  const static int dofsPerTriangle = RefinementConstants::numberOfSubTriangles
+                                   * RefinementConstants::dofsPerSubTriangle;
+  const static int dofsPerQuad     = RefinementConstants::numberOfSubQuads
+                                   * RefinementConstants::dofsPerSubQuad;
 
 
   template<class TP>
@@ -172,12 +170,17 @@ public:
 
 template<typename GV, int level, int k, typename ST, typename TP>
 class PQkDGRefinedDGNode :
-  public LeafBasisNode<ST, TP>
+  public LeafBasisNode<ST, TP>,
+  public RefinedNode < typename GV::template Codim<0>::Entity
+                     , typename GV::ctype, GV::dimension, level>
 {
   static const int dim = GV::dimension;
   static const int maxSize = StaticPower<(k+1),GV::dimension>::power;
 
   using Base = LeafBasisNode<ST,TP>;
+  using RefinedNodeBase =
+          RefinedNode < typename GV::template Codim<0>::Entity
+                      , typename GV::ctype, dim, level>;
   using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, k>;
 
 public:
@@ -189,14 +192,14 @@ public:
 
   PQkDGRefinedDGNode(const TreePath& treePath) :
     Base(treePath),
-    finiteElement_(nullptr),
-    element_(nullptr)
+    RefinedNodeBase(),
+    finiteElement_(nullptr)
   {}
 
   //! Return current element, throw if unbound
   const Element& element() const
   {
-    return *element_;
+    return *(this->element_);
   }
 
   /** \brief Return the LocalFiniteElement for the element we are bound to
@@ -211,8 +214,8 @@ public:
   //! Bind to element.
   void bind(const Element& e)
   {
-    element_ = &e;
-    finiteElement_ = &(cache_.get(element_->type()));
+    this->element_ = &e;
+    finiteElement_ = &(feCache_.get(this->element_->type()));
     using Factory = PQkDGRefinedDGNodeFactory<GV, level, k, void, ST>;
     size_type numberOfSubElements;
     if(e.type().isTriangle()) {
@@ -229,9 +232,8 @@ public:
 
 protected:
 
-  FiniteElementCache cache_;
+  FiniteElementCache feCache_;
   const FiniteElement* finiteElement_;
-  const Element* element_;
 };
 
 
