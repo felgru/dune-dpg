@@ -80,20 +80,23 @@ int main(int argc, char** argv)
   //   Choose a finite element space
   /////////////////////////////////////////////////////////
 
-  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
+  // u
+  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior;
   FEBasisInterior feBasisInterior(gridView);
 
-  typedef Functions::PQkNodalBasis<GridView, 2> FEBasisTrace; // bulk term corresponding to u^
+  // bulk term corresponding to u^
+  typedef Functions::PQkNodalBasis<GridView, 2> FEBasisTrace;
   FEBasisTrace feBasisTrace(gridView);
 
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
-  typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;     // v search space
+  // v search space
+  typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
-    typedef decltype(testSpaces) TestSpaces;
-    typedef decltype(solutionSpaces) SolutionSpaces;
-  //atof(argv[2])
+  typedef decltype(testSpaces) TestSpaces;
+  typedef decltype(solutionSpaces) SolutionSpaces;
+
   FieldVector<double, dim> beta = {1,1};
   double c = 1;
 
@@ -114,11 +117,14 @@ int main(int argc, char** argv)
 
   typedef decltype(bilinearForm) BilinearForm;
   typedef decltype(innerProduct) InnerProduct;
-  typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct> TestspaceCoefficientMatrix;
+  typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>
+      TestspaceCoefficientMatrix;
 
   TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
 
-  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix> FEBasisOptimalTest;              // v
+  // v
+  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix>
+      FEBasisOptimalTest;
   auto optimalTestSpaces
           = make_tuple(FEBasisOptimalTest(testspaceCoefficientMatrix));
 
@@ -140,7 +146,6 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////////////
   //  Assemble the system
   /////////////////////////////////////////////////////////
-//#if 0
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
   auto rightHandSide = std::make_tuple([] (const Domain& x) { return 1.;});
@@ -152,12 +157,6 @@ int main(int argc, char** argv)
   VectorType x(feBasisTrace.size()
                +feBasisInterior.size());
   x = 0;
-  //printmatrix(std::cout , stiffnessMatrix, "stiffnessMatrixWithoutBV", "--");
-  //std::cout <<"rhsWithoutBV" <<std::endl;
-  //for (unsigned int i=0; i<rhs.size(); i++)
-  //{
-  //  std::cout <<rhs[i] <<std::endl;
-  //}
 
 #if 0
   double delta = 1e-8;
@@ -184,12 +183,6 @@ int main(int argc, char** argv)
 
   writeMatrixToMatlab(stiffnessMatrix, "transportMatrix_"+ std::to_string(nelements));
 
- // printmatrix(std::cout , stiffnessMatrix, "stiffnessMatrix", "--");
-//  std::cout <<"rhs" <<std::endl;
-//  for (unsigned int i=0; i<rhs.size(); i++)
-//  {
-//    std::cout <<rhs[i] <<std::endl;
-//  }
   ////////////////////////////
   //   Compute solution
   ////////////////////////////
@@ -199,40 +192,14 @@ int main(int argc, char** argv)
             <<" solution size = "<< x.size() <<std::endl;
 
 
-//#if 0
   UMFPack<MatrixType> umfPack(stiffnessMatrix, 2);
   InverseOperatorResult statistics;
   umfPack.apply(x, rhs, statistics);
-//#endif
-
-#if 0
-  // Technicality:  turn the matrix into a linear operator
-  MatrixAdapter<MatrixType,VectorType,VectorType> op(stiffnessMatrix);
-
-  // Sequential incomplete LU decomposition as the preconditioner
-  SeqILU0<MatrixType,VectorType,VectorType> ilu0(stiffnessMatrix,1.0);
-
-  // Preconditioned conjugate-gradient solver
-  CGSolver<VectorType> cg(op,
-                          ilu0, // preconditioner
-                          1e-4, // desired residual reduction factor
-                          50,   // maximum number of iterations
-                          2);   // verbosity of the solver
-
-  // Object storing some statistics about the solving process
-  InverseOperatorResult statistics;
-
-  // Solve!
-  cg.apply(x, rhs, statistics);
-#endif
-
 
 
   ////////////////////////////////////////////////////////////////////////////
   //  Make a discrete function from the FE basis and the coefficient vector
   ////////////////////////////////////////////////////////////////////////////
-
-
 
   VectorType u(feBasisInterior.size());
   u=0;
@@ -248,8 +215,6 @@ int main(int argc, char** argv)
     uhat[i] = x[i+feBasisInterior.size()];
   }
 
-//  std::cout << u << std::endl;
-
   auto uFunction
       = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
             (feBasisInterior, Dune::TypeTree::hybridTreePath(), u);
@@ -260,10 +225,11 @@ int main(int argc, char** argv)
             (feBasisTrace, Dune::TypeTree::hybridTreePath(), uhat);
   auto localUhatFunction = localFunction(uhatFunction);
 
-  //////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////
   //  Write result to VTK file
-  //  We need to subsample, because VTK cannot natively display real second-order functions
-  //////////////////////////////////////////////////////////////////////////////////////////////
+  //  We need to subsample, because VTK cannot natively display
+  //  real second-order functions
+  /////////////////////////////////////////////////////////////////////////
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
   vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write("transport_simplex_"+std::to_string(nelements) +"_"+ std::to_string(beta[0]) + "_" + std::to_string(beta[1]));
@@ -271,32 +237,6 @@ int main(int argc, char** argv)
   SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
   vtkWriter1.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter1.write("transport_simplex_trace_"+std::to_string(nelements) +"_"+ std::to_string(beta[0]) + "_" + std::to_string(beta[1]));
-
-//#endif
-
-# if 0
-  VectorType sol(feBasisTest.size());
-  for(unsigned int idx = 0; idx<feBasisTest.size(); idx++)
-  {
-    sol=0;
-  //int idx = 1;
-  //int idx =atoi(argv[1]);
-    sol[idx]=1;
-
-  //std::cout << u << std::endl;
-    auto uFunction
-        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-              (feBasisTest, Dune::TypeTree::hybridTreePath(), sol);
-    auto localUFunction = localFunction(uFunction);
-  //////////////////////////////////////////////////////////////////////////////////////////////
-  //  Write result to VTK file
-  //  We need to subsample, because VTK cannot natively display real second-order functions
-  //////////////////////////////////////////////////////////////////////////////////////////////
-    SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
-    vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("testfkt", VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter.write("optimal_testfunction_irregGrid_"+ std::to_string(idx));
-  }
-# endif
 
     return 0;
   }
