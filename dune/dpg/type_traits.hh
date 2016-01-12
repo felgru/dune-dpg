@@ -67,6 +67,15 @@ struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
 template <typename FiniteElement>
 struct is_ContinuouslyRefinedFiniteElement : std::false_type {};
 
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class ST>
+struct is_ContinuouslyRefinedFiniteElement<Functions::DefaultGlobalBasis<
+            Functions::OptimalTestBasisNodeFactory<
+                TestspaceCoefficientMatrix, testIndex,
+                Functions::FlatMultiIndex<ST>, ST> > >
+  : is_RefinedFiniteElement<typename std::tuple_element<testIndex,
+                              typename TestspaceCoefficientMatrix::TestSpaces
+                            >::type> {};
+
 template <typename FiniteElement>
 struct is_RefinedFiniteElement
   : std::integral_constant<bool,
@@ -81,6 +90,15 @@ struct levelOfFE<Functions::DefaultGlobalBasis<
              Functions::PQkDGRefinedDGNodeFactory
                  <GV, level, k, Functions::FlatMultiIndex<ST>, ST> > >
        : std::integral_constant<int, level> {};
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class ST>
+struct levelOfFE<Functions::DefaultGlobalBasis<
+            Functions::OptimalTestBasisNodeFactory<
+                TestspaceCoefficientMatrix, testIndex,
+                Functions::FlatMultiIndex<ST>, ST> > >
+  : levelOfFE<typename std::tuple_element<testIndex,
+                typename TestspaceCoefficientMatrix::TestSpaces
+              >::type> {};
 
 template <typename FiniteElement>
 struct is_SubsampledFiniteElement : std::false_type {};
