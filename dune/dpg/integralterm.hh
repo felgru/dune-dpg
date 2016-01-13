@@ -7,7 +7,12 @@
 #include <vector>
 #include <type_traits>
 
+#include <dune/geometry/referenceelements.hh>
+
+#include <dune/grid/uggrid/uggridfactory.hh>
+
 #include <dune/istl/matrix.hh>
+#include <dune/istl/scalarproducts.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 
@@ -85,40 +90,45 @@ namespace Dune {
 
 namespace detail {
   template <IntegrationType type,
-            class LhsLocalView,
-            class RhsLocalView,
-            class MatrixType,
-            class Element,
-            class FactorType,
-            class DirectionType>
-  inline void getLocalMatrix_InteriorImpl(const LhsLocalView&,
-                                          const RhsLocalView&,
-                                          MatrixType&,
-                                          size_t,
-                                          size_t,
-                                          unsigned int,
-                                          const Element&,
-                                          const FactorType&,
-                                          const DirectionType&,
-                                          const DirectionType&);
+            class LhsSpace,
+            class RhsSpace,
+            bool = is_RefinedFiniteElement<LhsSpace>::value,
+            bool = is_RefinedFiniteElement<RhsSpace>::value>
+  struct GetLocalMatrix
+  {
+    using LhsLocalView = typename LhsSpace::LocalView;
+    using RhsLocalView = typename RhsSpace::LocalView;
 
-  template <IntegrationType type,
-            class LhsLocalView,
-            class RhsLocalView,
-            class MatrixType,
-            class Intersection,
-            class FactorType,
-            class DirectionType>
-  inline void getLocalMatrix_FaceImpl(const LhsLocalView&,
-                                      const RhsLocalView&,
-                                      MatrixType&,
-                                      size_t,
-                                      size_t,
-                                      unsigned int,
-                                      const Intersection&,
-                                      const FactorType&,
-                                      const DirectionType&,
-                                      const DirectionType&);
+    template <class MatrixType,
+              class Element,
+              class FactorType,
+              class DirectionType>
+    inline static void interiorImpl(const LhsLocalView&,
+                                    const RhsLocalView&,
+                                    MatrixType&,
+                                    size_t,
+                                    size_t,
+                                    unsigned int,
+                                    const Element&,
+                                    const FactorType&,
+                                    const DirectionType&,
+                                    const DirectionType&);
+
+    template <class MatrixType,
+              class Intersection,
+              class FactorType,
+              class DirectionType>
+    inline static void faceImpl(const LhsLocalView&,
+                                const RhsLocalView&,
+                                MatrixType&,
+                                size_t,
+                                size_t,
+                                unsigned int,
+                                const Intersection&,
+                                const FactorType&,
+                                const DirectionType&,
+                                const DirectionType&);
+  };
 }
 
 
@@ -239,8 +249,8 @@ auto make_IntegralTerm(FactorType c,
 }
 
 namespace detail {
-    /* We need to make this a class, as partial specializations of
-     * function templates are not allowed. */
+/* We need to make this a class, as partial specializations of
+ * function templates are not allowed. */
 template<int dim, EvaluationType type,
          DomainOfIntegration domain_of_integration>
 struct LocalFunctionEvaluation {
@@ -295,6 +305,137 @@ struct LocalFunctionEvaluation<dim, EvaluationType::grad,
     {
       FieldVector<double,dim> gradient;
       jacobian.mv(referenceGradients[i][0], gradient);
+      derivatives[i] = beta * gradient;
+    }
+
+    return derivatives;
+  }
+};
+
+/* We need to make this a class, as partial specializations of
+ * function templates are not allowed. */
+template<int dim, EvaluationType type,
+         DomainOfIntegration domain_of_integration,
+         bool isDGRefined>
+struct LocalRefinedFunctionEvaluation {
+
+  template <class LocalFiniteElement, class Geometry>
+  std::vector<FieldVector<double,1> >
+  operator() (const LocalFiniteElement& localFiniteElement,
+              unsigned int subElement,
+              const FieldVector<double, dim>& quadPos,
+              const Geometry& geometry,
+              const Geometry& subGeometryInReferenceElement,
+              const FieldVector<double, dim>& beta) const;
+};
+
+template<int dim, DomainOfIntegration domain_of_integration>
+struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value,
+                               domain_of_integration, false> {
+
+  template <class LocalFiniteElement, class Geometry>
+  std::vector<FieldVector<double,1> > operator()
+                      (const LocalFiniteElement& localFiniteElement,
+                       unsigned int,
+                       const FieldVector<double, dim>& quadPos,
+                       const Geometry& geometry,
+                       const Geometry& subGeometryInReferenceElement,
+                       const FieldVector<double, dim>&) const
+  {
+    // values of the shape functions
+    std::vector<FieldVector<double,1> > values;
+    localFiniteElement.localBasis().evaluateFunction(quadPos, values);
+    return values;
+  }
+};
+
+template<int dim, DomainOfIntegration domain_of_integration>
+struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad,
+                               domain_of_integration, false> {
+
+  template <class LocalFiniteElement, class Geometry>
+  std::vector<FieldVector<double,1> > operator()
+                      (const LocalFiniteElement& localFiniteElement,
+                       unsigned int,
+                       const FieldVector<double, dim> & quadPos,
+                       const Geometry& geometry,
+                       const Geometry& subGeometryInReferenceElement,
+                       const FieldVector<double, dim>& beta) const
+  {
+    const auto& jacobianSub
+        = subGeometryInReferenceElement.jacobianInverseTransposed(quadPos);
+    const auto& jacobian = geometry.jacobianInverseTransposed
+                           (subGeometryInReferenceElement.global(quadPos));
+    // The gradients of the shape functions on the reference element
+    std::vector<FieldMatrix<double,1,dim> > referenceGradients;
+    localFiniteElement.localBasis()
+            .evaluateJacobian(quadPos, referenceGradients);
+
+    // Compute the shape function gradients on the real element
+    std::vector<FieldVector<double, 1> >
+            derivatives(referenceGradients.size());
+    for (size_t i=0, i_max=referenceGradients.size(); i<i_max; i++)
+    {
+      FieldVector<double,dim> gradientRef, gradient;
+      jacobianSub.mv(referenceGradients[i][0], gradientRef);
+      jacobian.mv(gradientRef, gradient);
+      derivatives[i] = beta * gradient;
+    }
+
+    return derivatives;
+  }
+};
+
+template<int dim, DomainOfIntegration domain_of_integration>
+struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value,
+                               domain_of_integration, true> {
+
+  template <class LocalFiniteElement, class Geometry>
+  std::vector<FieldVector<double,1> > operator()
+                      (const LocalFiniteElement& localFiniteElement,
+                       unsigned int subElement,
+                       const FieldVector<double, dim>& quadPos,
+                       const Geometry& geometry,
+                       const Geometry& subGeometryInReferenceElement,
+                       const FieldVector<double, dim>&) const
+  {
+    // values of the shape functions
+    std::vector<FieldVector<double,1> > values;
+    localFiniteElement.localBasis().evaluateFunction(subElement, quadPos, values);
+    return values;
+  }
+};
+
+template<int dim, DomainOfIntegration domain_of_integration>
+struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad,
+                               domain_of_integration, true> {
+
+  template <class LocalFiniteElement, class Geometry>
+  std::vector<FieldVector<double,1> > operator()
+                      (const LocalFiniteElement& localFiniteElement,
+                       unsigned int subElement,
+                       const FieldVector<double, dim> & quadPos,
+                       const Geometry& geometry,
+                       const Geometry& subGeometryInReferenceElement,
+                       const FieldVector<double, dim>& beta) const
+  {
+    const auto& jacobianSub
+        = subGeometryInReferenceElement.jacobianInverseTransposed(quadPos);
+    const auto& jacobian = geometry.jacobianInverseTransposed
+                           (subGeometryInReferenceElement.global(quadPos));
+    // The gradients of the shape functions on the reference element
+    std::vector<FieldMatrix<double,1,dim> > referenceGradients;
+    localFiniteElement.localBasis()
+            .evaluateJacobian(subElement, quadPos, referenceGradients);
+
+    // Compute the shape function gradients on the real element
+    std::vector<FieldVector<double, 1> >
+            derivatives(referenceGradients.size());
+    for (size_t i=0, i_max=referenceGradients.size(); i<i_max; i++)
+    {
+      FieldVector<double,dim> gradientRef, gradient;
+      jacobianSub.mv(referenceGradients[i][0], gradientRef);
+      jacobian.mv(gradientRef, gradient);
       derivatives[i] = beta * gradient;
     }
 
@@ -365,6 +506,8 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
                 || type == IntegrationType::normalSign,
                 "IntegrationType not implemented on boundary.");
 
+  using LhsSpace = typename LhsLocalView::GlobalBasis;
+  using RhsSpace = typename RhsLocalView::GlobalBasis;
 
   // Get the grid element from the local FE basis view
   using Element = typename std::remove_pointer<LhsLocalView>::type::Element;
@@ -379,8 +522,8 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 
 
   if(domain_of_integration == DomainOfIntegration::interior) {
-    detail::getLocalMatrix_InteriorImpl<type>
-                                       (lhsLocalView,
+    detail::GetLocalMatrix<type, LhsSpace, RhsSpace>
+                         ::interiorImpl(lhsLocalView,
                                         rhsLocalView,
                                         elementMatrix,
                                         lhsSpaceOffset,
@@ -391,8 +534,8 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
                                         lhsBeta,
                                         rhsBeta);
   } else {
-    detail::getLocalMatrix_FaceImpl<type>
-                                   (lhsLocalView,
+    detail::GetLocalMatrix<type, LhsSpace, RhsSpace>
+                         ::faceImpl(lhsLocalView,
                                     rhsLocalView,
                                     elementMatrix,
                                     lhsSpaceOffset,
@@ -407,219 +550,13 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 }
 
 
-template <IntegrationType type,
-          class LhsLocalView,
-          class RhsLocalView,
-          class MatrixType,
-          class Element,
-          class FactorType,
-          class DirectionType>
-inline void
-detail::getLocalMatrix_InteriorImpl(const LhsLocalView& lhsLocalView,
-                                    const RhsLocalView& rhsLocalView,
-                                    MatrixType& elementMatrix,
-                                    size_t lhsSpaceOffset,
-                                    size_t rhsSpaceOffset,
-                                    unsigned int quadratureOrder,
-                                    const Element& element,
-                                    const FactorType& factor,
-                                    const DirectionType& lhsBeta,
-                                    const DirectionType& rhsBeta)
-{
-  using LhsSpace = typename LhsLocalView::GlobalBasis;
-  using RhsSpace = typename RhsLocalView::GlobalBasis;
+namespace detail {
 
-  const int dim = Element::dimension;
-  auto geometry = element.geometry();
+#include "integralterm_uu_impl.hh"
+#include "integralterm_rr_impl.hh"
+#include "integralterm_ru_impl.hh"
 
-  // Get set of shape functions for this element
-  const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
-  const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
-
-  const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
-  const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
-
-  typename detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>::type quad
-    = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
-      ::Quadrature(element, quadratureOrder, lhsBeta);
-
-  for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
-
-    // Position of the current quadrature point in the reference element
-    const FieldVector<double,dim>& quadPos = quad[pt].position();
-
-    // The transposed inverse Jacobian of the map from the reference element to the element
-    const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
-
-    // The multiplicative factor in the integral transformation formula
-    const double integrationWeight = geometry.integrationElement(quadPos)
-                                   * quad[pt].weight()
-                                   * detail::evaluateFactor(factor, quadPos);
-
-    //////////////////////////////
-    // Left hand side Functions //
-    //////////////////////////////
-    constexpr auto lhsType = (type == IntegrationType::valueValue ||
-                              type == IntegrationType::valueGrad)
-                             ? EvaluationType::value : EvaluationType::grad;
-
-    std::vector<FieldVector<double,1> > lhsValues =
-        detail::LocalFunctionEvaluation<dim, lhsType,
-                                        DomainOfIntegration::interior>()
-                      (lhsLocalFiniteElement,
-                       quadPos,
-                       geometry,
-                       lhsBeta);
-
-    ///////////////////////////////
-    // Right hand side Functions //
-    ///////////////////////////////
-    constexpr auto rhsType = (type == IntegrationType::valueValue ||
-                              type == IntegrationType::gradValue)
-                             ? EvaluationType::value : EvaluationType::grad;
-
-    std::vector<FieldVector<double,1> > rhsValues =
-        detail::LocalFunctionEvaluation<dim, rhsType,
-                                        DomainOfIntegration::interior>()
-                      (rhsLocalFiniteElement,
-                       quadPos,
-                       geometry,
-                       rhsBeta);
-
-    // Compute the actual matrix entries
-    for (unsigned int i=0; i<nLhs; i++)
-    {
-      for (unsigned int j=0; j<nRhs; j++)
-      {
-        elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                += (lhsValues[i] * rhsValues[j]) * integrationWeight;
-      }
-    }
-  }
-}
-
-
-template <IntegrationType type,
-          class LhsLocalView,
-          class RhsLocalView,
-          class MatrixType,
-          class Element,
-          class FactorType,
-          class DirectionType>
-inline void
-detail::getLocalMatrix_FaceImpl(const LhsLocalView& lhsLocalView,
-                                const RhsLocalView& rhsLocalView,
-                                MatrixType& elementMatrix,
-                                size_t lhsSpaceOffset,
-                                size_t rhsSpaceOffset,
-                                unsigned int quadratureOrder,
-                                const Element& element,
-                                const FactorType& factor,
-                                const DirectionType& lhsBeta,
-                                const DirectionType& rhsBeta)
-{
-  using LhsSpace = typename LhsLocalView::GlobalBasis;
-  using RhsSpace = typename RhsLocalView::GlobalBasis;
-
-  const int dim = Element::dimension;
-
-  // Get set of shape functions for this element
-  const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
-  const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
-
-  const int nLhs(lhsLocalFiniteElement.localBasis().size());
-  const int nRhs(rhsLocalFiniteElement.localBasis().size());
-
-  const auto& gridView = lhsLocalView.globalBasis().gridView();
-
-  for (auto&& intersection : intersections(gridView, element))
-  {
-    using intersectionType
-      = typename std::decay<decltype(intersection)>::type;
-    // TODO: Doe we really want to have a transport quadrature rule
-    //       on the faces, if one of the FE spaces is a transport space?
-    typename detail::ChooseQuadrature<LhsSpace,
-                                      RhsSpace,
-                                      intersectionType>::type quadFace
-      = detail::ChooseQuadrature<LhsSpace, RhsSpace, intersectionType>
-        ::Quadrature(intersection, quadratureOrder, lhsBeta);
-
-    for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
-
-      // Position of the current quadrature point in the reference element (face!)
-      const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
-
-      // The multiplicative factor in the integral transformation formula multiplied with outer normal
-      const FieldVector<double,dim>& integrationOuterNormal =
-              intersection.integrationOuterNormal(quadFacePos);
-
-      // The multiplicative factor in the integral transformation formula -
-
-      double integrationWeight;
-      if(type == IntegrationType::normalVector) {
-        integrationWeight = (lhsBeta*integrationOuterNormal)
-                          * detail::evaluateFactor(factor, quadFacePos)
-                          * quadFace[pt].weight();
-      } else if(type == IntegrationType::normalSign) {
-        const double integrationElement =
-            intersection.geometry().integrationElement(quadFacePos);
-
-        const FieldVector<double,dim>& centerOuterNormal =
-            intersection.centerUnitOuterNormal();
-
-        int sign = 1;
-        bool signfound = false;
-        for (unsigned int i=0;
-           i<centerOuterNormal.size() and signfound == false;
-           i++)
-        {
-          if (centerOuterNormal[i]<(-1e-10))
-          {
-            sign = -1;
-            signfound = true;
-          }
-          else if (centerOuterNormal[i]>(1e-10))
-          {
-            sign = 1;
-            signfound = true;
-          }
-        }
-
-        integrationWeight = sign * detail::evaluateFactor(factor, quadFacePos)
-                          * quadFace[pt].weight() * integrationElement;
-      }
-
-      // position of the quadrature point within the element
-      const FieldVector<double,dim> elementQuadPos =
-              intersection.geometryInInside().global(quadFacePos);
-
-
-      //////////////////////////////
-      // Left Hand Side Functions //
-      //////////////////////////////
-      std::vector<FieldVector<double,1> > lhsValues;
-      lhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
-                                                          lhsValues);
-
-      ///////////////////////////////
-      // Right Hand Side Functions //
-      ///////////////////////////////
-      std::vector<FieldVector<double,1> > rhsValues;
-      rhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
-                                                          rhsValues);
-
-      // Compute the actual matrix entries
-      for (size_t i=0; i<nLhs; i++)
-      {
-        for (size_t j=0; j<nRhs; j++)
-        {
-          elementMatrix[i+lhsSpaceOffset][j+rhsSpaceOffset]
-                  += (lhsValues[i] * rhsValues[j]) * integrationWeight;
-        }
-      }
-    }
-  }
-}
+} // end namespace detail
 
 } // end namespace Dune
 

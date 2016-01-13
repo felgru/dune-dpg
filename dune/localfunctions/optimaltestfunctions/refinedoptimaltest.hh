@@ -1,29 +1,32 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
 
-#ifndef DUNE_LOCALFUNCTIONS_OPTIMALTEST_LOCALFINITEELEMENT_HH
-#define DUNE_LOCALFUNCTIONS_OPTIMALTEST_LOCALFINITEELEMENT_HH
+#ifndef DUNE_LOCALFUNCTIONS_REFINEDOPTIMALTEST_LOCALFINITEELEMENT_HH
+#define DUNE_LOCALFUNCTIONS_REFINEDOPTIMALTEST_LOCALFINITEELEMENT_HH
 
-#include "optimaltest/optimaltestlocalinterpolation.hh"
-#include "optimaltest/optimaltestlocalbasis.hh"
-#include "optimaltest/optimaltestlocalcoefficients.hh"
+#include "refinedoptimaltest/refinedoptimaltestlocalinterpolation.hh"
+#include "refinedoptimaltest/refinedoptimaltestlocalbasis.hh"
+#include "refinedoptimaltest/refinedoptimaltestlocalcoefficients.hh"
 
 namespace Dune
 {
-  /** \brief optimaltestfunctions
+  /** \brief refined optimal test functions
    *
    * \tparam D type used for domain coordinates
    * \tparam R type used for function values
    * \tparam d dimension of the reference element
+   * \tparam level level of the refinement
+   * \tparam RefinementConstants
    * \tparam TestSearchSpace
    */
-  template<class D, class R, int d, class TestSearchSpace>
-  class OptimalTestLocalFiniteElement {
+  template<class D, class R, int d,
+           int level, class RefinementConstants, class TestSearchSpace>
+  class RefinedOptimalTestLocalFiniteElement {
 
-    typedef OptimalTestLocalBasis<D,R,d,
+    typedef RefinedOptimalTestLocalBasis<D,R,d,level,RefinementConstants,
               typename TestSearchSpace::Traits::LocalBasisType> LocalBasis;
-    typedef OptimalTestLocalCoefficients<d> LocalCoefficients;
-    typedef OptimalTestLocalInterpolation<d,LocalBasis> LocalInterpolation;
+    typedef RefinedOptimalTestLocalCoefficients<d,level> LocalCoefficients;
+    typedef RefinedOptimalTestLocalInterpolation<d,level,LocalBasis> LocalInterpolation;
     typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
 
   public:
@@ -34,20 +37,22 @@ namespace Dune
 
     /** \todo Please doc me !
      */
-    OptimalTestLocalFiniteElement () = delete;
+    RefinedOptimalTestLocalFiniteElement () = delete;
 
-    OptimalTestLocalFiniteElement (MatrixType& coeffMat,
+    RefinedOptimalTestLocalFiniteElement (MatrixType& coeffMat,
                                    const TestSearchSpace& testSearchSpace,
                                    std::vector<LocalKey>& localKeyList)
-    : basis(testSearchSpace.localBasis(), coeffMat, 0),
+    : basis(testSearchSpace.localBasis(), testSearchSpace.type(),
+            coeffMat, 0),
       coefficients(localKeyList),
       gt(testSearchSpace.type())
     { }
 
-    OptimalTestLocalFiniteElement (MatrixType& coeffMat,
+    RefinedOptimalTestLocalFiniteElement (MatrixType& coeffMat,
                                    const TestSearchSpace& testSearchSpace,
                                    size_t offset = 0)
-    : basis(testSearchSpace.localBasis(), coeffMat, offset),
+    : basis(testSearchSpace.localBasis(), testSearchSpace.type(),
+            coeffMat, offset),
       gt(testSearchSpace.type())
     { }
 
@@ -85,9 +90,9 @@ namespace Dune
       return gt;
     }
 
-    OptimalTestLocalFiniteElement* clone () const
+    RefinedOptimalTestLocalFiniteElement* clone () const
     {
-      return new OptimalTestLocalFiniteElement(*this);
+      return new RefinedOptimalTestLocalFiniteElement(*this);
     }
 
   private:
