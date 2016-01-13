@@ -34,6 +34,7 @@
 #include <dune/common/exceptions.hh>
 
 #include <dune/localfunctions/optimaltestfunctions/optimaltest.hh>
+#include <dune/localfunctions/optimaltestfunctions/refinedoptimaltest.hh>
 
 #include <dune/typetree/leafnode.hh>
 
@@ -42,6 +43,7 @@
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
 #include <dune/dpg/assemble_helper.hh>
 #include <dune/dpg/cholesky.hh>
+#include <dune/dpg/type_traits.hh>
 
 
 namespace Dune {
@@ -247,6 +249,27 @@ class TestspaceCoefficientMatrix
 };
 
 
+/* some forward declarations for refined bases */
+
+template<typename Element, typename ctype, int dim, int level>
+class RefinedNode;
+
+template<typename Element>
+class UnrefinedNode
+{
+public:
+
+  UnrefinedNode() :
+    element_(nullptr)
+  {}
+
+protected:
+
+  const Element* element_;
+};
+
+struct EmptyNodeFactoryConstants {};
+
 
 // *****************************************************************************
 // This is the reusable part of the basis. It contains
@@ -270,9 +293,23 @@ template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, c
 class OptimalTestBasisNodeFactory;
 
 
+template<typename Space>
+struct RefinementConstants : public EmptyNodeFactoryConstants {};
+
+template<class GV, int level, int k, class ST>
+struct RefinementConstants
+       < DefaultGlobalBasis<
+             PQkDGRefinedDGNodeFactory
+             <GV, level, k, FlatMultiIndex<ST>, ST> > >
+  : public PQkDGRefinedDGNodeFactory<GV, level, k, FlatMultiIndex<ST>, ST>
+           ::RefinementConstants {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, class ST>
 class OptimalTestBasisNodeFactory
+  : public RefinementConstants<
+               typename std::tuple_element<testIndex,
+                     typename TestspaceCoefficientMatrix::TestSpaces
+               >::type>
 {
   static const int dim =
       TestspaceCoefficientMatrix::GridView::dimension;
@@ -382,11 +419,30 @@ public:
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, typename ST, typename TP>
 class OptimalTestBasisNode :
-  public LeafBasisNode<ST, TP>
+  public LeafBasisNode<ST, TP>,
+  public std::conditional
+           < Dune::is_RefinedFiniteElement<
+               typename std::tuple_element<testIndex,
+                     typename TestspaceCoefficientMatrix::TestSpaces
+               >::type>::value
+           , RefinedNode< typename TestspaceCoefficientMatrix::GridView::
+                                   template Codim<0>::Entity
+                        , typename TestspaceCoefficientMatrix::GridView::ctype
+                        , TestspaceCoefficientMatrix::GridView::dimension
+                        , levelOfFE<typename std::tuple_element<testIndex,
+                              typename TestspaceCoefficientMatrix::TestSpaces
+                            >::type
+                          >::value >
+           , UnrefinedNode<typename TestspaceCoefficientMatrix::GridView::
+                                   template Codim<0>::Entity >
+           >::type
 {
 public:
   using SolutionSpaces = typename TestspaceCoefficientMatrix::SolutionSpaces;
   using TestSearchSpaces = typename TestspaceCoefficientMatrix::TestSpaces;
+
+  using TestSearchSpace
+          = typename std::tuple_element<testIndex,TestSearchSpaces>::type;
 
 private:
   using GV = typename TestspaceCoefficientMatrix::GridView;
@@ -396,8 +452,7 @@ private:
 
   using Base = LeafBasisNode<ST,TP>;
   using TestSearchFiniteElement
-      = typename std::tuple_element<testIndex,TestSearchSpaces>::type
-                   ::LocalView::Tree::FiniteElement;
+      = typename TestSearchSpace::LocalView::Tree::FiniteElement;
 
   using SolutionLocalView
         = typename boost::fusion::result_of::as_vector<
@@ -414,16 +469,29 @@ private:
                       >::type
              >::type;
 
+  static const bool testSearchSpaceIsRefined
+    = is_RefinedFiniteElement<TestSearchSpace>::value;
+
 public:
 
   using size_type = ST;
   using TreePath = TP;
   using Element = typename GV::template Codim<0>::Entity;
-  using FiniteElement = typename Dune::OptimalTestLocalFiniteElement
+  using FiniteElement = typename std::conditional
+                          < testSearchSpaceIsRefined
+                          , Dune::RefinedOptimalTestLocalFiniteElement
                                   <typename GV::ctype,
                                    double,
                                    GV::dimension,
-                                   TestSearchFiniteElement>;
+                                   levelOfFE<TestSearchSpace>::value,
+                                   RefinementConstants<TestSearchSpace>,
+                                   TestSearchFiniteElement>
+                          , Dune::OptimalTestLocalFiniteElement
+                                  <typename GV::ctype,
+                                   double,
+                                   GV::dimension,
+                                   TestSearchFiniteElement>
+                          >::type;
 
   OptimalTestBasisNode(const TreePath& treePath,
                        TestspaceCoefficientMatrix& testCoeffMat) :
@@ -431,7 +499,6 @@ public:
     testspaceCoefficientMatrix(testCoeffMat),
     finiteElement_(nullptr),
     testSearchSpace_(nullptr),
-    element_(nullptr),
     localViewSolution_(boost::fusion::as_vector(
                 boost::fusion::transform(testCoeffMat.bilinearForm()
                                                 .getSolutionSpaces(),
@@ -445,7 +512,7 @@ public:
   //! Return current element, throw if unbound
   const Element& element() const
   {
-    return *element_;
+    return *this->element_;
   }
 
   /** \brief Return the LocalFiniteElement for the element we are bound to
@@ -463,7 +530,7 @@ public:
     using namespace Dune::detail;
     using namespace boost::fusion;
 
-    element_ = &e;
+    this->element_ = &e;
     for_each(localViewTest, applyBind<decltype(e)>(e));
     testSearchSpace_ =
         &(at_c<testIndex>(localViewTest).tree().finiteElement());
@@ -491,7 +558,6 @@ protected:
   //FiniteElementCache cache_;
   std::unique_ptr<FiniteElement> finiteElement_;
   const TestSearchFiniteElement* testSearchSpace_;
-  const Element* element_;
   SolutionLocalView localViewSolution_;
   TestLocalView localViewTest;
 };

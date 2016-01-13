@@ -7,6 +7,7 @@
 
 namespace std {
   template<class T, class Alloc> class vector;
+  template< std::size_t I, class T > class tuple_element;
 }
 
 namespace Dune {
@@ -17,6 +18,9 @@ namespace Functions {
 
   template<class NF>
   class DefaultGlobalBasis;
+
+  template<typename GV, int level, int k, class MI, class ST>
+  class PQkDGRefinedDGNodeFactory;
 
   template<typename GV, int s, int k, class MI, class ST>
   class PQkDGSubsampledDGNodeFactory;
@@ -47,6 +51,54 @@ struct is_vector<Dune::FieldVector<T, size>> : std::true_type {};
 /****************************
  * Traits for finite elements
  ****************************/
+
+template <typename FiniteElement>
+struct is_RefinedFiniteElement;
+
+template <typename FiniteElement>
+struct is_DGRefinedFiniteElement : std::false_type {};
+
+template<typename GV, int level, int k, class ST>
+struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
+               Functions::PQkDGRefinedDGNodeFactory
+                   <GV, level, k, Functions::FlatMultiIndex<ST>, ST> > >
+       : std::true_type {};
+
+template <typename FiniteElement>
+struct is_ContinuouslyRefinedFiniteElement : std::false_type {};
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class ST>
+struct is_ContinuouslyRefinedFiniteElement<Functions::DefaultGlobalBasis<
+            Functions::OptimalTestBasisNodeFactory<
+                TestspaceCoefficientMatrix, testIndex,
+                Functions::FlatMultiIndex<ST>, ST> > >
+  : is_RefinedFiniteElement<typename std::tuple_element<testIndex,
+                              typename TestspaceCoefficientMatrix::TestSpaces
+                            >::type> {};
+
+template <typename FiniteElement>
+struct is_RefinedFiniteElement
+  : std::integral_constant<bool,
+         is_DGRefinedFiniteElement<FiniteElement>::value
+      || is_ContinuouslyRefinedFiniteElement<FiniteElement>::value> {};
+
+template <typename FiniteElement>
+struct levelOfFE : std::integral_constant<int, 0> {};
+
+template<class GV, int level, int k, class ST>
+struct levelOfFE<Functions::DefaultGlobalBasis<
+             Functions::PQkDGRefinedDGNodeFactory
+                 <GV, level, k, Functions::FlatMultiIndex<ST>, ST> > >
+       : std::integral_constant<int, level> {};
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class ST>
+struct levelOfFE<Functions::DefaultGlobalBasis<
+            Functions::OptimalTestBasisNodeFactory<
+                TestspaceCoefficientMatrix, testIndex,
+                Functions::FlatMultiIndex<ST>, ST> > >
+  : levelOfFE<typename std::tuple_element<testIndex,
+                typename TestspaceCoefficientMatrix::TestSpaces
+              >::type> {};
 
 template <typename FiniteElement>
 struct is_SubsampledFiniteElement : std::false_type {};

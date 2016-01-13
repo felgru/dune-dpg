@@ -32,6 +32,7 @@
 #include <dune/functions/functionspacebases/pqkfacenodalbasis.hh>
 #include <dune/functions/functionspacebases/optimaltestbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
+#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
@@ -87,7 +88,7 @@ int main(int argc, char** argv)
 
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
-  typedef Functions::LagrangeDGBasis<GridView, 5> FEBasisTest;     // v search space
+  typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;     // v search space
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
     typedef decltype(testSpaces) TestSpaces;
@@ -95,7 +96,6 @@ int main(int argc, char** argv)
   //atof(argv[2])
   FieldVector<double, dim> beta = {1,1};
   double c = 1;
-  double delta = 0.0001;
 
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
@@ -112,17 +112,8 @@ int main(int argc, char** argv)
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                     DomainOfIntegration::interior>(1., beta)));
 
-  auto minInnerProduct = make_InnerProduct(solutionSpaces,
-          make_tuple(
-              make_IntegralTerm<1,1,IntegrationType::valueValue,              // (u^,u^)
-                                    DomainOfIntegration::interior>(1),
-              make_IntegralTerm<1,1,IntegrationType::gradGrad,                // (beta grad u^,beta grad u^)
-                                    DomainOfIntegration::interior>(1, beta)
-          ));
-
   typedef decltype(bilinearForm) BilinearForm;
   typedef decltype(innerProduct) InnerProduct;
-  typedef decltype(minInnerProduct) MinInnerProduct;
   typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct> TestspaceCoefficientMatrix;
 
   TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
@@ -168,12 +159,14 @@ int main(int argc, char** argv)
   //  std::cout <<rhs[i] <<std::endl;
   //}
 
-  // Add minimization property for u^ on (near-)characteristic boundary if epsilon is closed to zero
-  systemAssembler.applyMinimization<1, MinInnerProduct,2>
+#if 0
+  double delta = 1e-8;
+  systemAssembler.defineCharacteristicFaces<1,2>
                     (stiffnessMatrix,
-                     minInnerProduct,
+                     rhs,
                      beta,
                      delta);
+#endif
 
   // Determine Dirichlet dofs for u^ (inflow boundary)
   {
