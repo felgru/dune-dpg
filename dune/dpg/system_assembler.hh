@@ -314,6 +314,18 @@ public:
                       VolumeTerms&& volumeTerms);
 
   /**
+   * \brief The same as assembleSystem but it only assembles the matrix.
+   */
+  void assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix);
+
+  /**
+   * \brief The same as assembleSystem but it only assembles the rhs.
+   */
+  template <class VolumeTerms>
+  void assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
+                   VolumeTerms&& volumeTerms);
+
+  /**
    * \brief Apply Dirichlet boundary values on a test space
    *
    * \param[in,out] matrix      the matrix of the DPG system
@@ -481,6 +493,17 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                BlockVector<FieldVector<double,1> >& rhs,
                VolumeTerms&& volumeTerms)
 {
+  assembleMatrix(matrix);
+  assembleRhs   (rhs,    volumeTerms);
+}
+
+template<class TestSpaces, class SolutionSpaces,
+         class BilinearForm, class InnerProduct,
+         class FormulationType>
+void SystemAssembler<TestSpaces, SolutionSpaces,
+                     BilinearForm, InnerProduct, FormulationType>::
+assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
+{
   using namespace boost::fusion;
   using namespace Dune::detail;
 
@@ -530,12 +553,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                                                      innerProduct, n);
   occupationPattern.exportIdx(matrix);
 
-  // set rhs to correct length -- the total number of basis vectors in the basis
-  rhs.resize((isSaddlepoint?globalTotalTestSize:0) + globalTotalSolutionSize);
-
   // Set all entries to zero
   matrix = 0;
-  rhs = 0;
 
   // Views on the FE bases on a single element
   auto solutionLocalViews = as_vector(transform(solutionSpaces,
@@ -602,6 +621,77 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
        testZip,
        solutionZip,
        cp, cpm);
+  }
+}
+
+template<class TestSpaces, class SolutionSpaces,
+         class BilinearForm, class InnerProduct,
+         class FormulationType>
+template <class VolumeTerms>
+void SystemAssembler<TestSpaces, SolutionSpaces,
+                     BilinearForm, InnerProduct, FormulationType>::
+assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
+            VolumeTerms&& volumeTerms)
+{
+  using namespace boost::fusion;
+  using namespace Dune::detail;
+
+  constexpr bool isSaddlepoint =
+        std::is_same<
+             typename std::decay<FormulationType>::type
+           , SaddlepointFormulation
+        >::value;
+
+  typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
+  GridView gridView = std::get<0>(testSpaces).gridView();
+
+  /* TODO: make this a vector of pointers to localVolumeTerm */
+  auto localVolumeTerms =
+      as_vector(transform(volumeTerms,
+                          getLocalVolumeTerm<GridView>(gridView)));
+
+
+  /* set up global offsets */
+  size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
+  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+  size_t globalTotalTestSize = 0;
+
+  if(isSaddlepoint) {
+    globalTotalTestSize =
+        fold(zip(globalTestSpaceOffsets, testSpaces),
+             (size_t)0, globalOffsetHelper());
+  } else { /* DPG formulation */
+    for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
+    {
+      globalTestSpaceOffsets[i] = 0;
+    }
+  }
+
+  size_t globalTotalSolutionSize =
+      fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
+           isSaddlepoint?globalTotalTestSize:0, globalOffsetHelper());
+
+  globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
+
+  // set rhs to correct length -- the total number of basis vectors in the basis
+  rhs.resize((isSaddlepoint?globalTotalTestSize:0) + globalTotalSolutionSize);
+
+  // Set all entries to zero
+  rhs = 0;
+
+  // Views on the FE bases on a single element
+  auto testLocalViews     = as_vector(transform(testSpaces, getLocalView()));
+
+  auto testLocalIndexSets = as_vector(transform(testSpaces,
+                                                getLocalIndexSet()));
+
+
+  for(const auto& e : elements(gridView)) {
+
+    for_each(testLocalViews, applyBind<decltype(e)>(e));
+
+    for_each(zip(testLocalIndexSets, testLocalViews),
+             make_fused_procedure(bindLocalIndexSet()));
 
     // Now get the local contribution to the right-hand side vector
     BlockVector<FieldVector<double,1> >
