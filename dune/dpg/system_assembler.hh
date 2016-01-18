@@ -50,6 +50,7 @@
 #include "bilinearform.hh"
 #include "innerproduct.hh"
 #include "quadrature.hh"
+#include "localevaluation.hh"
 
 namespace Dune {
 
