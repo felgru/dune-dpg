@@ -15,25 +15,27 @@ namespace Dune {
 namespace detail {
 
 // Compute the source term for a single element
-template <class LocalViewTest, class VolumeTerm,
+template <class LocalViewTest, class FactorType,
           bool = is_RefinedFiniteElement
                  <typename LocalViewTest::GlobalBasis>::value>
 struct GetVolumeTerm_Impl
 {
-  void operator() (const LocalViewTest& localViewTest,
-                   BlockVector<FieldVector<double,1> >& localRhs,
-                   const VolumeTerm& volumeTerm);
+  static void getVolumeTerm (const LocalViewTest& localViewTest,
+                      // TODO: make the vector type a template parameter
+                             BlockVector<FieldVector<double,1> >& localRhs,
+                             const FactorType& volumeTerm);
 };
 
-template <class LocalViewTest, class VolumeTerm>
-struct GetVolumeTerm_Impl<LocalViewTest, VolumeTerm, false>
+
+template <class LocalViewTest, class FactorType>
+struct GetVolumeTerm_Impl<LocalViewTest, FactorType, false>
 {
-  void operator() (const LocalViewTest& localViewTest,
-                   BlockVector<FieldVector<double,1> >& localRhs,
-                   const VolumeTerm& volumeTerm)
+  static void getVolumeTerm (const LocalViewTest& localViewTest,
+                             BlockVector<FieldVector<double,1> >& localRhs,
+                             const FactorType& volumeTerm)
   {
     static_assert(models<Functions::Concept::
-         Function<double(const Dune::FieldVector<double, 2>&)>, VolumeTerm>(),
+         Function<double(const Dune::FieldVector<double, 2>&)>, FactorType>(),
          "The volumeTerm passed to getVolumeTerm does not model the "
          "Function concept.");
 
@@ -90,15 +92,15 @@ struct GetVolumeTerm_Impl<LocalViewTest, VolumeTerm, false>
   }
 };
 
-template <class LocalViewTest, class VolumeTerm>
-struct GetVolumeTerm_Impl<LocalViewTest, VolumeTerm, true>
+template <class LocalViewTest, class FactorType>
+struct GetVolumeTerm_Impl<LocalViewTest, FactorType, true>
 {
-  void operator() (const LocalViewTest& localViewTest,
-                   BlockVector<FieldVector<double,1> >& localRhs,
-                   const VolumeTerm& volumeTerm)
+  static void getVolumeTerm (const LocalViewTest& localViewTest,
+                             BlockVector<FieldVector<double,1> >& localRhs,
+                             const FactorType& volumeTerm)
   {
     static_assert(models<Functions::Concept::
-         Function<double(const Dune::FieldVector<double, 2>&)>, VolumeTerm>(),
+         Function<double(const Dune::FieldVector<double, 2>&)>, FactorType>(),
          "The volumeTerm passed to getVolumeTerm does not model the "
          "Function concept.");
 
@@ -186,27 +188,6 @@ struct GetVolumeTerm_Impl<LocalViewTest, VolumeTerm, true>
         subElementOffset += subElementStride;
       subElementIndex++;
     }
-  }
-};
-
-template <class LocalViewTest, class VolumeTerm>
-inline void getVolumeTerm(const LocalViewTest& localViewTest,
-                          BlockVector<FieldVector<double,1> >& localRhs,
-                          const VolumeTerm& volumeTerm)
-{
-  GetVolumeTerm_Impl<LocalViewTest, VolumeTerm>()
-          (localViewTest, localRhs, volumeTerm);
-}
-
-struct getVolumeTermHelper
-{
-  template<class Seq>
-  void operator()(const Seq& seq) const
-  {
-    using namespace boost::fusion;
-
-    // TODO: this can probably be done more elegantly by sequence fusion.
-    getVolumeTerm(at_c<0>(seq), at_c<1>(seq), at_c<2>(seq));
   }
 };
 
