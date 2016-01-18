@@ -5,14 +5,8 @@
 
 #include <tuple>
 #include <vector>
-#include <type_traits>
-
-#include <dune/geometry/referenceelements.hh>
-
-#include <dune/grid/uggrid/uggridfactory.hh>
 
 #include <dune/istl/matrix.hh>
-#include <dune/istl/scalarproducts.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 
@@ -550,6 +544,9 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 }
 
 
+// UGGrid needs to be forward-declared in case that we are not using
+// refined elements who would already have included the UG headers.
+template<int dim> class UGGrid;
 namespace detail {
 
 #include "integralterm_uu_impl.hh"
