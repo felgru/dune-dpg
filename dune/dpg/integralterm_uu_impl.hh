@@ -1,3 +1,5 @@
+namespace detail {
+
 template <IntegrationType type,
           class LhsSpace,
           class RhsSpace>
@@ -209,3 +211,5 @@ faceImpl(const LhsLocalView& lhsLocalView,
   }
 }
 };
+
+} // end namespace detail

@@ -1,3 +1,5 @@
+namespace detail {
+
 template <IntegrationType type,
           class LhsSpace,
           class RhsSpace>
@@ -34,8 +36,6 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
   typename detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>::type quad
     = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
       ::Quadrature(element, quadratureOrder, lhsBeta);
-
-  int level = levelOfFE<LhsSpace>::value;
 
   const UGGrid<dim>& referenceGrid
     = lhsLocalView.tree().refinedReferenceElement();
@@ -147,8 +147,6 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const int nRhs(rhsLocalFiniteElement.localBasis().size());
 
   const auto& gridView = lhsLocalView.globalBasis().gridView();
-
-  int level = levelOfFE<LhsSpace>::value;
 
   const UGGrid<dim>& referenceGrid
     = lhsLocalView.tree().refinedReferenceElement();
@@ -284,3 +282,5 @@ faceImpl(const LhsLocalView& lhsLocalView,
   }
 }
 };
+
+} // end namespace detail

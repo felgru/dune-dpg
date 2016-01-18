@@ -324,13 +324,9 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 // UGGrid needs to be forward-declared in case that we are not using
 // refined elements who would already have included the UG headers.
 template<int dim> class UGGrid;
-namespace detail {
-
 #include "integralterm_uu_impl.hh"
 #include "integralterm_rr_impl.hh"
 #include "integralterm_ru_impl.hh"
-
-} // end namespace detail
 
 } // end namespace Dune
 

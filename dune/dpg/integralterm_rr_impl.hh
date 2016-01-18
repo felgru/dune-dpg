@@ -1,3 +1,5 @@
+namespace detail {
+
 template <IntegrationType type,
           class LhsSpace,
           class RhsSpace>
@@ -149,8 +151,6 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
   const auto& gridView = lhsLocalView.globalBasis().gridView();
 
-  int level = levelOfFE<LhsSpace>::value;
-
   const UGGrid<dim>& referenceGrid
     = lhsLocalView.tree().refinedReferenceElement();
   auto referenceGridView = referenceGrid.leafGridView();
@@ -211,7 +211,8 @@ faceImpl(const LhsLocalView& lhsLocalView,
           integrationWeight = (lhsBeta*unitOuterNormal)
                             // TODO: needs global geometry
                             * detail::evaluateFactor(factor, quadFacePos)
-                            * quadFace[pt].weight();
+                            * quadFace[pt].weight()
+                            * integrationElement;
         } else if(type == IntegrationType::normalSign) {
           int sign = 1;
           bool signfound = false;
@@ -287,3 +288,5 @@ faceImpl(const LhsLocalView& lhsLocalView,
   }
 }
 };
+
+} // end namespace detail
