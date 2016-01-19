@@ -555,11 +555,9 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
   globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
 
-  auto n = globalTotalSolutionSize;
-  if(isSaddlepoint)
-  {
-    n+=globalTotalTestSize;
-  }
+  const auto n = isSaddlepoint
+               ? (globalTotalSolutionSize + globalTotalTestSize)
+               : globalTotalSolutionSize;
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // They are not particularly efficient, but simple to use.
