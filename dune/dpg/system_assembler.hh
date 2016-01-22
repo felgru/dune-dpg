@@ -262,6 +262,140 @@ struct getVolumeTermHelper
     getVolumeTerm(at_c<0>(seq), at_c<1>(seq), at_c<2>(seq));
   }
 };
+
+template<class BilinearForm, class InnerProduct>
+struct SaddlepointSpecializations
+{
+  static inline void set_innerProduct_occupationPattern
+            (MatrixIndexSet& occupationPattern,
+             const InnerProduct& innerProduct,
+             size_t n)
+  {
+    innerProduct.getOccupationPattern(occupationPattern);
+
+    /* Add the diagonal of the matrix, since we need it for the
+     * interpolation of boundary values. */
+    for (size_t i=0; i<n; i++)
+    {
+      occupationPattern.add(i, i);
+    }
+  }
+
+  static inline void get_innerProduct_localMatrix
+      (const InnerProduct& innerProduct,
+       Matrix<FieldMatrix<double,1,1> >& ipElementMatrix)
+  {
+    innerProduct.getLocalMatrix(ipElementMatrix);
+  }
+
+  template<class TestZip, class SolutionZip, class CP, class CPM>
+  static inline void copy_local_matrix_to_global
+      (const BilinearForm& bilinearForm,
+       const InnerProduct& innerProduct,
+       const TestZip& testZip,
+       const SolutionZip& solutionZip,
+       CP& cp,
+       CPM& cpm)
+  {
+    using namespace boost::fusion;
+
+    /* create sets of index pairs to loop over.
+     * This will be used later, when copying the local matrices into
+     * the global one.
+     */
+    typedef typename boost::mpl::fold<
+        typename boost::mpl::transform<
+            /* This as_vector is probably not needed for boost::fusion 1.58
+             * or higher. */
+            typename result_of::as_vector<typename std::remove_reference<
+                  decltype(bilinearForm.getTerms())>::type
+                >::type
+          , mpl::firstTwo<boost::mpl::_1>
+          >::type
+      , boost::mpl::set0<>
+      , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
+      >::type BFIndices;
+    typedef typename boost::mpl::fold<
+        typename boost::mpl::transform<
+            typename result_of::as_vector<typename std::remove_reference<
+                  decltype(innerProduct.getTerms())>::type
+                >::type
+          , mpl::firstTwo<boost::mpl::_1>
+          >::type
+      , boost::mpl::set0<>
+      , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
+      >::type IPIndices;
+
+    auto bfIndices = BFIndices{};
+    auto ipIndices = IPIndices{};
+
+    for_each(ipIndices,
+             localToGlobalCopyHelper<TestZip,
+                                     TestZip,
+                                     CP>
+                                    (testZip, testZip, cp));
+    for_each(bfIndices,
+             localToGlobalCopyHelper<SolutionZip,
+                                     TestZip,
+                                     CPM>
+                                    (solutionZip, testZip, cpm));
+  }
+
+  template<class TestLocalView>
+  static inline void bind_innerProduct(InnerProduct& innerProduct,
+                                       const TestLocalView& testLocalView)
+  {
+    innerProduct.bind(testLocalView);
+  }
+};
+
+template<class BilinearForm>
+struct DPGSpecializations
+{
+  static inline void set_innerProduct_occupationPattern
+                                  (MatrixIndexSet& occupationPattern,
+                                   void const * const & innerProduct,
+                                   size_t n)
+  { }
+
+  static inline void get_innerProduct_localMatrix
+      (void const * const & innerProduct,
+       Matrix<FieldMatrix<double,1,1> >& ipElementMatrix)
+  { }
+
+  template<class TestZip, class SolutionZip, class CP, class CPM>
+  static inline void copy_local_matrix_to_global
+      (const BilinearForm& bilinearForm,
+       void const * const & innerProduct,
+       const TestZip& testZip,
+       const SolutionZip& solutionZip,
+       CP& cp,
+       CPM& cpm)
+  {
+    using namespace boost::fusion;
+
+    typedef
+        typename boost::mpl::transform<
+            typename result_of::as_vector<typename boost::mpl::range_c<
+                                size_t,0,result_of::size<SolutionZip>
+                             ::type::value>::type
+                >::type
+          , mpl::tupleOf0And<boost::mpl::_1>
+          >::type BFIndices;
+
+    auto bfIndices = BFIndices{};
+    for_each(bfIndices,
+             localToGlobalCopyHelper<decltype(solutionZip),
+                                     decltype(testZip),
+                                     decltype(cpm)>
+                                    (solutionZip, testZip, cpm));
+  }
+
+  template<class TestLocalView>
+  static inline void bind_innerProduct(void * & innerProduct,
+                                       const TestLocalView& testLocalView)
+  { }
+};
 } // end namespace detail
 
 /**
@@ -300,21 +434,46 @@ public:
                          >::type
       >::type BilinearForm;
   //! type of the inner product on the test spaces
-  typedef typename std::conditional<
-        std::is_same<
-             typename std::decay<FormulationType>::type
-           , SaddlepointFormulation
-        >::value
-      , InProduct
-      , typename detail::replaceTestSpace<InProduct, TestSpaces>::type
-      >::type InnerProduct;
+  typedef InProduct InnerProduct;
 
+private:
+  //! This class holds some methods that do work that is specific to
+  //!  either the DPG or the saddlepoint formulation.
+  using Specialization
+    = typename std::conditional<
+            std::is_same<
+                 typename std::decay<FormulationType>::type
+               , SaddlepointFormulation
+            >::value
+          , typename detail::SaddlepointSpecializations<BilinearForm,
+                                                        InnerProduct>
+          , typename detail::DPGSpecializations<BilinearForm>
+          >::type;
+
+public:
   SystemAssembler () = delete;
+  /**
+   * \brief constructor for DPG SystemAssembler
+   *
+   * \note For your convenience, use make_DPG_SystemAssembler() instead.
+   */
+  constexpr SystemAssembler (TestSpaces     testSpaces,
+                             SolutionSpaces solutionSpaces,
+                             BilinForm      bilinearForm)
+             : testSpaces(testSpaces),
+               solutionSpaces(solutionSpaces),
+               bilinearForm(detail::make_BilinearForm<FormulationType>
+                                             (testSpaces,
+                                              solutionSpaces,
+                                              bilinearForm.getTerms())),
+               innerProduct(nullptr)
+  { }
+
   /**
    * \brief constructor for SystemAssembler
    *
-   * \note For your convenience, use make_DPG_SystemAssembler() or
-   *       make_Saddlepoint_SystemAssembler() instead.
+   * \note For your convenience, use make_Saddlepoint_SystemAssembler()
+   *       instead.
    */
   constexpr SystemAssembler (TestSpaces     testSpaces,
                              SolutionSpaces solutionSpaces,
@@ -456,25 +615,26 @@ private:
  * \param testSpaces     a tuple of test spaces
  * \param solutionSpaces a tuple of solution spaces
  * \param bilinearForm   the bilinear form describing the DPG system
- * \param innerProduct   the inner product of the test spaces
  */
 template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+         class BilinearForm>
 auto make_DPG_SystemAssembler(TestSpaces     testSpaces,
                               SolutionSpaces solutionSpaces,
-                              BilinearForm   bilinearForm,
-                              InnerProduct   innerProduct)
+                              BilinearForm   bilinearForm)
     -> SystemAssembler<TestSpaces, SolutionSpaces,
-                       BilinearForm, InnerProduct,
+                       BilinearForm,
+                       void*,
                        DPGFormulation>
 {
+  // set the inner product of the system assembler to nullptr as it is
+  // not used in the DPG formulation (we use the inner product of the
+  // optimal test space her).
   return SystemAssembler<TestSpaces, SolutionSpaces,
-                         BilinearForm, InnerProduct,
+                         BilinearForm, void*,
                          DPGFormulation>
                       (testSpaces,
                        solutionSpaces,
-                       bilinearForm,
-                       innerProduct);
+                       bilinearForm);
 }
 
 /**
@@ -566,17 +726,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   bilinearForm.template getOccupationPattern<isSaddlepoint>
                (occupationPattern,
                 0, isSaddlepoint?globalTotalTestSize:0);
-  if(isSaddlepoint)
-  {
-    innerProduct.getOccupationPattern(occupationPattern);
-
-    /* Add the diagonal of the matrix, since we need it for the
-     * interpolation of boundary values. */
-    for (size_t i=0; i<n; i++)
-    {
-      occupationPattern.add(i, i);
-    }
-  }
+  Specialization::set_innerProduct_occupationPattern(occupationPattern,
+                                                     innerProduct, n);
   occupationPattern.exportIdx(matrix);
 
   // set rhs to correct length -- the total number of basis vectors in the basis
@@ -595,36 +746,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   auto testLocalIndexSet     = as_vector(transform(testSpaces,
                                                    getLocalIndexSet()));
 
-  /* create sets of index pairs to loop over.
-   * This will be used later, when copying the local matrices into
-   * the global one.
-   */
-  typedef typename boost::mpl::fold<
-      typename boost::mpl::transform<
-          /* This as_vector is probably not needed for boost::fusion 1.58
-           * or higher. */
-          typename result_of::as_vector<typename std::remove_reference<
-                decltype(bilinearForm.getTerms())>::type
-              >::type
-        , mpl::firstTwo<boost::mpl::_1>
-        >::type
-    , boost::mpl::set0<>
-    , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-    >::type BFIndices;
-  typedef typename boost::mpl::fold<
-      typename boost::mpl::transform<
-          typename result_of::as_vector<typename std::remove_reference<
-                decltype(innerProduct.getTerms())>::type
-              >::type
-        , mpl::firstTwo<boost::mpl::_1>
-        >::type
-    , boost::mpl::set0<>
-    , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-    >::type IPIndices;
-
-  auto bfIndices = BFIndices{};
-  auto ipIndices = IPIndices{};
-
   for(const auto& e : elements(gridView)) {
 
     for_each(solutionLocalView, applyBind<decltype(e)>(e));
@@ -636,10 +757,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
              make_fused_procedure(bindLocalIndexSet()));
 
     bilinearForm.bind(testLocalView, solutionLocalView);
-    if(isSaddlepoint)
-    {
-      innerProduct.bind(testLocalView);
-    }
+    Specialization::bind_innerProduct(innerProduct, testLocalView);
 
     // Now let's get the element stiffness matrix and the Gram matrix
     // for the test space.
@@ -647,9 +765,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     Matrix<FieldMatrix<double,1,1> > ipElementMatrix;
 
     bilinearForm.getLocalMatrix(bfElementMatrix);
-    if(isSaddlepoint) {
-      innerProduct.getLocalMatrix(ipElementMatrix);
-    }
+    Specialization::get_innerProduct_localMatrix(innerProduct,
+                                                 ipElementMatrix);
 
 
     // Add element stiffness matrix onto the global stiffness matrix
@@ -676,35 +793,13 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                            solutionLocalIndexSet,
                            bilinearForm.getLocalSolutionSpaceOffsets(),
                            globalSolutionSpaceOffsets);
-    if(isSaddlepoint)
-    {
-      for_each(ipIndices,
-               localToGlobalCopyHelper<decltype(testZip),
-                                       decltype(testZip),
-                                       decltype(cp)>
-                                      (testZip, testZip, cp));
-      for_each(bfIndices,
-               localToGlobalCopyHelper<decltype(solutionZip),
-                                       decltype(testZip),
-                                       decltype(cpm)>
-                                      (solutionZip, testZip, cpm));
-    } else {
-      typedef
-          typename boost::mpl::transform<
-              typename result_of::as_vector<typename boost::mpl::range_c<
-                                  size_t,0,std::tuple_size<SolutionSpaces
-                               >::value>::type
-                  >::type
-            , mpl::tupleOf0And<boost::mpl::_1>
-            >::type BFIndices;
 
-      auto bfIndices = BFIndices{};
-      for_each(bfIndices,
-               localToGlobalCopyHelper<decltype(solutionZip),
-                                       decltype(testZip),
-                                       decltype(cpm)>
-                                      (solutionZip, testZip, cpm));
-    }
+    Specialization::copy_local_matrix_to_global
+      (bilinearForm,
+       innerProduct,
+       testZip,
+       solutionZip,
+       cp, cpm);
 
     // Now get the local contribution to the right-hand side vector
     BlockVector<FieldVector<double,1> >

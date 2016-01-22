@@ -321,7 +321,7 @@ int main(int argc, char** argv)
 
   auto systemAssembler
      = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
-                                bilinearForm, innerProduct);
+                                bilinearForm);
 //  auto systemAssembler
 //     = make_Saddlepoint_SystemAssembler(testSpaces, solutionSpaces,
 //                                        bilinearForm, innerProduct);

@@ -130,7 +130,7 @@ int main(int argc, char** argv)
 
   auto systemAssembler
      = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
-                                bilinearForm, innerProduct);
+                                bilinearForm);
 
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
