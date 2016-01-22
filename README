@@ -7,8 +7,12 @@ following programs installed on your system:
   a C++11-compatible compiler (e.g. GCC >= 4.9)
   cmake >= 2.8.6
 
-In addition to the DUNE libraries mentioned in dune.module, you'll
-need the following libraries:
+You need the DUNE core libraries in version 2.4. Additionally you need
+dune-typetree 2.4 and dune-functions in the version of branch
+releases/2.4-compatible from the Git repository
+https://gitlab.dune-project.org/staging/dune-functions.git.
+
+In addition to the DUNE libraries, you'll need the following libraries:
 
   Boost Fusion >= 1.54
   ug
