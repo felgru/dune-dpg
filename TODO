@@ -10,5 +10,3 @@ technical debt that needs to be paid off sooner or later:
   dune-typetree instead of std::tuple.
 * Beginning with version 1.58 boost::fusion has better support for std::tuple,
   thus we can maybe get rid of those boost::fusion::vectors.
-* Find a proper way to handle transport problems on characteristic
-  quadrilateral grids.
