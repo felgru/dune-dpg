@@ -191,7 +191,10 @@ int main(int argc, char** argv)
     /////////////////////////////////////////////////////////
     using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
-    auto rightHandSide = std::make_tuple(f(beta));
+    auto rightHandSide
+      = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
+                        std::make_tuple(make_LinearIntegralTerm<0>(
+                                   f(beta))));
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
     /////////////////////////////////////////////////
@@ -217,7 +220,7 @@ int main(int argc, char** argv)
       boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
                                           dirichletNodesInflow,
                                           beta);
-      systemAssembler.applyDirichletBoundarySolution<1>
+      systemAssembler.applyDirichletBoundary<1>
           (stiffnessMatrix,
            rhs,
            dirichletNodesInflow,
@@ -287,7 +290,11 @@ int main(int argc, char** argv)
     // Estimate a posteriori error and refine
     ////////////////////////////////////////////////////
     auto rhsAssembler_aposteriori = make_RhsAssembler(testSpaces_aposteriori);
-    rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide);
+    auto rightHandSide_aposteriori
+      = make_DPG_LinearForm(testSpaces_aposteriori,
+                        std::make_tuple(make_LinearIntegralTerm<0>(
+                                   f(beta))));
+    rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
 
     const double ratio = .2;
     ErrorTools errorTools = ErrorTools();
