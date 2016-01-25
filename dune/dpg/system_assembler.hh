@@ -181,7 +181,7 @@ struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, true>
         ::Quadrature(element, quadratureOrder, nullptr);
 
 
-    const UGGrid<dim>& referenceGrid
+    const auto& referenceGrid
       = localViewTest.tree().refinedReferenceElement();
     auto referenceGridView = referenceGrid.leafGridView();
 

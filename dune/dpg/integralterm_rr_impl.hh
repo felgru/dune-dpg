@@ -37,7 +37,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
     = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
       ::Quadrature(element, quadratureOrder, lhsBeta);
 
-  const UGGrid<dim>& referenceGrid
+  const auto& referenceGrid
     = lhsLocalView.tree().refinedReferenceElement();
   auto referenceGridView = referenceGrid.leafGridView();
 
@@ -151,7 +151,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
   const auto& gridView = lhsLocalView.globalBasis().gridView();
 
-  const UGGrid<dim>& referenceGrid
+  const auto& referenceGrid
     = lhsLocalView.tree().refinedReferenceElement();
   auto referenceGridView = referenceGrid.leafGridView();
 
