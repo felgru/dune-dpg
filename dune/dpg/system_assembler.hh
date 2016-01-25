@@ -97,6 +97,11 @@ struct GetVolumeTerm_Impl<LocalViewTest, VolumeTerm, false>
                    BlockVector<FieldVector<double,1> >& localRhs,
                    const VolumeTerm& volumeTerm)
   {
+    static_assert(models<Functions::Concept::
+         Function<double(const Dune::FieldVector<double, 2>&)>, VolumeTerm>(),
+         "The volumeTerm passed to getVolumeTerm does not model the "
+         "Function concept.");
+
     using TestSpace = typename LocalViewTest::GlobalBasis;
 
     // Get the grid element from the local FE basis view
@@ -157,6 +162,10 @@ struct GetVolumeTerm_Impl<LocalViewTest, VolumeTerm, true>
                    BlockVector<FieldVector<double,1> >& localRhs,
                    const VolumeTerm& volumeTerm)
   {
+    static_assert(models<Functions::Concept::
+         Function<double(const Dune::FieldVector<double, 2>&)>, VolumeTerm>(),
+         "The volumeTerm passed to getVolumeTerm does not model the "
+         "Function concept.");
 
     using TestSpace = typename LocalViewTest::GlobalBasis;
 
