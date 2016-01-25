@@ -281,7 +281,7 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
   using RhsSpace = typename RhsLocalView::GlobalBasis;
 
   // Get the grid element from the local FE basis view
-  using Element = typename std::remove_pointer<LhsLocalView>::type::Element;
+  using Element = typename LhsLocalView::Element;
   const Element& element = lhsLocalView.element();
 
   const auto lhsOrder = lhsLocalView.tree().finiteElement().localBasis().order();
