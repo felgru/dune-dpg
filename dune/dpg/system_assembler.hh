@@ -256,13 +256,13 @@ struct GetVolumeTerm_Impl<LocalViewTest, VolumeTerm, true>
 
 } // end namespace detail
 
-template <class LocalViewTest, class LocalVolumeTerm>
+template <class LocalViewTest, class VolumeTerm>
 inline void getVolumeTerm(const LocalViewTest& localViewTest,
                           BlockVector<FieldVector<double,1> >& localRhs,
-                          LocalVolumeTerm&& localVolumeTerm)
+                          const VolumeTerm& volumeTerm)
 {
-  detail::GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm>()
-          (localViewTest, localRhs, localVolumeTerm);
+  detail::GetVolumeTerm_Impl<LocalViewTest, VolumeTerm>()
+          (localViewTest, localRhs, volumeTerm);
 }
 
 namespace detail {
