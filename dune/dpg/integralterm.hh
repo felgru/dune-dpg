@@ -289,7 +289,7 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 
   /* TODO: We might need a higher order when factor is a function. */
   /* TODO: Assuming β const. */
-  unsigned int quadratureOrder = lhsOrder + rhsOrder;
+  const unsigned int quadratureOrder = lhsOrder + rhsOrder;
 
 
   if(domain_of_integration == DomainOfIntegration::interior) {

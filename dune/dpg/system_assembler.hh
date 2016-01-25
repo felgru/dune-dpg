@@ -113,7 +113,8 @@ struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, false>
     localRhs = 0;
 
     /* TODO: Quadrature order is only good enough for a constant localVolumeTerm. */
-    int quadratureOrder = localFiniteElementTest.localBasis().order();
+    const unsigned int quadratureOrder
+        = localFiniteElementTest.localBasis().order();
 
     // TODO: This does not work with transport elements, as we do not know
     //       the transport direction.
@@ -172,7 +173,8 @@ struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, true>
     localRhs = 0;
 
     /* TODO: Quadrature order is only good enough for a constant localVolumeTerm. */
-    int quadratureOrder = localFiniteElementTest.localBasis().order();
+    const unsigned int quadratureOrder
+        = localFiniteElementTest.localBasis().order();
 
     // TODO: This does not work with transport elements, as we do not know
     //       the transport direction.
@@ -995,7 +997,8 @@ applyWeakBoundaryCondition
 
     const auto& localFiniteElement = localView.tree().finiteElement();
 
-    int quadratureOrder = 2*localFiniteElement.localBasis().order();
+    const unsigned int quadratureOrder
+        = 2*localFiniteElement.localBasis().order();
 
     size_t n = localFiniteElement.localBasis().size();
 
