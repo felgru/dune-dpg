@@ -80,22 +80,22 @@ struct replaceTestSpace<InnerProduct<TestSpaces, InnerProductTerms>,
 };
 
 // Compute the source term for a single element
-template <class LocalViewTest, class LocalVolumeTerm,
+template <class LocalViewTest, class VolumeTerm,
           bool = is_RefinedFiniteElement
                  <typename LocalViewTest::GlobalBasis>::value>
 struct GetVolumeTerm_Impl
 {
   void operator() (const LocalViewTest& localViewTest,
                    BlockVector<FieldVector<double,1> >& localRhs,
-                   LocalVolumeTerm&& localVolumeTerm);
+                   const VolumeTerm& localVolumeTerm);
 };
 
-template <class LocalViewTest, class LocalVolumeTerm>
-struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, false>
+template <class LocalViewTest, class VolumeTerm>
+struct GetVolumeTerm_Impl<LocalViewTest, VolumeTerm, false>
 {
   void operator() (const LocalViewTest& localViewTest,
                    BlockVector<FieldVector<double,1> >& localRhs,
-                   LocalVolumeTerm&& localVolumeTerm)
+                   const VolumeTerm& volumeTerm)
   {
     using TestSpace = typename LocalViewTest::GlobalBasis;
 
@@ -104,6 +104,7 @@ struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, false>
     const Element& element = localViewTest.element();
 
     const int dim = Element::dimension;
+    auto geometry = element.geometry();
 
     // Get set of shape functions for this element
     const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
@@ -112,7 +113,7 @@ struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, false>
     localRhs.resize(localFiniteElementTest.localBasis().size());
     localRhs = 0;
 
-    /* TODO: Quadrature order is only good enough for a constant localVolumeTerm. */
+    /* TODO: Quadrature order is only good enough for a constant volumeTerm. */
     const unsigned int quadratureOrder
         = localFiniteElementTest.localBasis().order();
 
@@ -127,13 +128,15 @@ struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, false>
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
+      const FieldVector<double,dim>& globalQuadPos
+          = geometry.global(quadPos);
 
       // The multiplicative factor in the integral transformation formula
       const double integrationElement
         = element.geometry().integrationElement(quadPos);
 
       const double weightedfunctionValue
-        = localVolumeTerm(quadPos) * quad[pt].weight() * integrationElement;
+        = volumeTerm(globalQuadPos) * quad[pt].weight() * integrationElement;
 
       std::vector<FieldVector<double,1> > shapeFunctionValues;
       localFiniteElementTest.localBasis().evaluateFunction(quadPos,
@@ -147,14 +150,13 @@ struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, false>
   }
 };
 
-template <class LocalViewTest, class LocalVolumeTerm>
-struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, true>
+template <class LocalViewTest, class VolumeTerm>
+struct GetVolumeTerm_Impl<LocalViewTest, VolumeTerm, true>
 {
   void operator() (const LocalViewTest& localViewTest,
                    BlockVector<FieldVector<double,1> >& localRhs,
-                   LocalVolumeTerm&& localVolumeTerm)
+                   const VolumeTerm& volumeTerm)
   {
-    /* TODO: adapt to refinement */
 
     using TestSpace = typename LocalViewTest::GlobalBasis;
 
@@ -172,7 +174,7 @@ struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, true>
     localRhs.resize(localFiniteElementTest.localBasis().size());
     localRhs = 0;
 
-    /* TODO: Quadrature order is only good enough for a constant localVolumeTerm. */
+    /* TODO: Quadrature order is only good enough for a constant volumeTerm. */
     const unsigned int quadratureOrder
         = localFiniteElementTest.localBasis().order();
 
@@ -201,6 +203,8 @@ struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, true>
 
         // Position of the current quadrature point in the reference element
         const FieldVector<double,dim>& quadPos = quad[pt].position();
+        const FieldVector<double,dim>& globalQuadPos
+            = geometry.global(subGeometryInReferenceElement.global(quadPos));
 
         // The transposed inverse Jacobian of the map from the reference element to the element
         const auto& jacobianSub
@@ -210,7 +214,7 @@ struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, true>
 
         // The multiplicative factor in the integral transformation formula
         const double weightedfunctionValue
-          = localVolumeTerm(quadPos)
+          = volumeTerm(globalQuadPos)
           * geometry.integrationElement(subGeometryInReferenceElement
                                                         .global(quadPos))
           * subGeometryInReferenceElement.integrationElement(quadPos)
