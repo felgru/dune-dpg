@@ -5,7 +5,8 @@
 
 #include <boost/fusion/sequence/intrinsic/at.hpp>
 
-#include <dune/functions/functionspacebases/concepts.hh>
+#include <dune/functions/common/functionconcepts.hh>
+#include <dune/istl/bvector.hh>
 
 #include "quadrature.hh"
 #include "localevaluation.hh"
