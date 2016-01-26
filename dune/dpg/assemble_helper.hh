@@ -9,7 +9,9 @@
 #include <dune/common/std/memory.hh>
 #include <dune/istl/matrixindexset.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
+#include <boost/fusion/container/vector/convert.hpp>
 #include <boost/fusion/sequence/intrinsic/size.hpp>
+#include <boost/fusion/algorithm/transformation/transform.hpp>
 
 namespace Dune {
 
