@@ -96,11 +96,6 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
 
-  /* TODO: make this a vector of pointers to localVolumeTerm */
-  auto localVolumeTerms =
-      as_vector(transform(volumeTerms,
-                          getLocalVolumeTerm<GridView>(gridView)));
-
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalTotalTestSize =
@@ -126,15 +121,14 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     BlockVector<FieldVector<double,1> >
         localRhs[std::tuple_size<
                  typename std::remove_reference<VolumeTerms>::type>::value];
-    for_each(localVolumeTerms, applyBind<decltype(e)>(e));
 
     using RHSZipHelper = vector<decltype(testLocalView)&,
                                 decltype(localRhs)&,
-                                decltype(localVolumeTerms)&,
+                                decltype(volumeTerms)&,
                                 decltype(testSpaces)&>;
     for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalView,
                                                  localRhs,
-                                                 localVolumeTerms,
+                                                 volumeTerms,
                                                  testSpaces)),
              getVolumeTermHelper());
 

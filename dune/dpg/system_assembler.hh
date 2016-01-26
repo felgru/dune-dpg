@@ -504,12 +504,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
 
-  /* TODO: make this a vector of pointers to localVolumeTerm */
-  auto localVolumeTerms =
-      as_vector(transform(volumeTerms,
-                          getLocalVolumeTerm<GridView>(gridView)));
-
-
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -622,14 +616,13 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     BlockVector<FieldVector<double,1> >
         localRhs[std::tuple_size<
                  typename std::remove_reference<VolumeTerms>::type>::value];
-    for_each(localVolumeTerms, applyBind<decltype(e)>(e));
 
     using RHSZipHelper = vector<decltype(testLocalView)&,
                                 decltype(localRhs)&,
-                                decltype(localVolumeTerms)&>;
+                                decltype(volumeTerms)&>;
     for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalView,
                                                  localRhs,
-                                                 localVolumeTerms)),
+                                                 volumeTerms)),
              getVolumeTermHelper());
 
     /* TODO: This will break with more than 1 test space having a rhs! */

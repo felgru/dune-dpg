@@ -53,37 +53,6 @@ struct getLocalView
   }
 };
 
-template<class GridView>
-struct getLocalVolumeTerm
-{
-  getLocalVolumeTerm(const GridView& gridView) : gridView(gridView) {}
-
-  template<class T>
-  struct result;
-
-  template<class T>
-  struct result<getLocalVolumeTerm(T)>
-  {
-    typedef decltype(localFunction(
-                     Functions::makeGridViewFunction(
-                             std::declval<T>(),
-                             std::declval<GridView>()))) type;
-  };
-
-  template<class T>
-  typename result<getLocalVolumeTerm(T)>::type operator()(const T& t) const
-  {
-    /* TODO: correctly forward t to makeGridViewFunction.
-     *       This also needs adaptation at the calling site */
-    auto localVolumeTerm =
-        localFunction(Functions::makeGridViewFunction(t, gridView));
-    return localVolumeTerm;
-  }
-
-  private:
-  const GridView& gridView;
-};
-
 struct getSize
 {
   template<class T>
