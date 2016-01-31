@@ -22,53 +22,45 @@ namespace Dune {
   //*******************************************************************
   class ErrorTools
   {
-    double errorTol_;
     std::vector<double> errorElement_;
 
   public:
-    ErrorTools(double);
+    ErrorTools() {};
     template <class LocalView,class VolumeTerms>
-    double computeL2errorElement(
-                                 const LocalView& ,
+    double computeL2errorElement(const LocalView& ,
                                  BlockVector<FieldVector<double,1> >& ,
-                                 VolumeTerms&
-                                );
+                                 VolumeTerms& );
 
     template <class FEBasis,class VolumeTerms>
-    double computeL2error(
-                          const FEBasis& ,
+    double computeL2error(const FEBasis& ,
                           BlockVector<FieldVector<double,1> >& ,
-                          VolumeTerms&
-                         );
+                          VolumeTerms&);
 
-    template<class GridType> void hRefinement( GridType& grid );
+    template<class GridType> void hRefinement(GridType& grid);
 
     template <class BilinearForm,class InnerProduct,class VectorType>
-    double aPosterioriError(
-                            BilinearForm& ,
+    double aPosterioriError(BilinearForm& ,
                             InnerProduct& ,
                             VectorType& ,
                             VectorType& ,
-                            VectorType&
-                           );
+                            VectorType& );
 
   };
 
 //*******************************************************************
-  ErrorTools::ErrorTools (double tol)
-  {
-    errorTol_ = tol;
-  }
 
-//*******************************************************************
-
-  // computation of an L2 error in an element
+/**
+ * \brief Returns the computation in a given element of the L2 error
+          between the exact solution uRef and the fem solution u.
+ *
+ * \param localView      the local view of the element
+ * \param u              the vector containing the computed solution
+ * \param uRef           the expression for the exact solution.
+ */
   template <class LocalView,class VolumeTerms>
-  double ErrorTools::computeL2errorElement(
-                                const LocalView& localView,
-                                BlockVector<FieldVector<double,1> >& u,
-                                VolumeTerms& uRef
-                              )
+  double ErrorTools::computeL2errorElement(const LocalView& localView,
+                                           BlockVector<FieldVector<double,1> >& u,
+                                           VolumeTerms& uRef)
   {
 
     // Get the grid element from the local FE basis view
@@ -81,7 +73,7 @@ namespace Dune {
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
 
-    const unsigned int quadratureOrder = 10; // Remark: the quadrature order has to be an even number (nombre pair)!
+    const unsigned int quadratureOrder = 10; // Remark: the quadrature order has to be an even number
     const QuadratureRule<double, dim>& quad =
         QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
 
@@ -124,15 +116,18 @@ namespace Dune {
     return std::sqrt(errSquare);
   }
 
-//*******************************************************************
-// computation in the whole mesh of the L2 error
-// between the exact solution uRef and the fem solution u
+/**
+ * \brief Computation in the whole mesh of the L2 error
+          between the exact solution uRef and the fem solution u.
+ *
+ * \param feBasis        the finite element basis
+ * \param u              the vector containing the computed solution
+ * \param uRef           the expression for the exact solution.
+ */
   template <class FEBasis,class VolumeTerms>
-  double ErrorTools::computeL2error(
-                        const FEBasis& feBasis,
-                        BlockVector<FieldVector<double,1> >& u,
-                        VolumeTerms& uRef
-                        )
+  double ErrorTools::computeL2error(const FEBasis& feBasis,
+                                    BlockVector<FieldVector<double,1> >& u,
+                                    VolumeTerms& uRef)
   {
 
     // Get the grid view from the finite element basis
@@ -177,9 +172,6 @@ namespace Dune {
       {
           uElement[i] = u[ localIndexSet.index(i)[0] ];
       }
-      //Remark syntax: The global index of the i-th vertex (because it is codim [0]) of the element 'e'
-      //auto row = localIndexSet.index(i)[0]; //equivalent to indexSet.subIndex(∗it, j , dim);
-
       // Now we compute the error inside the element
       errorElement_[indexElement] = computeL2errorElement(localView,uElement,uRef);
       errSquare += errorElement_[indexElement]*errorElement_[indexElement];
@@ -188,43 +180,21 @@ namespace Dune {
     return std::sqrt(errSquare);
   }
 
-//*******************************************************************
-  template<class GridType> void ErrorTools::hRefinement( GridType& grid )
-  {
-
-    auto gridView = grid->leafGridView();
-    for(const auto& e : elements(gridView))
-    {
-      int indexElement = gridView.indexSet().index(e);
-      std::cout << "element with index " << indexElement << std::endl;
-      if ( errorElement_[indexElement] < errorTol_)
-      {
-        grid->mark(0, e); // index 0: we do not mark for refinement nor coarsening
-        std::cout << "Error element = " << errorElement_[indexElement] << " --> not h-refinement" << std::endl;
-      }
-      else if ( errorElement_[indexElement] >= errorTol_)
-      {
-        grid->mark(1, e); // index 1: mark for refinement
-        std::cout << "Error element = " << errorElement_[indexElement] << " -->  h-refinement" << std::endl;
-      }
-    }
-
-    grid->preAdapt();
-    grid->adapt();
-    grid->postAdapt();
-
-  }
-
-//*******************************************************************
-  // computation of a posteriori error in (u,theta)
+/**
+ * \brief Computation of a posteriori error in (u,theta)
+ *
+ * \param bilinearForm        the bilinear form
+ * \param innerProduct        the inner product
+ * \param uSolution           the computed solution u
+ * \param thetaSolution       the computed solution theta
+ * \param rhs                 the right-hand side
+ */
   template <class BilinearForm,class InnerProduct,class VectorType>
-  double ErrorTools::aPosterioriError(
-                        BilinearForm& bilinearForm,
-                        InnerProduct& innerProduct,
-                        VectorType& uSolution,
-                        VectorType& thetaSolution,
-                        VectorType& rhs
-                        )
+  double ErrorTools::aPosterioriError(BilinearForm& bilinearForm,
+                                      InnerProduct& innerProduct,
+                                      VectorType&   uSolution,
+                                      VectorType&   thetaSolution,
+                                      VectorType&   rhs)
   {
     using namespace boost::fusion;
     using namespace Dune::detail;
