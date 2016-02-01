@@ -272,17 +272,13 @@ namespace Dune {
       // compute Bu - f (we do f-= Bu so the output is in rhsElement)
       bilinearFormMatrix.mmv(solutionElement,rhsElement);
 
-      //Solve the system
-      // We first copy the matrix because it is going to be destroyed by the Cholesky
-      Matrix<FieldMatrix<double,1,1> > innerProductMatrixCholesky = innerProductMatrix;
+      // Solve for the Riesz lift and then compute the residual
+      BlockVector<FieldVector<double,1> > tmpVector(rhsElement);
+      Cholesky<Matrix<FieldMatrix<double,1,1>>> cholesky(innerProductMatrix);
+      cholesky.apply(tmpVector);
 
-      Cholesky<Matrix<FieldMatrix<double,1,1> > > cholesky(innerProductMatrixCholesky);
-      cholesky.apply(rhsElement); // the solution is overwritten in rhsElement
-
-      // computation of the residual
-      BlockVector<FieldVector<double,1> > tmpVector(rhsElement.size());
-      innerProductMatrix.mv(rhsElement,tmpVector);
-      res += rhsElement * tmpVector; // remark: the operation * in vectors of Dune computes the scalar product of two vectors
+      // compute the scalar product of the following two vectors
+      res += tmpVector * rhsElement;
 
    }
 
