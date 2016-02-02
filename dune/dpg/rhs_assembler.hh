@@ -124,14 +124,13 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     using RHSZipHelper = vector<decltype(testLocalView)&,
                                 decltype(localRhs)&,
-                                decltype(volumeTerms)&,
-                                decltype(testSpaces)&>;
+                                decltype(volumeTerms)&>;
     for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalView,
                                                  localRhs,
-                                                 volumeTerms,
-                                                 testSpaces)),
+                                                 volumeTerms)),
              getVolumeTermHelper());
 
+    /* TODO: This will break with more than 1 test space having a rhs! */
     auto cpr = fused_procedure<localToGlobalRHSCopier<
                     typename std::remove_reference<decltype(rhs)>::type> >
                  (localToGlobalRHSCopier<
