@@ -181,8 +181,6 @@ int main(int argc, char** argv)
          0.);
   }
 
-  writeMatrixToMatlab(stiffnessMatrix, "transportMatrix_"+ std::to_string(nelements));
-
   ////////////////////////////
   //   Compute solution
   ////////////////////////////
