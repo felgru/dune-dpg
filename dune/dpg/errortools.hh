@@ -214,14 +214,10 @@ namespace Dune {
     // We get the local index sets of the test spaces
     auto testLocalIndexSet = as_vector(transform(bilinearForm.getTestSpaces(),
                                                  getLocalIndexSet()));
-    for_each(zip(testLocalIndexSet, localViewTest),
-             make_fused_procedure(bindLocalIndexSet()));
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSet
             = as_vector(transform(bilinearForm.getSolutionSpaces(),
                                   getLocalIndexSet()));
-    for_each(zip(solutionLocalIndexSet, localViewSolution),
-             make_fused_procedure(bindLocalIndexSet()));
 
     // Variable where we compute the residual
     double res = 0.;
@@ -230,6 +226,10 @@ namespace Dune {
     {
       for_each(localViewTest, applyBind<decltype(e)>(e));
       for_each(localViewSolution, applyBind<decltype(e)>(e));
+      for_each(zip(testLocalIndexSet, localViewTest),
+               make_fused_procedure(bindLocalIndexSet()));
+      for_each(zip(solutionLocalIndexSet, localViewSolution),
+               make_fused_procedure(bindLocalIndexSet()));
 
       // We take the coefficients of our solution (u,theta) that correspond to the current element e. They are stored in uLocal and thetaLocal.
       // dof of the finite element inside the element
