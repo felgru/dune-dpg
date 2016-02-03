@@ -66,6 +66,33 @@ for further options.
 
 The full build-system is described in the dune-common/doc/buildsystem (Git version) or under share/doc/dune-common/buildsystem if you installed DUNE!
 
+Running example programs
+------------------------
+
+[It is assumed that all the following commands are run from the build directory
+ and that the build directory is a subdirectory of the dune-dpg root directory.]
+
+To regenerate the convergence plots from the paper, it is advised to compile
+the test programs in release mode, to significantly speed up the computations.
+The release mode can be configured with
+
+    cmake -DCMAKE_BUILD_TYPE=Release .
+
+Afterwards, we can compile the test programs with
+
+    make
+
+To run the test programs with the right parameters, call
+
+    ../scripts/run_convergence_test.sh
+
+This will take quite a while. (you can first adapt this script if you
+want to change the grid parameter n=1/H)
+
+Finally, the convergence plots can be generated with
+
+    ../scripts/convergence_plots.py
+
 License
 -------
 
