@@ -87,10 +87,8 @@ def plot(data,
 
 datadir = '.'
 datafiles = map(lambda s: datadir + '/' + s,
-                ['convergence_error_ls0_ks2_la0_ka5',
-                 'convergence_error_ls1_ks2_la0_ka5',
-                 'convergence_error_ls2_ks2_la0_ka5',
-                 'convergence_error_ls3_ks2_la0_ka5'])
+                filter(lambda s: s.startswith('convergence_error_'),
+                       os.listdir(datadir)))
 data = dict()
 for datafile in datafiles:
     readData(data, datafile)

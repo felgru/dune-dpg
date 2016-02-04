@@ -16,7 +16,7 @@ add_dune_ug_flags(dune_dpg_opt_testspace)
 target_link_dune_default_libraries("dune_dpg_opt_testspace")
 
 foreach(level RANGE 0 3)
-  set(degree 2)
+  set(degree 3)
   set(alevel 0)
   set(adegree 5)
   set(convergence_test
