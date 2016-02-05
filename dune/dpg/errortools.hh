@@ -29,12 +29,12 @@ namespace Dune {
     template <class LocalView,class VolumeTerms>
     double computeL2errorElement(const LocalView& ,
                                  BlockVector<FieldVector<double,1> >& ,
-                                 VolumeTerms& );
+                                 VolumeTerms&& );
 
     template <class FEBasis,class VolumeTerms>
     double computeL2error(const FEBasis& ,
                           BlockVector<FieldVector<double,1> >& ,
-                          VolumeTerms&);
+                          VolumeTerms&&);
 
     template<class GridType> void hRefinement(GridType& grid);
 
@@ -60,7 +60,7 @@ namespace Dune {
   template <class LocalView,class VolumeTerms>
   double ErrorTools::computeL2errorElement(const LocalView& localView,
                                            BlockVector<FieldVector<double,1> >& u,
-                                           VolumeTerms& uRef)
+                                           VolumeTerms&& uRef)
   {
 
     // Get the grid element from the local FE basis view
@@ -127,7 +127,7 @@ namespace Dune {
   template <class FEBasis,class VolumeTerms>
   double ErrorTools::computeL2error(const FEBasis& feBasis,
                                     BlockVector<FieldVector<double,1> >& u,
-                                    VolumeTerms& uRef)
+                                    VolumeTerms&& uRef)
   {
 
     // Get the grid view from the finite element basis
