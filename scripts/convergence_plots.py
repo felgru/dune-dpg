@@ -97,10 +97,7 @@ for datafile in datafiles:
 plot(data,
      dataselect=lambda d: d['l2'],
      labelmaker=lambda ls, ks, la, ka: \
-                       'unrefined test space' if ls==0 \
-                       else 'once refined test space' if ls==1 \
-                       else 'twice refined test space' if ls==2 \
-                       else str(ls)+' times refined test space',
+                       '$\\mathbb{V}_h$, with $h=2^{-' + str(ls) + '}H$',
      outputfile='error.pdf',
      # title='$L_2$ error of $\\varphi$',
      ylabel='$L_2$ errors')
@@ -108,10 +105,7 @@ plot(data,
 plot(data,
      dataselect=lambda d: d['apost'],
      labelmaker=lambda ls, ks, la, ka: \
-                       'unrefined test space' if ls==0 \
-                       else 'once refined test space' if ls==1 \
-                       else 'twice refined test space' if ls==2 \
-                       else str(ls)+' times refined test space',
+                       '$\\mathbb{V}_h$, with $h=2^{-' + str(ls) + '}H$',
      outputfile='error_aposteriori.pdf',
      # title='a posteriori error of $u=(\\varphi, \\theta)$',
      ylabel='a posteriori errors')
@@ -120,10 +114,7 @@ plot(data,
      dataselect=lambda d: map(lambda (l, a): a/l,
                               zip(d['l2'], d['apost'])),
      labelmaker=lambda ls, ks, la, ka: \
-                       'unrefined test space' if ls==0 \
-                       else 'once refined test space' if ls==1 \
-                       else 'twice refined test space' if ls==2 \
-                       else str(ls)+' times refined test space',
+                       '$\\mathbb{V}_h$, with $h=2^{-' + str(ls) + '}H$',
      outputfile='error_apost_rel.pdf',
      # title='relative a posteriori error' \
      #       '$\\frac{e_{a posteriori}}{e_{exact}}$',
