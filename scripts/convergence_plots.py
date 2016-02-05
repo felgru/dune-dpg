@@ -94,6 +94,9 @@ data = dict()
 for datafile in datafiles:
     readData(data, datafile)
 
+mpl.rc('font',**{'family':'serif','serif':['Palatino']})
+mpl.rc('text', usetex=True)
+
 plot(data,
      dataselect=lambda d: d['l2'],
      labelmaker=lambda ls, ks, la, ka: \
