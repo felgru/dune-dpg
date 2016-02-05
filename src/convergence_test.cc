@@ -63,43 +63,12 @@ std::function<double(const Domain&)> uAnalytic(const Direction& s)
     };
 }
 
-// Optical parameter: sigma
-template <class Domain,class Direction>
-double sigma(const Domain& x,
-             const Direction& s)
-{
-  return 0.;
-}
-
 // The right hand-side
 template <class Direction, class Domain = Direction>
 std::function<double(const Domain&)> f(const Direction& s)
 {
   return [] (const Domain& x) { return 1.;};
 }
-
-
-// The values on the incoming boundary
-template <class Domain,class Direction>
-double g(const Domain& x,
-         const Direction& s)
-{
-  return 0.;
-}
-
-// Get solution u or theta out of the solution vector x
-template<class FieldVector>
-void extractSolution(FieldVector& u,
-                     FieldVector& x,
-                     const int offset
-                     )
-{
-  int i_max = u.size();
-  for(int i=0; i<i_max; i++) {
-    u[i] = x[i+offset];
-  }
-}
-
 
 
 int main(int argc, char** argv)
