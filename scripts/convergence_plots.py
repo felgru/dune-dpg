@@ -46,14 +46,15 @@ def plot(data,
          labelmaker=lambda ls, ks, la, ka: \
                            str(ls)+' '+str(ks)+' '+str(la)+' '+str(ka),
          outputfile='error.pdf',
-         title='$L_2$ error of $u$',
+         title=None,
          xlabel='mesh size $h$',
          ylabel='$L_2$ errors',
          xscale='log',
          yscale='log',
          legendlocation='upper left'):
     fig = plt.figure()
-    plt.title(title)
+    if title != None:
+        plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
@@ -101,7 +102,7 @@ plot(data,
                        else 'twice refined test space' if ls==2 \
                        else str(ls)+' times refined test space',
      outputfile='error.pdf',
-     title='$L_2$ error of $u$',
+     # title='$L_2$ error of $\\varphi$',
      ylabel='$L_2$ errors')
 
 plot(data,
@@ -112,7 +113,7 @@ plot(data,
                        else 'twice refined test space' if ls==2 \
                        else str(ls)+' times refined test space',
      outputfile='error_aposteriori.pdf',
-     title='aposteriori error of $u$, $\\theta$',
+     # title='a posteriori error of $u=(\\varphi, \\theta)$',
      ylabel='a posteriori errors')
 
 plot(data,
@@ -124,7 +125,8 @@ plot(data,
                        else 'twice refined test space' if ls==2 \
                        else str(ls)+' times refined test space',
      outputfile='error_apost_rel.pdf',
-     title='relative a posteriori error $\\frac{e_{a posteriori}}{e_{exact}}$',
+     # title='relative a posteriori error' \
+     #       '$\\frac{e_{a posteriori}}{e_{exact}}$',
      ylabel='relative a posteriori errors',
      yscale='linear',
      legendlocation='lower left')
