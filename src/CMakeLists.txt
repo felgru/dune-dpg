@@ -15,6 +15,11 @@ add_dune_suitesparse_flags(dune_dpg_opt_testspace)
 add_dune_ug_flags(dune_dpg_opt_testspace)
 target_link_dune_default_libraries("dune_dpg_opt_testspace")
 
+add_executable("plot_solution" plot_solution.cc)
+add_dune_suitesparse_flags(plot_solution)
+add_dune_ug_flags(plot_solution)
+target_link_dune_default_libraries("plot_solution")
+
 foreach(level RANGE 0 3)
   set(degree 3)
   set(alevel 0)
