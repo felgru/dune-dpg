@@ -98,7 +98,7 @@ data = dict()
 for datafile in datafiles:
     readData(data, datafile)
 
-mpl.rc('font',**{'family':'serif','serif':['Palatino']})
+mpl.rc('font',**{'family':'serif','serif':['Palatino'],'size':16})
 mpl.rc('text', usetex=True)
 
 plot(data,
