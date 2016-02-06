@@ -42,7 +42,9 @@ renderView1.Background = [1.0, 1.0, 1.0]
 # set color of text in the legend to black
 solutionLUTColorBar = GetScalarBar(solutionLUT, renderView1)
 solutionLUTColorBar.TitleColor = [0.0, 0.0, 0.0]
+solutionLUTColorBar.TitleFontFamily = 'Times'
 solutionLUTColorBar.LabelColor = [0.0, 0.0, 0.0]
+solutionLUTColorBar.LabelFontFamily = 'Times'
 
 # change title of color bar
 solutionLUTColorBar.Title = ' '
