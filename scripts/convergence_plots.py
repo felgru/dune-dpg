@@ -80,7 +80,6 @@ def plot(data,
     plt.yscale(yscale)
     if labelmaker != None:
         plt.legend(loc=legendlocation,shadow=True)
-    plt.show()
     plt.savefig(outputfile)
 
     plt.clf()
