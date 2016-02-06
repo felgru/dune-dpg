@@ -49,6 +49,8 @@ def plot(data,
          title=None,
          xlabel='mesh size $h$',
          ylabel='$L_2$ errors',
+         xlim=None,
+         ylim=None,
          xscale='log',
          yscale='log',
          legendlocation='upper left'):
@@ -57,8 +59,7 @@ def plot(data,
         plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
-    plt.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
-    plt.ticklabel_format(axis='x', style='sci', scilimits=(0,0))
+    plt.ticklabel_format(axis='both', style='sci', scilimits=(0,0))
 
     for ls in sorted(data):
         for ks in sorted(data[ls]):
@@ -80,6 +81,10 @@ def plot(data,
     plt.yscale(yscale)
     if labelmaker != None:
         plt.legend(loc=legendlocation,shadow=True)
+    if xlim != None:
+        plt.xlim(xlim)
+    if ylim != None:
+        plt.ylim(ylim)
     plt.savefig(outputfile)
 
     plt.clf()
@@ -102,7 +107,8 @@ plot(data,
                        '$\\mathbb{V}_h$, with $h=2^{-' + str(ls) + '}H$',
      outputfile='error.pdf',
      # title='$L_2$ error of $\\varphi$',
-     ylabel='$L_2$ errors')
+     ylabel='$L_2$ errors',
+     ylim=[1e-4,1e-1])
 
 plot(data,
      dataselect=lambda d: d['apost'],
