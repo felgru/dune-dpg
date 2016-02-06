@@ -90,12 +90,26 @@ To run the test programs with the right parameters, call
 
     ../scripts/run_convergence_test.sh
 
-This will take quite a while. (you can first adapt this script if you
-want to change the grid parameter n=1/H)
+This will take several hours. (you can first adapt this script if you
+want to change the grid resolution n=1/H, especially the testcase with
+locally refined test search space of level 3 gets very slow for large n)
 
 Finally, the convergence plots can be generated with
 
     ../scripts/convergence_plots.py
+
+To plot the solution itself in the .vtu format readable by ParaView, run
+
+    src/plot_solution <n>
+
+where <n> is to be replaced by the desired grid resolution. This will write
+two .vtu files to the current working directory representing the numerical
+solution of the interior and trace variables.
+If you have the pvpython interpreter shipped with ParaView, you can also run
+the scripts/plot_solution.py to regenerate the solution plot given in the paper.
+(This script was run with ParaView 4.2.0. As the Python interface of ParaView
+seems to be highly unstable, we cannot guarantee, that the script will run
+unmodified on another version of ParaView.)
 
 License
 -------
