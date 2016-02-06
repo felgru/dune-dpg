@@ -18,7 +18,7 @@ inputData.PointArrayStatus = ['theta']
 renderView1 = GetActiveViewOrCreate('RenderView')
 renderView1.ViewSize = [1409, 807]
 renderView1.UseOffscreenRendering = True
-#renderView1.UseOffscreenRenderingForScreenshots = True
+renderView1.UseOffscreenRenderingForScreenshots = True
 
 # display values of the solution on the third axis
 solution = WarpByScalar(Input=inputData)
@@ -59,4 +59,5 @@ camera.SetViewAngle(30)
 Render()
 
 # export view
-ExportView(sys.argv[2], view=renderView1)
+#ExportView(sys.argv[2], view=renderView1)
+WriteImage(sys.argv[2])
