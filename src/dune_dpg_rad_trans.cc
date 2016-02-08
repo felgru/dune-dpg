@@ -573,7 +573,7 @@ int main(int argc, char** argv)
       // Error tolerance to do h-refinement: I guess we will never do this so remove
       double adaptivityTol = 0.001;
       //We build an object of type ErrorTools to study errors, residuals and do hp-adaptivity
-      ErrorTools errorTools = ErrorTools(adaptivityTol);
+      ErrorTools errorTools = ErrorTools();
       //We compute the L2 error between the exact and the fem solutions
       auto uExactSfixed = std::make_tuple([s] (const Domain& x){ return uAnalytic(x,s);});
       double err = errorTools.computeL2error(std::get<0>(solutionSpaces),u[i],uExactSfixed);
