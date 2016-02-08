@@ -23,7 +23,6 @@
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqktransportnodalbasis.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
@@ -98,11 +97,8 @@ int main(int argc, char** argv)
   auto solutionSpaces = std::make_tuple(FEBasisTrace(gridView),
                                         FEBasisInterior(gridView));
 
-  //typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v
-  //auto testSpaces = std::make_tuple(FEBasisTest(gridView));
-
-  typedef Functions::PQkTransportBasis<GridView,4> FEBasisTest;              // v
-  auto testSpaces = std::make_tuple(FEBasisTest(gridView,beta));
+  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v
+  auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
   /////////////////////////////////////////////////////////
   //   Choose a bilinear form

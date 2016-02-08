@@ -4,9 +4,12 @@
 #include <iostream>
 #include <cstdlib> // for std::abort()
 
-#include <vector>
 #include <array>
+#include <functional>
 #include <tuple>
+#include <vector>
+
+#include <boost/math/constants/constants.hpp>
 
 #include <dune/common/exceptions.hh> // We use exceptions
 
@@ -39,11 +42,33 @@
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/dpg/system_assembler.hh>
+#include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/errortools.hh>
 
 
 using namespace Dune;
 
+//The analytic solution
+template <class Direction, class Domain = Direction>
+std::function<double(const Domain&)> uAnalytic(const Direction& s)
+{
+  return [s] (const Domain& x) -> double
+    { double crossproduct = s[0]*x[1]-s[1]*x[0];
+      // return distance to inflow boundary along s
+      if(crossproduct > 0)
+        return sqrt(s[1]*s[1]/(s[0]*s[0])+1)*x[0];
+      else
+        return sqrt(s[0]*s[0]/(s[1]*s[1])+1)*x[1];
+    };
+}
+
+// The right hand-side
+template <class Direction, class Domain = Direction>
+std::function<double(const Domain&)> f(const Direction& s)
+{
+  return [] (const Domain& x) { return 1.;};
+}
 
 
 int main(int argc, char** argv)
@@ -67,11 +92,9 @@ int main(int argc, char** argv)
   FieldVector<double,dim> upper = {1,1};
   array<unsigned int,dim> elements = {nelements,nelements};
 
-  //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+  // shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
   shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
-
-  //shared_ptr<GridType> grid = shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh"));
 
   typedef GridType::LeafGridView GridView;
   GridView gridView = grid->leafGridView();
@@ -81,26 +104,52 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////////////
 
   // u
-  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior;
+  using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
   FEBasisInterior feBasisInterior(gridView);
 
-  // bulk term corresponding to u^
-  typedef Functions::PQkNodalBasis<GridView, 2> FEBasisTrace;
+  // bulk term corresponding to theta
+  using FEBasisTrace = Functions::PQkNodalBasis<GridView, 2>;
   FEBasisTrace feBasisTrace(gridView);
 
-  auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
+  auto solutionSpaces
+      = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
   // v search space
-  typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
+#if LEVEL_SEARCH>0
+  using FEBasisTest
+      = Functions::PQkDGRefinedDGBasis<GridView, LEVEL_SEARCH, K_SEARCH>;
+#else
+  using FEBasisTest
+      = Functions::LagrangeDGBasis<GridView, K_SEARCH>;
+#endif
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
-  typedef decltype(testSpaces) TestSpaces;
-  typedef decltype(solutionSpaces) SolutionSpaces;
+  // enriched test space for error estimation
+  using FEBasisTest_aposteriori
+      = Functions::PQkDGRefinedDGBasis<GridView, LEVEL_APOSTERIORI,
+                                                 K_APOSTERIORI>;
+  auto testSpaces_aposteriori
+      = std::make_tuple(FEBasisTest_aposteriori(gridView));
 
-  FieldVector<double, dim> beta = {1,1};
-  double c = 1;
+  using TestSpaces             = decltype(testSpaces);
+  using TestSpaces_aposteriori = decltype(testSpaces_aposteriori);
+  using SolutionSpaces         = decltype(solutionSpaces);
+
+  FieldVector<double, dim> beta
+             = {cos(boost::math::constants::pi<double>()/8),
+                sin(boost::math::constants::pi<double>()/8)};
+  double c = 0;
 
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
+          make_tuple(
+              make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                    DomainOfIntegration::interior>(c),
+              make_IntegralTerm<0,0,IntegrationType::gradValue,
+                                    DomainOfIntegration::interior>(-1., beta),
+              make_IntegralTerm<0,1,IntegrationType::normalVector,
+                                    DomainOfIntegration::face>(1., beta)));
+  auto bilinearForm_aposteriori
+      = make_BilinearForm(testSpaces_aposteriori, solutionSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
                                     DomainOfIntegration::interior>(c),
@@ -114,17 +163,28 @@ int main(int argc, char** argv)
                                     DomainOfIntegration::interior>(1.),
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                     DomainOfIntegration::interior>(1., beta)));
+  auto innerProduct_aposteriori
+      = make_InnerProduct(testSpaces_aposteriori,
+          make_tuple(
+              make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                    DomainOfIntegration::interior>(1.),
+              make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                    DomainOfIntegration::interior>(1., beta)));
 
-  typedef decltype(bilinearForm) BilinearForm;
-  typedef decltype(innerProduct) InnerProduct;
-  typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>
-      TestspaceCoefficientMatrix;
+  using BilinearForm = decltype(bilinearForm);
+  using InnerProduct = decltype(innerProduct);
+  using BilinearForm_aposteriori = decltype(bilinearForm_aposteriori);
+  using InnerProduct_aposteriori = decltype(innerProduct_aposteriori);
 
-  TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
+  using TestspaceCoefficientMatrix
+      = Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
+
+  TestspaceCoefficientMatrix
+      testspaceCoefficientMatrix(bilinearForm, innerProduct);
 
   // v
-  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix>
-      FEBasisOptimalTest;
+  using FEBasisOptimalTest
+      = Functions::OptimalTestBasis<TestspaceCoefficientMatrix>;
   auto optimalTestSpaces
           = make_tuple(FEBasisOptimalTest(testspaceCoefficientMatrix));
 
@@ -148,7 +208,7 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////////////
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
-  auto rightHandSide = std::make_tuple([] (const Domain& x) { return 1.;});
+  auto rightHandSide = std::make_tuple(f(beta));
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
   /////////////////////////////////////////////////
@@ -158,7 +218,7 @@ int main(int argc, char** argv)
                +feBasisInterior.size());
   x = 0;
 
-#if 0
+#if LEVEL_SEARCH==0
   double delta = 1e-8;
   systemAssembler.defineCharacteristicFaces<1,2>
                     (stiffnessMatrix,
@@ -167,7 +227,7 @@ int main(int argc, char** argv)
                      delta);
 #endif
 
-  // Determine Dirichlet dofs for u^ (inflow boundary)
+  // Determine Dirichlet dofs for theta (inflow boundary)
   {
     std::vector<bool> dirichletNodesInflow;
     BoundaryTools boundaryTools = BoundaryTools();
@@ -190,7 +250,7 @@ int main(int argc, char** argv)
             <<" solution size = "<< x.size() <<std::endl;
 
 
-  UMFPack<MatrixType> umfPack(stiffnessMatrix, 2);
+  UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
   InverseOperatorResult statistics;
   umfPack.apply(x, rhs, statistics);
 
@@ -206,37 +266,52 @@ int main(int argc, char** argv)
     u[i] = x[i];
   }
 
-  VectorType uhat(feBasisTrace.size());
-  uhat=0;
+  VectorType theta(feBasisTrace.size());
+  theta=0;
   for (unsigned int i=0; i<feBasisTrace.size(); i++)
   {
-    uhat[i] = x[i+feBasisInterior.size()];
+    theta[i] = x[i+feBasisInterior.size()];
   }
 
-  auto uFunction
-      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-            (feBasisInterior, Dune::TypeTree::hybridTreePath(), u);
-  auto localUFunction = localFunction(uFunction);
+  ErrorTools errorTools = ErrorTools();
+  double err = errorTools.computeL2error(std::get<0>(solutionSpaces),
+                                         u, std::make_tuple(uAnalytic(beta)));
 
-  auto uhatFunction
-      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-            (feBasisTrace, Dune::TypeTree::hybridTreePath(), uhat);
-  auto localUhatFunction = localFunction(uhatFunction);
+  // We compute the a posteriori error
+  auto rhsAssembler_aposteriori
+    = make_RhsAssembler(testSpaces_aposteriori);
+  rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide);
 
-  /////////////////////////////////////////////////////////////////////////
-  //  Write result to VTK file
-  //  We need to subsample, because VTK cannot natively display
-  //  real second-order functions
-  /////////////////////////////////////////////////////////////////////////
-  SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
-  vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("transport_simplex_"+std::to_string(nelements) +"_"+ std::to_string(beta[0]) + "_" + std::to_string(beta[1]));
+  double aposterioriErr
+    = errorTools.aPosterioriError(bilinearForm_aposteriori,
+                                  innerProduct_aposteriori,
+                                  u, theta, rhs);
 
-  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-  vtkWriter1.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter1.write("transport_simplex_trace_"+std::to_string(nelements) +"_"+ std::to_string(beta[0]) + "_" + std::to_string(beta[1]));
+  std::cout << "test search space: level=" << LEVEL_SEARCH
+            << ", polynomial degree=" << K_SEARCH << std::endl;
+  std::cout << "aposteriori search space: level=" << LEVEL_APOSTERIORI
+            << ", polynomial degree=" << K_APOSTERIORI << std::endl;
+  std::cout << "grid size n=" << nelements << std::endl;
+  std::cout << "L^2 error of numerical solution: " << err << std::endl;
+  std::cout << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
+            << aposterioriErr << std::endl;
 
-    return 0;
+  std::string filename
+      = std::string("convergence_error_ls")
+      + std::to_string(LEVEL_SEARCH)
+      + std::string("_ks") + std::to_string(K_SEARCH)
+      + std::string("_la") + std::to_string(LEVEL_APOSTERIORI)
+      + std::string("_ka") + std::to_string(K_APOSTERIORI);
+
+  std::ofstream ofs(filename, std::ios_base::app);
+  ofs << LEVEL_SEARCH << " " << K_SEARCH << " "
+      << LEVEL_APOSTERIORI << " " << K_APOSTERIORI << " "
+      << nelements << " "
+      << std::scientific << std::setprecision(12) << err << " "
+      << aposterioriErr << std::endl;
+
+
+  return 0;
   }
   catch (Exception &e){
     std::cerr << "Dune reported error: " << e << std::endl;

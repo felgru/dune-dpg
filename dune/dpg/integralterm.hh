@@ -4,21 +4,13 @@
 #define DUNE_DPG_INTEGRALTERM_HH
 
 #include <tuple>
-#include <vector>
-#include <type_traits>
-
-#include <dune/geometry/referenceelements.hh>
-
-#include <dune/grid/uggrid/uggridfactory.hh>
 
 #include <dune/istl/matrix.hh>
-#include <dune/istl/scalarproducts.hh>
-
-#include <dune/functions/functionspacebases/interpolate.hh>
 
 #include "assemble_types.hh"
 #include "type_traits.hh"
 #include "quadrature.hh"
+#include "localevaluation.hh"
 
 namespace Dune {
 
@@ -248,227 +240,6 @@ auto make_IntegralTerm(FactorType c,
                        FactorType, DirectionType>(c, lhsBeta, rhsBeta));
 }
 
-namespace detail {
-/* We need to make this a class, as partial specializations of
- * function templates are not allowed. */
-template<int dim, EvaluationType type,
-         DomainOfIntegration domain_of_integration>
-struct LocalFunctionEvaluation {
-
-  template <class LocalFiniteElement, class Geometry>
-  std::vector<FieldVector<double,1> >
-  operator() (const LocalFiniteElement& localFiniteElement,
-              const FieldVector<double, dim>& quadPos,
-              const Geometry& geometry,
-              const FieldVector<double, dim>& beta) const;
-};
-
-template<int dim, DomainOfIntegration domain_of_integration>
-struct LocalFunctionEvaluation<dim, EvaluationType::value,
-                               domain_of_integration> {
-
-  template <class LocalFiniteElement, class Geometry>
-  std::vector<FieldVector<double,1> > operator()
-                      (const LocalFiniteElement& localFiniteElement,
-                       const FieldVector<double, dim>& quadPos,
-                       const Geometry& geometry,
-                       const FieldVector<double, dim>&) const
-  {
-    // values of the shape functions
-    std::vector<FieldVector<double,1> > values;
-    localFiniteElement.localBasis().evaluateFunction(quadPos, values);
-    return values;
-  }
-};
-
-template<int dim, DomainOfIntegration domain_of_integration>
-struct LocalFunctionEvaluation<dim, EvaluationType::grad,
-                               domain_of_integration> {
-
-  template <class LocalFiniteElement, class Geometry>
-  std::vector<FieldVector<double,1> > operator()
-                      (const LocalFiniteElement& localFiniteElement,
-                       const FieldVector<double, dim> & quadPos,
-                       const Geometry& geometry,
-                       const FieldVector<double, dim>& beta) const
-  {
-    const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
-    // The gradients of the shape functions on the reference element
-    std::vector<FieldMatrix<double,1,dim> > referenceGradients;
-    localFiniteElement.localBasis()
-            .evaluateJacobian(quadPos, referenceGradients);
-
-    // Compute the shape function gradients on the real element
-    std::vector<FieldVector<double, 1> >
-            derivatives(referenceGradients.size());
-    for (size_t i=0, i_max=referenceGradients.size(); i<i_max; i++)
-    {
-      FieldVector<double,dim> gradient;
-      jacobian.mv(referenceGradients[i][0], gradient);
-      derivatives[i] = beta * gradient;
-    }
-
-    return derivatives;
-  }
-};
-
-/* We need to make this a class, as partial specializations of
- * function templates are not allowed. */
-template<int dim, EvaluationType type,
-         DomainOfIntegration domain_of_integration,
-         bool isDGRefined>
-struct LocalRefinedFunctionEvaluation {
-
-  template <class LocalFiniteElement, class Geometry>
-  std::vector<FieldVector<double,1> >
-  operator() (const LocalFiniteElement& localFiniteElement,
-              unsigned int subElement,
-              const FieldVector<double, dim>& quadPos,
-              const Geometry& geometry,
-              const Geometry& subGeometryInReferenceElement,
-              const FieldVector<double, dim>& beta) const;
-};
-
-template<int dim, DomainOfIntegration domain_of_integration>
-struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value,
-                               domain_of_integration, false> {
-
-  template <class LocalFiniteElement, class Geometry>
-  std::vector<FieldVector<double,1> > operator()
-                      (const LocalFiniteElement& localFiniteElement,
-                       unsigned int,
-                       const FieldVector<double, dim>& quadPos,
-                       const Geometry& geometry,
-                       const Geometry& subGeometryInReferenceElement,
-                       const FieldVector<double, dim>&) const
-  {
-    // values of the shape functions
-    std::vector<FieldVector<double,1> > values;
-    localFiniteElement.localBasis().evaluateFunction(quadPos, values);
-    return values;
-  }
-};
-
-template<int dim, DomainOfIntegration domain_of_integration>
-struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad,
-                               domain_of_integration, false> {
-
-  template <class LocalFiniteElement, class Geometry>
-  std::vector<FieldVector<double,1> > operator()
-                      (const LocalFiniteElement& localFiniteElement,
-                       unsigned int,
-                       const FieldVector<double, dim> & quadPos,
-                       const Geometry& geometry,
-                       const Geometry& subGeometryInReferenceElement,
-                       const FieldVector<double, dim>& beta) const
-  {
-    const auto& jacobianSub
-        = subGeometryInReferenceElement.jacobianInverseTransposed(quadPos);
-    const auto& jacobian = geometry.jacobianInverseTransposed
-                           (subGeometryInReferenceElement.global(quadPos));
-    // The gradients of the shape functions on the reference element
-    std::vector<FieldMatrix<double,1,dim> > referenceGradients;
-    localFiniteElement.localBasis()
-            .evaluateJacobian(quadPos, referenceGradients);
-
-    // Compute the shape function gradients on the real element
-    std::vector<FieldVector<double, 1> >
-            derivatives(referenceGradients.size());
-    for (size_t i=0, i_max=referenceGradients.size(); i<i_max; i++)
-    {
-      FieldVector<double,dim> gradientRef, gradient;
-      jacobianSub.mv(referenceGradients[i][0], gradientRef);
-      jacobian.mv(gradientRef, gradient);
-      derivatives[i] = beta * gradient;
-    }
-
-    return derivatives;
-  }
-};
-
-template<int dim, DomainOfIntegration domain_of_integration>
-struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value,
-                               domain_of_integration, true> {
-
-  template <class LocalFiniteElement, class Geometry>
-  std::vector<FieldVector<double,1> > operator()
-                      (const LocalFiniteElement& localFiniteElement,
-                       unsigned int subElement,
-                       const FieldVector<double, dim>& quadPos,
-                       const Geometry& geometry,
-                       const Geometry& subGeometryInReferenceElement,
-                       const FieldVector<double, dim>&) const
-  {
-    // values of the shape functions
-    std::vector<FieldVector<double,1> > values;
-    localFiniteElement.localBasis().evaluateFunction(subElement, quadPos, values);
-    return values;
-  }
-};
-
-template<int dim, DomainOfIntegration domain_of_integration>
-struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad,
-                               domain_of_integration, true> {
-
-  template <class LocalFiniteElement, class Geometry>
-  std::vector<FieldVector<double,1> > operator()
-                      (const LocalFiniteElement& localFiniteElement,
-                       unsigned int subElement,
-                       const FieldVector<double, dim> & quadPos,
-                       const Geometry& geometry,
-                       const Geometry& subGeometryInReferenceElement,
-                       const FieldVector<double, dim>& beta) const
-  {
-    const auto& jacobianSub
-        = subGeometryInReferenceElement.jacobianInverseTransposed(quadPos);
-    const auto& jacobian = geometry.jacobianInverseTransposed
-                           (subGeometryInReferenceElement.global(quadPos));
-    // The gradients of the shape functions on the reference element
-    std::vector<FieldMatrix<double,1,dim> > referenceGradients;
-    localFiniteElement.localBasis()
-            .evaluateJacobian(subElement, quadPos, referenceGradients);
-
-    // Compute the shape function gradients on the real element
-    std::vector<FieldVector<double, 1> >
-            derivatives(referenceGradients.size());
-    for (size_t i=0, i_max=referenceGradients.size(); i<i_max; i++)
-    {
-      FieldVector<double,dim> gradientRef, gradient;
-      jacobianSub.mv(referenceGradients[i][0], gradientRef);
-      jacobian.mv(gradientRef, gradient);
-      derivatives[i] = beta * gradient;
-    }
-
-    return derivatives;
-  }
-};
-
-template<class FactorType, class PositionType,
-         typename std::enable_if<std::is_arithmetic<FactorType>::value>
-                              ::type* = nullptr >
-inline double evaluateFactor(FactorType factor, PositionType)
-{
-  return factor;
-}
-
-template<class FactorType, class PositionType,
-         typename std::enable_if<std::is_function<FactorType>::value>
-                              ::type* = nullptr >
-inline double evaluateFactor(FactorType factor, PositionType x)
-{
-  return factor(x);
-}
-
-template<class FactorType, class PositionType,
-         typename std::enable_if<is_vector<FactorType>::value>
-                              ::type* = nullptr >
-inline double evaluateFactor(const FactorType& factor, PositionType x)
-{
-  return factor[x];
-}
-
-}
-
 
 template<IntegrationType type, DomainOfIntegration domain_of_integration,
          class FactorType, class DirectionType>
@@ -510,7 +281,7 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
   using RhsSpace = typename RhsLocalView::GlobalBasis;
 
   // Get the grid element from the local FE basis view
-  using Element = typename std::remove_pointer<LhsLocalView>::type::Element;
+  using Element = typename LhsLocalView::Element;
   const Element& element = lhsLocalView.element();
 
   const auto lhsOrder = lhsLocalView.tree().finiteElement().localBasis().order();
@@ -518,7 +289,7 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 
   /* TODO: We might need a higher order when factor is a function. */
   /* TODO: Assuming β const. */
-  unsigned int quadratureOrder = lhsOrder + rhsOrder;
+  const unsigned int quadratureOrder = lhsOrder + rhsOrder;
 
 
   if(domain_of_integration == DomainOfIntegration::interior) {
@@ -550,13 +321,9 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 }
 
 
-namespace detail {
-
 #include "integralterm_uu_impl.hh"
 #include "integralterm_rr_impl.hh"
 #include "integralterm_ru_impl.hh"
-
-} // end namespace detail
 
 } // end namespace Dune
 

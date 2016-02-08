@@ -293,7 +293,7 @@ int main(int argc, char** argv)
 
   auto systemAssembler
      = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
-                                bilinearForm, innerProduct);
+                                bilinearForm);
 //  auto systemAssembler
 //     = make_Saddlepoint_SystemAssembler(testSpaces, solutionSpaces,
 //                                        bilinearForm, innerProduct);
@@ -538,11 +538,8 @@ printmatrix(file1 , stiffnessMatrix, "matrix", "--");
   // to retrive the value out of this:
   // std::get<0>(uExact)(x)
 
-  // Error tolerance to do h-refinement
-  double adaptivityTol = 0.001;
-
   //We build an object of type ErrorTools to study errors, residuals and do hp-adaptivity
-  ErrorTools errorTools = ErrorTools(adaptivityTol);
+  ErrorTools errorTools = ErrorTools();
 
   //We compute the L2 error between the exact and the fem solutions
   double err = errorTools.computeL2error(feBasisInterior,u,uExact) ;

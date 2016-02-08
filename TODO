@@ -3,6 +3,20 @@ known bugs:
 * evaluateFactor() in integralterm.hh is called with the *local* position
   of a given quadrature point, this should be first transformed into
   global coordinates.
+* PQkTransportBasis cannot be used as a test space at the moment.
+  There are compile-time errors that are probably caused by using
+  ChooseQuadrature without specifying the transport direction β.
+* Bug in convergence_test.cc with refined a posteriori FE:
+    * a posteriori error is too large by addition of a constant under
+      the square root. This constant is
+      * 3*(f^2) for 1 refinement.
+      * 15*(f^2) for 2 refinements.
+      Assumption: The summand for level l and rhs f is
+                  (N(l)-1)*(f^2),
+                  where N(l)=4^l are the number of subcells
+    * Check scaling of gradients in refined FE!
+    * Compare system matrix (with OptTestSpace) of dg-refined test search space
+      of different refinement levels and the old one using subsampled FE.
 
 technical debt that needs to be paid off sooner or later:
 
@@ -10,5 +24,3 @@ technical debt that needs to be paid off sooner or later:
   dune-typetree instead of std::tuple.
 * Beginning with version 1.58 boost::fusion has better support for std::tuple,
   thus we can maybe get rid of those boost::fusion::vectors.
-* Find a proper way to handle transport problems on characteristic
-  quadrilateral grids.

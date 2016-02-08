@@ -50,6 +50,8 @@
 #include "bilinearform.hh"
 #include "innerproduct.hh"
 #include "quadrature.hh"
+#include "localevaluation.hh"
+#include "getvolumeterm_impl.hh"
 
 namespace Dune {
 
@@ -78,188 +80,138 @@ struct replaceTestSpace<InnerProduct<TestSpaces, InnerProductTerms>,
     typedef InnerProduct<newTestSpaces, InnerProductTerms> type;
 };
 
-// Compute the source term for a single element
-template <class LocalViewTest, class LocalVolumeTerm,
-          bool = is_RefinedFiniteElement
-                 <typename LocalViewTest::GlobalBasis>::value>
-struct GetVolumeTerm_Impl
+template<class BilinearForm, class InnerProduct>
+struct SaddlepointSpecializations
 {
-  void operator() (const LocalViewTest& localViewTest,
-                   BlockVector<FieldVector<double,1> >& localRhs,
-                   LocalVolumeTerm&& localVolumeTerm);
-};
-
-template <class LocalViewTest, class LocalVolumeTerm>
-struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, false>
-{
-  void operator() (const LocalViewTest& localViewTest,
-                   BlockVector<FieldVector<double,1> >& localRhs,
-                   LocalVolumeTerm&& localVolumeTerm)
+  static inline void set_innerProduct_occupationPattern
+            (MatrixIndexSet& occupationPattern,
+             const InnerProduct& innerProduct,
+             size_t n)
   {
-    using TestSpace = typename LocalViewTest::GlobalBasis;
+    innerProduct.getOccupationPattern(occupationPattern);
 
-    // Get the grid element from the local FE basis view
-    typedef typename LocalViewTest::Element Element;
-    const Element& element = localViewTest.element();
-
-    const int dim = Element::dimension;
-
-    // Get set of shape functions for this element
-    const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
-
-    // Set all entries to zero
-    localRhs.resize(localFiniteElementTest.localBasis().size());
-    localRhs = 0;
-
-    /* TODO: Quadrature order is only good enough for a constant localVolumeTerm. */
-    int quadratureOrder = localFiniteElementTest.localBasis().order();
-
-    // TODO: This does not work with transport elements, as we do not know
-    //       the transport direction.
-    typename detail::ChooseQuadrature<TestSpace, TestSpace, Element>::type quad
-      = detail::ChooseQuadrature<TestSpace, TestSpace, Element>
-        ::Quadrature(element, quadratureOrder, nullptr);
-
-
-    for ( size_t pt=0, qsize=quad.size(); pt < qsize; pt++ ) {
-
-      // Position of the current quadrature point in the reference element
-      const FieldVector<double,dim>& quadPos = quad[pt].position();
-
-      // The multiplicative factor in the integral transformation formula
-      const double integrationElement
-        = element.geometry().integrationElement(quadPos);
-
-      const double weightedfunctionValue
-        = localVolumeTerm(quadPos) * quad[pt].weight() * integrationElement;
-
-      std::vector<FieldVector<double,1> > shapeFunctionValues;
-      localFiniteElementTest.localBasis().evaluateFunction(quadPos,
-                                                           shapeFunctionValues);
-
-      for (size_t i=0, rhsSize=localRhs.size(); i<rhsSize; i++)
-        localRhs[i] += shapeFunctionValues[i] * weightedfunctionValue;
-
-    }
-
-  }
-};
-
-template <class LocalViewTest, class LocalVolumeTerm>
-struct GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm, true>
-{
-  void operator() (const LocalViewTest& localViewTest,
-                   BlockVector<FieldVector<double,1> >& localRhs,
-                   LocalVolumeTerm&& localVolumeTerm)
-  {
-    /* TODO: adapt to refinement */
-
-    using TestSpace = typename LocalViewTest::GlobalBasis;
-
-    // Get the grid element from the local FE basis view
-    typedef typename LocalViewTest::Element Element;
-    const Element& element = localViewTest.element();
-
-    const int dim = Element::dimension;
-    auto geometry = element.geometry();
-
-    // Get set of shape functions for this element
-    const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
-
-    // Set all entries to zero
-    localRhs.resize(localFiniteElementTest.localBasis().size());
-    localRhs = 0;
-
-    /* TODO: Quadrature order is only good enough for a constant localVolumeTerm. */
-    int quadratureOrder = localFiniteElementTest.localBasis().order();
-
-    // TODO: This does not work with transport elements, as we do not know
-    //       the transport direction.
-    typename detail::ChooseQuadrature<TestSpace, TestSpace, Element>::type quad
-      = detail::ChooseQuadrature<TestSpace, TestSpace, Element>
-        ::Quadrature(element, quadratureOrder, nullptr);
-
-
-    const UGGrid<dim>& referenceGrid
-      = localViewTest.tree().refinedReferenceElement();
-    auto referenceGridView = referenceGrid.leafGridView();
-
-    assert(element.type().isTriangle() || element.type().isQuadrilateral());
-    const size_t subElementStride =
-      (element.type().isTriangle())
-      ? localViewTest.globalBasis().nodeFactory().dofsPerSubTriangle
-      : localViewTest.globalBasis().nodeFactory().dofsPerSubQuad;
-
-    unsigned int subElementOffset = 0;
-    unsigned int subElementIndex = 0;
-    for(const auto& subElement : elements(referenceGridView)) {
-      auto subGeometryInReferenceElement = subElement.geometry();
-      for ( size_t pt=0, qsize=quad.size(); pt < qsize; pt++ ) {
-
-        // Position of the current quadrature point in the reference element
-        const FieldVector<double,dim>& quadPos = quad[pt].position();
-
-        // The transposed inverse Jacobian of the map from the reference element to the element
-        const auto& jacobianSub
-            = subGeometryInReferenceElement.jacobianInverseTransposed(quadPos);
-        const auto& jacobian = geometry.jacobianInverseTransposed
-                               (subGeometryInReferenceElement.global(quadPos));
-
-        // The multiplicative factor in the integral transformation formula
-        const double weightedfunctionValue
-          = localVolumeTerm(quadPos)
-          * geometry.integrationElement(subGeometryInReferenceElement
-                                                        .global(quadPos))
-          * subGeometryInReferenceElement.integrationElement(quadPos)
-          * quad[pt].weight();
-
-        ////////////////////
-        // Test Functions //
-        ////////////////////
-        std::vector<FieldVector<double,1> > shapeFunctionValues =
-            detail::LocalRefinedFunctionEvaluation
-                    <dim, EvaluationType::value, DomainOfIntegration::interior,
-                     is_ContinuouslyRefinedFiniteElement<TestSpace>::value>()
-                          (localFiniteElementTest,
-                           subElementIndex,
-                           quadPos,
-                           geometry,
-                           subGeometryInReferenceElement,
-                           {});
-
-        for (size_t i=0, rhsSize=localRhs.size(); i<rhsSize; i++)
-          localRhs[i] += shapeFunctionValues[i] * weightedfunctionValue;
-
-      }
-      if(is_DGRefinedFiniteElement<TestSpace>::value)
-        subElementOffset += subElementStride;
-      subElementIndex++;
+    /* Add the diagonal of the matrix, since we need it for the
+     * interpolation of boundary values. */
+    for (size_t i=0; i<n; i++)
+    {
+      occupationPattern.add(i, i);
     }
   }
-};
 
-} // end namespace detail
+  static inline void get_innerProduct_localMatrix
+      (const InnerProduct& innerProduct,
+       Matrix<FieldMatrix<double,1,1> >& ipElementMatrix)
+  {
+    innerProduct.getLocalMatrix(ipElementMatrix);
+  }
 
-template <class LocalViewTest, class LocalVolumeTerm>
-inline void getVolumeTerm(const LocalViewTest& localViewTest,
-                          BlockVector<FieldVector<double,1> >& localRhs,
-                          LocalVolumeTerm&& localVolumeTerm)
-{
-  detail::GetVolumeTerm_Impl<LocalViewTest, LocalVolumeTerm>()
-          (localViewTest, localRhs, localVolumeTerm);
-}
-
-namespace detail {
-struct getVolumeTermHelper
-{
-  template<class Seq>
-  void operator()(const Seq& seq) const
+  template<class TestZip, class SolutionZip, class CP, class CPM>
+  static inline void copy_local_matrix_to_global
+      (const BilinearForm& bilinearForm,
+       const InnerProduct& innerProduct,
+       const TestZip& testZip,
+       const SolutionZip& solutionZip,
+       CP& cp,
+       CPM& cpm)
   {
     using namespace boost::fusion;
 
-    // TODO: this can probably be done more elegantly by sequence fusion.
-    getVolumeTerm(at_c<0>(seq), at_c<1>(seq), at_c<2>(seq));
+    /* create sets of index pairs to loop over.
+     * This will be used later, when copying the local matrices into
+     * the global one.
+     */
+    typedef typename boost::mpl::fold<
+        typename boost::mpl::transform<
+            /* This as_vector is probably not needed for boost::fusion 1.58
+             * or higher. */
+            typename result_of::as_vector<typename std::remove_reference<
+                  decltype(bilinearForm.getTerms())>::type
+                >::type
+          , mpl::firstTwo<boost::mpl::_1>
+          >::type
+      , boost::mpl::set0<>
+      , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
+      >::type BFIndices;
+    typedef typename boost::mpl::fold<
+        typename boost::mpl::transform<
+            typename result_of::as_vector<typename std::remove_reference<
+                  decltype(innerProduct.getTerms())>::type
+                >::type
+          , mpl::firstTwo<boost::mpl::_1>
+          >::type
+      , boost::mpl::set0<>
+      , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
+      >::type IPIndices;
+
+    auto bfIndices = BFIndices{};
+    auto ipIndices = IPIndices{};
+
+    for_each(ipIndices,
+             localToGlobalCopyHelper<TestZip,
+                                     TestZip,
+                                     CP>
+                                    (testZip, testZip, cp));
+    for_each(bfIndices,
+             localToGlobalCopyHelper<SolutionZip,
+                                     TestZip,
+                                     CPM>
+                                    (solutionZip, testZip, cpm));
   }
+
+  template<class TestLocalView>
+  static inline void bind_innerProduct(InnerProduct& innerProduct,
+                                       const TestLocalView& testLocalView)
+  {
+    innerProduct.bind(testLocalView);
+  }
+};
+
+template<class BilinearForm>
+struct DPGSpecializations
+{
+  static inline void set_innerProduct_occupationPattern
+                                  (MatrixIndexSet& occupationPattern,
+                                   void const * const & innerProduct,
+                                   size_t n)
+  { }
+
+  static inline void get_innerProduct_localMatrix
+      (void const * const & innerProduct,
+       Matrix<FieldMatrix<double,1,1> >& ipElementMatrix)
+  { }
+
+  template<class TestZip, class SolutionZip, class CP, class CPM>
+  static inline void copy_local_matrix_to_global
+      (const BilinearForm& bilinearForm,
+       void const * const & innerProduct,
+       const TestZip& testZip,
+       const SolutionZip& solutionZip,
+       CP& cp,
+       CPM& cpm)
+  {
+    using namespace boost::fusion;
+
+    typedef
+        typename boost::mpl::transform<
+            typename result_of::as_vector<typename boost::mpl::range_c<
+                                size_t,0,result_of::size<SolutionZip>
+                             ::type::value>::type
+                >::type
+          , mpl::tupleOf0And<boost::mpl::_1>
+          >::type BFIndices;
+
+    auto bfIndices = BFIndices{};
+    for_each(bfIndices,
+             localToGlobalCopyHelper<decltype(solutionZip),
+                                     decltype(testZip),
+                                     decltype(cpm)>
+                                    (solutionZip, testZip, cpm));
+  }
+
+  template<class TestLocalView>
+  static inline void bind_innerProduct(void * & innerProduct,
+                                       const TestLocalView& testLocalView)
+  { }
 };
 } // end namespace detail
 
@@ -299,21 +251,46 @@ public:
                          >::type
       >::type BilinearForm;
   //! type of the inner product on the test spaces
-  typedef typename std::conditional<
-        std::is_same<
-             typename std::decay<FormulationType>::type
-           , SaddlepointFormulation
-        >::value
-      , InProduct
-      , typename detail::replaceTestSpace<InProduct, TestSpaces>::type
-      >::type InnerProduct;
+  typedef InProduct InnerProduct;
 
+private:
+  //! This class holds some methods that do work that is specific to
+  //!  either the DPG or the saddlepoint formulation.
+  using Specialization
+    = typename std::conditional<
+            std::is_same<
+                 typename std::decay<FormulationType>::type
+               , SaddlepointFormulation
+            >::value
+          , typename detail::SaddlepointSpecializations<BilinearForm,
+                                                        InnerProduct>
+          , typename detail::DPGSpecializations<BilinearForm>
+          >::type;
+
+public:
   SystemAssembler () = delete;
+  /**
+   * \brief constructor for DPG SystemAssembler
+   *
+   * \note For your convenience, use make_DPG_SystemAssembler() instead.
+   */
+  constexpr SystemAssembler (TestSpaces     testSpaces,
+                             SolutionSpaces solutionSpaces,
+                             BilinForm      bilinearForm)
+             : testSpaces(testSpaces),
+               solutionSpaces(solutionSpaces),
+               bilinearForm(detail::make_BilinearForm<FormulationType>
+                                             (testSpaces,
+                                              solutionSpaces,
+                                              bilinearForm.getTerms())),
+               innerProduct(nullptr)
+  { }
+
   /**
    * \brief constructor for SystemAssembler
    *
-   * \note For your convenience, use make_DPG_SystemAssembler() or
-   *       make_Saddlepoint_SystemAssembler() instead.
+   * \note For your convenience, use make_Saddlepoint_SystemAssembler()
+   *       instead.
    */
   constexpr SystemAssembler (TestSpaces     testSpaces,
                              SolutionSpaces solutionSpaces,
@@ -455,25 +432,26 @@ private:
  * \param testSpaces     a tuple of test spaces
  * \param solutionSpaces a tuple of solution spaces
  * \param bilinearForm   the bilinear form describing the DPG system
- * \param innerProduct   the inner product of the test spaces
  */
 template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+         class BilinearForm>
 auto make_DPG_SystemAssembler(TestSpaces     testSpaces,
                               SolutionSpaces solutionSpaces,
-                              BilinearForm   bilinearForm,
-                              InnerProduct   innerProduct)
+                              BilinearForm   bilinearForm)
     -> SystemAssembler<TestSpaces, SolutionSpaces,
-                       BilinearForm, InnerProduct,
+                       BilinearForm,
+                       void*,
                        DPGFormulation>
 {
+  // set the inner product of the system assembler to nullptr as it is
+  // not used in the DPG formulation (we use the inner product of the
+  // optimal test space her).
   return SystemAssembler<TestSpaces, SolutionSpaces,
-                         BilinearForm, InnerProduct,
+                         BilinearForm, void*,
                          DPGFormulation>
                       (testSpaces,
                        solutionSpaces,
-                       bilinearForm,
-                       innerProduct);
+                       bilinearForm);
 }
 
 /**
@@ -526,12 +504,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
 
-  /* TODO: make this a vector of pointers to localVolumeTerm */
-  auto localVolumeTerms =
-      as_vector(transform(volumeTerms,
-                          getLocalVolumeTerm<GridView>(gridView)));
-
-
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -554,11 +526,9 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
   globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
 
-  auto n = globalTotalSolutionSize;
-  if(isSaddlepoint)
-  {
-    n+=globalTotalTestSize;
-  }
+  const auto n = isSaddlepoint
+               ? (globalTotalSolutionSize + globalTotalTestSize)
+               : globalTotalSolutionSize;
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // They are not particularly efficient, but simple to use.
@@ -567,17 +537,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   bilinearForm.template getOccupationPattern<isSaddlepoint>
                (occupationPattern,
                 0, isSaddlepoint?globalTotalTestSize:0);
-  if(isSaddlepoint)
-  {
-    innerProduct.getOccupationPattern(occupationPattern);
-
-    /* Add the diagonal of the matrix, since we need it for the
-     * interpolation of boundary values. */
-    for (size_t i=0; i<n; i++)
-    {
-      occupationPattern.add(i, i);
-    }
-  }
+  Specialization::set_innerProduct_occupationPattern(occupationPattern,
+                                                     innerProduct, n);
   occupationPattern.exportIdx(matrix);
 
   // set rhs to correct length -- the total number of basis vectors in the basis
@@ -596,36 +557,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   auto testLocalIndexSet     = as_vector(transform(testSpaces,
                                                    getLocalIndexSet()));
 
-  /* create sets of index pairs to loop over.
-   * This will be used later, when copying the local matrices into
-   * the global one.
-   */
-  typedef typename boost::mpl::fold<
-      typename boost::mpl::transform<
-          /* This as_vector is probably not needed for boost::fusion 1.58
-           * or higher. */
-          typename result_of::as_vector<typename std::remove_reference<
-                decltype(bilinearForm.getTerms())>::type
-              >::type
-        , mpl::firstTwo<boost::mpl::_1>
-        >::type
-    , boost::mpl::set0<>
-    , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-    >::type BFIndices;
-  typedef typename boost::mpl::fold<
-      typename boost::mpl::transform<
-          typename result_of::as_vector<typename std::remove_reference<
-                decltype(innerProduct.getTerms())>::type
-              >::type
-        , mpl::firstTwo<boost::mpl::_1>
-        >::type
-    , boost::mpl::set0<>
-    , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-    >::type IPIndices;
-
-  auto bfIndices = BFIndices{};
-  auto ipIndices = IPIndices{};
-
   for(const auto& e : elements(gridView)) {
 
     for_each(solutionLocalView, applyBind<decltype(e)>(e));
@@ -637,10 +568,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
              make_fused_procedure(bindLocalIndexSet()));
 
     bilinearForm.bind(testLocalView, solutionLocalView);
-    if(isSaddlepoint)
-    {
-      innerProduct.bind(testLocalView);
-    }
+    Specialization::bind_innerProduct(innerProduct, testLocalView);
 
     // Now let's get the element stiffness matrix and the Gram matrix
     // for the test space.
@@ -648,9 +576,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     Matrix<FieldMatrix<double,1,1> > ipElementMatrix;
 
     bilinearForm.getLocalMatrix(bfElementMatrix);
-    if(isSaddlepoint) {
-      innerProduct.getLocalMatrix(ipElementMatrix);
-    }
+    Specialization::get_innerProduct_localMatrix(innerProduct,
+                                                 ipElementMatrix);
 
 
     // Add element stiffness matrix onto the global stiffness matrix
@@ -677,48 +604,25 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                            solutionLocalIndexSet,
                            bilinearForm.getLocalSolutionSpaceOffsets(),
                            globalSolutionSpaceOffsets);
-    if(isSaddlepoint)
-    {
-      for_each(ipIndices,
-               localToGlobalCopyHelper<decltype(testZip),
-                                       decltype(testZip),
-                                       decltype(cp)>
-                                      (testZip, testZip, cp));
-      for_each(bfIndices,
-               localToGlobalCopyHelper<decltype(solutionZip),
-                                       decltype(testZip),
-                                       decltype(cpm)>
-                                      (solutionZip, testZip, cpm));
-    } else {
-      typedef
-          typename boost::mpl::transform<
-              typename result_of::as_vector<typename boost::mpl::range_c<
-                                  size_t,0,std::tuple_size<SolutionSpaces
-                               >::value>::type
-                  >::type
-            , mpl::tupleOf0And<boost::mpl::_1>
-            >::type BFIndices;
 
-      auto bfIndices = BFIndices{};
-      for_each(bfIndices,
-               localToGlobalCopyHelper<decltype(solutionZip),
-                                       decltype(testZip),
-                                       decltype(cpm)>
-                                      (solutionZip, testZip, cpm));
-    }
+    Specialization::copy_local_matrix_to_global
+      (bilinearForm,
+       innerProduct,
+       testZip,
+       solutionZip,
+       cp, cpm);
 
     // Now get the local contribution to the right-hand side vector
     BlockVector<FieldVector<double,1> >
         localRhs[std::tuple_size<
                  typename std::remove_reference<VolumeTerms>::type>::value];
-    for_each(localVolumeTerms, applyBind<decltype(e)>(e));
 
     using RHSZipHelper = vector<decltype(testLocalView)&,
                                 decltype(localRhs)&,
-                                decltype(localVolumeTerms)&>;
+                                decltype(volumeTerms)&>;
     for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalView,
                                                  localRhs,
-                                                 localVolumeTerms)),
+                                                 volumeTerms)),
              getVolumeTermHelper());
 
     /* TODO: This will break with more than 1 test space having a rhs! */
@@ -901,7 +805,8 @@ applyWeakBoundaryCondition
 
     const auto& localFiniteElement = localView.tree().finiteElement();
 
-    int quadratureOrder = 2*localFiniteElement.localBasis().order();
+    const unsigned int quadratureOrder
+        = 2*localFiniteElement.localBasis().order();
 
     size_t n = localFiniteElement.localBasis().size();
 
@@ -1200,11 +1105,6 @@ applyMinimization
     }
   }
 }
-
-
-
-
-
 
 
 } // end namespace Dune

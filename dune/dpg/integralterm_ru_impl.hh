@@ -1,3 +1,5 @@
+namespace detail {
+
 template <IntegrationType type,
           class LhsSpace,
           class RhsSpace>
@@ -35,9 +37,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
     = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
       ::Quadrature(element, quadratureOrder, lhsBeta);
 
-  int level = levelOfFE<LhsSpace>::value;
-
-  const UGGrid<dim>& referenceGrid
+  const auto& referenceGrid
     = lhsLocalView.tree().refinedReferenceElement();
   auto referenceGridView = referenceGrid.leafGridView();
 
@@ -55,12 +55,6 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
-
-      // The transposed inverse Jacobian of the map from the reference element to the element
-      const auto& jacobianSub
-          = subGeometryInReferenceElement.jacobianInverseTransposed(quadPos);
-      const auto& jacobian = geometry.jacobianInverseTransposed
-                             (subGeometryInReferenceElement.global(quadPos));
 
       // The multiplicative factor in the integral transformation formula
       const double integrationWeight
@@ -148,9 +142,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
   const auto& gridView = lhsLocalView.globalBasis().gridView();
 
-  int level = levelOfFE<LhsSpace>::value;
-
-  const UGGrid<dim>& referenceGrid
+  const auto& referenceGrid
     = lhsLocalView.tree().refinedReferenceElement();
   auto referenceGridView = referenceGrid.leafGridView();
 
@@ -284,3 +276,5 @@ faceImpl(const LhsLocalView& lhsLocalView,
   }
 }
 };
+
+} // end namespace detail
