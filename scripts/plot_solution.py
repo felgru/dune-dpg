@@ -1,6 +1,7 @@
 #!/usr/bin/env pvpython
 
 import sys
+from math import sqrt
 from paraview.simple import *
 
 if len(sys.argv) != 3:
@@ -26,12 +27,13 @@ solution.Scalars = ['POINTS', 'theta']
 solutionDisplay = Show(solution, renderView1)
 
 # rescale color transfer function/color map
+maxvalue = sqrt(5.)/2.
 solutionLUT = GetColorTransferFunction('theta')
 #solutionLUT.LoadPreset("Cool to Warm")
-solutionLUT.RescaleTransferFunction(0.0, 1.0)
+solutionLUT.RescaleTransferFunction(0.0, maxvalue)
 solutionLUT.LockScalarRange = 1
 solutionPWF = GetOpacityTransferFunction('theta')
-solutionPWF.RescaleTransferFunction(0.0, 1.0)
+solutionPWF.RescaleTransferFunction(0.0, maxvalue)
 
 # show color bar/color legend
 solutionDisplay.SetScalarBarVisibility(renderView1, True)
