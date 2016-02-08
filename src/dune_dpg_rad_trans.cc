@@ -313,8 +313,7 @@ int main(int argc, char** argv)
 #else
               testSpaces, solutionSpaces,
 #endif
-              std::declval<BilinearForm>(),
-              std::declval<InnerProduct>()))
+              std::declval<BilinearForm>()))
           SystemAssembler_t;
 
   std::vector<SystemAssembler_t> systemAssemblers;
@@ -377,7 +376,7 @@ int main(int argc, char** argv)
 
     systemAssemblers.emplace_back(
         make_DPG_SystemAssembler(optimalTestSpaces[i], solutionSpaces,
-                                 bilinearForms[i], innerProducts[i]));
+                                 bilinearForms[i]));
     scatteringAssemblers.emplace_back(
         make_DPG_ScatteringAssembler(optimalTestSpaces[i],
                                      solutionSpaces));
