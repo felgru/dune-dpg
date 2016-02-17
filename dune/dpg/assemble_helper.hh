@@ -110,22 +110,22 @@ struct getLocalMatrixHelper
   //! tuple type for the local views of the test spaces
   typedef typename boost::fusion::result_of::as_vector<
       typename boost::fusion::result_of::
-      transform<TestSpaces, detail::getLocalView>::type>::type TestLocalView;
+      transform<TestSpaces, detail::getLocalView>::type>::type TestLocalViews;
   //! tuple type for the local views of the solution spaces
   typedef typename boost::fusion::result_of::as_vector<
       typename boost::fusion::result_of::
       transform<SolutionSpaces, detail::getLocalView>::type
-      >::type SolutionLocalView;
+      >::type SolutionLocalViews;
 
-  getLocalMatrixHelper(const TestLocalView& testLocalView,
-                       const SolutionLocalView& solutionLocalView,
+  getLocalMatrixHelper(const TestLocalViews& testLocalViews,
+                       const SolutionLocalViews& solutionLocalViews,
                        MatrixType& elementMatrix,
-                       const array_of_same_size<size_t, TestLocalView>&
+                       const array_of_same_size<size_t, TestLocalViews>&
                            localTestSpaceOffsets,
-                       const array_of_same_size<size_t, SolutionLocalView>&
+                       const array_of_same_size<size_t, SolutionLocalViews>&
                            localSolutionSpaceOffsets)
-      : solutionLocalView(solutionLocalView),
-        testLocalView(testLocalView),
+      : solutionLocalViews(solutionLocalViews),
+        testLocalViews(testLocalViews),
         elementMatrix(elementMatrix),
         localSolutionSpaceOffsets(localSolutionSpaceOffsets),
         localTestSpaceOffsets(localTestSpaceOffsets)
@@ -148,9 +148,9 @@ struct getLocalMatrixHelper
     const auto& term = std::get<2>(termTuple);
 
     const auto& testLV =
-        at_c<testSpaceIndex::value>(testLocalView);
+        at_c<testSpaceIndex::value>(testLocalViews);
     const auto& solutionLV =
-        at_c<solutionSpaceIndex::value>(solutionLocalView);
+        at_c<solutionSpaceIndex::value>(solutionLocalViews);
     size_t localTestSpaceOffset =
         at_c<testSpaceIndex::value>(localTestSpaceOffsets);
     size_t localSolutionSpaceOffset =
@@ -164,19 +164,19 @@ struct getLocalMatrixHelper
   }
 
 private:
-  const TestLocalView& testLocalView;
-  const SolutionLocalView& solutionLocalView;
+  const TestLocalViews& testLocalViews;
+  const SolutionLocalViews& solutionLocalViews;
   MatrixType& elementMatrix;
-  const array_of_same_size<size_t, TestLocalView>&
+  const array_of_same_size<size_t, TestLocalViews>&
       localTestSpaceOffsets;
-  const array_of_same_size<size_t, SolutionLocalView>&
+  const array_of_same_size<size_t, SolutionLocalViews>&
       localSolutionSpaceOffsets;
 };
 
-template <class TestLocalView,
-          class SolutionLocalView,
-          class TestLocalIndexSet,
-          class SolutionLocalIndexSet,
+template <class TestLocalViews,
+          class SolutionLocalViews,
+          class TestLocalIndexSets,
+          class SolutionLocalIndexSets,
           bool mirror = false>
 struct getOccupationPatternHelper
 {
@@ -185,19 +185,19 @@ struct getOccupationPatternHelper
       T[boost::fusion::result_of::size<Seq>::type::value];
 
   getOccupationPatternHelper(
-                       const TestLocalView& testLocalView,
-                       const SolutionLocalView& solutionLocalView,
-                       const TestLocalIndexSet& testLocalIndexSet,
-                       const SolutionLocalIndexSet& solutionLocalIndexSet,
-                       const array_of_same_size<size_t, TestLocalView>&
+                       const TestLocalViews& testLocalViews,
+                       const SolutionLocalViews& solutionLocalViews,
+                       const TestLocalIndexSets& testLocalIndexSets,
+                       const SolutionLocalIndexSets& solutionLocalIndexSets,
+                       const array_of_same_size<size_t, TestLocalViews>&
                            globalTestSpaceOffsets,
-                       const array_of_same_size<size_t, SolutionLocalView>&
+                       const array_of_same_size<size_t, SolutionLocalViews>&
                            globalSolutionSpaceOffsets,
                        Dune::MatrixIndexSet& nb)
-      : testLocalView(testLocalView),
-        solutionLocalView(solutionLocalView),
-        testLocalIndexSet(testLocalIndexSet),
-        solutionLocalIndexSet(solutionLocalIndexSet),
+      : testLocalViews(testLocalViews),
+        solutionLocalViews(solutionLocalViews),
+        testLocalIndexSets(testLocalIndexSets),
+        solutionLocalIndexSets(solutionLocalIndexSets),
         globalTestSpaceOffsets(globalTestSpaceOffsets),
         globalSolutionSpaceOffsets(globalSolutionSpaceOffsets),
         nb(nb)
@@ -213,13 +213,13 @@ struct getOccupationPatternHelper
     using namespace boost::fusion;
 
     const auto& testLV =
-        at_c<testSpaceIndex::value>(testLocalView);
+        at_c<testSpaceIndex::value>(testLocalViews);
     const auto& solutionLV =
-        at_c<solutionSpaceIndex::value>(solutionLocalView);
+        at_c<solutionSpaceIndex::value>(solutionLocalViews);
     const auto& testLIS =
-        at_c<testSpaceIndex::value>(testLocalIndexSet);
+        at_c<testSpaceIndex::value>(testLocalIndexSets);
     const auto& solutionLIS =
-        at_c<solutionSpaceIndex::value>(solutionLocalIndexSet);
+        at_c<solutionSpaceIndex::value>(solutionLocalIndexSets);
     size_t globalTestSpaceOffset =
         at_c<testSpaceIndex::value>(globalTestSpaceOffsets);
     size_t globalSolutionSpaceOffset =
@@ -246,13 +246,13 @@ struct getOccupationPatternHelper
   }
 
 private:
-  const TestLocalView& testLocalView;
-  const SolutionLocalView& solutionLocalView;
-  const TestLocalIndexSet& testLocalIndexSet;
-  const SolutionLocalIndexSet& solutionLocalIndexSet;
-  const array_of_same_size<size_t, TestLocalView>&
+  const TestLocalViews& testLocalViews;
+  const SolutionLocalViews& solutionLocalViews;
+  const TestLocalIndexSets& testLocalIndexSets;
+  const SolutionLocalIndexSets& solutionLocalIndexSets;
+  const array_of_same_size<size_t, TestLocalViews>&
       globalTestSpaceOffsets;
-  const array_of_same_size<size_t, SolutionLocalView>&
+  const array_of_same_size<size_t, SolutionLocalViews>&
       globalSolutionSpaceOffsets;
   Dune::MatrixIndexSet& nb;
 };

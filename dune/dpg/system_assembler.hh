@@ -158,11 +158,11 @@ struct SaddlepointSpecializations
                                     (solutionZip, testZip, cpm));
   }
 
-  template<class TestLocalView>
+  template<class TestLocalViews>
   static inline void bind_innerProduct(InnerProduct& innerProduct,
-                                       const TestLocalView& testLocalView)
+                                       const TestLocalViews& testLocalViews)
   {
-    innerProduct.bind(testLocalView);
+    innerProduct.bind(testLocalViews);
   }
 };
 
@@ -208,9 +208,9 @@ struct DPGSpecializations
                                     (solutionZip, testZip, cpm));
   }
 
-  template<class TestLocalView>
+  template<class TestLocalViews>
   static inline void bind_innerProduct(void * & innerProduct,
-                                       const TestLocalView& testLocalView)
+                                       const TestLocalViews& testLocalViews)
   { }
 };
 } // end namespace detail
@@ -233,12 +233,12 @@ public:
   //! tuple type for the local views of the test spaces
   typedef typename boost::fusion::result_of::as_vector<
       typename boost::fusion::result_of::
-      transform<TestSpaces, detail::getLocalView>::type>::type TestLocalView;
+      transform<TestSpaces, detail::getLocalView>::type>::type TestLocalViews;
   //! tuple type for the local views of the solution spaces
   typedef typename boost::fusion::result_of::as_vector<
       typename boost::fusion::result_of::
       transform<SolutionSpaces, detail::getLocalView>::type
-      >::type SolutionLocalView;
+      >::type SolutionLocalViews;
   //! type of the bilinear form describing this DPG system
   typedef typename std::conditional<
         std::is_same<
@@ -549,26 +549,28 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   rhs = 0;
 
   // Views on the FE bases on a single element
-  auto solutionLocalView = as_vector(transform(solutionSpaces, getLocalView()));
-  auto testLocalView     = as_vector(transform(testSpaces, getLocalView()));
+  auto solutionLocalViews = as_vector(transform(solutionSpaces,
+                                                getLocalView()));
+  auto testLocalViews     = as_vector(transform(testSpaces,
+                                                getLocalView()));
 
-  auto solutionLocalIndexSet = as_vector(transform(solutionSpaces,
-                                                   getLocalIndexSet()));
-  auto testLocalIndexSet     = as_vector(transform(testSpaces,
-                                                   getLocalIndexSet()));
+  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces,
+                                                    getLocalIndexSet()));
+  auto testLocalIndexSets     = as_vector(transform(testSpaces,
+                                                    getLocalIndexSet()));
 
   for(const auto& e : elements(gridView)) {
 
-    for_each(solutionLocalView, applyBind<decltype(e)>(e));
-    for_each(testLocalView, applyBind<decltype(e)>(e));
+    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
+    for_each(testLocalViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(solutionLocalIndexSet, solutionLocalView),
+    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
              make_fused_procedure(bindLocalIndexSet()));
-    for_each(zip(testLocalIndexSet, testLocalView),
+    for_each(zip(testLocalIndexSets, testLocalViews),
              make_fused_procedure(bindLocalIndexSet()));
 
-    bilinearForm.bind(testLocalView, solutionLocalView);
-    Specialization::bind_innerProduct(innerProduct, testLocalView);
+    bilinearForm.bind(testLocalViews, solutionLocalViews);
+    Specialization::bind_innerProduct(innerProduct, testLocalViews);
 
     // Now let's get the element stiffness matrix and the Gram matrix
     // for the test space.
@@ -596,12 +598,12 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     /* copy every local submatrix indexed by a pair of indices from
      * bfIndices and ipIndices exactly once. */
-    auto testZip = zip(testLocalView,
-                       testLocalIndexSet,
+    auto testZip = zip(testLocalViews,
+                       testLocalIndexSets,
                        bilinearForm.getLocalTestSpaceOffsets(),
                        globalTestSpaceOffsets);
-    auto solutionZip = zip(solutionLocalView,
-                           solutionLocalIndexSet,
+    auto solutionZip = zip(solutionLocalViews,
+                           solutionLocalIndexSets,
                            bilinearForm.getLocalSolutionSpaceOffsets(),
                            globalSolutionSpaceOffsets);
 
@@ -617,10 +619,10 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
         localRhs[std::tuple_size<
                  typename std::remove_reference<VolumeTerms>::type>::value];
 
-    using RHSZipHelper = vector<decltype(testLocalView)&,
+    using RHSZipHelper = vector<decltype(testLocalViews)&,
                                 decltype(localRhs)&,
                                 decltype(volumeTerms)&>;
-    for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalView,
+    for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalViews,
                                                  localRhs,
                                                  volumeTerms)),
              getVolumeTermHelper());
@@ -631,7 +633,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                  (localToGlobalRHSCopier<
                     typename std::remove_reference<decltype(rhs)>::type>(rhs));
     for_each(zip(localRhs,
-                 testLocalIndexSet,
+                 testLocalIndexSets,
                  globalTestSpaceOffsets),
              std::ref(cpr));
 
