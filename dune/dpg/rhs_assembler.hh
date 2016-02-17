@@ -106,15 +106,15 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   rhs = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalView     = as_vector(transform(testSpaces, getLocalView()));
+  auto testLocalViews     = as_vector(transform(testSpaces, getLocalView()));
 
-  auto testLocalIndexSet     = as_vector(transform(testSpaces,
-                                                   getLocalIndexSet()));
+  auto testLocalIndexSets = as_vector(transform(testSpaces,
+                                                getLocalIndexSet()));
 
   for(const auto& e : elements(gridView)) {
 
-    for_each(testLocalView, applyBind<decltype(e)>(e));
-    for_each(zip(testLocalIndexSet, testLocalView),
+    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    for_each(zip(testLocalIndexSets, testLocalViews),
              make_fused_procedure(bindLocalIndexSet()));
 
     // Now get the local contribution to the right-hand side vector
@@ -122,10 +122,10 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
         localRhs[std::tuple_size<
                  typename std::remove_reference<VolumeTerms>::type>::value];
 
-    using RHSZipHelper = vector<decltype(testLocalView)&,
+    using RHSZipHelper = vector<decltype(testLocalViews)&,
                                 decltype(localRhs)&,
                                 decltype(volumeTerms)&>;
-    for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalView,
+    for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalViews,
                                                  localRhs,
                                                  volumeTerms)),
              getVolumeTermHelper());
@@ -136,7 +136,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
                  (localToGlobalRHSCopier<
                     typename std::remove_reference<decltype(rhs)>::type>(rhs));
     for_each(zip(localRhs,
-                 testLocalIndexSet,
+                 testLocalIndexSets,
                  globalTestSpaceOffsets),
              std::ref(cpr));
 
