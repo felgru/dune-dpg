@@ -53,12 +53,12 @@ namespace Dune {
     //! tuple type for the local views of the test spaces
     typedef typename boost::fusion::result_of::as_vector<
         typename boost::fusion::result_of::
-        transform<TestSpaces, detail::getLocalView>::type>::type TestLocalView;
+        transform<TestSpaces, detail::getLocalView>::type>::type TestLocalViews;
     //! tuple type for the local views of the solution spaces
     typedef typename boost::fusion::result_of::as_vector<
         typename boost::fusion::result_of::
         transform<SolutionSpaces, detail::getLocalView>::type
-        >::type SolutionLocalView;
+        >::type SolutionLocalViews;
 
     BilinearForm () = delete;
     /**
@@ -72,8 +72,8 @@ namespace Dune {
                : testSpaces(testSpaces),
                  solutionSpaces(solutionSpaces),
                  terms(terms),
-                 testLocalView(nullptr),
-                 solutionLocalView(nullptr)
+                 testLocalViews(nullptr),
+                 solutionLocalViews(nullptr)
     { }
 
     /**
@@ -96,8 +96,8 @@ namespace Dune {
                       <MatrixType,
                        TestSpaces,
                        SolutionSpaces>
-                      (*testLocalView,
-                       *solutionLocalView,
+                      (*testLocalViews,
+                       *solutionLocalViews,
                        elementMatrix,
                        localTestSpaceOffsets,
                        localSolutionSpaceOffsets));
@@ -125,7 +125,7 @@ namespace Dune {
      *
      * \pre The given localViews have to be bound to the same element.
      */
-    void bind(const TestLocalView& tlv, const SolutionLocalView& slv)
+    void bind(const TestLocalViews& tlv, const SolutionLocalViews& slv)
     {
       constexpr bool isSaddlepoint =
                 std::is_same<
@@ -133,13 +133,13 @@ namespace Dune {
               , SaddlepointFormulation
             >::value;
 
-      testLocalView     = std::addressof(tlv);
-      solutionLocalView = std::addressof(slv);
+      testLocalViews     = std::addressof(tlv);
+      solutionLocalViews = std::addressof(slv);
 
       using namespace boost::fusion;
       using namespace Dune::detail;
 
-      constexpr size_t testSize = result_of::size<TestLocalView>::value;
+      constexpr size_t testSize = result_of::size<TestLocalViews>::value;
 
       /* set up local offsets */
       if(isSaddlepoint) {
@@ -205,8 +205,8 @@ namespace Dune {
     size_t localTotalTestSize,
            localTotalSolutionSize;
 
-    const TestLocalView*     testLocalView;
-    const SolutionLocalView* solutionLocalView;
+    const TestLocalViews*     testLocalViews;
+    const SolutionLocalViews* solutionLocalViews;
   };
 
 /**
@@ -278,15 +278,15 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
        solutionShift, globalOffsetHelper());
 
   // A view on the FE basis on a single element
-  auto solutionLocalView = as_vector(transform(solutionSpaces,
-                                               getLocalView()));
-  auto testLocalView     = as_vector(transform(testSpaces,
-                                               getLocalView()));
+  auto solutionLocalViews = as_vector(transform(solutionSpaces,
+                                                getLocalView()));
+  auto testLocalViews     = as_vector(transform(testSpaces,
+                                                getLocalView()));
 
-  auto solutionLocalIndexSet = as_vector(transform(solutionSpaces,
-                                                   getLocalIndexSet()));
-  auto testLocalIndexSet     = as_vector(transform(testSpaces,
-                                                   getLocalIndexSet()));
+  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces,
+                                                    getLocalIndexSet()));
+  auto testLocalIndexSets     = as_vector(transform(testSpaces,
+                                                    getLocalIndexSet()));
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
@@ -306,23 +306,23 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
 
   for(const auto& e : elements(gridView))
   {
-    for_each(solutionLocalView, applyBind<decltype(e)>(e));
-    for_each(testLocalView, applyBind<decltype(e)>(e));
+    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
+    for_each(testLocalViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(solutionLocalIndexSet, solutionLocalView),
+    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
              make_fused_procedure(bindLocalIndexSet()));
-    for_each(zip(testLocalIndexSet, testLocalView),
+    for_each(zip(testLocalIndexSets, testLocalViews),
              make_fused_procedure(bindLocalIndexSet()));
 
-    auto gOPH = getOccupationPatternHelper<decltype(testLocalView),
-                                           decltype(solutionLocalView),
-                                           decltype(testLocalIndexSet),
-                                           decltype(solutionLocalIndexSet),
+    auto gOPH = getOccupationPatternHelper<decltype(testLocalViews),
+                                           decltype(solutionLocalViews),
+                                           decltype(testLocalIndexSets),
+                                           decltype(solutionLocalIndexSets),
                                            mirror>
-                        (testLocalView,
-                         solutionLocalView,
-                         testLocalIndexSet,
-                         solutionLocalIndexSet,
+                        (testLocalViews,
+                         solutionLocalViews,
+                         testLocalIndexSets,
+                         solutionLocalIndexSets,
                          globalTestSpaceOffsets,
                          globalSolutionSpaceOffsets,
                          nb);

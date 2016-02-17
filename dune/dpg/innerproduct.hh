@@ -49,7 +49,7 @@ namespace Dune {
     //! tuple type for the local views of the test spaces
     typedef typename boost::fusion::result_of::as_vector<
         typename boost::fusion::result_of::
-        transform<TestSpaces, detail::getLocalView>::type>::type TestLocalView;
+        transform<TestSpaces, detail::getLocalView>::type>::type TestLocalViews;
 
     InnerProduct () = delete;
     /**
@@ -61,7 +61,7 @@ namespace Dune {
                             const InnerProductTerms& terms)
                : testSpaces(testSpaces),
                  terms(terms),
-                 testLocalView(nullptr)
+                 testLocalViews(nullptr)
     { }
 
     /**
@@ -84,8 +84,8 @@ namespace Dune {
                       <MatrixType,
                        TestSpaces,
                        TestSpaces>
-                      (*testLocalView,
-                       *testLocalView,
+                      (*testLocalViews,
+                       *testLocalViews,
                        elementMatrix,
                        localTestSpaceOffsets,
                        localTestSpaceOffsets));
@@ -106,9 +106,9 @@ namespace Dune {
      *
      * \pre The given localViews have to be bound to the same element.
      */
-    void bind(const TestLocalView& tlv)
+    void bind(const TestLocalViews& tlv)
     {
-      testLocalView = std::addressof(tlv);
+      testLocalViews = std::addressof(tlv);
 
       using namespace boost::fusion;
       using namespace Dune::detail;
@@ -137,7 +137,7 @@ namespace Dune {
     InnerProductTerms  terms;
     size_t localTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
     size_t localTotalTestSize;
-    const TestLocalView* testLocalView;
+    const TestLocalViews* testLocalViews;
   };
 
 /**
@@ -167,10 +167,10 @@ getOccupationPattern(MatrixIndexSet& nb) const
   fold(zip(globalTestSpaceOffsets, testSpaces),
        (size_t)0, globalOffsetHelper());
 
-  auto testLocalView = as_vector(transform(testSpaces,
-                                           getLocalView()));
-  auto testLocalIndexSet = as_vector(transform(testSpaces,
-                                               getLocalIndexSet()));
+  auto testLocalViews = as_vector(transform(testSpaces,
+                                            getLocalView()));
+  auto testLocalIndexSets = as_vector(transform(testSpaces,
+                                                getLocalIndexSet()));
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
@@ -190,20 +190,20 @@ getOccupationPattern(MatrixIndexSet& nb) const
 
   for(const auto& e : elements(gridView))
   {
-    for_each(testLocalView, applyBind<decltype(e)>(e));
+    for_each(testLocalViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(testLocalIndexSet, testLocalView),
+    for_each(zip(testLocalIndexSets, testLocalViews),
              make_fused_procedure(bindLocalIndexSet()));
 
-    auto gOPH = getOccupationPatternHelper<decltype(testLocalView),
-                                           decltype(testLocalView),
-                                           decltype(testLocalIndexSet),
-                                           decltype(testLocalIndexSet),
+    auto gOPH = getOccupationPatternHelper<decltype(testLocalViews),
+                                           decltype(testLocalViews),
+                                           decltype(testLocalIndexSets),
+                                           decltype(testLocalIndexSets),
                                            false>
-                        (testLocalView,
-                         testLocalView,
-                         testLocalIndexSet,
-                         testLocalIndexSet,
+                        (testLocalViews,
+                         testLocalViews,
+                         testLocalIndexSets,
+                         testLocalIndexSets,
                          globalTestSpaceOffsets,
                          globalTestSpaceOffsets,
                          nb);

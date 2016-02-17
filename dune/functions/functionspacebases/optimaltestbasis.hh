@@ -160,14 +160,14 @@ class TestspaceCoefficientMatrix
                          SolutionSpaces,
                          detail::getLocalView
                       >::type
-             >::type SolutionLocalView;
+             >::type SolutionLocalViews;
 
   typedef typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<
                          TestSpaces,
                          detail::getLocalView
                       >::type
-             >::type TestLocalView;
+             >::type TestLocalViews;
 
   typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
 
@@ -176,10 +176,10 @@ class TestspaceCoefficientMatrix
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
     gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
-    localViewSolution_(boost::fusion::as_vector(
+    localViewsSolution_(boost::fusion::as_vector(
                 boost::fusion::transform(bilinearForm_.getSolutionSpaces(),
                                          detail::getLocalView()))),
-    localViewTest_(boost::fusion::as_vector(
+    localViewsTest_(boost::fusion::as_vector(
                 boost::fusion::transform(bilinearForm_.getTestSpaces(),
                                          detail::getLocalView()))),
     geometryBufferIsSet_(false)
@@ -200,15 +200,15 @@ class TestspaceCoefficientMatrix
     {
       geometryBuffer_.set(e.geometry());
       //std::cout <<"New Geometry" <<std::endl;
-      for_each(localViewTest_, applyBind<decltype(e)>(e));
-      for_each(localViewSolution_, applyBind<decltype(e)>(e));
+      for_each(localViewsTest_, applyBind<decltype(e)>(e));
+      for_each(localViewsSolution_, applyBind<decltype(e)>(e));
 
       MatrixType stiffnessMatrix;
 
-      innerProduct_.bind(localViewTest_);
+      innerProduct_.bind(localViewsTest_);
       innerProduct_.getLocalMatrix(stiffnessMatrix);
 
-      bilinearForm_.bind(localViewTest_, localViewSolution_);
+      bilinearForm_.bind(localViewsTest_, localViewsSolution_);
       bilinearForm_.getLocalMatrix(coefficientMatrix_);
 
       Cholesky<MatrixType> cholesky(stiffnessMatrix);
@@ -238,14 +238,14 @@ class TestspaceCoefficientMatrix
   }
 
   private:
-  BilinearForm&     bilinearForm_;
-  InnerProduct&     innerProduct_;
-  GridView          gridView_;
-  SolutionLocalView localViewSolution_;
-  TestLocalView     localViewTest_;
+  BilinearForm&      bilinearForm_;
+  InnerProduct&      innerProduct_;
+  GridView           gridView_;
+  SolutionLocalViews localViewsSolution_;
+  TestLocalViews     localViewsTest_;
   GeometryBuffer<Geometry> geometryBuffer_;
-  bool              geometryBufferIsSet_;
-  MatrixType        coefficientMatrix_;
+  bool               geometryBufferIsSet_;
+  MatrixType         coefficientMatrix_;
 };
 
 
@@ -454,14 +454,14 @@ private:
   using TestSearchFiniteElement
       = typename TestSearchSpace::LocalView::Tree::FiniteElement;
 
-  using SolutionLocalView
+  using SolutionLocalViews
         = typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<
                          SolutionSpaces,
                          detail::getLocalView
                       >::type
              >::type;
-  using TestLocalView
+  using TestLocalViews
         = typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<
                          TestSearchSpaces,
@@ -499,11 +499,11 @@ public:
     testspaceCoefficientMatrix(testCoeffMat),
     finiteElement_(nullptr),
     testSearchSpace_(nullptr),
-    localViewSolution_(boost::fusion::as_vector(
+    localViewsSolution_(boost::fusion::as_vector(
                 boost::fusion::transform(testCoeffMat.bilinearForm()
                                                 .getSolutionSpaces(),
                                          detail::getLocalView()))),
-    localViewTest(boost::fusion::as_vector(
+    localViewsTest(boost::fusion::as_vector(
                 boost::fusion::transform(testCoeffMat.bilinearForm()
                                                     .getTestSpaces(),
                                          detail::getLocalView())))
@@ -531,15 +531,15 @@ public:
     using namespace boost::fusion;
 
     this->element_ = &e;
-    for_each(localViewTest, applyBind<decltype(e)>(e));
+    for_each(localViewsTest, applyBind<decltype(e)>(e));
     testSearchSpace_ =
-        &(at_c<testIndex>(localViewTest).tree().finiteElement());
-    for_each(localViewSolution_, applyBind<decltype(e)>(e));
+        &(at_c<testIndex>(localViewsTest).tree().finiteElement());
+    for_each(localViewsSolution_, applyBind<decltype(e)>(e));
 
     testspaceCoefficientMatrix.bind(e);
 
     size_t localTestSpaceOffsets[std::tuple_size<TestSearchSpaces>::value];
-    fold(zip(localTestSpaceOffsets, localViewTest), (size_t)0, offsetHelper());
+    fold(zip(localTestSpaceOffsets, localViewsTest), (size_t)0, offsetHelper());
     size_t offset = at_c<testIndex>(localTestSpaceOffsets);
 
     finiteElement_ = std::make_unique<FiniteElement>
@@ -548,9 +548,9 @@ public:
     this->setSize(finiteElement_->size());
   }
 
-  const SolutionLocalView& localViewSolution() const
+  const SolutionLocalViews& localViewsSolution() const
   {
-    return localViewSolution_;
+    return localViewsSolution_;
   }
 protected:
 
@@ -558,8 +558,8 @@ protected:
   //FiniteElementCache cache_;
   std::unique_ptr<FiniteElement> finiteElement_;
   const TestSearchFiniteElement* testSearchSpace_;
-  SolutionLocalView localViewSolution_;
-  TestLocalView localViewTest;
+  SolutionLocalViews localViewsSolution_;
+  TestLocalViews localViewsTest;
 };
 
 
@@ -586,11 +586,11 @@ public:
              typename boost::fusion::result_of::transform<
                        SolutionSpaces,
                        detail::getLocalIndexSet>::type
-             >::type SolutionLocalIndexSet;
+             >::type SolutionLocalIndexSets;
 
   OptimalTestBasisNodeIndexSet(const NodeFactory& nodeFactory) :
     nodeFactory_(&nodeFactory),
-    solutionLocalIndexSet_(boost::fusion::as_vector(
+    solutionLocalIndexSets_(boost::fusion::as_vector(
               boost::fusion::transform(
                       nodeFactory.testspaceCoefficientMatrix_
                           .bilinearForm().getSolutionSpaces(),
@@ -614,7 +614,7 @@ public:
 
     node_ = &node;
 
-    for_each(zip(solutionLocalIndexSet_, node.localViewSolution()),
+    for_each(zip(solutionLocalIndexSets_, node.localViewsSolution()),
              make_fused_procedure(detail::bindLocalIndexSet()));
   }
 
@@ -623,7 +623,7 @@ public:
   void unbind()
   {
     node_ = nullptr;
-    for_each(solutionLocalIndexSet_, detail::applyUnbind());
+    for_each(solutionLocalIndexSets_, detail::applyUnbind());
   }
 
   /** \brief Size of subtree rooted in this node (element-local)
@@ -643,7 +643,7 @@ public:
     size_t index_result=i;
     bool index_found=false;
 
-    for_each(solutionLocalIndexSet_,
+    for_each(solutionLocalIndexSets_,
              computeIndex(space_index, index_result, index_found));
 
     MultiIndex result;
@@ -656,7 +656,7 @@ protected:
 
   const Node* node_;
 
-  SolutionLocalIndexSet solutionLocalIndexSet_;
+  SolutionLocalIndexSets solutionLocalIndexSets_;
 };
 
 
