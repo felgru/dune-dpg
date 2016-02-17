@@ -205,17 +205,17 @@ namespace Dune {
     typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
     typedef typename BilinearForm::TestSpaces EnrichedTestspaces;
 
-    typedef typename result_of::as_vector<typename result_of::transform<SolutionSpaces,getLocalView>::type>::type SolutionLocalView;
-    typedef typename result_of::as_vector<typename result_of::transform<EnrichedTestspaces,getLocalView>::type>::type TestLocalView;
+    typedef typename result_of::as_vector<typename result_of::transform<SolutionSpaces,getLocalView>::type>::type SolutionLocalViews;
+    typedef typename result_of::as_vector<typename result_of::transform<EnrichedTestspaces,getLocalView>::type>::type TestLocalViews;
 
-    SolutionLocalView localViewSolution = as_vector(transform(bilinearForm.getSolutionSpaces(),getLocalView()));
-    TestLocalView localViewTest = as_vector(transform(bilinearForm.getTestSpaces(),getLocalView()));
+    SolutionLocalViews localViewsSolution = as_vector(transform(bilinearForm.getSolutionSpaces(),getLocalView()));
+    TestLocalViews localViewsTest = as_vector(transform(bilinearForm.getTestSpaces(),getLocalView()));
 
     // We get the local index sets of the test spaces
-    auto testLocalIndexSet = as_vector(transform(bilinearForm.getTestSpaces(),
-                                                 getLocalIndexSet()));
+    auto testLocalIndexSets = as_vector(transform(bilinearForm.getTestSpaces(),
+                                                  getLocalIndexSet()));
     // We get the local index sets of the solution spaces
-    auto solutionLocalIndexSet
+    auto solutionLocalIndexSets
             = as_vector(transform(bilinearForm.getSolutionSpaces(),
                                   getLocalIndexSet()));
 
@@ -224,49 +224,49 @@ namespace Dune {
 
     for(const auto& e : elements(gridView))
     {
-      for_each(localViewTest, applyBind<decltype(e)>(e));
-      for_each(localViewSolution, applyBind<decltype(e)>(e));
-      for_each(zip(testLocalIndexSet, localViewTest),
+      for_each(localViewsTest, applyBind<decltype(e)>(e));
+      for_each(localViewsSolution, applyBind<decltype(e)>(e));
+      for_each(zip(testLocalIndexSets, localViewsTest),
                make_fused_procedure(bindLocalIndexSet()));
-      for_each(zip(solutionLocalIndexSet, localViewSolution),
+      for_each(zip(solutionLocalIndexSets, localViewsSolution),
                make_fused_procedure(bindLocalIndexSet()));
 
       // We take the coefficients of our solution (u,theta) that correspond to the current element e. They are stored in uLocal and thetaLocal.
       // dof of the finite element inside the element
-      size_t dofElementU = boost::fusion::at_c<0>(localViewSolution).size();
-      size_t dofElementTheta = boost::fusion::at_c<1>(localViewSolution).size();
+      size_t dofElementU = boost::fusion::at_c<0>(localViewsSolution).size();
+      size_t dofElementTheta = boost::fusion::at_c<1>(localViewsSolution).size();
 
       // We extract the solution on the current element
       BlockVector<FieldVector<double,1> > solutionElement(dofElementU+dofElementTheta);
       // We take the coefficients of uSolution that correspond to the current element e. They are stored in the second part of solutionElement.
       for (size_t i=0; i<dofElementU; i++)
       {
-        solutionElement[i] = uSolution[ at_c<0>(solutionLocalIndexSet).index(i)[0] ];
+        solutionElement[i] = uSolution[ at_c<0>(solutionLocalIndexSets).index(i)[0] ];
       }
       // We take the coefficients of thetaSolution that correspond to the current element e. They are stored in the first part of solutionElement.
       for (size_t i=0; i<dofElementTheta; i++)
       {
-        solutionElement[i+dofElementU] = thetaSolution[ at_c<1>(solutionLocalIndexSet).index(i)[0] ];
+        solutionElement[i+dofElementU] = thetaSolution[ at_c<1>(solutionLocalIndexSets).index(i)[0] ];
       }
 
       // We get rhsLocal
       // dof of the finite element test space inside the element
-      size_t dofElementTest = boost::fusion::at_c<0>(localViewTest).size();
+      size_t dofElementTest = boost::fusion::at_c<0>(localViewsTest).size();
       // We extract the rhs of the current element
       BlockVector<FieldVector<double,1> > rhsElement(dofElementTest);
       for (size_t i=0; i<dofElementTest; i++)
       {
-        rhsElement[i] = rhs[ at_c<0>(testLocalIndexSet).index(i)[0] ];
+        rhsElement[i] = rhs[ at_c<0>(testLocalIndexSets).index(i)[0] ];
       }
 
       // We grab the inner product matrix in the innerProductMatrix variable (IP)
       Matrix<FieldMatrix<double,1,1> > innerProductMatrix;
-      innerProduct.bind(localViewTest);
+      innerProduct.bind(localViewsTest);
       innerProduct.getLocalMatrix(innerProductMatrix);
 
       // We grab the bilinear form matrix in the bilinearFormMatrix variable
       Matrix<FieldMatrix<double,1,1> > bilinearFormMatrix;
-      bilinearForm.bind(localViewTest, localViewSolution);
+      bilinearForm.bind(localViewsTest, localViewsSolution);
       bilinearForm.getLocalMatrix(bilinearFormMatrix);
 
       // compute Bu - f (we do f-= Bu so the output is in rhsElement)
