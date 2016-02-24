@@ -137,8 +137,8 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
   const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
 
-  const int nLhs(lhsLocalFiniteElement.localBasis().size());
-  const int nRhs(rhsLocalFiniteElement.localBasis().size());
+  const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
+  const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
   const auto& gridView = lhsLocalView.globalBasis().gridView();
 
