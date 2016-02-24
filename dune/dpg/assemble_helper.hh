@@ -124,11 +124,11 @@ struct getLocalMatrixHelper
                            localTestSpaceOffsets,
                        const array_of_same_size<size_t, SolutionLocalViews>&
                            localSolutionSpaceOffsets)
-      : solutionLocalViews(solutionLocalViews),
-        testLocalViews(testLocalViews),
+      : testLocalViews(testLocalViews),
+        solutionLocalViews(solutionLocalViews),
         elementMatrix(elementMatrix),
-        localSolutionSpaceOffsets(localSolutionSpaceOffsets),
-        localTestSpaceOffsets(localTestSpaceOffsets)
+        localTestSpaceOffsets(localTestSpaceOffsets),
+        localSolutionSpaceOffsets(localSolutionSpaceOffsets)
   {}
 
   /**
