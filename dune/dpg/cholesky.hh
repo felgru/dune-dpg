@@ -47,12 +47,12 @@ public:
 
   void apply(MatrixType& rhsMatrix)
   {
-    unsigned int m = rhsMatrix.M();
-    unsigned int n = matrix.N();
+    const unsigned int m = rhsMatrix.M();
+    const unsigned int n = matrix.N();
     for (unsigned int im=0; im<m; im++)
     {
     // solve LY = B
-      for (int j=0; j<n; j++)
+      for (unsigned int j=0; j<n; j++)
       {
         double summe = 0;
         for (unsigned int i=0; i<j; i++)
