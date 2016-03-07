@@ -10,13 +10,11 @@
 
 #include <dune/common/exceptions.hh> // We use exceptions
 
+#include <dune/grid/io/file/gmshreader.hh>
+#include <dune/grid/io/file/vtk.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
-#include <dune/grid/io/file/vtk.hh>
-#include <dune/grid/io/file/gmshreader.hh>
-
-
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -26,17 +24,13 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-
+#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/pqkfacenodalbasis.hh>
 #include <dune/functions/functionspacebases/optimaltestbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
-
-#include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-#include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/dpg/system_assembler.hh>
 #include <dune/dpg/boundarytools.hh>
