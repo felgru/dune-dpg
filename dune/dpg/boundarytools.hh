@@ -7,15 +7,14 @@
 
 #include <dune/common/fvector.hh>
 
+#include <dune/geometry/referenceelements.hh>
+#include <dune/geometry/type.hh>
+
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
 
 #include <dune/istl/io.hh>
-
-#include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/gridviewfunction.hh>
-
 
 
 namespace Dune {
