@@ -27,6 +27,7 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
+#include <dune/functions/common/vtkadapter.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/optimaltestbasis.hh>
@@ -214,12 +215,10 @@ int main(int argc, char** argv)
   auto uFunction
       = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
             (feBasisInterior, Dune::TypeTree::hybridTreePath(), u);
-  auto localUFunction = localFunction(uFunction);
 
   auto thetaFunction
       = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
             (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta);
-  auto localThetaFunction = localFunction(thetaFunction);
 
   /////////////////////////////////////////////////////////////////////////
   //  Write result to VTK file
@@ -227,12 +226,12 @@ int main(int argc, char** argv)
   //  real second-order functions
   /////////////////////////////////////////////////////////////////////////
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
-  vtkWriter.addVertexData(localUFunction,
+  vtkWriter.addVertexData(vtkFunction(uFunction),
                VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write("transport_solution_"+std::to_string(nelements));
 
   SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-  vtkWriter1.addVertexData(localThetaFunction,
+  vtkWriter1.addVertexData(vtkFunction(thetaFunction),
                 VTK::FieldInfo("theta", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter1.write("transport_solution_trace_"+std::to_string(nelements));
 
