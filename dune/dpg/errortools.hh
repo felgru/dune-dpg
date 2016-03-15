@@ -10,9 +10,6 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
 
-#include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/gridviewfunction.hh>
-
 #include <dune/dpg/cholesky.hh>
 
 

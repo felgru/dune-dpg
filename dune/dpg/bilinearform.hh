@@ -9,6 +9,9 @@
 #include <memory>
 #include <type_traits>
 
+#include <boost/mpl/set.hpp>
+#include <boost/mpl/transform.hpp>
+
 #include <boost/fusion/adapted/std_tuple.hpp>
 #include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
@@ -24,9 +27,6 @@
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
-
-#include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include "assemble_helper.hh"
 #include "assemble_types.hh"

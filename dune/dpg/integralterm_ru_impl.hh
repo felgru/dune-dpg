@@ -137,8 +137,8 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
   const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
 
-  const int nLhs(lhsLocalFiniteElement.localBasis().size());
-  const int nRhs(rhsLocalFiniteElement.localBasis().size());
+  const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
+  const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
   const auto& gridView = lhsLocalView.globalBasis().gridView();
 
@@ -192,8 +192,8 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
         // Position of the current quadrature point in the reference element (face!)
         const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
-        const FieldVector<double,dim>& quadFacePosInReferenceElement
-          = intersection.geometry().global(quadFacePos);
+        // const FieldVector<double,dim>& quadFacePosInReferenceElement
+        //   = intersection.geometry().global(quadFacePos);
 
         // The multiplicative factor in the integral transformation formula -
 
