@@ -9,12 +9,11 @@
 
 #include <dune/common/exceptions.hh> // We use exceptions
 
-#include <dune/grid/common/intersection.hh> //TODO necessary?
+#include <dune/grid/io/file/gmshreader.hh>
+#include <dune/grid/io/file/vtk.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
-#include <dune/grid/io/file/vtk.hh>
-#include <dune/grid/io/file/gmshreader.hh>
 
 
 
@@ -33,9 +32,7 @@
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqksubsampleddgbasis.hh>
 
-#include <dune/functions/functionspacebases/interpolate.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-#include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/dpg/system_assembler.hh>
 #include <dune/dpg/errortools.hh>
