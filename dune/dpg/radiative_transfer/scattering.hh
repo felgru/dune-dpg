@@ -8,10 +8,16 @@
 #include <memory>
 #include <type_traits>
 
+#include <dune/common/fvector.hh>
+
 #include <dune/dpg/assemble_types.hh>
 #include <dune/dpg/assemble_helper.hh>
+#include <dune/dpg/quadrature.hh>
+
+#include <dune/istl/bvector.hh>
 
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
+#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
 namespace Dune {
 
@@ -58,6 +64,7 @@ public:
           const std::vector<Direction>& sVector,
                    Function& kernelS);
 
+private:
   template<class Function, class Geometry, class QuadratureRule, class Direction>
   void evaluateKernelElement
     (std::vector<std::vector<double>>&,
@@ -66,7 +73,6 @@ public:
     const QuadratureRule&,
     const std::vector<Direction>&);
 
-private:
   TestSpaces     testSpaces;
   SolutionSpaces solutionSpaces;
 };
@@ -134,8 +140,6 @@ void ScatteringAssembler<TestSpaces, SolutionSpaces, FormulationType>::
         k[iQuad][iS] = std::get<0>(kernelS)(mapQuadPos,sVector[iS]);
       }
   }
-
-  return;
 }
 
 
@@ -247,8 +251,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
     // We get the values of the kernel at the quad points
     // and the angular directions. Result stored in kernelVect[iQuad][iS]
     std::vector<std::vector<double>> kernelVect;
-    evaluateKernelElement(kernelVect,kernelS,
-      at_c<0>(testLocalView).tree().element().geometry(),quad,sVector);
+    evaluateKernelElement(kernelVect, kernelS, e.geometry(), quad, sVector);
 
     // Loop over all quadrature points
     for ( size_t pt=0; pt < quad.size(); pt++ ) {
