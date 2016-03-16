@@ -27,7 +27,6 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/common/vtkadapter.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/optimaltestbasis.hh>
@@ -226,12 +225,12 @@ int main(int argc, char** argv)
   //  real second-order functions
   /////////////////////////////////////////////////////////////////////////
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
-  vtkWriter.addVertexData(vtkFunction(uFunction),
+  vtkWriter.addVertexData(uFunction,
                VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write("transport_solution_"+std::to_string(nelements));
 
   SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-  vtkWriter1.addVertexData(vtkFunction(thetaFunction),
+  vtkWriter1.addVertexData(thetaFunction,
                 VTK::FieldInfo("theta", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter1.write("transport_solution_trace_"+std::to_string(nelements));
 
