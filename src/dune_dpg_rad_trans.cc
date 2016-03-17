@@ -55,8 +55,8 @@ double fInner(const Domain& x,
   double c0 = 1.;
   double c1 = 1.;
   double value = (std::exp(c0*x[0])-1)*(std::exp(c1*x[1])-1);//v pure transport
-  //double value = 1-(x[0]-0.5)*(x[0]-0.5)-(x[1]-0.5)*(x[1]-0.5) ; //v RT
-  return value ;
+  //double value = 1-(x[0]-0.5)*(x[0]-0.5)-(x[1]-0.5)*(x[1]-0.5); //v RT
+  return value;
 }
 // Partial derivative of fInner with respect to x[0]
 template <class Domain,class Direction>
@@ -66,8 +66,8 @@ double fInnerD0(const Domain& x,
   double c0 = 1.;
   double c1 = 1.;
   double value = c0*std::exp(c0*x[0])*(std::exp(c1*x[1])-1);//v pure transport
-  //double value = -2*(x[0]-0.5) ;//v RT
-  return value ;
+  //double value = -2*(x[0]-0.5); //v RT
+  return value;
 }
 // Partial derivative of fInner with respect to x[1]
 template <class Domain,class Direction>
@@ -77,8 +77,8 @@ double fInnerD1(const Domain& x,
   double c0 = 1.;
   double c1 = 1.;
   double value = (std::exp(c0*x[0])-1)*std::exp(c1*x[1])*c1;//v pure transport
-  //double value = -2*(x[1]-0.5) ;//v RT
-  return value ;
+  //double value = -2*(x[1]-0.5); //v RT
+  return value;
 }
 
 // This function satifies the zero incoming flux bounday conditions
@@ -89,7 +89,7 @@ double fBoundary(const Domain& x,
   // double value = 1.;//v pure transport
   double value = ( (s[0]>0)*x[0] + (s[0]==0)*1. + (s[0]<0)*(1-x[0]) )*
                  ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) );//v RT
-  return value ;
+  return value;
 }
 // Partial derivative of fBoundary with respect to x[0]
 template <class Domain,class Direction>
@@ -99,7 +99,7 @@ double fBoundaryD0(const Domain& x,
   //double value = 0.;//v pure transport
   double value = ( (s[0]>0)*1 + (s[0]==0)*0. + (s[0]<0)*(-1.) )*
                  ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) );//v RT
-  return value ;
+  return value;
 }
 // Partial derivative of fBoundary with respect to x[1]
 template <class Domain,class Direction>
@@ -109,7 +109,7 @@ double fBoundaryD1(const Domain& x,
   // double value = 0.;//v pure transport
   double value = ( (s[0]>0)*x[0] + (s[0]==0)*1. + (s[0]<0)*(1-x[0]) )*
                  ( (s[1]>0)*1 + (s[1]==0)*0. + (s[1]<0)*(-1.) ); //v RT
-  return value ;
+  return value;
 }
 
 //The analytic solution
@@ -144,7 +144,7 @@ double collisionTerm(const Domain& x,
                      const std::vector< Direction >& sVector)
 {
   int numS = sVector.size();
-  double sum = 0. ;
+  double sum = 0.;
   for(int i=0; i<numS; i++)
   {
     sum += kernel(x,sVector[i],s)*u(x,sVector[i]);
@@ -162,7 +162,7 @@ double f(const Domain& x,
 {
   double value = s[0]*( fInnerD0(x,s) * fBoundary(x,s) + fInner(x,s)*fBoundaryD0(x,s)) +
                  s[1]*( fInnerD1(x,s) * fBoundary(x,s) + fInner(x,s)*fBoundaryD1(x,s)) +
-                 sigma(x,s)*u(x,s) - collisionTerm(x,s,u,sVector) ;
+                 sigma(x,s)*u(x,s) - collisionTerm(x,s,u,sVector);
   return value;
 }
 
@@ -243,9 +243,9 @@ int main(int argc, char** argv)
   // Handle directions of discrete ordinates
   ///////////////////////////////////
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
-  using Direction = FieldVector<double, dim> ;
+  using Direction = FieldVector<double, dim>;
   // Vector of directions: sVector
-  std::vector< Direction > sVector(numS) ;
+  std::vector< Direction > sVector(numS);
   for(int i = 0; i < numS; ++i)
   {
     using namespace boost::math::constants;
@@ -459,8 +459,8 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////////////
   for(int n = 0; n < N; ++n)
   {
-    ofs << "Iteration " << n << std::endl ;
-    std::cout << "Iteration " << n << std::endl << std::endl ;
+    ofs << "Iteration " << n << std::endl;
+    std::cout << "Iteration " << n << std::endl << std::endl;
 
     /////////////////////////////////////////////////////////
     //  Update solutions
@@ -529,7 +529,7 @@ int main(int argc, char** argv)
     {
       Direction s = sVector[i];
 
-      std::cout << "Direction " << i << std::endl ;
+      std::cout << "Direction " << i << std::endl;
 
       // ////////////////////////////////////////////////////////////////////////
       // //  Write result to VTK file
@@ -597,7 +597,7 @@ int main(int argc, char** argv)
       for (unsigned int j=0; j<feBasisTrace.indexSet().size(); j++)
         diffTheta[j] = theta[i][j]-thetaPrevious[i][j];
 
-      ofs << "Diff wrt previous iteration: " << std::endl ;
+      ofs << "Diff wrt previous iteration: " << std::endl;
       ofs << "  -> || u["<< i << "] - u_previous["<< i <<"] ||_L2 = " << diffU.two_norm() << std::endl;
       ofs << "  -> || theta["<< i << "] - theta_previous["<< i <<"] ||_L2 = " << diffTheta.two_norm() << std::endl << std::endl;
 
