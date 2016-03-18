@@ -59,8 +59,8 @@ struct replaceTestSpaceAndType<BilinearForm<TestSpaces, SolutionSpaces,
                                             BilinearTerms, FormulationType>,
                                newTestSpaces, newFormulationType>
 {
-    typedef BilinearForm<newTestSpaces, SolutionSpaces,
-                         BilinearTerms, newFormulationType> type;
+  typedef BilinearForm<newTestSpaces, SolutionSpaces,
+                       BilinearTerms, newFormulationType> type;
 };
 
 template<class Form, class newTestSpace>
@@ -70,7 +70,7 @@ template<class TestSpaces, class InnerProductTerms, class newTestSpaces>
 struct replaceTestSpace<InnerProduct<TestSpaces, InnerProductTerms>,
                         newTestSpaces>
 {
-    typedef InnerProduct<newTestSpaces, InnerProductTerms> type;
+  typedef InnerProduct<newTestSpaces, InnerProductTerms> type;
 };
 
 template<class BilinearForm, class InnerProduct>

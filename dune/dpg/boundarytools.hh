@@ -223,7 +223,7 @@ namespace Dune {
     {
       localView.bind(e);
       const auto& localFEM = localView.tree().finiteElement();
-      const auto& localInterp = localFEM.localInterpolation() ;
+      const auto& localInterp = localFEM.localInterpolation();
 
       localIndexSet.bind(localView);
 
