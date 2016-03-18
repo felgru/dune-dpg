@@ -87,7 +87,7 @@ namespace Dune {
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
       // Position of the current quadrature point in the current element
-      const FieldVector<double,dim>& mapQuadPos = geometry.global(quadPos) ;  // we get the global coordinate of quadPos
+      const FieldVector<double,dim>& mapQuadPos = geometry.global(quadPos);  // we get the global coordinate of quadPos
 
       // The multiplicative factor in the integral transformation formula
       const double integrationElement = element.geometry().integrationElement(quadPos);
