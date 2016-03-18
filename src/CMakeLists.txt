@@ -51,3 +51,8 @@ add_executable("dune_dpg_rad_trans" dune_dpg_rad_trans.cc)
 add_dune_suitesparse_flags(dune_dpg_rad_trans)
 add_dune_ug_flags(dune_dpg_rad_trans)
 target_link_dune_default_libraries("dune_dpg_rad_trans")
+
+add_executable("dune_dpg_rad_trans_wavelets" dune_dpg_rad_trans_wavelets.cc)
+add_dune_suitesparse_flags(dune_dpg_rad_trans_wavelets)
+add_dune_ug_flags(dune_dpg_rad_trans_wavelets)
+target_link_dune_default_libraries("dune_dpg_rad_trans_wavelets")
