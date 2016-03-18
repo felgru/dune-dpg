@@ -1,0 +1,6 @@
+0.1.1:
+* dune-dpg has been made compatible with Dune 2.4.1.
+* added some missing #includes and removed unused ones.
+
+0.1:
+* initial release, compatible with Dune 2.4.0
