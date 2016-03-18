@@ -120,7 +120,7 @@ double fieldExact(const Dune::FieldVector<double, 2>& x) {
   const double pi = boost::math::constants::pi<double>();
   const double r1 = (-1+std::sqrt(1+4*epsilon*epsilon*pi*pi))/(-2*epsilon);
   const double r2 = (-1-std::sqrt(1+4*epsilon*epsilon*pi*pi))/(-2*epsilon);
-  return (((std::exp(r1*(x[0]-1))-std::exp(r2*(x[0]-1)))/(std::exp(-r1)-std::exp(-r2)) - (1-x[0]))* std::sin(pi*x[1]) ) ;
+  return (((std::exp(r1*(x[0]-1))-std::exp(r2*(x[0]-1)))/(std::exp(-r1)-std::exp(-r2)) - (1-x[0]))* std::sin(pi*x[1]) );
 }
 
 
@@ -555,8 +555,8 @@ int main(int argc, char** argv)
   ErrorTools errorTools = ErrorTools(adaptivityTol);
 
   //We compute the L2 error between the exact and the fem solutions
-  double err = errorTools.computeL2error(feBasisInterior,u,uExact) ;
-  std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl ;
+  double err = errorTools.computeL2error(feBasisInterior,u,uExact);
+  std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl;
 
   //// todo: h-refinement
   //errorTools->hRefinement(grid);
@@ -566,8 +566,8 @@ int main(int argc, char** argv)
       //We compute the rhs in the form given by the projection approach
   rhsAssembler.assembleRhs(rhs, rightHandSide);
       //It is necessary to provide rhs in the above form to call this aPosterioriError method
-  double aposterioriErr = errorTools.aPosterioriError(bilinearForm,innerProduct,u,theta,rhs) ;
-  std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl ;*/
+  double aposterioriErr = errorTools.aPosterioriError(bilinearForm,innerProduct,u,theta,rhs);
+  std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl; */
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////
