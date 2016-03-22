@@ -16,6 +16,9 @@
 
 #include <boost/math/constants/constants.hpp>
 
+#include <Eigen/Core>
+#include <Eigen/SVD>
+
 namespace Dune {
 
 
@@ -31,6 +34,44 @@ template<class TestSpaces,
          class FormulationType>
 class WaveletScatteringAssembler
 {
+private:
+  class SVD {
+    public:
+      template<class Function>
+      SVD(const Function& kernel, size_t num_s)
+        : kernelSVD(num_s, num_s, Eigen::ComputeThinU | Eigen::ComputeThinV) {
+        using namespace Eigen;
+        using namespace boost::math::constants;
+        MatrixXd kernelMatrix(num_s, num_s);
+        for(size_t j = 0; j < num_s; ++j) {
+          Direction s_j = {cos(2*pi<double>()*j/num_s),
+                           sin(2*pi<double>()*j/num_s)};
+          for(size_t i = 0; i < num_s; ++i) {
+            Direction s_i = {cos(2*pi<double>()*i/num_s),
+                             sin(2*pi<double>()*i/num_s)};
+            // TODO: maybe use a higher order quadrature
+            kernelMatrix(i,j) = kernel(s_i, s_j)/(num_s*num_s);
+          }
+        }
+        /* initialize SVD of kernel (using Eigen) */
+        kernelSVD.compute(kernelMatrix);
+      }
+
+      void applyToVector(Eigen::VectorXd& v,
+                         double accuracy) {
+        // TODO: Truncate SVD according to given accuracy.
+        using namespace Eigen;
+        MatrixXd tmp = kernelSVD.matrixV().adjoint() * v;
+        VectorXd singularValues = kernelSVD.singularValues();
+        for(size_t i=0, i_max=tmp.size(); i<i_max; ++i)
+          tmp(i) *= singularValues(i);
+        v = kernelSVD.matrixU() * tmp;
+      }
+
+    private:
+      Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner> kernelSVD;
+  };
+
 public:
   enum : unsigned int { dim = 2 };
   using Direction = FieldVector<double, dim>;
@@ -48,21 +89,8 @@ public:
                               size_t num_s)
              : testSpaces(testSpaces),
                solutionSpaces(solutionSpaces),
-               kernelMatrix(num_s, num_s)
-  {
-    using namespace boost::math::constants;
-    for(size_t i = 0; i < num_s; ++i) {
-      Direction s_i = {cos(2*pi<double>()*i/num_s),
-                       sin(2*pi<double>()*i/num_s)};
-      for(size_t j = 0; j < num_s; ++j) {
-        Direction s_j = {cos(2*pi<double>()*j/num_s),
-                         sin(2*pi<double>()*j/num_s)};
-        // TODO: maybe use a higher order quadrature
-        kernelMatrix[i][j] = kernel(s_i, s_j)/(num_s*num_s);
-      }
-    }
-    /* TODO: initialize SVD of kernel (using Arpack++?) */
-  }
+               kernelSVD(kernel, num_s)
+  {}
 
   /**
    * \brief Assemble the vector corresponding to the scattering integral
@@ -85,7 +113,7 @@ public:
 private:
   TestSpaces     testSpaces;
   SolutionSpaces solutionSpaces;
-  DynamicMatrix<double> kernelMatrix;
+  SVD kernelSVD;
 };
 
 /**
@@ -231,7 +259,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
       localFiniteElementTest.localBasis()
           .evaluateFunction(quadPos, testShapeFunctionValues);
 
-      std::vector<double> uValues(numS);
+      Eigen::VectorXd uValues(numS);
       {
         std::vector<FieldVector<double,1>> shapeFunctionValues;
         localFiniteElementSolution.localBasis().
@@ -254,15 +282,15 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
               + globalSolutionSpaceOffset;
             uValue += x[scatteringAngle][row] * shapeFunctionValues[j];
           }
-          uValues[scatteringAngle] = uValue;
+          uValues(scatteringAngle) = uValue;
         }
       }
+      kernelSVD.applyToVector(uValues, /* TODO: */ 0);
 
-      const double factor = quad[pt].weight() * integrationElement;
+      const double factor = uValues(si) * quad[pt].weight()
+                            * integrationElement;
       for (size_t i=0, i_max=localScattering.size(); i<i_max; i++)
-        for (size_t j=0, j_max=uValues.size(); j<j_max; j++)
-          localScattering[i] += factor * testShapeFunctionValues[i]
-                              * kernelMatrix[si][j] * uValues[j];
+        localScattering[i] += factor * testShapeFunctionValues[i];
     }
 
     auto rhsCopier
