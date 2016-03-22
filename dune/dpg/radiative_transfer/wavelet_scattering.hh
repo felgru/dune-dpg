@@ -39,7 +39,8 @@ private:
     public:
       template<class Function>
       SVD(const Function& kernel, size_t num_s)
-        : kernelSVD(num_s, num_s, Eigen::ComputeThinU | Eigen::ComputeThinV) {
+        : kernelSVD(num_s, num_s, Eigen::ComputeThinU | Eigen::ComputeThinV),
+          rank(num_s) {
         using namespace Eigen;
         using namespace boost::math::constants;
         MatrixXd kernelMatrix(num_s, num_s);
@@ -57,19 +58,34 @@ private:
         kernelSVD.compute(kernelMatrix);
       }
 
-      void applyToVector(Eigen::VectorXd& v,
-                         double accuracy) {
+      void applyToVector(Eigen::VectorXd& v) {
         // TODO: Truncate SVD according to given accuracy.
         using namespace Eigen;
-        MatrixXd tmp = kernelSVD.matrixV().adjoint() * v;
+        VectorXd tmp = kernelSVD.matrixV().leftCols(rank).adjoint() * v;
         VectorXd singularValues = kernelSVD.singularValues();
-        for(size_t i=0, i_max=tmp.size(); i<i_max; ++i)
+        for(size_t i=0; i<rank; ++i)
           tmp(i) *= singularValues(i);
-        v = kernelSVD.matrixU() * tmp;
+        v = kernelSVD.matrixU().leftCols(rank) * tmp;
+      }
+
+      void setAccuracy(double accuracy) {
+        using namespace Eigen;
+        VectorXd singularValues = kernelSVD.singularValues();
+        rank = singularValues.size();
+        double err = 0;
+        accuracy = accuracy * accuracy;
+        while (err < accuracy && rank > 0) {
+          rank -= 1;
+          err += singularValues(rank) * singularValues(rank);
+        }
+        rank += 1;
+        // TODO: If accuracy is low enough to allow rank = 0,
+        //       this gives rank = 1.
       }
 
     private:
       Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner> kernelSVD;
+      size_t rank;
   };
 
 public:
@@ -152,6 +168,8 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
 {
   using namespace boost::fusion;
   using namespace Dune::detail;
+
+  // TODO: kernelSVD.setAccuracy(...)
 
   constexpr bool isSaddlepoint =
         std::is_same<
@@ -285,7 +303,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
           uValues(scatteringAngle) = uValue;
         }
       }
-      kernelSVD.applyToVector(uValues, /* TODO: */ 0);
+      kernelSVD.applyToVector(uValues);
 
       const double factor = uValues(si) * quad[pt].weight()
                             * integrationElement;
