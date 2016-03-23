@@ -59,13 +59,9 @@ private:
       }
 
       void applyToVector(Eigen::VectorXd& v) {
-        // TODO: Truncate SVD according to given accuracy.
-        using namespace Eigen;
-        VectorXd tmp = kernelSVD.matrixV().leftCols(rank).adjoint() * v;
-        VectorXd singularValues = kernelSVD.singularValues();
-        for(size_t i=0; i<rank; ++i)
-          tmp(i) *= singularValues(i);
-        v = kernelSVD.matrixU().leftCols(rank) * tmp;
+        v = kernelSVD.matrixU().leftCols(rank)
+          * kernelSVD.singularValues().head(rank).asDiagonal()
+          * kernelSVD.matrixV().leftCols(rank).adjoint() * v;
       }
 
       void setAccuracy(double accuracy) {
