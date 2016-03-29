@@ -3,16 +3,19 @@
 #ifndef DUNE_DPG_RADIATIVE_TRANSFER_WAVELET_SCATTERING_HH
 #define DUNE_DPG_RADIATIVE_TRANSFER_WAVELET_SCATTERING_HH
 
+#include <tuple>
 #include <vector>
 
 #include <dune/common/fvector.hh>
 
 #include <dune/dpg/assemble_types.hh>
 #include <dune/dpg/assemble_helper.hh>
+#include <dune/dpg/quadrature.hh>
 
 #include <dune/istl/bvector.hh>
 
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
+#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
 #include <boost/math/constants/constants.hpp>
 
@@ -115,12 +118,14 @@ public:
    * \param[in]  x           the vectors of the solutions of the
    *                           previous iteration
    * \param[in]  si          index of the scattering direction
+   * \param[in]  accuracy    accuracy of the kernel approximation
    */
   template<size_t solutionSpaceIndex>
   void assembleScattering
          (BlockVector<FieldVector<double,1>>& scattering,
           const std::vector<BlockVector<FieldVector<double,1>>>& x,
-          size_t si);
+          size_t si,
+          double accuracy);
 
 private:
   TestSpaces     testSpaces;
@@ -160,12 +165,12 @@ template<size_t solutionSpaceIndex>
 void WaveletScatteringAssembler<TestSpaces, SolutionSpaces, FormulationType>::
 assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
                    const std::vector<BlockVector<FieldVector<double,1> >>& x,
-                   size_t si)
+                   size_t si, double accuracy)
 {
   using namespace boost::fusion;
   using namespace Dune::detail;
 
-  // TODO: kernelSVD.setAccuracy(...)
+  kernelSVD.setAccuracy(accuracy);
 
   constexpr bool isSaddlepoint =
         std::is_same<
