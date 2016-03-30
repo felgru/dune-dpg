@@ -1,7 +1,7 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_DPG_RADIATIVE_TRANSFER_WAVELET_SCATTERING_HH
-#define DUNE_DPG_RADIATIVE_TRANSFER_WAVELET_SCATTERING_HH
+#ifndef DUNE_DPG_RADIATIVE_TRANSFER_APPROXIMATE_SCATTERING_HH
+#define DUNE_DPG_RADIATIVE_TRANSFER_APPROXIMATE_SCATTERING_HH
 
 #include <tuple>
 #include <vector>
@@ -24,22 +24,12 @@
 
 namespace Dune {
 
-
-/**
- * \brief This constructs the right hand side vector of a DPG system.
- *
- * \tparam TestSpaces      tuple of test spaces
- * \tparam SolutionSpaces  tuple of solution spaces
- * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
- */
-template<class TestSpaces,
-         class SolutionSpaces,
-         class FormulationType>
-class WaveletScatteringAssembler
-{
-private:
+namespace ScatteringKernelApproximation {
   class SVD {
     public:
+      enum : unsigned int { dim = 2 };
+      using Direction = FieldVector<double, dim>;
+
       template<class Function>
       SVD(const Function& kernel, size_t num_s)
         : kernelSVD(num_s, num_s, Eigen::ComputeThinU | Eigen::ComputeThinV),
@@ -86,25 +76,42 @@ private:
       Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner> kernelSVD;
       size_t rank;
   };
+}
 
+/**
+ * \brief This constructs the right hand side vector of a DPG system.
+ *
+ * \tparam TestSpaces      tuple of test spaces
+ * \tparam SolutionSpaces  tuple of solution spaces
+ * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
+ */
+template<class TestSpaces,
+         class SolutionSpaces,
+         class KernelApproximation,
+         class FormulationType>
+class ApproximateScatteringAssembler
+{
 public:
   enum : unsigned int { dim = 2 };
   using Direction = FieldVector<double, dim>;
 
-  WaveletScatteringAssembler () = delete;
+  ApproximateScatteringAssembler () = delete;
   /**
-   * \brief constructor for WaveletScatteringAssembler
+   * \brief constructor for ApproximateScatteringAssembler
    *
-   * \note For your convenience, use make_WaveletScatteringAssembler() instead.
+   * \param si  index of the scattering direction
+   *
+   * \note For your convenience, use make_ApproximateScatteringAssembler()
+   *       instead.
    */
-  template<class Function>
-  WaveletScatteringAssembler (const TestSpaces& testSpaces,
-                              const SolutionSpaces& solutionSpaces,
-                              const Function& kernel,
-                              size_t num_s)
+  ApproximateScatteringAssembler (const TestSpaces& testSpaces,
+                                  const SolutionSpaces& solutionSpaces,
+                                  const KernelApproximation& kernel,
+                                  size_t si)
              : testSpaces(testSpaces),
                solutionSpaces(solutionSpaces),
-               kernelSVD(kernel, num_s)
+               si(si),
+               kernelApproximation(kernel)
   {}
 
   /**
@@ -117,20 +124,19 @@ public:
    * \param[out] scattering  the scattering vector
    * \param[in]  x           the vectors of the solutions of the
    *                           previous iteration
-   * \param[in]  si          index of the scattering direction
    * \param[in]  accuracy    accuracy of the kernel approximation
    */
   template<size_t solutionSpaceIndex>
   void assembleScattering
          (BlockVector<FieldVector<double,1>>& scattering,
           const std::vector<BlockVector<FieldVector<double,1>>>& x,
-          size_t si,
           double accuracy);
 
 private:
   TestSpaces     testSpaces;
   SolutionSpaces solutionSpaces;
-  SVD kernelSVD;
+  const size_t si;
+  KernelApproximation kernelApproximation;
 };
 
 /**
@@ -139,38 +145,38 @@ private:
  *
  * \param  testSpaces       a tuple of test spaces
  * \param  solutionSpaces   a tuple of solution spaces
- * \param  kernel           a function over (double, double) describing
- *                            the scattering kernel
- * \param  num_s            number of scattering directions
+ * \param  kernel           an approximation of the scattering kernel
+ * \param  si               index of scattering direction (0 < si < numS)
  */
 template<class TestSpaces,
          class SolutionSpaces,
-         class Function>
-auto make_DPG_WaveletScatteringAssembler(
+         class KernelApproximation>
+auto make_DPG_ApproximateScatteringAssembler(
       const TestSpaces& testSpaces,
       const SolutionSpaces& solutionSpaces,
-      const Function& kernel,
-      size_t num_s)
-     -> WaveletScatteringAssembler<TestSpaces, SolutionSpaces, DPGFormulation>
+      const KernelApproximation& kernel,
+      size_t si)
+     -> ApproximateScatteringAssembler<TestSpaces, SolutionSpaces, KernelApproximation, DPGFormulation>
 {
-  return WaveletScatteringAssembler<TestSpaces, SolutionSpaces, DPGFormulation>
-                            (testSpaces, solutionSpaces, kernel, num_s);
+  return ApproximateScatteringAssembler<TestSpaces, SolutionSpaces, KernelApproximation, DPGFormulation>
+                            (testSpaces, solutionSpaces, kernel, si);
 }
 
 
 template<class TestSpaces,
          class SolutionSpaces,
+         class KernelApproximation,
          class FormulationType>
 template<size_t solutionSpaceIndex>
-void WaveletScatteringAssembler<TestSpaces, SolutionSpaces, FormulationType>::
+void ApproximateScatteringAssembler<TestSpaces, SolutionSpaces, KernelApproximation, FormulationType>::
 assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
                    const std::vector<BlockVector<FieldVector<double,1> >>& x,
-                   size_t si, double accuracy)
+                   double accuracy)
 {
   using namespace boost::fusion;
   using namespace Dune::detail;
 
-  kernelSVD.setAccuracy(accuracy);
+  kernelApproximation.setAccuracy(accuracy);
 
   constexpr bool isSaddlepoint =
         std::is_same<
@@ -304,7 +310,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
           uValues(scatteringAngle) = uValue;
         }
       }
-      kernelSVD.applyToVector(uValues);
+      kernelApproximation.applyToVector(uValues);
 
       const double factor = uValues(si) * quad[pt].weight()
                             * integrationElement;
@@ -325,4 +331,4 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
 
 } // end namespace Dune
 
-#endif // DUNE_DPG_RADIATIVE_TRANSFER_WAVELET_SCATTERING_HH
+#endif // DUNE_DPG_RADIATIVE_TRANSFER_APPROXIMATE_SCATTERING_HH

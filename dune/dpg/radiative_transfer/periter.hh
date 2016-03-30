@@ -28,6 +28,7 @@
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/rhs_assembler.hh>
+#include <dune/dpg/radiative_transfer/approximate_scattering.hh>
 
 #include <boost/math/constants/constants.hpp>
 
@@ -147,24 +148,30 @@ void Periter::solve(GridView gridView,
   std::vector<SystemAssembler_t> systemAssemblers;
   systemAssemblers.reserve(numS);
 
+  ScatteringKernelApproximation::SVD kernelSVD(kernel, numS);
+
   // Scattering assemblers with optimal test spaces
-  std::vector<WaveletScatteringAssembler
+  std::vector<ApproximateScatteringAssembler
                   <std::tuple<FEBasisOptimalTest>,
                    SolutionSpaces,
+                   decltype(kernelSVD),
                    DPGFormulation>
              > scatteringAssemblers;
   scatteringAssemblers.reserve(numS);
 
+#if 0
   // Scattering assembler with enriched test space
-  WaveletScatteringAssembler<std::tuple<FEBasisTest>,
+  ApproximateScatteringAssembler<std::tuple<FEBasisTest>,
                                   SolutionSpaces,
+                                  decltype(kernelSVD),
                                   DPGFormulation
                       > scatteringAssemblerEnriched
-                          = make_DPG_WaveletScatteringAssembler(
+                          = make_DPG_ApproximateScatteringAssembler(
                                 testSpaces,
                                 solutionSpaces,
-                                kernel,
-                                numS);
+                                kernelSVD,
+                                /* TODO: si */);
+#endif
 
   /* create an FEBasisOptimalTest for each direction */
   std::vector<std::tuple<FEBasisOptimalTest> > optimalTestSpaces;
@@ -209,10 +216,10 @@ void Periter::solve(GridView gridView,
         make_DPG_SystemAssembler(optimalTestSpaces[i], solutionSpaces,
                                  bilinearForms[i]));
     scatteringAssemblers.emplace_back(
-        make_DPG_WaveletScatteringAssembler(optimalTestSpaces[i],
-                                            solutionSpaces,
-                                            kernel,
-                                            numS));
+        make_DPG_ApproximateScatteringAssembler(optimalTestSpaces[i],
+                                                solutionSpaces,
+                                                kernelSVD,
+                                                i));
   }
 
   /////////////////////////////////////////////////////////
@@ -324,7 +331,6 @@ void Periter::solve(GridView gridView,
       scatteringAssemblers[i].template assembleScattering<0>(
           scattering,
           xPrevious,
-          i,
           accuracy);
       rhs[i] += scattering;
       systemAssemblers[i].template applyDirichletBoundarySolution<1>
@@ -403,6 +409,7 @@ void Periter::solve(GridView gridView,
                        + std::to_string(i);
       vtkWriterTrace.write(name);
 
+#if 0
       ////////////////////////////////////
       //  A posteriori error
       ////////////////////////////////////
@@ -415,7 +422,7 @@ void Periter::solve(GridView gridView,
       // -- Contribution of the scattering term
       VectorType scattering;
       scatteringAssemblerEnriched
-          .template assembleScattering<0>(scattering, xPrevious, i, 0.);
+          .template assembleScattering<0>(scattering, xPrevious, /*i,*/ 0.);
       rhs[i] += scattering;
       // - Computation of the a posteriori error
       double aposterioriErr = errorTools.aPosterioriError(bilinearForms[i],innerProducts[i],u[i],theta[i],rhs[i]); //change with contribution of scattering rhs[i]
@@ -431,6 +438,7 @@ void Periter::solve(GridView gridView,
       ofs << "Diff wrt previous iteration: " << std::endl;
       ofs << "  -> || u["<< i << "] - u_previous["<< i <<"] ||_L2 = " << diffU.two_norm() << std::endl;
       ofs << "  -> || theta["<< i << "] - theta_previous["<< i <<"] ||_L2 = " << diffTheta.two_norm() << std::endl << std::endl;
+#endif
 
     }
     ofs << std::endl;

@@ -21,7 +21,6 @@
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
-#include <dune/dpg/radiative_transfer/wavelet_scattering.hh>
 #include <dune/dpg/radiative_transfer/periter.hh>
 
 #include <boost/math/constants/constants.hpp>
