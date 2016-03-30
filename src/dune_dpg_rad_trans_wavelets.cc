@@ -96,7 +96,7 @@ double fBoundaryD1(const Domain& x,
 }
 
 //The analytic solution
-template <class Domain,class Direction>
+template <class Domain, class Direction>
 double uAnalytic(const Domain& x,
                  const Direction& s)
 {
@@ -121,11 +121,11 @@ double kernel(const Direction& sIntegration,
 
 // The scattering kernel computed with an analytic solution u
 // and a mid-point rule for the quadrature formula
-template <class Domain,class Direction,class lambdaExpr>
+template <class Domain, class Direction, class Function>
 double collisionTerm(const Domain& x,
                      const Direction& s,
-                     const lambdaExpr& u,
-                     const std::vector< Direction >& sVector)
+                     const Function& u,
+                     const std::vector<Direction>& sVector)
 {
   int numS = sVector.size();
   double sum = 0.;
@@ -138,11 +138,11 @@ double collisionTerm(const Domain& x,
 }
 
 // The right hand-side
-template <class Domain,class Direction,class lambdaExpr>
+template <class Domain, class Direction, class Function>
 double f(const Domain& x,
          const Direction& s,
-         const lambdaExpr& u,
-         const std::vector< Direction >& sVector)
+         const Function& u,
+         const std::vector<Direction>& sVector)
 {
   double value = s[0]*( fInnerD0(x,s) * fBoundary(x,s) + fInner(x,s)*fBoundaryD0(x,s)) +
                  s[1]*( fInnerD1(x,s) * fBoundary(x,s) + fInner(x,s)*fBoundaryD1(x,s)) +
@@ -214,11 +214,8 @@ int main(int argc, char** argv)
                   sin(2*pi<double>()*i/numS)};
   }
 
-  auto uExact
-    = [] (const Domain& x, const Direction& s) { return uAnalytic(x,s); };
-  auto g = [&uExact,&sVector] (const Domain& x,
-                               const Direction& s)
-           { return f(x,s,uExact,sVector); };
+  auto g = [&sVector] (const Domain& x, const Direction& s)
+           { return f(x, s, uAnalytic<Domain, Direction>, sVector); };
   Periter().solve(gridView, g, kernel<Direction>, numS, N);
 
   return 0;
