@@ -159,19 +159,14 @@ void Periter::solve(GridView gridView,
              > scatteringAssemblers;
   scatteringAssemblers.reserve(numS);
 
-#if 0
   // Scattering assembler with enriched test space
-  ApproximateScatteringAssembler<std::tuple<FEBasisTest>,
-                                  SolutionSpaces,
-                                  decltype(kernelSVD),
-                                  DPGFormulation
-                      > scatteringAssemblerEnriched
-                          = make_DPG_ApproximateScatteringAssembler(
-                                testSpaces,
-                                solutionSpaces,
-                                kernelSVD,
-                                /* TODO: si */);
-#endif
+  std::vector<ApproximateScatteringAssembler
+                  <std::tuple<FEBasisTest>,
+                   SolutionSpaces,
+                   decltype(kernelSVD),
+                   DPGFormulation>
+             > scatteringAssemblersEnriched;
+  scatteringAssemblersEnriched.reserve(numS);
 
   /* create an FEBasisOptimalTest for each direction */
   std::vector<std::tuple<FEBasisOptimalTest> > optimalTestSpaces;
@@ -220,6 +215,12 @@ void Periter::solve(GridView gridView,
                                                 solutionSpaces,
                                                 kernelSVD,
                                                 i));
+    scatteringAssemblersEnriched.emplace_back(
+        make_DPG_ApproximateScatteringAssembler(
+            testSpaces,
+            solutionSpaces,
+            kernelSVD,
+            i));
   }
 
   /////////////////////////////////////////////////////////
@@ -415,7 +416,6 @@ void Periter::solve(GridView gridView,
                        + std::to_string(i);
       vtkWriterTrace.write(name);
 
-#if 0
       ////////////////////////////////////
       //  A posteriori error
       ////////////////////////////////////
@@ -427,9 +427,9 @@ void Periter::solve(GridView gridView,
           std::make_tuple([s,&f] (const Domain& x) { return f(x,s); }));
       // -- Contribution of the scattering term
       VectorType scattering;
-      // TODO: Set accuracy of kernelSVD.
-      scatteringAssemblerEnriched
-          .template assembleScattering<0>(scattering, xPrevious, /*i*/);
+      kernelSVD.setAccuracy(0.);
+      scatteringAssemblersEnriched[i]
+          .template assembleScattering<0>(scattering, xPrevious);
       rhs[i] += scattering;
       // - Computation of the a posteriori error
       double aposterioriErr = errorTools.aPosterioriError(bilinearForms[i],innerProducts[i],u[i],theta[i],rhs[i]); //change with contribution of scattering rhs[i]
@@ -445,7 +445,6 @@ void Periter::solve(GridView gridView,
       ofs << "Diff wrt previous iteration: " << std::endl;
       ofs << "  -> || u["<< i << "] - u_previous["<< i <<"] ||_L2 = " << diffU.two_norm() << std::endl;
       ofs << "  -> || theta["<< i << "] - theta_previous["<< i <<"] ||_L2 = " << diffTheta.two_norm() << std::endl << std::endl;
-#endif
 
     }
     ofs << std::endl;
