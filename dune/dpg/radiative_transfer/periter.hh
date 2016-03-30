@@ -300,8 +300,13 @@ void Periter::solve(GridView gridView,
   /////////////////////////////////////////////////////////
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
+  // TODO: Estimate ρ from the paper.
+  const double rho = .5;
+  // The accuracy η_n:
+  double accuracy = 1.;
   for(unsigned int n = 0; n < numberOfIterations; ++n)
   {
+    accuracy *= rho/2.;
     ofs << "Iteration " << n << std::endl;
     std::cout << "Iteration " << n << std::endl << std::endl;
 
@@ -318,8 +323,10 @@ void Periter::solve(GridView gridView,
     // using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
     //auto f = [] (const Domain& x, const Direction& s) { return 1.;};
 
+    // TODO: Consider the norm of the transport solver in the accuracy.
+    kernelSVD.setAccuracy(accuracy/2.);
+
     // loop of the discrete ordinates
-    double accuracy = 0.;
     for(unsigned int i = 0; i < numS; ++i)
     {
       Direction s = sVector[i];
@@ -330,8 +337,7 @@ void Periter::solve(GridView gridView,
       VectorType scattering;
       scatteringAssemblers[i].template assembleScattering<0>(
           scattering,
-          xPrevious,
-          accuracy);
+          xPrevious);
       rhs[i] += scattering;
       systemAssemblers[i].template applyDirichletBoundarySolution<1>
           (stiffnessMatrix[i],
@@ -421,8 +427,9 @@ void Periter::solve(GridView gridView,
           std::make_tuple([s,&f] (const Domain& x) { return f(x,s); }));
       // -- Contribution of the scattering term
       VectorType scattering;
+      // TODO: Set accuracy of kernelSVD.
       scatteringAssemblerEnriched
-          .template assembleScattering<0>(scattering, xPrevious, /*i,*/ 0.);
+          .template assembleScattering<0>(scattering, xPrevious, /*i*/);
       rhs[i] += scattering;
       // - Computation of the a posteriori error
       double aposterioriErr = errorTools.aPosterioriError(bilinearForms[i],innerProducts[i],u[i],theta[i],rhs[i]); //change with contribution of scattering rhs[i]

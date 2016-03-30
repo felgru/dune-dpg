@@ -124,13 +124,11 @@ public:
    * \param[out] scattering  the scattering vector
    * \param[in]  x           the vectors of the solutions of the
    *                           previous iteration
-   * \param[in]  accuracy    accuracy of the kernel approximation
    */
   template<size_t solutionSpaceIndex>
   void assembleScattering
          (BlockVector<FieldVector<double,1>>& scattering,
-          const std::vector<BlockVector<FieldVector<double,1>>>& x,
-          double accuracy);
+          const std::vector<BlockVector<FieldVector<double,1>>>& x);
 
 private:
   TestSpaces     testSpaces;
@@ -170,13 +168,10 @@ template<class TestSpaces,
 template<size_t solutionSpaceIndex>
 void ApproximateScatteringAssembler<TestSpaces, SolutionSpaces, KernelApproximation, FormulationType>::
 assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
-                   const std::vector<BlockVector<FieldVector<double,1> >>& x,
-                   double accuracy)
+                   const std::vector<BlockVector<FieldVector<double,1> >>& x)
 {
   using namespace boost::fusion;
   using namespace Dune::detail;
-
-  kernelApproximation.setAccuracy(accuracy);
 
   constexpr bool isSaddlepoint =
         std::is_same<
