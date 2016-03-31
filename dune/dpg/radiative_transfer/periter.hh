@@ -305,7 +305,7 @@ void Periter::solve(GridView gridView,
   const double rho = .5;
   // The accuracy η_n:
   double accuracy = 1.;
-  for(unsigned int n = 0; n < numberOfIterations; ++n)
+  for(unsigned int n = 0; accuracy > 1e-10 && n < numberOfIterations; ++n)
   {
     accuracy *= rho/2.;
     ofs << "Iteration " << n << std::endl;
