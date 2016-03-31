@@ -34,7 +34,7 @@
 
 namespace Dune {
 
-// template<class Apply, class Solve>
+template<class ScatteringKernelApproximation>
 class Periter {
   public:
   template<class GridView, class F, class Kernel>
@@ -62,8 +62,9 @@ void extractSolution(std::vector< FieldVector >& u,
   }
 }
 
+template<class ScatteringKernelApproximation>
 template<class GridView, class F, class Kernel>
-void Periter::solve(GridView gridView,
+void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
            const F& f,
            const Kernel& kernel,
            unsigned int numS,
@@ -148,13 +149,13 @@ void Periter::solve(GridView gridView,
   std::vector<SystemAssembler_t> systemAssemblers;
   systemAssemblers.reserve(numS);
 
-  ScatteringKernelApproximation::SVD kernelSVD(kernel, numS);
+  ScatteringKernelApproximation kernelApproximation(kernel, numS);
 
   // Scattering assemblers with optimal test spaces
   std::vector<ApproximateScatteringAssembler
                   <std::tuple<FEBasisOptimalTest>,
                    SolutionSpaces,
-                   decltype(kernelSVD),
+                   decltype(kernelApproximation),
                    DPGFormulation>
              > scatteringAssemblers;
   scatteringAssemblers.reserve(numS);
@@ -163,7 +164,7 @@ void Periter::solve(GridView gridView,
   std::vector<ApproximateScatteringAssembler
                   <std::tuple<FEBasisTest>,
                    SolutionSpaces,
-                   decltype(kernelSVD),
+                   decltype(kernelApproximation),
                    DPGFormulation>
              > scatteringAssemblersEnriched;
   scatteringAssemblersEnriched.reserve(numS);
@@ -213,13 +214,13 @@ void Periter::solve(GridView gridView,
     scatteringAssemblers.emplace_back(
         make_DPG_ApproximateScatteringAssembler(optimalTestSpaces[i],
                                                 solutionSpaces,
-                                                kernelSVD,
+                                                kernelApproximation,
                                                 i));
     scatteringAssemblersEnriched.emplace_back(
         make_DPG_ApproximateScatteringAssembler(
             testSpaces,
             solutionSpaces,
-            kernelSVD,
+            kernelApproximation,
             i));
   }
 
@@ -325,7 +326,7 @@ void Periter::solve(GridView gridView,
     //auto f = [] (const Domain& x, const Direction& s) { return 1.;};
 
     // TODO: Consider the norm of the transport solver in the accuracy.
-    kernelSVD.setAccuracy(accuracy/2.);
+    kernelApproximation.setAccuracy(accuracy/2.);
 
     // loop of the discrete ordinates
     for(unsigned int i = 0; i < numS; ++i)
@@ -427,7 +428,7 @@ void Periter::solve(GridView gridView,
           std::make_tuple([s,&f] (const Domain& x) { return f(x,s); }));
       // -- Contribution of the scattering term
       VectorType scattering;
-      kernelSVD.setAccuracy(0.);
+      kernelApproximation.setAccuracy(0.);
       scatteringAssemblersEnriched[i]
           .template assembleScattering<0>(scattering, xPrevious);
       rhs[i] += scattering;
