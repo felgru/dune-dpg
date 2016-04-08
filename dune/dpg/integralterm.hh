@@ -320,6 +320,39 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
   }
 }
 
+namespace detail {
+  // This function expects data transformed to the reference triangle:
+  // A point in the inflow boundary of the reference cell and the
+  // transport direction transformed under the global-to-local mapping.
+  template<class ReferenceCellCoordinate, class ReferenceCellDirection>
+  double travelDistance(
+      const ReferenceCellCoordinate& x,
+      const ReferenceCellDirection& beta)
+  {
+    if(x[0]) { /* x[0] != 0 */
+      if(x[1]) { /* x[1] != 0 */
+        double a = x[1] - x[0]*beta[1]/beta[0];
+        if(0 <= a && a <= 1)
+          return -x[0]/beta[0];
+        else
+          return -x[1]/beta[1];
+      } else { /* x[1] == 0 */
+        double a = -beta[1]/beta[0]*x[0];
+        if(0 <= a && a <= 1)
+          return -x[0]/beta[0];
+        else
+          return (1-x[0])/(beta[0]+beta[1]);
+      }
+    } else { /* x[0] == 0 */
+      double b = -beta[0]/beta[1]*x[1];
+      if(0 <= b && b <= 1)
+        return -x[1]/beta[1];
+      else
+        return (1-x[1])/(beta[0]+beta[1]);
+    }
+  }
+}
+
 
 #include "integralterm_uu_impl.hh"
 #include "integralterm_rr_impl.hh"
