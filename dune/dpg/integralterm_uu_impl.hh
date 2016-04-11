@@ -117,17 +117,44 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
   const auto& gridView = lhsLocalView.globalBasis().gridView();
 
+  unsigned int nInflowIntersections = 0;
+  unsigned int nOutflowIntersections = 0;
   for (auto&& intersection : intersections(gridView, element))
   {
+    double prod = lhsBeta * intersection.centerUnitOuterNormal();
+    if(prod > 0)
+      ++nOutflowIntersections;
+    else if (prod < 0)
+      ++nInflowIntersections;
+  }
+
+  FieldVector<double,dim> referenceBeta;
+  {
+    const auto& jacobian = element.geometry().jacobianTransposed({0.5, 0.5});
+    jacobian.mv(lhsBeta, referenceBeta);
+  }
+
+  for (auto&& intersection : intersections(gridView, element))
+  {
+    if(type == IntegrationType::travelDistanceWeighted &&
+       lhsBeta * intersection.centerUnitOuterNormal() >= 0) {
+      /* Only integrate over inflow boundaries. */
+      continue;
+    }
+
     using intersectionType
       = typename std::decay<decltype(intersection)>::type;
     // TODO: Do we really want to have a transport quadrature rule
     //       on the faces, if one of the FE spaces is a transport space?
-    typename detail::ChooseQuadrature<LhsSpace,
-                                      RhsSpace,
-                                      intersectionType>::type quadFace
+    QuadratureRule<double, 1> quadFace
       = detail::ChooseQuadrature<LhsSpace, RhsSpace, intersectionType>
         ::Quadrature(intersection, quadratureOrder, lhsBeta);
+    if (type == IntegrationType::travelDistanceWeighted &&
+        nOutflowIntersections > 1) {
+      quadFace = SplitQuadratureRule<double>(
+          quadFace,
+          detail::splitPointOfInflowFace(intersection, referenceBeta));
+    }
 
     for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
 
@@ -141,11 +168,16 @@ faceImpl(const LhsLocalView& lhsLocalView,
       // The multiplicative factor in the integral transformation formula -
 
       double integrationWeight;
-      if(type == IntegrationType::normalVector) {
-        integrationWeight = (lhsBeta*integrationOuterNormal)
+      if(type == IntegrationType::normalVector ||
+         type == IntegrationType::travelDistanceWeighted) {
+        // TODO: scale lhsBeta to length 1
                           // TODO: needs global geometry
-                          * detail::evaluateFactor(factor, quadFacePos)
+        integrationWeight = detail::evaluateFactor(factor, quadFacePos)
                           * quadFace[pt].weight();
+        if(type == IntegrationType::travelDistanceWeighted)
+          integrationWeight *= fabs(lhsBeta*integrationOuterNormal);
+        else
+          integrationWeight *= (lhsBeta*integrationOuterNormal);
       } else if(type == IntegrationType::normalSign) {
         const double integrationElement =
             intersection.geometry().integrationElement(quadFacePos);
@@ -180,6 +212,11 @@ faceImpl(const LhsLocalView& lhsLocalView,
       const FieldVector<double,dim> elementQuadPos =
               intersection.geometryInInside().global(quadFacePos);
 
+      if(type == IntegrationType::travelDistanceWeighted) {
+        integrationWeight *= detail::travelDistance(
+            elementQuadPos,
+            referenceBeta);
+      }
 
       //////////////////////////////
       // Left Hand Side Functions //

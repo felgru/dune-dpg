@@ -5,6 +5,7 @@
 
 #include <tuple>
 
+#include <dune/geometry/quadraturerules/splitquadraturerule.hh>
 #include <dune/istl/matrix.hh>
 
 #include "assemble_types.hh"
@@ -182,7 +183,9 @@ template<size_t lhsSpaceIndex,
                      integrationType == IntegrationType::gradValue
                   || integrationType == IntegrationType::valueGrad
                   || integrationType == IntegrationType::gradGrad
-                  || integrationType == IntegrationType::normalVector>::type*
+                  || integrationType == IntegrationType::normalVector
+                  || integrationType == IntegrationType::travelDistanceWeighted
+                  >::type*
            = nullptr
         >
 auto make_IntegralTerm(FactorType c, DirectionType beta)
@@ -264,7 +267,8 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
              || type == IntegrationType::valueGrad
              || type == IntegrationType::gradGrad
              || type == IntegrationType::normalVector
-             || type == IntegrationType::normalSign,
+             || type == IntegrationType::normalSign
+             || type == IntegrationType::travelDistanceWeighted,
              "Use of unknown IntegrationType.");
   static_assert(domain_of_integration != DomainOfIntegration::interior
                 || type == IntegrationType::valueValue
@@ -274,7 +278,8 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
                 "IntegrationType not implemented on interior.");
   static_assert(domain_of_integration != DomainOfIntegration::face
                 || type == IntegrationType::normalVector
-                || type == IntegrationType::normalSign,
+                || type == IntegrationType::normalSign
+                || type == IntegrationType::travelDistanceWeighted,
                 "IntegrationType not implemented on boundary.");
 
   using LhsSpace = typename LhsLocalView::GlobalBasis;
@@ -350,6 +355,35 @@ namespace detail {
       else
         return (1-x[1])/(beta[0]+beta[1]);
     }
+  }
+
+  template<class Intersection, class ReferenceCellDirection>
+  double splitPointOfInflowFace(
+      const Intersection& intersection,
+      const ReferenceCellDirection& referenceBeta)
+  {
+    // This gets a bit ugly as we have to check the orientation of the face
+    double splitPoint;
+    if(referenceBeta[0] > 0) {
+      if(intersection.geometryInInside().global({0})
+          == FieldVector<double,2>{0.,0.})
+        splitPoint = -referenceBeta[1]/referenceBeta[0];
+      else
+        splitPoint = 1.+referenceBeta[1]/referenceBeta[0];
+    } else if(referenceBeta[1] > 0) {
+      if(intersection.geometryInInside().global({0})
+          == FieldVector<double,2>{0.,0.})
+        splitPoint = -referenceBeta[0]/referenceBeta[1];
+      else
+        splitPoint = 1.+referenceBeta[0]/referenceBeta[1];
+    } else {
+      if(intersection.geometryInInside().global({0})
+          == FieldVector<double,2>{0.,1.})
+        splitPoint = referenceBeta[0]/(referenceBeta[0]+referenceBeta[1]);
+      else
+        splitPoint = 1.-referenceBeta[0]/(referenceBeta[0]+referenceBeta[1]);
+    }
+    return splitPoint;
   }
 }
 
