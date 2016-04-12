@@ -85,7 +85,8 @@ int main(int argc, char** argv)
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
   // v search space
-  typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
+  //typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
+  typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
   typedef decltype(testSpaces) TestSpaces;
@@ -104,10 +105,10 @@ int main(int argc, char** argv)
                                     DomainOfIntegration::face>(1., beta)));
   auto innerProduct = make_InnerProduct(testSpaces,
           make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1.),
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta)));
+                                    DomainOfIntegration::interior>(1., beta),
+              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                    DomainOfIntegration::face>(1., beta)));
 
   typedef decltype(bilinearForm) BilinearForm;
   typedef decltype(innerProduct) InnerProduct;
@@ -152,7 +153,7 @@ int main(int argc, char** argv)
                +feBasisInterior.size());
   x = 0;
 
-#if 0
+#if 1
   double delta = 1e-8;
   systemAssembler.defineCharacteristicFaces<1,2>
                     (stiffnessMatrix,
