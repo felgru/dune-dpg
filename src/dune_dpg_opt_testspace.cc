@@ -85,8 +85,8 @@ int main(int argc, char** argv)
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
   // v search space
-  //typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
-  typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;
+  typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
+  //typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
   typedef decltype(testSpaces) TestSpaces;
@@ -153,7 +153,7 @@ int main(int argc, char** argv)
                +feBasisInterior.size());
   x = 0;
 
-#if 1
+#if 0
   double delta = 1e-8;
   systemAssembler.defineCharacteristicFaces<1,2>
                     (stiffnessMatrix,
