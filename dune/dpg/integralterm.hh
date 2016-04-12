@@ -385,6 +385,26 @@ namespace detail {
     }
     return splitPoint;
   }
+
+  template <class Geometry, int dim>
+  FieldVector<double,dim> referenceBeta(
+      const Geometry& geometry,
+      const Geometry& subGeometryInReferenceElement,
+      const FieldVector<double, dim>& beta)
+  {
+    static_assert(dim==2, "Computation of transport direction on reference"
+                          " cell only implemented in 2d!");
+    /* This won't work for curvilinear elements, but they don't seem
+     * to be supported by UG anyway. */
+    const auto& jacobianSub
+        = subGeometryInReferenceElement.jacobianTransposed({0.5, 0.5});
+    const auto& jacobian = geometry.jacobianTransposed({0.5, 0.5});
+    FieldVector<double,dim> referenceBetaSub, referenceBeta;
+    jacobian.mv(beta, referenceBeta);
+    jacobianSub.mv(referenceBeta, referenceBetaSub);
+
+    return referenceBetaSub;
+  }
 }
 
 

@@ -158,6 +158,8 @@ faceImpl(const LhsLocalView& lhsLocalView,
   {
     auto subGeometryInReferenceElement = subElement.geometry();
 
+    unsigned int nInflowIntersections = 0;
+    unsigned int nOutflowIntersections = 0;
     for (auto&& intersection : intersections(gridView, subElement))
     {
       using intersectionType
@@ -180,13 +182,56 @@ faceImpl(const LhsLocalView& lhsLocalView,
           , (globalCorner0[0] - globalCorner1[0]) };
       unitOuterNormal /= unitOuterNormal.two_norm();
 
+      double prod = lhsBeta * unitOuterNormal;
+      if(prod > 0)
+        ++nOutflowIntersections;
+      else if (prod < 0)
+        ++nInflowIntersections;
+    }
+
+    FieldVector<double,dim> referenceBeta
+        = detail::referenceBeta(geometry,
+            subGeometryInReferenceElement, lhsBeta);
+
+    for (auto&& intersection : intersections(gridView, subElement))
+    {
+      using intersectionType
+        = typename std::decay<decltype(intersection)>::type;
+
+      const FieldVector<double,dim> globalCorner0
+        = geometry.global(intersection.geometry().global({0}));
+      const FieldVector<double,dim> globalCorner1
+        = geometry.global(intersection.geometry().global({1}));
+      // compute integration element for interface
+      const double integrationElement
+        = (globalCorner1 - globalCorner0).two_norm();
+
+      static_assert(dim==2, "Computation of unit outer normal for subcell"
+                            " only implemented in 2d!");
+      /* This won't work for curvilinear elements, but they don't seem
+       * to be supported by UG anyway. */
+      FieldVector<double,dim> unitOuterNormal
+        = { (globalCorner1[1] - globalCorner0[1])
+          , (globalCorner0[0] - globalCorner1[0]) };
+      unitOuterNormal /= unitOuterNormal.two_norm();
+
+      if(type == IntegrationType::travelDistanceWeighted &&
+         lhsBeta * unitOuterNormal >= 0) {
+        /* Only integrate over inflow boundaries. */
+        continue;
+      }
+
       // TODO: Do we really want to have a transport quadrature rule
       //       on the faces, if one of the FE spaces is a transport space?
-      typename detail::ChooseQuadrature<LhsSpace,
-                                        RhsSpace,
-                                        intersectionType>::type quadFace
+      QuadratureRule<double, 1> quadFace
         = detail::ChooseQuadrature<LhsSpace, RhsSpace, intersectionType>
           ::Quadrature(intersection, quadratureOrder, lhsBeta);
+      if (type == IntegrationType::travelDistanceWeighted &&
+          nOutflowIntersections > 1) {
+        quadFace = SplitQuadratureRule<double>(
+            quadFace,
+            detail::splitPointOfInflowFace(intersection, referenceBeta));
+      }
 
       for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
 
@@ -198,12 +243,17 @@ faceImpl(const LhsLocalView& lhsLocalView,
         // The multiplicative factor in the integral transformation formula -
 
         double integrationWeight;
-        if(type == IntegrationType::normalVector) {
-          integrationWeight = (lhsBeta*unitOuterNormal)
+        if(type == IntegrationType::normalVector ||
+           type == IntegrationType::travelDistanceWeighted) {
                             // TODO: needs global geometry
-                            * detail::evaluateFactor(factor, quadFacePos)
+          integrationWeight = detail::evaluateFactor(factor, quadFacePos)
                             * quadFace[pt].weight()
                             * integrationElement;
+          // TODO: scale lhsBeta to length 1
+          if(type == IntegrationType::travelDistanceWeighted)
+            integrationWeight *= fabs(lhsBeta*unitOuterNormal);
+          else
+            integrationWeight *= (lhsBeta*unitOuterNormal);
         } else if(type == IntegrationType::normalSign) {
           int sign = 1;
           bool signfound = false;
@@ -236,6 +286,11 @@ faceImpl(const LhsLocalView& lhsLocalView,
         const FieldVector<double,dim> elementQuadPos =
                 subGeometryInReferenceElement.global(elementQuadPosSubCell);
 
+        if(type == IntegrationType::travelDistanceWeighted) {
+          integrationWeight *= detail::travelDistance(
+              elementQuadPosSubCell,
+              referenceBeta);
+        }
 
         //////////////////////////////
         // Left Hand Side Functions //

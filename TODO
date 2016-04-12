@@ -1,5 +1,9 @@
 known bugs:
 
+* IntegralTerm does not work with IntegrationType::travelDistanceWeighted
+  and refined test search spaces and throws an error when computing the
+  Cholesky decomposition for the optimal test space. Apparently the
+  corresponding system is not symmetrically positive definite.
 * evaluateFactor() in integralterm.hh is called with the *local* position
   of a given quadrature point, this should be first transformed into
   global coordinates.
