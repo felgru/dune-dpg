@@ -4,7 +4,6 @@ import re
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import pylab
 
 def insertData(data, ls, ks, la, ka, n, l2error, aposteriori):
     if ls not in data:
