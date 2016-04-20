@@ -383,6 +383,7 @@ namespace detail {
       else
         splitPoint = 1.-referenceBeta[0]/(referenceBeta[0]+referenceBeta[1]);
     }
+    assert(splitPoint >= 0 && splitPoint <= 1);
     return splitPoint;
   }
 
