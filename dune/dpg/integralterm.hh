@@ -364,21 +364,22 @@ namespace detail {
   {
     // This gets a bit ugly as we have to check the orientation of the face
     double splitPoint;
+    const double tol = 1e-5;
     if(referenceBeta[0] > 0) {
-      if(intersection.geometryInInside().global({0})
-          == FieldVector<double,2>{0.,0.})
+      if((intersection.geometryInInside().global({0})
+          - FieldVector<double,2>{0.,0.}).two_norm() < tol)
         splitPoint = -referenceBeta[1]/referenceBeta[0];
       else
         splitPoint = 1.+referenceBeta[1]/referenceBeta[0];
     } else if(referenceBeta[1] > 0) {
-      if(intersection.geometryInInside().global({0})
-          == FieldVector<double,2>{0.,0.})
+      if((intersection.geometryInInside().global({0})
+          - FieldVector<double,2>{0.,0.}).two_norm() < tol)
         splitPoint = -referenceBeta[0]/referenceBeta[1];
       else
         splitPoint = 1.+referenceBeta[0]/referenceBeta[1];
     } else {
-      if(intersection.geometryInInside().global({0})
-          == FieldVector<double,2>{0.,1.})
+      if((intersection.geometryInInside().global({0})
+          - FieldVector<double,2>{0.,1.}).two_norm() < tol)
         splitPoint = referenceBeta[0]/(referenceBeta[0]+referenceBeta[1]);
       else
         splitPoint = 1.-referenceBeta[0]/(referenceBeta[0]+referenceBeta[1]);
