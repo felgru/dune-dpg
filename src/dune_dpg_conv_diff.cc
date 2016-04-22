@@ -374,6 +374,18 @@ printmatrix(file , testMatrix, "testmatrix", "--");
 
   tassembled = time(0);
 
+// computation of condition number of stiffnessMatrix (does not work)
+
+//  const bool verbose = true;
+//  const unsigned int arppp_a_verbosity_level = 2;
+//  const unsigned int pia_verbosity_level = 1;
+//  MatrixInfo<MatrixType> matrixInfo
+//      (stiffnessMatrix,verbose,arppp_a_verbosity_level,pia_verbosity_level);
+
+//  MatrixType::field_type condition = matrixInfo.getCond2(false);
+//  std::cout << "Condition number in 2 Norm = " << condition <<std::endl;
+
+
 /*  bool issymmetric = true;
   std::ofstream filesym("matrixsymmetry.txt");
   filesym <<"Stiffness Matrix Symmetry:" <<std::endl;
