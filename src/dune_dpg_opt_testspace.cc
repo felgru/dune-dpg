@@ -8,6 +8,8 @@
 #include <array>
 #include <tuple>
 
+#include <boost/math/constants/constants.hpp>
+
 #include <dune/common/exceptions.hh> // We use exceptions
 
 #include <dune/grid/io/file/gmshreader.hh>
@@ -92,8 +94,10 @@ int main(int argc, char** argv)
   typedef decltype(testSpaces) TestSpaces;
   typedef decltype(solutionSpaces) SolutionSpaces;
 
-  FieldVector<double, dim> beta = {1,1};
-  double c = 1;
+  FieldVector<double, dim> beta
+             = {cos(boost::math::constants::pi<double>()/8),
+                sin(boost::math::constants::pi<double>()/8)};
+  double c = 2;
 
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
