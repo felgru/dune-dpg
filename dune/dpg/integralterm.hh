@@ -5,6 +5,7 @@
 
 #include <tuple>
 
+#include <dune/geometry/quadraturerules/splitquadraturerule.hh>
 #include <dune/istl/matrix.hh>
 
 #include "assemble_types.hh"
@@ -182,7 +183,9 @@ template<size_t lhsSpaceIndex,
                      integrationType == IntegrationType::gradValue
                   || integrationType == IntegrationType::valueGrad
                   || integrationType == IntegrationType::gradGrad
-                  || integrationType == IntegrationType::normalVector>::type*
+                  || integrationType == IntegrationType::normalVector
+                  || integrationType == IntegrationType::travelDistanceWeighted
+                  >::type*
            = nullptr
         >
 auto make_IntegralTerm(FactorType c, DirectionType beta)
@@ -264,7 +267,8 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
              || type == IntegrationType::valueGrad
              || type == IntegrationType::gradGrad
              || type == IntegrationType::normalVector
-             || type == IntegrationType::normalSign,
+             || type == IntegrationType::normalSign
+             || type == IntegrationType::travelDistanceWeighted,
              "Use of unknown IntegrationType.");
   static_assert(domain_of_integration != DomainOfIntegration::interior
                 || type == IntegrationType::valueValue
@@ -274,7 +278,8 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
                 "IntegrationType not implemented on interior.");
   static_assert(domain_of_integration != DomainOfIntegration::face
                 || type == IntegrationType::normalVector
-                || type == IntegrationType::normalSign,
+                || type == IntegrationType::normalSign
+                || type == IntegrationType::travelDistanceWeighted,
                 "IntegrationType not implemented on boundary.");
 
   using LhsSpace = typename LhsLocalView::GlobalBasis;
@@ -317,6 +322,90 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
                                     lhsBeta,
                                     rhsBeta);
 
+  }
+}
+
+namespace detail {
+  // This function expects data transformed to the reference triangle:
+  // A point in the inflow boundary of the reference cell and the
+  // transport direction transformed under the global-to-local mapping.
+  template<class ReferenceCellCoordinate, class ReferenceCellDirection>
+  double travelDistance(
+      const ReferenceCellCoordinate& x,
+      const ReferenceCellDirection& beta)
+  {
+    if(x[0]) { /* x[0] != 0 */
+      if(x[1]) { /* x[1] != 0 */
+        double a = x[1] - x[0]*beta[1]/beta[0];
+        if(0 <= a && a <= 1)
+          return -x[0]/beta[0];
+        else
+          return -x[1]/beta[1];
+      } else { /* x[1] == 0 */
+        double a = -beta[1]/beta[0]*x[0];
+        if(0 <= a && a <= 1)
+          return -x[0]/beta[0];
+        else
+          return (1-x[0])/(beta[0]+beta[1]);
+      }
+    } else { /* x[0] == 0 */
+      double b = -beta[0]/beta[1]*x[1];
+      if(0 <= b && b <= 1)
+        return -x[1]/beta[1];
+      else
+        return (1-x[1])/(beta[0]+beta[1]);
+    }
+  }
+
+  template<class Intersection, class ReferenceCellDirection>
+  double splitPointOfInflowFace(
+      const Intersection& intersection,
+      const ReferenceCellDirection& referenceBeta)
+  {
+    // This gets a bit ugly as we have to check the orientation of the face
+    double splitPoint;
+    const double tol = 1e-5;
+    if(referenceBeta[0] > 0) {
+      if((intersection.geometryInInside().global({0})
+          - FieldVector<double,2>{0.,0.}).two_norm() < tol)
+        splitPoint = -referenceBeta[1]/referenceBeta[0];
+      else
+        splitPoint = 1.+referenceBeta[1]/referenceBeta[0];
+    } else if(referenceBeta[1] > 0) {
+      if((intersection.geometryInInside().global({0})
+          - FieldVector<double,2>{0.,0.}).two_norm() < tol)
+        splitPoint = -referenceBeta[0]/referenceBeta[1];
+      else
+        splitPoint = 1.+referenceBeta[0]/referenceBeta[1];
+    } else {
+      if((intersection.geometryInInside().global({0})
+          - FieldVector<double,2>{0.,1.}).two_norm() < tol)
+        splitPoint = referenceBeta[0]/(referenceBeta[0]+referenceBeta[1]);
+      else
+        splitPoint = 1.-referenceBeta[0]/(referenceBeta[0]+referenceBeta[1]);
+    }
+    assert(splitPoint >= 0 && splitPoint <= 1);
+    return splitPoint;
+  }
+
+  template <class Geometry, int dim>
+  FieldVector<double,dim> referenceBeta(
+      const Geometry& geometry,
+      const Geometry& subGeometryInReferenceElement,
+      const FieldVector<double, dim>& beta)
+  {
+    static_assert(dim==2, "Computation of transport direction on reference"
+                          " cell only implemented in 2d!");
+    /* This won't work for curvilinear elements, but they don't seem
+     * to be supported by UG anyway. */
+    const auto& jacobianSubInverse
+        = subGeometryInReferenceElement.jacobianInverseTransposed({0., 0.});
+    const auto& jacobianInverse = geometry.jacobianInverseTransposed({0., 0.});
+    FieldVector<double,dim> referenceBetaSub, referenceBeta;
+    jacobianInverse.mtv(beta, referenceBeta);
+    jacobianSubInverse.mtv(referenceBeta, referenceBetaSub);
+
+    return referenceBetaSub;
   }
 }
 
