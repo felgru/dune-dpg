@@ -139,7 +139,15 @@ int main(int argc, char** argv)
   unsigned int nelements = atoi(argv[1]);
   int epsinv = atoi(argv[2]);
 //  int muinv = atoi(argv[3]);
-  epsilon = 0;//1./double(epsinv);
+  if (epsinv == 0)
+  {
+    epsilon = 0;
+  }
+  else
+  {
+    epsilon = 1/double(epsinv);
+  }
+  //epsilon = 0;
 
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
