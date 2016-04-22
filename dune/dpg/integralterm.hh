@@ -396,12 +396,12 @@ namespace detail {
                           " cell only implemented in 2d!");
     /* This won't work for curvilinear elements, but they don't seem
      * to be supported by UG anyway. */
-    const auto& jacobianSub
-        = subGeometryInReferenceElement.jacobianTransposed({0.5, 0.5});
-    const auto& jacobian = geometry.jacobianTransposed({0.5, 0.5});
+    const auto& jacobianSubInverse
+        = subGeometryInReferenceElement.jacobianInverseTransposed({0., 0.});
+    const auto& jacobianInverse = geometry.jacobianInverseTransposed({0., 0.});
     FieldVector<double,dim> referenceBetaSub, referenceBeta;
-    jacobian.mv(beta, referenceBeta);
-    jacobianSub.mv(referenceBeta, referenceBetaSub);
+    jacobianInverse.mtv(beta, referenceBeta);
+    jacobianSubInverse.mtv(referenceBeta, referenceBetaSub);
 
     return referenceBetaSub;
   }

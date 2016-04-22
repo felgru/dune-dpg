@@ -130,8 +130,8 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
   FieldVector<double,dim> referenceBeta;
   {
-    const auto& jacobian = element.geometry().jacobianTransposed({0.5, 0.5});
-    jacobian.mv(lhsBeta, referenceBeta);
+    const auto& jacobianInverse = element.geometry().jacobianInverseTransposed({0., 0.});
+    jacobianInverse.mtv(lhsBeta, referenceBeta);
   }
 
   for (auto&& intersection : intersections(gridView, element))
@@ -170,12 +170,14 @@ faceImpl(const LhsLocalView& lhsLocalView,
       double integrationWeight;
       if(type == IntegrationType::normalVector ||
          type == IntegrationType::travelDistanceWeighted) {
-        // TODO: scale lhsBeta to length 1
                           // TODO: needs global geometry
         integrationWeight = detail::evaluateFactor(factor, quadFacePos)
                           * quadFace[pt].weight();
         if(type == IntegrationType::travelDistanceWeighted)
+        {
+          // |beta * n|*integrationweight
           integrationWeight *= fabs(lhsBeta*integrationOuterNormal);
+        }
         else
           integrationWeight *= (lhsBeta*integrationOuterNormal);
       } else if(type == IntegrationType::normalSign) {
@@ -213,6 +215,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
               intersection.geometryInInside().global(quadFacePos);
 
       if(type == IntegrationType::travelDistanceWeighted) {
+        // factor r_K(s)/|beta|
         integrationWeight *= detail::travelDistance(
             elementQuadPos,
             referenceBeta);
