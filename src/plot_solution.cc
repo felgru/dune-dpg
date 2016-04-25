@@ -41,6 +41,20 @@
 
 using namespace Dune;
 
+//The analytic solution
+template <class Direction, class Domain = Direction>
+std::function<double(const Domain&)> uAnalytic(const Direction& s)
+{
+  return [s] (const Domain& x) -> double
+    { double crossproduct = s[0]*x[1]-s[1]*x[0];
+      // return distance to inflow boundary along s
+      if(crossproduct > 0)
+        return sqrt(s[1]*s[1]/(s[0]*s[0])+1)*x[0];
+      else
+        return sqrt(s[0]*s[0]/(s[1]*s[1])+1)*x[1];
+    };
+}
+
 // The right hand-side
 template <class Direction, class Domain = Direction>
 std::function<double(const Domain&)> f(const Direction& s)
@@ -74,167 +88,186 @@ int main(int argc, char** argv)
 
   shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
-  typedef GridType::LeafGridView GridView;
-  GridView gridView = grid->leafGridView();
-
-  /////////////////////////////////////////////////////////
-  //   Choose a finite element space
-  /////////////////////////////////////////////////////////
-
-  // u
-  using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
-  FEBasisInterior feBasisInterior(gridView);
-
-  // bulk term corresponding to theta
-  using FEBasisTrace = Functions::PQkNodalBasis<GridView, 2>;
-  FEBasisTrace feBasisTrace(gridView);
-
-  auto solutionSpaces
-      = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
-
-  // v search space
-  using FEBasisTest
-      = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
-  auto testSpaces = std::make_tuple(FEBasisTest(gridView));
-
-  using TestSpaces             = decltype(testSpaces);
-  using SolutionSpaces         = decltype(solutionSpaces);
-
-  FieldVector<double, dim> beta
-             = {cos(boost::math::constants::pi<double>()/8),
-                sin(boost::math::constants::pi<double>()/8)};
-  double c = 0;
-
-  auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(c),
-              make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                    DomainOfIntegration::interior>(-1., beta),
-              make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                    DomainOfIntegration::face>(1., beta)));
-  auto innerProduct = make_InnerProduct(testSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1.),
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta)));
-
-  using BilinearForm = decltype(bilinearForm);
-  using InnerProduct = decltype(innerProduct);
-
-  using TestspaceCoefficientMatrix
-      = Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
-
-  TestspaceCoefficientMatrix
-      testspaceCoefficientMatrix(bilinearForm, innerProduct);
-
-  // v
-  using FEBasisOptimalTest
-      = Functions::OptimalTestBasis<TestspaceCoefficientMatrix>;
-  auto optimalTestSpaces
-          = make_tuple(FEBasisOptimalTest(testspaceCoefficientMatrix));
-
-  auto systemAssembler
-     = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
-                                bilinearForm);
-
-  /////////////////////////////////////////////////////////
-  //   Stiffness matrix and right hand side vector
-  /////////////////////////////////////////////////////////
-
-
-  typedef BlockVector<FieldVector<double,1> > VectorType;
-  typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
-
-  VectorType rhs;
-  MatrixType stiffnessMatrix;
-
-  /////////////////////////////////////////////////////////
-  //  Assemble the system
-  /////////////////////////////////////////////////////////
-  using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
-
-  auto rightHandSide = std::make_tuple(f(beta));
-  systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
-
-  /////////////////////////////////////////////////
-  //   Choose an initial iterate
-  /////////////////////////////////////////////////
-  VectorType x(feBasisTrace.size()
-               +feBasisInterior.size());
-  x = 0;
-
-  // Determine Dirichlet dofs for theta (inflow boundary)
+  double err = 1.;
+  const double tol = 1e-10;
+  for(unsigned int i = 0; err > tol && i < 10; ++i)
   {
-    std::vector<bool> dirichletNodesInflow;
-    BoundaryTools boundaryTools = BoundaryTools();
-    boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
-                                        dirichletNodesInflow,
-                                        beta);
-    systemAssembler.applyDirichletBoundarySolution<1>
-        (stiffnessMatrix,
-         rhs,
-         dirichletNodesInflow,
-         0.);
+    typedef GridType::LeafGridView GridView;
+    GridView gridView = grid->leafGridView();
+
+    /////////////////////////////////////////////////////////
+    //   Choose a finite element space
+    /////////////////////////////////////////////////////////
+
+    // u
+    using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
+    FEBasisInterior feBasisInterior(gridView);
+
+    // bulk term corresponding to theta
+    using FEBasisTrace = Functions::PQkNodalBasis<GridView, 2>;
+    FEBasisTrace feBasisTrace(gridView);
+
+    auto solutionSpaces
+        = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
+
+    // v search space
+    using FEBasisTest
+        = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
+    auto testSpaces = std::make_tuple(FEBasisTest(gridView));
+
+    using TestSpaces             = decltype(testSpaces);
+    using SolutionSpaces         = decltype(solutionSpaces);
+
+    FieldVector<double, dim> beta
+               = {cos(boost::math::constants::pi<double>()/8),
+                  sin(boost::math::constants::pi<double>()/8)};
+    double c = 0;
+
+    auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
+            make_tuple(
+                make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                      DomainOfIntegration::interior>(c),
+                make_IntegralTerm<0,0,IntegrationType::gradValue,
+                                      DomainOfIntegration::interior>(-1., beta),
+                make_IntegralTerm<0,1,IntegrationType::normalVector,
+                                      DomainOfIntegration::face>(1., beta)));
+    auto innerProduct = make_InnerProduct(testSpaces,
+            make_tuple(
+                make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                      DomainOfIntegration::interior>(1.),
+                make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                      DomainOfIntegration::interior>(1., beta)));
+
+    using BilinearForm = decltype(bilinearForm);
+    using InnerProduct = decltype(innerProduct);
+
+    using TestspaceCoefficientMatrix
+        = Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
+
+    TestspaceCoefficientMatrix
+        testspaceCoefficientMatrix(bilinearForm, innerProduct);
+
+    // v
+    using FEBasisOptimalTest
+        = Functions::OptimalTestBasis<TestspaceCoefficientMatrix>;
+    auto optimalTestSpaces
+            = make_tuple(FEBasisOptimalTest(testspaceCoefficientMatrix));
+
+    auto systemAssembler
+       = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
+                                  bilinearForm);
+
+    /////////////////////////////////////////////////////////
+    //   Stiffness matrix and right hand side vector
+    /////////////////////////////////////////////////////////
+
+
+    typedef BlockVector<FieldVector<double,1> > VectorType;
+    typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
+
+    VectorType rhs;
+    MatrixType stiffnessMatrix;
+
+    /////////////////////////////////////////////////////////
+    //  Assemble the system
+    /////////////////////////////////////////////////////////
+    using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
+
+    auto rightHandSide = std::make_tuple(f(beta));
+    systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
+
+    /////////////////////////////////////////////////
+    //   Choose an initial iterate
+    /////////////////////////////////////////////////
+    VectorType x(feBasisTrace.size()
+                 +feBasisInterior.size());
+    x = 0;
+
+    // Determine Dirichlet dofs for theta (inflow boundary)
+    {
+      std::vector<bool> dirichletNodesInflow;
+      BoundaryTools boundaryTools = BoundaryTools();
+      boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
+                                          dirichletNodesInflow,
+                                          beta);
+      systemAssembler.applyDirichletBoundarySolution<1>
+          (stiffnessMatrix,
+           rhs,
+           dirichletNodesInflow,
+           0.);
+    }
+
+    ////////////////////////////
+    //   Compute solution
+    ////////////////////////////
+
+    std::cout <<"rhs size = "<< rhs.size()
+              <<" matrix size = " << stiffnessMatrix.N() <<" x " << stiffnessMatrix.M()
+              <<" solution size = "<< x.size() <<std::endl;
+
+
+    UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
+    InverseOperatorResult statistics;
+    umfPack.apply(x, rhs, statistics);
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    //  Make a discrete function from the FE basis and the coefficient vector
+    ////////////////////////////////////////////////////////////////////////////
+
+    VectorType u(feBasisInterior.size());
+    u=0;
+    for (unsigned int i=0; i<feBasisInterior.size(); i++)
+    {
+      u[i] = x[i];
+    }
+
+    VectorType theta(feBasisTrace.size());
+    theta=0;
+    for (unsigned int i=0; i<feBasisTrace.size(); i++)
+    {
+      theta[i] = x[i+feBasisInterior.size()];
+    }
+
+    ErrorTools errorTools = ErrorTools();
+    err = errorTools.computeL2error<1>(std::get<0>(solutionSpaces),
+                                       u, std::make_tuple(uAnalytic(beta)));
+
+    auto uFunction
+        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+              (feBasisInterior, Dune::TypeTree::hybridTreePath(), u);
+    auto localUFunction = localFunction(uFunction);
+
+    auto thetaFunction
+        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+              (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta);
+    auto localThetaFunction = localFunction(thetaFunction);
+
+    /////////////////////////////////////////////////////////////////////////
+    //  Write result to VTK file
+    //  We need to subsample, because VTK cannot natively display
+    //  real second-order functions
+    /////////////////////////////////////////////////////////////////////////
+    SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
+    vtkWriter.addVertexData(localUFunction,
+                 VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
+    vtkWriter.write("transport_solution_"+std::to_string(nelements)
+        +"_"+std::to_string(i));
+
+    SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
+    vtkWriter1.addVertexData(localThetaFunction,
+                  VTK::FieldInfo("theta", VTK::FieldInfo::Type::scalar, 1));
+    vtkWriter1.write("transport_solution_trace_"+std::to_string(nelements)
+        +"_"+std::to_string(i));
+
+    ////////////////
+    // Refine
+    ////////////////
+    const double ratio = .5;
+    errorTools.DoerflerMarking<1>(*grid, ratio, feBasisInterior,
+        u, std::make_tuple(uAnalytic(beta)), 10);
+    grid->adapt();
   }
-
-  ////////////////////////////
-  //   Compute solution
-  ////////////////////////////
-
-  std::cout <<"rhs size = "<< rhs.size()
-            <<" matrix size = " << stiffnessMatrix.N() <<" x " << stiffnessMatrix.M()
-            <<" solution size = "<< x.size() <<std::endl;
-
-
-  UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
-  InverseOperatorResult statistics;
-  umfPack.apply(x, rhs, statistics);
-
-
-  ////////////////////////////////////////////////////////////////////////////
-  //  Make a discrete function from the FE basis and the coefficient vector
-  ////////////////////////////////////////////////////////////////////////////
-
-  VectorType u(feBasisInterior.size());
-  u=0;
-  for (unsigned int i=0; i<feBasisInterior.size(); i++)
-  {
-    u[i] = x[i];
-  }
-
-  VectorType theta(feBasisTrace.size());
-  theta=0;
-  for (unsigned int i=0; i<feBasisTrace.size(); i++)
-  {
-    theta[i] = x[i+feBasisInterior.size()];
-  }
-
-  auto uFunction
-      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-            (feBasisInterior, Dune::TypeTree::hybridTreePath(), u);
-  auto localUFunction = localFunction(uFunction);
-
-  auto thetaFunction
-      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-            (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta);
-  auto localThetaFunction = localFunction(thetaFunction);
-
-  /////////////////////////////////////////////////////////////////////////
-  //  Write result to VTK file
-  //  We need to subsample, because VTK cannot natively display
-  //  real second-order functions
-  /////////////////////////////////////////////////////////////////////////
-  SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
-  vtkWriter.addVertexData(localUFunction,
-               VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("transport_solution_"+std::to_string(nelements));
-
-  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-  vtkWriter1.addVertexData(localThetaFunction,
-                VTK::FieldInfo("theta", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter1.write("transport_solution_trace_"+std::to_string(nelements));
 
 
   return 0;
