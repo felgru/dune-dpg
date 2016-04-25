@@ -26,21 +26,21 @@ namespace Dune {
     template <unsigned int subsamples, class LocalView, class VolumeTerms>
     double computeL2errorElement(const LocalView& ,
                                  BlockVector<FieldVector<double,1> >& ,
-                                 VolumeTerms&&, const unsigned int = 5);
+                                 VolumeTerms&&, unsigned int = 5);
 
-    template <unsigned int subsamples, class FEBasis,class VolumeTerms>
+    template <unsigned int subsamples, class FEBasis, class VolumeTerms>
     double computeL2error(const FEBasis& ,
                           BlockVector<FieldVector<double,1> >& ,
-                          VolumeTerms&&, const unsigned int = 5);
+                          VolumeTerms&&, unsigned int = 5);
 
     template<class GridType> void hRefinement(GridType& grid);
 
-    template <class BilinearForm,class InnerProduct,class VectorType>
+    template <class BilinearForm, class InnerProduct, class VectorType>
     double aPosterioriError(BilinearForm& ,
                             InnerProduct& ,
-                            VectorType& ,
-                            VectorType& ,
-                            VectorType& );
+                            const VectorType& ,
+                            const VectorType& ,
+                            const VectorType& );
 
   };
 
@@ -64,7 +64,7 @@ namespace Dune {
   double ErrorTools::computeL2errorElement(const LocalView& localView,
                                            BlockVector<FieldVector<double,1> >& u,
                                            VolumeTerms&& uRef,
-                                           const unsigned int quadOrder
+                                           unsigned int quadOrder
                                           )
   {
 
@@ -140,7 +140,7 @@ namespace Dune {
   double ErrorTools::computeL2error(const FEBasis& feBasis,
                                     BlockVector<FieldVector<double,1> >& u,
                                     VolumeTerms&& uRef,
-                                    const unsigned int quadratureOrder
+                                    unsigned int quadratureOrder
                                    )
   {
     // Get the grid view from the finite element basis
@@ -160,10 +160,6 @@ namespace Dune {
     // A view on the FE basis on a single element
     auto localView = feBasis.localView();
     auto localIndexSet = feBasis.localIndexSet();
-
-    // Position of the coefficients
-    int posBegin = 0;
-    int posEnd   = 0;
 
     // A loop over all elements of the grid
     for(const auto& e : elements(gridView))
@@ -206,9 +202,9 @@ namespace Dune {
   template <class BilinearForm,class InnerProduct,class VectorType>
   double ErrorTools::aPosterioriError(BilinearForm& bilinearForm,
                                       InnerProduct& innerProduct,
-                                      VectorType&   uSolution,
-                                      VectorType&   thetaSolution,
-                                      VectorType&   rhs)
+                                      const VectorType& uSolution,
+                                      const VectorType& thetaSolution,
+                                      const VectorType& rhs)
   {
     using namespace boost::fusion;
     using namespace Dune::detail;
