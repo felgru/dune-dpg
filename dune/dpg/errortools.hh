@@ -47,6 +47,14 @@ namespace Dune {
                             const VectorType& ,
                             const VectorType& );
 
+    template <unsigned int subsamples, class Grid,
+              class FEBasis, class VolumeTerms>
+    void DoerflerMarking(Grid& ,
+                         double ,
+                         const FEBasis& ,
+                         BlockVector<FieldVector<double,1> >& ,
+                         VolumeTerms&& ,
+                         unsigned int );
   };
 
 //*******************************************************************
@@ -321,6 +329,79 @@ namespace Dune {
 
    return std::sqrt(res);
 
+  }
+
+/**
+ * \brief Mark elements for refinement according to Dörfler's strategy
+ *
+ * This mean, given a ratio $\theta \in (0,1]$, the set
+ * $\mathcal M \subset \Omega_h$ of marked elements satisfies
+ * $$\operatorname{err}(u_h, \mathcal M) \geq \operatorname{err}(u_h, \Omega_h).$$
+ *
+ * \param ratio  the marking ratio $\theta \in (0,1]$
+ * \param feBasis
+ * \param u  FE solution of interior variable
+ * \param uRef  exact solution
+ * \param quadratureOrder
+ */
+  template <unsigned int subsamples, class Grid,
+            class FEBasis, class VolumeTerms>
+  void ErrorTools::DoerflerMarking(Grid& grid,
+                                   double ratio,
+                                   const FEBasis& feBasis,
+                                   BlockVector<FieldVector<double,1> >& u,
+                                   VolumeTerms&& uRef,
+                                   unsigned int quadratureOrder)
+  {
+    using GridView = typename FEBasis::GridView;
+    static_assert(std::is_same<typename GridView::Grid, Grid>::value,
+        "FEBasis not defined on Grid!");
+    using Entity = typename GridView::template Codim<0>::Entity;
+    using EntitySeed = typename Entity::EntitySeed;
+
+    const GridView& gridView = feBasis.gridView();
+    auto localView = feBasis.localView();
+    auto localIndexSet = feBasis.localIndexSet();
+
+    std::vector<std::tuple<EntitySeed, double>> errorEstimates;
+    errorEstimates.reserve(gridView.size(0));
+    for(const auto& e : elements(gridView))
+    {
+      // Bind the local FE basis view to the current element
+      localView.bind(e);
+      localIndexSet.bind(localView);
+
+      // Now we take the coefficients of u that correspond to the current element e. They are stored in uElement.
+      // dof of the finite element inside the element (remark: this value will vary if we do p-refinement)
+      const size_t dofFEelement = localView.size();
+
+      // We take the coefficients of u that correspond to the current element e. They are stored in uElement.
+      BlockVector<FieldVector<double,1> > uElement(dofFEelement);
+      for (size_t i=0; i<dofFEelement; i++)
+      {
+          uElement[i] = u[ localIndexSet.index(i)[0] ];
+      }
+      // Now we compute the error inside the element
+      double elementError = computeL2errorElement<subsamples>
+                              (localView, uElement, uRef, quadratureOrder);
+      errorEstimates.emplace_back(e.seed(), elementError);
+    }
+    std::sort(errorEstimates.begin(), errorEstimates.end(),
+        [](const auto& a, const auto& b) {
+            return std::get<1>(a) > std::get<1>(b);
+        });
+    const double targetError = ratio * std::accumulate(
+        errorEstimates.cbegin(), errorEstimates.cend(), 0.,
+        [](double a, const auto& b) {
+            return a + std::get<1>(b);
+        });
+    double error = 0.;
+    auto currElem = errorEstimates.begin();
+    while(error < targetError) {
+      error += std::get<1>(*currElem);
+      grid.mark(1, grid.entity(std::get<0>(*currElem)));
+      ++currElem;
+    }
   }
 
 } // end namespace Dune

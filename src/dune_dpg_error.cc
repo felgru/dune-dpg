@@ -254,10 +254,6 @@ int main()
   double err = errorTools.computeL2error<1>(innerSpace,u,uExact);
   std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl;
 
-  //// TODO: h-refinement
-  //errorTools->hRefinement(grid);
-  //// TODO: p-refinement
-
   // A posteriori error
   // We compute the rhs in the form given by the projection approach
   rhsAssembler.assembleRhs(rhs, rightHandSide);
@@ -276,6 +272,13 @@ int main()
   SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
   vtkWriter1.addVertexData(localThetaFunction, VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
   vtkWriter1.write("solution_trace");
+
+  ////////////////
+  // Refine
+  ////////////////
+  const double ratio = .5;
+  errorTools.DoerflerMarking<1>(*grid, ratio, innerSpace, u, uExact, 10);
+  grid->adapt();
 
   return 0;
   }
