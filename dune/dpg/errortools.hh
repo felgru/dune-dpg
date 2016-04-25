@@ -23,15 +23,15 @@ namespace Dune {
 
   public:
     ErrorTools() {};
-    template <class LocalView,class VolumeTerms>
+    template <unsigned int subsamples, class LocalView, class VolumeTerms>
     double computeL2errorElement(const LocalView& ,
                                  BlockVector<FieldVector<double,1> >& ,
-                                 VolumeTerms&& );
+                                 VolumeTerms&&, const unsigned int = 5);
 
-    template <class FEBasis,class VolumeTerms>
+    template <unsigned int subsamples, class FEBasis,class VolumeTerms>
     double computeL2error(const FEBasis& ,
                           BlockVector<FieldVector<double,1> >& ,
-                          VolumeTerms&&);
+                          VolumeTerms&&, const unsigned int = 5);
 
     template<class GridType> void hRefinement(GridType& grid);
 
@@ -50,14 +50,22 @@ namespace Dune {
  * \brief Returns the computation in a given element of the L2 error
           between the exact solution uRef and the fem solution u.
  *
+ * \tparam subsamples   number of subsamples (per direction) used for the quadrature
+ *                      (must be >= 1)
  * \param localView      the local view of the element
  * \param u              the vector containing the computed solution
  * \param uRef           the expression for the exact solution.
+ * \param quadOrder      polynomial degree up to which (x2) the quadrature shall be exact.
+ *                       If quadOrder < polynomial degree of the local finite element, the
+ *                       polynomial degree of the local finite element (x2)
+ *                       will be used instead
  */
-  template <class LocalView,class VolumeTerms>
+  template <unsigned int subsamples, class LocalView,class VolumeTerms>
   double ErrorTools::computeL2errorElement(const LocalView& localView,
                                            BlockVector<FieldVector<double,1> >& u,
-                                           VolumeTerms&& uRef)
+                                           VolumeTerms&& uRef,
+                                           const unsigned int quadOrder
+                                          )
   {
 
     // Get the grid element from the local FE basis view
@@ -70,9 +78,11 @@ namespace Dune {
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
 
-    const unsigned int quadratureOrder = 10; // Remark: the quadrature order has to be an even number
-    const QuadratureRule<double, dim>& quad =
+    const unsigned int quadratureOrder = std::max(2*quadOrder, 2*localFiniteElement.localBasis().order()); // Remark: the quadrature order has to be an even number
+
+    const QuadratureRule<double, dim>& quadSection =
         QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
+    const SubsampledQuadratureRule<double, subsamples, dim>& quad(quadSection);
 
     // Variables employed in the loop
     double errSquare = 0;     // we store here the square of the error
@@ -107,7 +117,6 @@ namespace Dune {
 
       // we add the squared error at the quadrature point
       errSquare += (uQuad - uExactQuad)*(uQuad - uExactQuad) * quad[pt].weight() * integrationElement;
-
     }
 
     return std::sqrt(errSquare);
@@ -117,16 +126,23 @@ namespace Dune {
  * \brief Computation in the whole mesh of the L2 error
           between the exact solution uRef and the fem solution u.
  *
+ * \tparam subsamples   number of subsamples (per direction) used for the quadrature
+ *                      (must be >= 1)
  * \param feBasis        the finite element basis
  * \param u              the vector containing the computed solution
  * \param uRef           the expression for the exact solution.
+ * \param quadOrder      polynomial degree up to which (x2) the quadrature shall be exact.
+ *                       If quadOrder < polynomial degree of the local finite element, the
+ *                       polynomial degree of the local finite element (x2)
+ *                       will be used instead
  */
-  template <class FEBasis,class VolumeTerms>
+  template <unsigned int subsamples, class FEBasis,class VolumeTerms>
   double ErrorTools::computeL2error(const FEBasis& feBasis,
                                     BlockVector<FieldVector<double,1> >& u,
-                                    VolumeTerms&& uRef)
+                                    VolumeTerms&& uRef,
+                                    const unsigned int quadratureOrder
+                                   )
   {
-
     // Get the grid view from the finite element basis
     typedef typename FEBasis::GridView GridView;
     GridView gridView = feBasis.gridView();
@@ -170,7 +186,8 @@ namespace Dune {
           uElement[i] = u[ localIndexSet.index(i)[0] ];
       }
       // Now we compute the error inside the element
-      errorElement_[indexElement] = computeL2errorElement(localView,uElement,uRef);
+      errorElement_[indexElement] = computeL2errorElement<subsamples>
+                                      (localView,uElement,uRef,quadratureOrder);
       errSquare += errorElement_[indexElement]*errorElement_[indexElement];
     }
 

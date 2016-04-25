@@ -251,7 +251,7 @@ int main()
   ErrorTools errorTools = ErrorTools();
 
   // We compute the L2 error between the exact and the fem solutions
-  double err = errorTools.computeL2error(innerSpace,u,uExact);
+  double err = errorTools.computeL2error<1>(innerSpace,u,uExact);
   std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl;
 
   //// TODO: h-refinement

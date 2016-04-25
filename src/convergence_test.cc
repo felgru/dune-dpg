@@ -267,7 +267,7 @@ int main(int argc, char** argv)
   }
 
   ErrorTools errorTools = ErrorTools();
-  double err = errorTools.computeL2error(std::get<0>(solutionSpaces),
+  double err = errorTools.computeL2error<1>(std::get<0>(solutionSpaces),
                                          u, std::make_tuple(uAnalytic(beta)));
 
   // We compute the a posteriori error

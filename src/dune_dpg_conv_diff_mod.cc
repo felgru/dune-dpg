@@ -555,7 +555,7 @@ int main(int argc, char** argv)
   ErrorTools errorTools = ErrorTools(adaptivityTol);
 
   //We compute the L2 error between the exact and the fem solutions
-  double err = errorTools.computeL2error(feBasisInterior,u,uExact);
+  double err = errorTools.computeL2error<1>(feBasisInterior,u,uExact);
   std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl;
 
   //// todo: h-refinement
