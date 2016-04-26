@@ -98,7 +98,11 @@ int main(int argc, char** argv)
 
     // v search space
     using FEBasisTest
+#if 0
         = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
+#else
+        = Functions::LagrangeDGBasis<GridView, 3>;
+#endif
     auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
     // enriched test space for error estimation
@@ -197,6 +201,15 @@ int main(int argc, char** argv)
     VectorType x(feBasisTrace.size()
                  +feBasisInterior.size());
     x = 0;
+
+#if 1
+    double delta = 1e-5;
+    systemAssembler.defineCharacteristicFaces<1,2>
+                      (stiffnessMatrix,
+                       rhs,
+                       beta,
+                       delta);
+#endif
 
     // Determine Dirichlet dofs for theta (inflow boundary)
     {
