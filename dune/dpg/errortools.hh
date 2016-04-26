@@ -24,7 +24,7 @@ namespace Dune {
   public:
     ErrorTools() {};
     template <unsigned int subsamples, class LocalView, class VolumeTerms>
-    double computeL2errorElement(const LocalView& ,
+    double computeL2errorSquareElement(const LocalView& ,
                                  BlockVector<FieldVector<double,1> >& ,
                                  VolumeTerms&&,
                                  unsigned int = 5);
@@ -35,9 +35,16 @@ namespace Dune {
                           VolumeTerms&&,
                           unsigned int = 5);
 
-    template <class BilinearForm,class InnerProduct,class VectorType>
+    template <class BilinearForm,class InnerProduct,
+              class LocalViewsTest, class LocalViewsSolution,
+              class LocalIndexSetTest, class LocalIndexSetSolution,
+              class VectorType>
     double aPosterioriErrorSquareElement(BilinearForm& ,
                                       InnerProduct& ,
+                                      LocalViewsTest& ,
+                                      LocalViewsSolution& ,
+                                      LocalIndexSetTest& ,
+                                      LocalIndexSetSolution& ,
                                       VectorType& ,
                                       VectorType& );
 
@@ -74,7 +81,7 @@ namespace Dune {
  *                       will be used instead
  */
   template <unsigned int subsamples, class LocalView,class VolumeTerms>
-  double ErrorTools::computeL2errorElement(const LocalView& localView,
+  double ErrorTools::computeL2errorSquareElement(const LocalView& localView,
                                            BlockVector<FieldVector<double,1> >& u,
                                            VolumeTerms&& uRef,
                                            unsigned int quadOrder
@@ -132,7 +139,7 @@ namespace Dune {
       errSquare += (uQuad - uExactQuad)*(uQuad - uExactQuad) * quad[pt].weight() * integrationElement;
     }
 
-    return std::sqrt(errSquare);
+    return errSquare;
   }
 
 /**
@@ -195,9 +202,9 @@ namespace Dune {
           uElement[i] = u[ localIndexSet.index(i)[0] ];
       }
       // Now we compute the error inside the element
-      errorElement_[indexElement] = computeL2errorElement<subsamples>
+      errorElement_[indexElement] = computeL2errorSquareElement<subsamples>
                                       (localView,uElement,uRef,quadratureOrder);
-      errSquare += errorElement_[indexElement]*errorElement_[indexElement];
+      errSquare += errorElement_[indexElement];
     }
 
     return std::sqrt(errSquare);
@@ -205,7 +212,7 @@ namespace Dune {
 
 
 
-  /**
+/**
  * \brief Computation of a posteriori error in (u,theta)
  *
  * \param bilinearForm        the bilinear form
@@ -213,16 +220,80 @@ namespace Dune {
  * \param solution           the computed solution
  * \param rhs                 the right-hand side
  */
-  template <class BilinearForm,class InnerProduct,class VectorType>
+  template <class BilinearForm,class InnerProduct,
+            class LocalViewsTest, class LocalViewsSolution,
+            class LocalIndexSetTest, class LocalIndexSetSolution,
+            class VectorType>
   double ErrorTools::aPosterioriErrorSquareElement(BilinearForm& bilinearForm,
                                       InnerProduct& innerProduct,
+                                      LocalViewsTest& localViewsTest,
+                                      LocalViewsSolution& localViewsSolution,
+                                      LocalIndexSetTest& testLocalIndexSets,
+                                      LocalIndexSetSolution& solutionLocalIndexSets,
                                       VectorType& solution,
                                       VectorType& rhs)
   {
+    using namespace boost::fusion;
+    using namespace Dune::detail;
 
+    typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
+    typedef typename BilinearForm::TestSpaces EnrichedTestspaces;
+
+    // Create and fill vector with offsets for global dofs
+    size_t globalTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
+    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+
+    fold(zip(globalTestSpaceOffsets, bilinearForm.getTestSpaces()),
+           (size_t)0, globalOffsetHelper());
+    fold(zip(globalSolutionSpaceOffsets, bilinearForm.getSolutionSpaces()),
+           (size_t)0, globalOffsetHelper());
+
+    // Create and fill vector with offsets for local dofs on element
+    size_t localTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
+    size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+
+    size_t localSolutionDofs = fold(zip(localSolutionSpaceOffsets,
+                                        localViewsSolution),
+                                    (size_t)0, globalOffsetHelper());
+    size_t localTestDofs = fold(zip(localTestSpaceOffsets,
+                                    localViewsTest),
+                                (size_t)0, globalOffsetHelper());
+    // Create and fill vectors with cofficients
+    // corresponding to local dofs on element
+    // for the solution and for the righthand side
+    BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
+    BlockVector<FieldVector<double,1> > rhsElement(localTestDofs);
+
+    for_each(zip(localViewsSolution, solutionLocalIndexSets,
+                 localSolutionSpaceOffsets, globalSolutionSpaceOffsets),
+         getLocalCoefficients<VectorType, BlockVector<FieldVector<double,1> > >(solution, solutionElement));
+    for_each(zip(localViewsTest, testLocalIndexSets,
+                 localTestSpaceOffsets, globalTestSpaceOffsets),
+         getLocalCoefficients<VectorType, BlockVector<FieldVector<double,1> > >(rhs, rhsElement));
+
+    // We grab the inner product matrix in the innerProductMatrix variable (IP)
+    Matrix<FieldMatrix<double,1,1> > innerProductMatrix;
+    innerProduct.bind(localViewsTest);
+    innerProduct.getLocalMatrix(innerProductMatrix);
+
+    // We grab the bilinear form matrix in the bilinearFormMatrix variable
+    Matrix<FieldMatrix<double,1,1> > bilinearFormMatrix;
+    bilinearForm.bind(localViewsTest, localViewsSolution);
+    bilinearForm.getLocalMatrix(bilinearFormMatrix);
+
+    // compute Bu - f (we do f-= Bu so the output is in rhsElement)
+    bilinearFormMatrix.mmv(solutionElement,rhsElement);
+
+    // Solve for the Riesz lift and then compute the residual
+    BlockVector<FieldVector<double,1> > tmpVector(rhsElement);
+    Cholesky<Matrix<FieldMatrix<double,1,1>>> cholesky(innerProductMatrix);
+    cholesky.apply(tmpVector);
+
+    // compute the scalar product of the following two vectors
+    return tmpVector * rhsElement;
   }
 
-  /**
+/**
  * \brief Computation of a posteriori error in (u,theta)
  *
  * \param bilinearForm        the bilinear form
@@ -230,7 +301,8 @@ namespace Dune {
  * \param solution           the computed solution
  * \param rhs                 the right-hand side
  */
-  template <class BilinearForm,class InnerProduct,class VectorType>
+  template <class BilinearForm,class InnerProduct,
+            class VectorType>
   double ErrorTools::aPosterioriError(BilinearForm& bilinearForm,
                                       InnerProduct& innerProduct,
                                       const VectorType& solution,
@@ -272,59 +344,14 @@ namespace Dune {
       for_each(zip(solutionLocalIndexSets, localViewsSolution),
                make_fused_procedure(bindLocalIndexSet()));
 
-      // Create and fill vector with offsets for global dofs
-      size_t globalTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
-      size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-
-      fold(zip(globalTestSpaceOffsets, bilinearForm.getTestSpaces()),
-             (size_t)0, globalOffsetHelper());
-      fold(zip(globalSolutionSpaceOffsets, bilinearForm.getSolutionSpaces()),
-             (size_t)0, globalOffsetHelper());
-
-      // Create and fill vector with offsets for local dofs on element
-      size_t localTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
-      size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-
-      size_t localSolutionDofs = fold(zip(localSolutionSpaceOffsets,
-                                          localViewsSolution),
-                                      (size_t)0, globalOffsetHelper());
-      size_t localTestDofs = fold(zip(localTestSpaceOffsets,
-                                      localViewsTest),
-                                  (size_t)0, globalOffsetHelper());
-      // Create and fill vectors with cofficients
-      // corresponding to local dofs on element
-      // for the solution and for the righthand side
-      BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
-      BlockVector<FieldVector<double,1> > rhsElement(localTestDofs);
-
-      for_each(zip(localViewsSolution, solutionLocalIndexSets,
-                   localSolutionSpaceOffsets, globalSolutionSpaceOffsets),
-           getLocalCoefficients<VectorType, BlockVector<FieldVector<double,1> > >(solution, solutionElement));
-      for_each(zip(localViewsTest, testLocalIndexSets,
-                   localTestSpaceOffsets, globalTestSpaceOffsets),
-           getLocalCoefficients<VectorType, BlockVector<FieldVector<double,1> > >(rhs, rhsElement));
-
-      // We grab the inner product matrix in the innerProductMatrix variable (IP)
-      Matrix<FieldMatrix<double,1,1> > innerProductMatrix;
-      innerProduct.bind(localViewsTest);
-      innerProduct.getLocalMatrix(innerProductMatrix);
-
-      // We grab the bilinear form matrix in the bilinearFormMatrix variable
-      Matrix<FieldMatrix<double,1,1> > bilinearFormMatrix;
-      bilinearForm.bind(localViewsTest, localViewsSolution);
-      bilinearForm.getLocalMatrix(bilinearFormMatrix);
-
-      // compute Bu - f (we do f-= Bu so the output is in rhsElement)
-      bilinearFormMatrix.mmv(solutionElement,rhsElement);
-
-      // Solve for the Riesz lift and then compute the residual
-      BlockVector<FieldVector<double,1> > tmpVector(rhsElement);
-      Cholesky<Matrix<FieldMatrix<double,1,1>>> cholesky(innerProductMatrix);
-      cholesky.apply(tmpVector);
-
-      // compute the scalar product of the following two vectors
-      res += tmpVector * rhsElement;
-
+      res += aPosterioriErrorSquareElement(bilinearForm,
+                                           innerProduct,
+                                           localViewsTest,
+                                           localViewsSolution,
+                                           testLocalIndexSets,
+                                           solutionLocalIndexSets,
+                                           solution,
+                                           rhs);
    }
 
    return std::sqrt(res);
@@ -382,7 +409,7 @@ namespace Dune {
           uElement[i] = u[ localIndexSet.index(i)[0] ];
       }
       // Now we compute the error inside the element
-      double elementError = computeL2errorElement<subsamples>
+      double elementError = computeL2errorSquareElement<subsamples>
                               (localView, uElement, uRef, quadratureOrder);
       errorEstimates.emplace_back(e.seed(), elementError);
     }
