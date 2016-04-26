@@ -56,12 +56,12 @@ namespace Dune {
 
     template <class Grid, class BilinearForm, class InnerProduct,
               class VectorType>
-    void DoerflerMarking(Grid& ,
-                         double ,
-                         BilinearForm& ,
-                         InnerProduct& ,
-                         const VectorType& ,
-                         const VectorType& );
+    double DoerflerMarking(Grid& ,
+                           double ,
+                           BilinearForm& ,
+                           InnerProduct& ,
+                           const VectorType& ,
+                           const VectorType& );
   };
 
 //*******************************************************************
@@ -370,15 +370,18 @@ namespace Dune {
  * \param innerProduct
  * \param solution  FE solution
  * \param rhs  Rhs of the problem in enriched test space
+ *
+ * \return estimate for global a posteriori error
  */
   template <class Grid, class BilinearForm, class InnerProduct,
             class VectorType>
-  void ErrorTools::DoerflerMarking(Grid& grid,
-                                   double ratio,
-                                   BilinearForm& bilinearForm,
-                                   InnerProduct& innerProduct,
-                                   const VectorType& solution,
-                                   const VectorType& rhs)
+  double ErrorTools::DoerflerMarking(
+      Grid& grid,
+      double ratio,
+      BilinearForm& bilinearForm,
+      InnerProduct& innerProduct,
+      const VectorType& solution,
+      const VectorType& rhs)
   {
     using namespace boost::fusion;
     using namespace Dune::detail;
@@ -445,12 +448,13 @@ namespace Dune {
         [](const auto& a, const auto& b) {
             return std::get<1>(a) > std::get<1>(b);
         });
-    // Since we used squared errors, we have to square the marking ratio
-    const double targetError = ratio * ratio * std::accumulate(
+    const double errorSquared = std::accumulate(
         errorEstimates.cbegin(), errorEstimates.cend(), 0.,
         [](double a, const auto& b) {
             return a + std::get<1>(b);
         });
+    // Since we used squared errors, we have to square the marking ratio
+    const double targetError = ratio * ratio * errorSquared;
     double error = 0.;
     auto currElem = errorEstimates.begin();
     while(error < targetError) {
@@ -458,6 +462,8 @@ namespace Dune {
       grid.mark(1, grid.entity(std::get<0>(*currElem)));
       ++currElem;
     }
+
+    return std::sqrt(errorSquared);
   }
 
 } // end namespace Dune

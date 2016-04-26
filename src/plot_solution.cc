@@ -277,18 +277,16 @@ int main(int argc, char** argv)
     auto rhsAssembler_aposteriori = make_RhsAssembler(testSpaces_aposteriori);
     rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide);
 
+    const double ratio = .2;
     ErrorTools errorTools = ErrorTools();
-    err = errorTools.aPosterioriError(bilinearForm_aposteriori,
-                                      innerProduct_aposteriori,
-                                      x, rhs);
+    err = errorTools.DoerflerMarking(*grid, ratio,
+                                     bilinearForm_aposteriori,
+                                     innerProduct_aposteriori,
+                                     x, rhs);
+
     std::cout << "A posteriori error in iteration " << i << ": "
               << err << std::endl;
 
-    const double ratio = .2;
-    errorTools.DoerflerMarking(*grid, ratio,
-                               bilinearForm_aposteriori,
-                               innerProduct_aposteriori,
-                               x, rhs);
     grid->adapt();
   }
 
