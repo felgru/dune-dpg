@@ -41,20 +41,6 @@
 
 using namespace Dune;
 
-//The analytic solution
-template <class Direction, class Domain = Direction>
-std::function<double(const Domain&)> uAnalytic(const Direction& s)
-{
-  return [s] (const Domain& x) -> double
-    { double crossproduct = s[0]*x[1]-s[1]*x[0];
-      // return distance to inflow boundary along s
-      if(crossproduct > 0)
-        return sqrt(s[1]*s[1]/(s[0]*s[0])+1)*x[0];
-      else
-        return sqrt(s[0]*s[0]/(s[1]*s[1])+1)*x[1];
-    };
-}
-
 // The right hand-side
 template <class Direction, class Domain = Direction>
 std::function<double(const Domain&)> f(const Direction& s)
@@ -90,7 +76,7 @@ int main(int argc, char** argv)
 
   double err = 1.;
   const double tol = 1e-10;
-  for(unsigned int i = 0; err > tol && i < 50; ++i)
+  for(unsigned int i = 0; err > tol && i < 100; ++i)
   {
     typedef GridType::LeafGridView GridView;
     GridView gridView = grid->leafGridView();
@@ -115,8 +101,19 @@ int main(int argc, char** argv)
         = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
     auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
+    // enriched test space for error estimation
+    using FEBasisTest_aposteriori
+#if 0
+        = Functions::PQkDGRefinedDGBasis<GridView, 1, 4>;
+#else
+        = Functions::LagrangeDGBasis<GridView, 4>;
+#endif
+    auto testSpaces_aposteriori
+        = std::make_tuple(FEBasisTest_aposteriori(gridView));
+
     using TestSpaces             = decltype(testSpaces);
     using SolutionSpaces         = decltype(solutionSpaces);
+    using TestSpaces_aposteriori = decltype(testSpaces_aposteriori);
 
     FieldVector<double, dim> beta
                = {cos(boost::math::constants::pi<double>()/8),
@@ -131,7 +128,23 @@ int main(int argc, char** argv)
                                       DomainOfIntegration::interior>(-1., beta),
                 make_IntegralTerm<0,1,IntegrationType::normalVector,
                                       DomainOfIntegration::face>(1., beta)));
+    auto bilinearForm_aposteriori
+        = make_BilinearForm(testSpaces_aposteriori, solutionSpaces,
+            make_tuple(
+                make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                      DomainOfIntegration::interior>(c),
+                make_IntegralTerm<0,0,IntegrationType::gradValue,
+                                      DomainOfIntegration::interior>(-1., beta),
+                make_IntegralTerm<0,1,IntegrationType::normalVector,
+                                      DomainOfIntegration::face>(1., beta)));
     auto innerProduct = make_InnerProduct(testSpaces,
+            make_tuple(
+                make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                      DomainOfIntegration::interior>(1.),
+                make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                      DomainOfIntegration::interior>(1., beta)));
+    auto innerProduct_aposteriori
+        = make_InnerProduct(testSpaces_aposteriori,
             make_tuple(
                 make_IntegralTerm<0,0,IntegrationType::valueValue,
                                       DomainOfIntegration::interior>(1.),
@@ -140,6 +153,8 @@ int main(int argc, char** argv)
 
     using BilinearForm = decltype(bilinearForm);
     using InnerProduct = decltype(innerProduct);
+    using BilinearForm_aposteriori = decltype(bilinearForm_aposteriori);
+    using InnerProduct_aposteriori = decltype(innerProduct_aposteriori);
 
     using TestspaceCoefficientMatrix
         = Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
@@ -229,11 +244,6 @@ int main(int argc, char** argv)
       theta[i] = x[i+feBasisInterior.size()];
     }
 
-    ErrorTools errorTools = ErrorTools();
-    err = errorTools.computeL2error<1>(std::get<0>(solutionSpaces),
-                                       u, std::make_tuple(uAnalytic(beta)));
-    std::cout << "L^2 error in iteration " << i << ": " << err << std::endl;
-
     auto uFunction
         = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
               (feBasisInterior, Dune::TypeTree::hybridTreePath(), u);
@@ -261,12 +271,24 @@ int main(int argc, char** argv)
     vtkWriter1.write("transport_solution_trace_"+std::to_string(nelements)
         +"_"+std::to_string(i));
 
-    ////////////////
-    // Refine
-    ////////////////
+    ////////////////////////////////////////////////////
+    // Estimate a posteriori error and refine
+    ////////////////////////////////////////////////////
+    auto rhsAssembler_aposteriori = make_RhsAssembler(testSpaces_aposteriori);
+    rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide);
+
+    ErrorTools errorTools = ErrorTools();
+    err = errorTools.aPosterioriError(bilinearForm_aposteriori,
+                                      innerProduct_aposteriori,
+                                      x, rhs);
+    std::cout << "A posteriori error in iteration " << i << ": "
+              << err << std::endl;
+
     const double ratio = .2;
-    errorTools.DoerflerMarking<1>(*grid, ratio, feBasisInterior,
-        u, std::make_tuple(uAnalytic(beta)), 10);
+    errorTools.DoerflerMarking(*grid, ratio,
+                               bilinearForm_aposteriori,
+                               innerProduct_aposteriori,
+                               x, rhs);
     grid->adapt();
   }
 

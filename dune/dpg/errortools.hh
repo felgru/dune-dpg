@@ -54,14 +54,14 @@ namespace Dune {
                             const VectorType& ,
                             const VectorType& );
 
-    template <unsigned int subsamples, class Grid,
-              class FEBasis, class VolumeTerms>
+    template <class Grid, class BilinearForm, class InnerProduct,
+              class VectorType>
     void DoerflerMarking(Grid& ,
                          double ,
-                         const FEBasis& ,
-                         BlockVector<FieldVector<double,1> >& ,
-                         VolumeTerms&& ,
-                         unsigned int );
+                         BilinearForm& ,
+                         InnerProduct& ,
+                         const VectorType& ,
+                         const VectorType& );
   };
 
 //*******************************************************************
@@ -366,58 +366,87 @@ namespace Dune {
  * $$\operatorname{err}(u_h, \mathcal M) \geq \operatorname{err}(u_h, \Omega_h).$$
  *
  * \param ratio  the marking ratio $\theta \in (0,1]$
- * \param feBasis
- * \param u  FE solution of interior variable
- * \param uRef  exact solution
- * \param quadratureOrder
+ * \param bilinearForm
+ * \param innerProduct
+ * \param solution  FE solution
+ * \param rhs  Rhs of the problem in enriched test space
  */
-  template <unsigned int subsamples, class Grid,
-            class FEBasis, class VolumeTerms>
+  template <class Grid, class BilinearForm, class InnerProduct,
+            class VectorType>
   void ErrorTools::DoerflerMarking(Grid& grid,
                                    double ratio,
-                                   const FEBasis& feBasis,
-                                   BlockVector<FieldVector<double,1> >& u,
-                                   VolumeTerms&& uRef,
-                                   unsigned int quadratureOrder)
+                                   BilinearForm& bilinearForm,
+                                   InnerProduct& innerProduct,
+                                   const VectorType& solution,
+                                   const VectorType& rhs)
   {
-    using GridView = typename FEBasis::GridView;
+    using namespace boost::fusion;
+    using namespace Dune::detail;
+
+    using GridView
+        = typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>
+                        ::type::GridView;
     static_assert(std::is_same<typename GridView::Grid, Grid>::value,
-        "FEBasis not defined on Grid!");
+        "Type mismatch between Grid and Grid of BilinearForm!");
     using Entity = typename GridView::template Codim<0>::Entity;
     using EntitySeed = typename Entity::EntitySeed;
 
-    const GridView& gridView = feBasis.gridView();
-    auto localView = feBasis.localView();
-    auto localIndexSet = feBasis.localIndexSet();
+    const GridView gridView
+        = std::get<0>(bilinearForm.getSolutionSpaces()).gridView();
+
+    using SolutionSpaces = typename BilinearForm::SolutionSpaces;
+    using EnrichedTestspaces = typename BilinearForm::TestSpaces;
+
+    using SolutionLocalViews
+        = typename result_of::as_vector<typename
+            result_of::transform<SolutionSpaces,getLocalView>::type>::type;
+    using TestLocalViews
+        = typename result_of::as_vector<typename
+            result_of::transform<EnrichedTestspaces,getLocalView>::type>::type;
+
+    SolutionLocalViews localViewsSolution
+        = as_vector(transform(bilinearForm.getSolutionSpaces(), getLocalView()));
+    TestLocalViews localViewsTest
+        = as_vector(transform(bilinearForm.getTestSpaces(), getLocalView()));
+
+    // We get the local index sets of the test spaces
+    auto testLocalIndexSets = as_vector(transform(bilinearForm.getTestSpaces(),
+                                                  getLocalIndexSet()));
+    // We get the local index sets of the solution spaces
+    auto solutionLocalIndexSets
+            = as_vector(transform(bilinearForm.getSolutionSpaces(),
+                                  getLocalIndexSet()));
 
     std::vector<std::tuple<EntitySeed, double>> errorEstimates;
     errorEstimates.reserve(gridView.size(0));
     for(const auto& e : elements(gridView))
     {
-      // Bind the local FE basis view to the current element
-      localView.bind(e);
-      localIndexSet.bind(localView);
+      // Bind localViews and localIndexSets
+      for_each(localViewsTest, applyBind<decltype(e)>(e));
+      for_each(localViewsSolution, applyBind<decltype(e)>(e));
+      for_each(zip(testLocalIndexSets, localViewsTest),
+               make_fused_procedure(bindLocalIndexSet()));
+      for_each(zip(solutionLocalIndexSets, localViewsSolution),
+               make_fused_procedure(bindLocalIndexSet()));
 
-      // Now we take the coefficients of u that correspond to the current element e. They are stored in uElement.
-      // dof of the finite element inside the element (remark: this value will vary if we do p-refinement)
-      const size_t dofFEelement = localView.size();
-
-      // We take the coefficients of u that correspond to the current element e. They are stored in uElement.
-      BlockVector<FieldVector<double,1> > uElement(dofFEelement);
-      for (size_t i=0; i<dofFEelement; i++)
-      {
-          uElement[i] = u[ localIndexSet.index(i)[0] ];
-      }
       // Now we compute the error inside the element
-      double elementError = computeL2errorSquareElement<subsamples>
-                              (localView, uElement, uRef, quadratureOrder);
+      double elementError = aPosterioriErrorSquareElement(
+                                bilinearForm,
+                                innerProduct,
+                                localViewsTest,
+                                localViewsSolution,
+                                testLocalIndexSets,
+                                solutionLocalIndexSets,
+                                solution,
+                                rhs);
       errorEstimates.emplace_back(e.seed(), elementError);
     }
     std::sort(errorEstimates.begin(), errorEstimates.end(),
         [](const auto& a, const auto& b) {
             return std::get<1>(a) > std::get<1>(b);
         });
-    const double targetError = ratio * std::accumulate(
+    // Since we used squared errors, we have to square the marking ratio
+    const double targetError = ratio * ratio * std::accumulate(
         errorEstimates.cbegin(), errorEstimates.cend(), 0.,
         [](double a, const auto& b) {
             return a + std::get<1>(b);
