@@ -1,16 +1,26 @@
+// -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+// vi: set et ts=4 sw=2 sts=2:
 #ifndef DUNE_DPG_ERROR_TOOLS
 #define DUNE_DPG_ERROR_TOOLS
 
-
-#include <iostream>
-
+#include <algorithm>
+#include <tuple>
+#include <type_traits>
 #include <vector>
+
+#include <boost/fusion/algorithm/transformation/transform.hpp>
+#include <boost/fusion/algorithm/transformation/zip.hpp>
+#include <boost/fusion/algorithm/iteration/accumulate.hpp>
+#include <boost/fusion/algorithm/iteration/for_each.hpp>
+#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
 
-#include <dune/dpg/cholesky.hh>
+#include "assemble_helper.hh"
+#include "cholesky.hh"
+#include "quadrature.hh"
 
 
 namespace Dune {
