@@ -76,206 +76,216 @@ int main()
   typedef UGGrid<dim> GridType;
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
-  array<unsigned int,dim> elements = {10,10};
+  array<unsigned int,dim> elements = {1,1};
 
   // Square mesh
-  //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+  //std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
   // Triangular mesh
-  shared_ptr<GridType> grid  =  StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+  std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
   // Read mesh from an input file
-  // shared_ptr<GridType> grid = shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh")); // for an irregular mesh square
-  // shared_ptr<GridType> grid = shared_ptr<GridType>(GmshReader<GridType>::read("circle.msh")); // for an irregular mesh square
+  // std::shared_ptr<GridType> grid(GmshReader<GridType>::read("irregular-square.msh")); // for an irregular mesh square
+  // std::shared_ptr<GridType> grid(GmshReader<GridType>::read("circle.msh")); // for a circle-shaped mesh
 
-  typedef GridType::LeafGridView GridView;
-  GridView gridView = grid->leafGridView();
-
-
-  /////////////////////////////////////////////////////////
-  //   Choose finite element spaces
-  /////////////////////////////////////////////////////////
-
-  typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
-  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
-  auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView),
-                                        FEBasisTrace(gridView));
-
-  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v
-  auto testSpaces = std::make_tuple(FEBasisTest(gridView));
-
-  /////////////////////////////////////////////////////////
-  //   Choose a bilinear form
-  /////////////////////////////////////////////////////////
-
-  double beta0 = -1.0;
-  double beta1 = -1.0;
-  FieldVector<double, dim> beta = {beta0,beta1};
-  auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1.),
-              make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                    DomainOfIntegration::interior>(-1., beta),
-              make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                    DomainOfIntegration::face>(1., beta)));
-  auto innerProduct = make_InnerProduct(testSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1.),
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta)));
-
-  auto rhsAssembler = make_RhsAssembler(testSpaces);
-
-  typedef decltype(bilinearForm) BilinearForm;
-  typedef decltype(innerProduct) InnerProduct;
-  typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct> TestspaceCoefficientMatrix;
-
-  TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
-
-  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix> FEBasisOptimalTest;              // v
-  FEBasisOptimalTest feBasisTest(testspaceCoefficientMatrix);
-  auto optimalTestSpaces = make_tuple(feBasisTest);
-
-  auto systemAssembler
-     = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
-                                bilinearForm);
-
-  /////////////////////////////////////////////////////////
-  //   Stiffness matrix and right hand side vector
-  /////////////////////////////////////////////////////////
-
-  typedef BlockVector<FieldVector<double,1> > VectorType;
-  typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
-
-  VectorType rhs;
-  MatrixType stiffnessMatrix;
-
-  /////////////////////////////////////////////////////////
-  //  Assemble the system
-  /////////////////////////////////////////////////////////
-
-  using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
-
-  auto rightHandSide = std::make_tuple(fieldRHS);
-  // how to retrive the value out of this:
-  // std::get<i>(rightHandSide)(x)
-
-  systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
-
-  /////////////////////////////////////////////////
-  //   Choose an initial iterate
-  /////////////////////////////////////////////////
-  /* TODO: compute the correct size from the .sizes of the FE spaces. */
-  VectorType x(rhs.size());
-  x = 0;
-
-  // Determine Dirichlet dofs for u^ (inflow boundary)
+  double err = 1.;
+  const double tol = 1e-10;
+  for(unsigned int i = 0; err > tol && i < 20; ++i)
   {
-    std::vector<bool> dirichletNodesInflow;
-    std::vector<bool> dirichletNodesInflowErrorTools;
-
-    BoundaryTools boundaryTools = BoundaryTools();
-    boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
-                                        dirichletNodesInflow,
-                                        beta);
+    typedef GridType::LeafGridView GridView;
+    GridView gridView = grid->leafGridView();
 
 
-    systemAssembler.applyDirichletBoundarySolution<1>
-        (stiffnessMatrix,
-         rhs,
-         dirichletNodesInflow,
-         0.);
+    /////////////////////////////////////////////////////////
+    //   Choose finite element spaces
+    /////////////////////////////////////////////////////////
+
+    typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
+    typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
+    auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView),
+                                          FEBasisTrace(gridView));
+
+    typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v
+    auto testSpaces = std::make_tuple(FEBasisTest(gridView));
+
+    /////////////////////////////////////////////////////////
+    //   Choose a bilinear form
+    /////////////////////////////////////////////////////////
+
+    double beta0 = -1.0;
+    double beta1 = -1.0;
+    FieldVector<double, dim> beta = {beta0,beta1};
+    auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
+            make_tuple(
+                make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                      DomainOfIntegration::interior>(1.),
+                make_IntegralTerm<0,0,IntegrationType::gradValue,
+                                      DomainOfIntegration::interior>(-1., beta),
+                make_IntegralTerm<0,1,IntegrationType::normalVector,
+                                      DomainOfIntegration::face>(1., beta)));
+    auto innerProduct = make_InnerProduct(testSpaces,
+            make_tuple(
+                make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                      DomainOfIntegration::interior>(1.),
+                make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                      DomainOfIntegration::interior>(1., beta)));
+
+    auto rhsAssembler = make_RhsAssembler(testSpaces);
+
+    typedef decltype(bilinearForm) BilinearForm;
+    typedef decltype(innerProduct) InnerProduct;
+    typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct> TestspaceCoefficientMatrix;
+
+    TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
+
+    typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix> FEBasisOptimalTest;              // v
+    FEBasisOptimalTest feBasisTest(testspaceCoefficientMatrix);
+    auto optimalTestSpaces = make_tuple(feBasisTest);
+
+    auto systemAssembler
+       = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
+                                  bilinearForm);
+
+    /////////////////////////////////////////////////////////
+    //   Stiffness matrix and right hand side vector
+    /////////////////////////////////////////////////////////
+
+    typedef BlockVector<FieldVector<double,1> > VectorType;
+    typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
+
+    VectorType rhs;
+    MatrixType stiffnessMatrix;
+
+    /////////////////////////////////////////////////////////
+    //  Assemble the system
+    /////////////////////////////////////////////////////////
+
+    using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
+
+    auto rightHandSide = std::make_tuple(fieldRHS);
+    // how to retrive the value out of this:
+    // std::get<i>(rightHandSide)(x)
+
+    systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
+
+    /////////////////////////////////////////////////
+    //   Choose an initial iterate
+    /////////////////////////////////////////////////
+    /* TODO: compute the correct size from the .sizes of the FE spaces. */
+    VectorType x(rhs.size());
+    x = 0;
+
+    // Determine Dirichlet dofs for u^ (inflow boundary)
+    {
+      std::vector<bool> dirichletNodesInflow;
+      std::vector<bool> dirichletNodesInflowErrorTools;
+
+      BoundaryTools boundaryTools = BoundaryTools();
+      boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
+                                          dirichletNodesInflow,
+                                          beta);
+
+
+      systemAssembler.applyDirichletBoundarySolution<1>
+          (stiffnessMatrix,
+           rhs,
+           dirichletNodesInflow,
+           0.);
+    }
+
+    ////////////////////////////
+    //   Compute solution
+    ////////////////////////////
+
+    std::cout <<"rhs size = "<< rhs.size()
+              <<" matrix size = " << stiffnessMatrix.N() <<" x " << stiffnessMatrix.M()
+              <<" solution size = "<< x.size() <<std::endl;
+
+    //writeMatrixToMatlab(stiffnessMatrix, "TestMatrix1cell");
+
+    UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
+    InverseOperatorResult statistics;
+    umfPack.apply(x, rhs, statistics);
+
+    ////////////////////////////////////////////////////////////////////////////
+    //  Make a discrete function from the FE basis and the coefficient vector
+    ////////////////////////////////////////////////////////////////////////////
+
+    size_t nFace = std::get<1>(solutionSpaces).size();
+    size_t nInner = std::get<0>(solutionSpaces).size();
+    VectorType u(nInner);
+    VectorType theta(nFace);
+    u=0;
+    theta=0;
+
+    // We extract the solution vector u
+    for (size_t i=0; i<nInner; i++)
+    {
+      u[i] = x[i];
+    }
+
+    // We extract the solution vector theta of the faces
+    for (size_t i=0; i<nFace; i++)
+    {
+      theta[i] = x[nInner+i];
+    }
+
+    auto innerSpace = std::get<0>(solutionSpaces);
+    auto uFunction
+        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+              (innerSpace, Dune::TypeTree::hybridTreePath(), u);
+    auto localUFunction = localFunction(uFunction);
+
+    auto feBasisTrace = std::get<1>(solutionSpaces);
+    auto thetaFunction
+        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+              (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta);
+    auto localThetaFunction = localFunction(thetaFunction);
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    //  Error evaluation
+    ////////////////////////////////////////////////////////////////////////////
+
+    std::cout << std::endl << "******** Computation of errors *************" << std::endl;
+    // The exact solution against which we are comparing our FEM solution
+    auto uExact = std::make_tuple(fieldExact);
+    // to retrive the value out of this:
+    // std::get<0>(uExact)(x)
+
+    // We build an object of type ErrorTools to study errors, residuals and do hp-adaptivity
+    ErrorTools errorTools = ErrorTools();
+
+    // We compute the L2 error between the exact and the fem solutions
+    err = errorTools.computeL2error<1>(innerSpace,u,uExact);
+    std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl;
+
+    // A posteriori error
+    // We compute the rhs in the form given by the projection approach
+    rhsAssembler.assembleRhs(rhs, rightHandSide);
+    // It is necessary to provide rhs in the above form to call this aPosterioriError method
+    double aposterioriErr
+        = errorTools.aPosterioriError(bilinearForm, innerProduct, x, rhs);
+    std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
+
+    //////////////////////////////////////////////////////////////////////////////////////////////
+    //  Write result to VTK file
+    //  We need to subsample, because VTK cannot natively display real second-order functions
+    //////////////////////////////////////////////////////////////////////////////////////////////
+    SubsamplingVTKWriter<GridView> vtkWriter(gridView,0);
+    vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
+    vtkWriter.write(std::string{"solution_transport_"}+std::to_string(i));
+
+    SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
+    vtkWriter1.addVertexData(localThetaFunction, VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
+    vtkWriter1.write(std::string{"solution_trace_"}+std::to_string(i));
+
+    ////////////////
+    // Refine
+    ////////////////
+    const double ratio = .2;
+    errorTools.DoerflerMarking(*grid, ratio,
+                               bilinearForm, innerProduct, x, rhs);
+    grid->adapt();
   }
-
-  ////////////////////////////
-  //   Compute solution
-  ////////////////////////////
-
-  std::cout <<"rhs size = "<< rhs.size()
-            <<" matrix size = " << stiffnessMatrix.N() <<" x " << stiffnessMatrix.M()
-            <<" solution size = "<< x.size() <<std::endl;
-
-  //writeMatrixToMatlab(stiffnessMatrix, "TestMatrix1cell");
-
-  UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
-  InverseOperatorResult statistics;
-  umfPack.apply(x, rhs, statistics);
-
-  ////////////////////////////////////////////////////////////////////////////
-  //  Make a discrete function from the FE basis and the coefficient vector
-  ////////////////////////////////////////////////////////////////////////////
-
-  size_t nFace = std::get<1>(solutionSpaces).size();
-  size_t nInner = std::get<0>(solutionSpaces).size();
-  VectorType u(nInner);
-  VectorType theta(nFace);
-  u=0;
-  theta=0;
-
-  // We extract the solution vector u
-  for (size_t i=0; i<nInner; i++)
-  {
-    u[i] = x[i];
-  }
-
-  // We extract the solution vector theta of the faces
-  for (size_t i=0; i<nFace; i++)
-  {
-    theta[i] = x[nInner+i];
-  }
-
-  auto innerSpace = std::get<0>(solutionSpaces);
-  auto uFunction
-      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-            (innerSpace, Dune::TypeTree::hybridTreePath(), u);
-  auto localUFunction = localFunction(uFunction);
-
-  auto feBasisTrace = std::get<1>(solutionSpaces);
-  auto thetaFunction
-      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-            (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta);
-  auto localThetaFunction = localFunction(thetaFunction);
-
-
-  ////////////////////////////////////////////////////////////////////////////
-  //  Error evaluation
-  ////////////////////////////////////////////////////////////////////////////
-
-  std::cout << std::endl << "******** Computation of errors *************" << std::endl;
-  // The exact solution against which we are comparing our FEM solution
-  auto uExact = std::make_tuple(fieldExact);
-  // to retrive the value out of this:
-  // std::get<0>(uExact)(x)
-
-  // We build an object of type ErrorTools to study errors, residuals and do hp-adaptivity
-  ErrorTools errorTools = ErrorTools();
-
-  // We compute the L2 error between the exact and the fem solutions
-  double err = errorTools.computeL2error(innerSpace,u,uExact);
-  std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl;
-
-  //// TODO: h-refinement
-  //errorTools->hRefinement(grid);
-  //// TODO: p-refinement
-
-  // A posteriori error
-  // We compute the rhs in the form given by the projection approach
-  rhsAssembler.assembleRhs(rhs, rightHandSide);
-  // It is necessary to provide rhs in the above form to call this aPosterioriError method
-  double aposterioriErr = errorTools.aPosterioriError(bilinearForm,innerProduct,u,theta,rhs);
-  std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
-
-  //////////////////////////////////////////////////////////////////////////////////////////////
-  //  Write result to VTK file
-  //  We need to subsample, because VTK cannot natively display real second-order functions
-  //////////////////////////////////////////////////////////////////////////////////////////////
-  SubsamplingVTKWriter<GridView> vtkWriter(gridView,0);
-  vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("solution_transport");
-
-  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-  vtkWriter1.addVertexData(localThetaFunction, VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter1.write("solution_trace");
 
   return 0;
   }

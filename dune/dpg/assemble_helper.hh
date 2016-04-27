@@ -463,6 +463,33 @@ struct getLocalFiniteElement
     }
 };
 
+template<class VectorType1, class VectorType2>
+struct getLocalCoefficients
+{
+  getLocalCoefficients(const VectorType1& sol, VectorType2& solEl) :
+    solution(sol),
+    solutionElement(solEl)
+  {}
+
+  template<class T>
+  void operator()(const T& t) const
+  {
+    using namespace boost::fusion;
+
+    auto const & localView = at_c<0>(t);
+    auto const & localIndexSet = at_c<1>(t);
+    size_t dofElement = localView.size();
+    for (size_t i=0; i<dofElement; i++)
+    {
+      solutionElement[i+at_c<2>(t)] = solution[at_c<3>(t)+localIndexSet.index(i)[0] ];
+    }
+  }
+private:
+  const VectorType1& solution;
+  VectorType2& solutionElement;
+};
+
+
 
 namespace mpl {
   template<class Seq>

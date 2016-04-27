@@ -555,7 +555,7 @@ int main(int argc, char** argv)
   ErrorTools errorTools = ErrorTools(adaptivityTol);
 
   //We compute the L2 error between the exact and the fem solutions
-  double err = errorTools.computeL2error(feBasisInterior,u,uExact);
+  double err = errorTools.computeL2error<1>(feBasisInterior,u,uExact);
   std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl;
 
   //// todo: h-refinement
@@ -566,7 +566,7 @@ int main(int argc, char** argv)
       //We compute the rhs in the form given by the projection approach
   rhsAssembler.assembleRhs(rhs, rightHandSide);
       //It is necessary to provide rhs in the above form to call this aPosterioriError method
-  double aposterioriErr = errorTools.aPosterioriError(bilinearForm,innerProduct,u,theta,rhs);
+  double aposterioriErr = errorTools.aPosterioriError(bilinearForm,innerProduct,x,rhs);
   std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl; */
 
 

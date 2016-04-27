@@ -39,7 +39,8 @@ namespace Dune {
 
     public:
     /** \brief Construct summed quadrature rule
-     * \param quad Base quadrature rule.  Element type of this rule must be simplex
+     * \param quad Base quadrature rule.  Element type of this
+     * rule must be cubical or triangle
      */
     SubsampledQuadratureRule(const Dune::QuadratureRule<ctype,dim>& quad)
       : QuadratureRule<ctype,dim>(quad.type(), quad.order())
@@ -74,7 +75,7 @@ namespace Dune {
         this->reserve(numSections*quad.size());
 
         for (unsigned int line=0; line<s; ++line) {
-          for(unsigned int i=0; i<2*(s-line-1)+1; ++i) {
+          for(unsigned int i=0; i<2*(s-line)-1; ++i) {
             if(i%2) { // mirrored triangle
               for (size_t q=0, qsize=quad.size(); q<qsize; q++) {
 
