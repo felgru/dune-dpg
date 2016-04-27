@@ -90,7 +90,7 @@ int main(int argc, char** argv)
 
   double err = 1.;
   const double tol = 1e-10;
-  for(unsigned int i = 0; err > tol && i < 10; ++i)
+  for(unsigned int i = 0; err > tol && i < 50; ++i)
   {
     typedef GridType::LeafGridView GridView;
     GridView gridView = grid->leafGridView();
@@ -232,6 +232,7 @@ int main(int argc, char** argv)
     ErrorTools errorTools = ErrorTools();
     err = errorTools.computeL2error<1>(std::get<0>(solutionSpaces),
                                        u, std::make_tuple(uAnalytic(beta)));
+    std::cout << "L^2 error in iteration " << i << ": " << err << std::endl;
 
     auto uFunction
         = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
@@ -248,7 +249,7 @@ int main(int argc, char** argv)
     //  We need to subsample, because VTK cannot natively display
     //  real second-order functions
     /////////////////////////////////////////////////////////////////////////
-    SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
+    SubsamplingVTKWriter<GridView> vtkWriter(gridView,0);
     vtkWriter.addVertexData(localUFunction,
                  VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
     vtkWriter.write("transport_solution_"+std::to_string(nelements)
@@ -263,7 +264,7 @@ int main(int argc, char** argv)
     ////////////////
     // Refine
     ////////////////
-    const double ratio = .5;
+    const double ratio = .2;
     errorTools.DoerflerMarking<1>(*grid, ratio, feBasisInterior,
         u, std::make_tuple(uAnalytic(beta)), 10);
     grid->adapt();
