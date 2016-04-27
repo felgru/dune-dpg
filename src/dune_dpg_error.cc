@@ -284,7 +284,9 @@ int main()
     const double ratio = .2;
     errorTools.DoerflerMarking(*grid, ratio,
                                bilinearForm, innerProduct, x, rhs);
+    grid->preAdapt();
     grid->adapt();
+    grid->postAdapt();
   }
 
   return 0;

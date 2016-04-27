@@ -299,7 +299,9 @@ int main(int argc, char** argv)
     std::cout << "A posteriori error in iteration " << i << ": "
               << err << std::endl;
 
+    grid->preAdapt();
     grid->adapt();
+    grid->postAdapt();
   }
 
 
