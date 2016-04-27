@@ -4,6 +4,12 @@
    overwritten
 */
 
+/* Boost::Fusion definitions */
+
+/* 7 would be enough, but better take some more, in case we
+ * change our procedures later. */
+#define BOOST_FUSION_INVOKE_PROCEDURE_MAX_ARITY 10
+
 /* begin private */
 /* Name of package */
 #define PACKAGE "@DUNE_MOD_NAME@"

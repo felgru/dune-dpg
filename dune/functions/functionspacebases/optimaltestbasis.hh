@@ -8,10 +8,6 @@
 #include <memory>
 #include <type_traits>
 
-/* 7 would be enought, but better take some more, in case we
- * change our procedures later. */
-#define BOOST_FUSION_INVOKE_PROCEDURE_MAX_ARITY 10
-
 #include <boost/fusion/adapted/std_tuple.hpp>
 #include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
