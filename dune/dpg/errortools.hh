@@ -26,19 +26,24 @@ namespace Dune {
     template <unsigned int subsamples, class LocalView, class VolumeTerms>
     double computeL2errorElement(const LocalView& ,
                                  BlockVector<FieldVector<double,1> >& ,
-                                 VolumeTerms&&, unsigned int = 5);
+                                 VolumeTerms&&,
+                                 unsigned int = 5);
 
     template <unsigned int subsamples, class FEBasis, class VolumeTerms>
     double computeL2error(const FEBasis& ,
                           BlockVector<FieldVector<double,1> >& ,
-                          VolumeTerms&&, unsigned int = 5);
+                          VolumeTerms&&,
+                          unsigned int = 5);
 
-    template<class GridType> void hRefinement(GridType& grid);
+    template <class BilinearForm,class InnerProduct,class VectorType>
+    double aPosterioriErrorSquareElement(BilinearForm& ,
+                                      InnerProduct& ,
+                                      VectorType& ,
+                                      VectorType& );
 
     template <class BilinearForm, class InnerProduct, class VectorType>
     double aPosterioriError(BilinearForm& ,
                             InnerProduct& ,
-                            const VectorType& ,
                             const VectorType& ,
                             const VectorType& );
 
@@ -190,20 +195,37 @@ namespace Dune {
     return std::sqrt(errSquare);
   }
 
-/**
+
+
+  /**
  * \brief Computation of a posteriori error in (u,theta)
  *
  * \param bilinearForm        the bilinear form
  * \param innerProduct        the inner product
- * \param uSolution           the computed solution u
- * \param thetaSolution       the computed solution theta
+ * \param solution           the computed solution
+ * \param rhs                 the right-hand side
+ */
+  template <class BilinearForm,class InnerProduct,class VectorType>
+  double ErrorTools::aPosterioriErrorSquareElement(BilinearForm& bilinearForm,
+                                      InnerProduct& innerProduct,
+                                      VectorType& solution,
+                                      VectorType& rhs)
+  {
+
+  }
+
+  /**
+ * \brief Computation of a posteriori error in (u,theta)
+ *
+ * \param bilinearForm        the bilinear form
+ * \param innerProduct        the inner product
+ * \param solution           the computed solution
  * \param rhs                 the right-hand side
  */
   template <class BilinearForm,class InnerProduct,class VectorType>
   double ErrorTools::aPosterioriError(BilinearForm& bilinearForm,
                                       InnerProduct& innerProduct,
-                                      const VectorType& uSolution,
-                                      const VectorType& thetaSolution,
+                                      const VectorType& solution,
                                       const VectorType& rhs)
   {
     using namespace boost::fusion;
@@ -234,6 +256,7 @@ namespace Dune {
 
     for(const auto& e : elements(gridView))
     {
+      // Bind localViews and localIndexSets
       for_each(localViewsTest, applyBind<decltype(e)>(e));
       for_each(localViewsSolution, applyBind<decltype(e)>(e));
       for_each(zip(testLocalIndexSets, localViewsTest),
@@ -241,33 +264,37 @@ namespace Dune {
       for_each(zip(solutionLocalIndexSets, localViewsSolution),
                make_fused_procedure(bindLocalIndexSet()));
 
-      // We take the coefficients of our solution (u,theta) that correspond to the current element e. They are stored in uLocal and thetaLocal.
-      // dof of the finite element inside the element
-      size_t dofElementU = boost::fusion::at_c<0>(localViewsSolution).size();
-      size_t dofElementTheta = boost::fusion::at_c<1>(localViewsSolution).size();
+      // Create and fill vector with offsets for global dofs
+      size_t globalTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
+      size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-      // We extract the solution on the current element
-      BlockVector<FieldVector<double,1> > solutionElement(dofElementU+dofElementTheta);
-      // We take the coefficients of uSolution that correspond to the current element e. They are stored in the second part of solutionElement.
-      for (size_t i=0; i<dofElementU; i++)
-      {
-        solutionElement[i] = uSolution[ at_c<0>(solutionLocalIndexSets).index(i)[0] ];
-      }
-      // We take the coefficients of thetaSolution that correspond to the current element e. They are stored in the first part of solutionElement.
-      for (size_t i=0; i<dofElementTheta; i++)
-      {
-        solutionElement[i+dofElementU] = thetaSolution[ at_c<1>(solutionLocalIndexSets).index(i)[0] ];
-      }
+      fold(zip(globalTestSpaceOffsets, bilinearForm.getTestSpaces()),
+             (size_t)0, globalOffsetHelper());
+      fold(zip(globalSolutionSpaceOffsets, bilinearForm.getSolutionSpaces()),
+             (size_t)0, globalOffsetHelper());
 
-      // We get rhsLocal
-      // dof of the finite element test space inside the element
-      size_t dofElementTest = boost::fusion::at_c<0>(localViewsTest).size();
-      // We extract the rhs of the current element
-      BlockVector<FieldVector<double,1> > rhsElement(dofElementTest);
-      for (size_t i=0; i<dofElementTest; i++)
-      {
-        rhsElement[i] = rhs[ at_c<0>(testLocalIndexSets).index(i)[0] ];
-      }
+      // Create and fill vector with offsets for local dofs on element
+      size_t localTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
+      size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+
+      size_t localSolutionDofs = fold(zip(localSolutionSpaceOffsets,
+                                          localViewsSolution),
+                                      (size_t)0, globalOffsetHelper());
+      size_t localTestDofs = fold(zip(localTestSpaceOffsets,
+                                      localViewsTest),
+                                  (size_t)0, globalOffsetHelper());
+      // Create and fill vectors with cofficients
+      // corresponding to local dofs on element
+      // for the solution and for the righthand side
+      BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
+      BlockVector<FieldVector<double,1> > rhsElement(localTestDofs);
+
+      for_each(zip(localViewsSolution, solutionLocalIndexSets,
+                   localSolutionSpaceOffsets, globalSolutionSpaceOffsets),
+           getLocalCoefficients<VectorType, BlockVector<FieldVector<double,1> > >(solution, solutionElement));
+      for_each(zip(localViewsTest, testLocalIndexSets,
+                   localTestSpaceOffsets, globalTestSpaceOffsets),
+           getLocalCoefficients<VectorType, BlockVector<FieldVector<double,1> > >(rhs, rhsElement));
 
       // We grab the inner product matrix in the innerProductMatrix variable (IP)
       Matrix<FieldMatrix<double,1,1> > innerProductMatrix;

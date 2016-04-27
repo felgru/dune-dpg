@@ -262,7 +262,7 @@ int main()
   // We compute the rhs in the form given by the projection approach
   rhsAssembler.assembleRhs(rhs, rightHandSide);
   // It is necessary to provide rhs in the above form to call this aPosterioriError method
-  double aposterioriErr = errorTools.aPosterioriError(bilinearForm,innerProduct,u,theta,rhs);
+  double aposterioriErr = errorTools.aPosterioriError(bilinearForm,innerProduct,x,rhs);
   std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
 
   //////////////////////////////////////////////////////////////////////////////////////////////

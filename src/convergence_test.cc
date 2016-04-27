@@ -278,7 +278,7 @@ int main(int argc, char** argv)
   double aposterioriErr
     = errorTools.aPosterioriError(bilinearForm_aposteriori,
                                   innerProduct_aposteriori,
-                                  u, theta, rhs);
+                                  x, rhs);
 
   std::cout << "test search space: level=" << LEVEL_SEARCH
             << ", polynomial degree=" << K_SEARCH << std::endl;
