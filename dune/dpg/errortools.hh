@@ -19,8 +19,6 @@ namespace Dune {
   //*******************************************************************
   class ErrorTools
   {
-    std::vector<double> errorElement_;
-
   public:
     ErrorTools() {};
     template <class LocalView,class VolumeTerms>
@@ -131,13 +129,6 @@ namespace Dune {
     typedef typename FEBasis::GridView GridView;
     GridView gridView = feBasis.gridView();
 
-     //   Number of elements
-    const int codimElement = 0;   //Element: codim = 0
-    int nElement = gridView.indexSet().size(codimElement);
-
-    // we update the size of errorElement_ where we will store the errors per element
-    errorElement_.resize(nElement);
-
     // Variables where we will store the errors
     double errSquare = 0.;
 
@@ -170,8 +161,8 @@ namespace Dune {
           uElement[i] = u[ localIndexSet.index(i)[0] ];
       }
       // Now we compute the error inside the element
-      errorElement_[indexElement] = computeL2errorElement(localView,uElement,uRef);
-      errSquare += errorElement_[indexElement]*errorElement_[indexElement];
+      double errorElement_ = computeL2errorElement(localView, uElement, uRef);
+      errSquare += errorElement_*errorElement_;
     }
 
     return std::sqrt(errSquare);
