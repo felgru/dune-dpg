@@ -12,6 +12,7 @@ template<typename Element, typename ctype, int dim, int level>
 class RefinedNode
 {
   using RefinementCache = ReferenceRefinementCache<ctype, dim, level>;
+  using GridType = typename RefinementCache::GridType;
 
 public:
 
@@ -19,7 +20,7 @@ public:
     element_(nullptr)
   {}
 
-  const UGGrid<dim>& refinedReferenceElement() const
+  const GridType& refinedReferenceElement() const
   {
     return refinementCache_.get(element_->type());
   }
