@@ -85,13 +85,13 @@ template<int dim, EvaluationType type,
          bool isDGRefined>
 struct LocalRefinedFunctionEvaluation {
 
-  template <class LocalFiniteElement, class Geometry>
+  template <class LocalFiniteElement, class Geometry, class SubGeometry>
   std::vector<FieldVector<double,1> >
   operator() (const LocalFiniteElement& localFiniteElement,
               unsigned int subElement,
               const FieldVector<double, dim>& quadPos,
               const Geometry& geometry,
-              const Geometry& subGeometryInReferenceElement,
+              const SubGeometry& subGeometryInReferenceElement,
               const FieldVector<double, dim>& beta) const;
 };
 
@@ -99,13 +99,13 @@ template<int dim, DomainOfIntegration domain_of_integration>
 struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value,
                                domain_of_integration, false> {
 
-  template <class LocalFiniteElement, class Geometry>
+  template <class LocalFiniteElement, class Geometry, class SubGeometry>
   std::vector<FieldVector<double,1> > operator()
                       (const LocalFiniteElement& localFiniteElement,
                        unsigned int,
                        const FieldVector<double, dim>& quadPos,
                        const Geometry& geometry,
-                       const Geometry& subGeometryInReferenceElement,
+                       const SubGeometry& subGeometryInReferenceElement,
                        const FieldVector<double, dim>&) const
   {
     // values of the shape functions
@@ -119,13 +119,13 @@ template<int dim, DomainOfIntegration domain_of_integration>
 struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad,
                                domain_of_integration, false> {
 
-  template <class LocalFiniteElement, class Geometry>
+  template <class LocalFiniteElement, class Geometry, class SubGeometry>
   std::vector<FieldVector<double,1> > operator()
                       (const LocalFiniteElement& localFiniteElement,
                        unsigned int,
                        const FieldVector<double, dim> & quadPos,
                        const Geometry& geometry,
-                       const Geometry& subGeometryInReferenceElement,
+                       const SubGeometry& subGeometryInReferenceElement,
                        const FieldVector<double, dim>& beta) const
   {
     const auto& jacobianSub
@@ -156,13 +156,13 @@ template<int dim, DomainOfIntegration domain_of_integration>
 struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value,
                                domain_of_integration, true> {
 
-  template <class LocalFiniteElement, class Geometry>
+  template <class LocalFiniteElement, class Geometry, class SubGeometry>
   std::vector<FieldVector<double,1> > operator()
                       (const LocalFiniteElement& localFiniteElement,
                        unsigned int subElement,
                        const FieldVector<double, dim>& quadPos,
                        const Geometry& geometry,
-                       const Geometry& subGeometryInReferenceElement,
+                       const SubGeometry& subGeometryInReferenceElement,
                        const FieldVector<double, dim>&) const
   {
     // values of the shape functions
@@ -176,13 +176,13 @@ template<int dim, DomainOfIntegration domain_of_integration>
 struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad,
                                domain_of_integration, true> {
 
-  template <class LocalFiniteElement, class Geometry>
+  template <class LocalFiniteElement, class Geometry, class SubGeometry>
   std::vector<FieldVector<double,1> > operator()
                       (const LocalFiniteElement& localFiniteElement,
                        unsigned int subElement,
                        const FieldVector<double, dim> & quadPos,
                        const Geometry& geometry,
-                       const Geometry& subGeometryInReferenceElement,
+                       const SubGeometry& subGeometryInReferenceElement,
                        const FieldVector<double, dim>& beta) const
   {
     const auto& jacobianSub
