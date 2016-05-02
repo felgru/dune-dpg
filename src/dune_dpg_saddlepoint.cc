@@ -137,7 +137,13 @@ int main(int argc, char** argv)
 
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
-  auto rightHandSide = std::make_tuple([] (const Domain& x) { return 1.;});
+  auto rightHandSide
+    = make_Saddlepoint_LinearForm(
+        systemAssembler.getTestSpaces(),
+        systemAssembler.getSolutionSpaces(),
+        std::make_tuple(
+            make_LinearIntegralTerm<0>([] (const Domain& x) { return 1.;})
+          ));
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
   /////////////////////////////////////////////////
@@ -152,7 +158,7 @@ int main(int argc, char** argv)
     std::vector<bool> dirichletNodesInflow;
     boundaryTreatmentInflow(std::get<0>(solutionSpaces),
                             dirichletNodesInflow);
-    systemAssembler.applyDirichletBoundarySolution<0>
+    systemAssembler.applyDirichletBoundary<0>
         (stiffnessMatrix,
          rhs,
          dirichletNodesInflow,
@@ -165,6 +171,7 @@ int main(int argc, char** argv)
     std::vector<bool> dirichletNodesInflowTest;
     boundaryTreatmentInflow(std::get<0>(testSpaces),
                             dirichletNodesInflowTest);
+    /* TODO: applyDirichletBoundaryTest has been removed */
     systemAssembler.applyDirichletBoundaryTest<0>
         (stiffnessMatrix,
          rhs,

@@ -160,9 +160,9 @@ int main()
 
     using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
-    auto rightHandSide = std::make_tuple(fieldRHS);
-    // how to retrive the value out of this:
-    // std::get<i>(rightHandSide)(x)
+    auto rightHandSide
+      = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
+                        std::make_tuple(make_LinearIntegralTerm<0>(fieldRHS)));
 
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
@@ -184,7 +184,7 @@ int main()
                                           beta);
 
 
-      systemAssembler.applyDirichletBoundarySolution<1>
+      systemAssembler.applyDirichletBoundary<1>
           (stiffnessMatrix,
            rhs,
            dirichletNodesInflow,
@@ -260,7 +260,10 @@ int main()
 
     // A posteriori error
     // We compute the rhs in the form given by the projection approach
-    rhsAssembler.assembleRhs(rhs, rightHandSide);
+    auto rightHandSideEnriched
+      = make_DPG_LinearForm(rhsAssembler.getTestSpaces(),
+                        std::make_tuple(make_LinearIntegralTerm<0>(fieldRHS)));
+    rhsAssembler.assembleRhs(rhs, rightHandSideEnriched);
     // It is necessary to provide rhs in the above form to call this aPosterioriError method
     double aposterioriErr
         = errorTools.aPosterioriError(bilinearForm, innerProduct, x, rhs);

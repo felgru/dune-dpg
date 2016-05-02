@@ -147,7 +147,10 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////////////
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
-  auto rightHandSide = std::make_tuple([] (const Domain& x) { return 1.;});
+  auto rightHandSide
+    = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
+                      std::make_tuple(make_LinearIntegralTerm<0>(
+                                 [] (const Domain& x) { return 1.;})));
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
   /////////////////////////////////////////////////
@@ -173,7 +176,7 @@ int main(int argc, char** argv)
     boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
                                         dirichletNodesInflow,
                                         beta);
-    systemAssembler.applyDirichletBoundarySolution<1>
+    systemAssembler.applyDirichletBoundary<1>
         (stiffnessMatrix,
          rhs,
          dirichletNodesInflow,
