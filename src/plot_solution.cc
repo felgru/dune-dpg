@@ -154,8 +154,17 @@ int main(int argc, char** argv)
               make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
                                     DomainOfIntegration::face>(1., beta)));
 
+    auto minInnerProduct = make_InnerProduct(solutionSpaces,
+          make_tuple(
+              make_IntegralTerm<1,1,IntegrationType::valueValue,              // (u^,u^)
+                                    DomainOfIntegration::interior>(1),
+              make_IntegralTerm<1,1,IntegrationType::gradGrad,                // (beta grad u^,beta grad u^)
+                                    DomainOfIntegration::interior>(1, beta)
+          ));
+
     using BilinearForm = decltype(bilinearForm);
     using InnerProduct = decltype(innerProduct);
+    using MinInnerProduct = decltype(minInnerProduct);
     using BilinearForm_aposteriori = decltype(bilinearForm_aposteriori);
     using InnerProduct_aposteriori = decltype(innerProduct_aposteriori);
 
@@ -203,8 +212,16 @@ int main(int argc, char** argv)
     VectorType x(feBasisTrace.size()
                  +feBasisInterior.size());
     x = 0;
-
 #if 1
+    double delta = 1e-5;
+    systemAssembler.applyMinimization<1, MinInnerProduct,2>
+                    (stiffnessMatrix,
+                     minInnerProduct,
+                     beta,
+                     delta,
+                     1);
+#endif
+#if 0
     double delta = 1e-5;
     systemAssembler.defineCharacteristicFaces<1,2>
                       (stiffnessMatrix,
