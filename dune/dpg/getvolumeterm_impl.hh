@@ -22,8 +22,8 @@ struct GetVolumeTerm_Impl
 {
   static void getVolumeTerm (const LocalViewTest& localViewTest,
                       // TODO: make the vector type a template parameter
-                             BlockVector<FieldVector<double,1> >& localRhs,
-                             const FactorType& volumeTerm);
+                             BlockVector<FieldVector<double,1> >& elementVector,
+                             const FactorType& factor);
 };
 
 
@@ -31,12 +31,12 @@ template <class LocalViewTest, class FactorType>
 struct GetVolumeTerm_Impl<LocalViewTest, FactorType, false>
 {
   static void getVolumeTerm (const LocalViewTest& localViewTest,
-                             BlockVector<FieldVector<double,1> >& localRhs,
-                             const FactorType& volumeTerm)
+                             BlockVector<FieldVector<double,1> >& elementVector,
+                             const FactorType& factor)
   {
     static_assert(models<Functions::Concept::
          Function<double(const Dune::FieldVector<double, 2>&)>, FactorType>(),
-         "The volumeTerm passed to getVolumeTerm does not model the "
+         "The factor passed to getVolumeTerm does not model the "
          "Function concept.");
 
     using TestSpace = typename LocalViewTest::GlobalBasis;
@@ -52,10 +52,10 @@ struct GetVolumeTerm_Impl<LocalViewTest, FactorType, false>
     const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
 
     // Set all entries to zero
-    localRhs.resize(localFiniteElementTest.localBasis().size());
-    localRhs = 0;
+    elementVector.resize(localFiniteElementTest.localBasis().size());
+    elementVector = 0;
 
-    /* TODO: Quadrature order is only good enough for a constant volumeTerm. */
+    /* TODO: Quadrature order is only good enough for a constant factor. */
     const unsigned int quadratureOrder
         = localFiniteElementTest.localBasis().order();
 
@@ -78,14 +78,14 @@ struct GetVolumeTerm_Impl<LocalViewTest, FactorType, false>
         = element.geometry().integrationElement(quadPos);
 
       const double weightedfunctionValue
-        = volumeTerm(globalQuadPos) * quad[pt].weight() * integrationElement;
+        = factor(globalQuadPos) * quad[pt].weight() * integrationElement;
 
       std::vector<FieldVector<double,1> > shapeFunctionValues;
       localFiniteElementTest.localBasis().evaluateFunction(quadPos,
                                                            shapeFunctionValues);
 
-      for (size_t i=0, rhsSize=localRhs.size(); i<rhsSize; i++)
-        localRhs[i] += shapeFunctionValues[i] * weightedfunctionValue;
+      for (size_t i=0, rhsSize=elementVector.size(); i<rhsSize; i++)
+        elementVector[i] += shapeFunctionValues[i] * weightedfunctionValue;
 
     }
 
@@ -96,12 +96,12 @@ template <class LocalViewTest, class FactorType>
 struct GetVolumeTerm_Impl<LocalViewTest, FactorType, true>
 {
   static void getVolumeTerm (const LocalViewTest& localViewTest,
-                             BlockVector<FieldVector<double,1> >& localRhs,
-                             const FactorType& volumeTerm)
+                             BlockVector<FieldVector<double,1> >& elementVector,
+                             const FactorType& factor)
   {
     static_assert(models<Functions::Concept::
          Function<double(const Dune::FieldVector<double, 2>&)>, FactorType>(),
-         "The volumeTerm passed to getVolumeTerm does not model the "
+         "The factor passed to getVolumeTerm does not model the "
          "Function concept.");
 
     using TestSpace = typename LocalViewTest::GlobalBasis;
@@ -117,10 +117,10 @@ struct GetVolumeTerm_Impl<LocalViewTest, FactorType, true>
     const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
 
     // Set all entries to zero
-    localRhs.resize(localFiniteElementTest.localBasis().size());
-    localRhs = 0;
+    elementVector.resize(localFiniteElementTest.localBasis().size());
+    elementVector = 0;
 
-    /* TODO: Quadrature order is only good enough for a constant volumeTerm. */
+    /* TODO: Quadrature order is only good enough for a constant factor. */
     const unsigned int quadratureOrder
         = localFiniteElementTest.localBasis().order();
 
@@ -160,7 +160,7 @@ struct GetVolumeTerm_Impl<LocalViewTest, FactorType, true>
 
         // The multiplicative factor in the integral transformation formula
         const double weightedfunctionValue
-          = volumeTerm(globalQuadPos)
+          = factor(globalQuadPos)
           * geometry.integrationElement(subGeometryInReferenceElement
                                                         .global(quadPos))
           * subGeometryInReferenceElement.integrationElement(quadPos)
@@ -180,8 +180,8 @@ struct GetVolumeTerm_Impl<LocalViewTest, FactorType, true>
                            subGeometryInReferenceElement,
                            {});
 
-        for (size_t i=0, rhsSize=localRhs.size(); i<rhsSize; i++)
-          localRhs[i] += shapeFunctionValues[i] * weightedfunctionValue;
+        for (size_t i=0, rhsSize=elementVector.size(); i<rhsSize; i++)
+          elementVector[i] += shapeFunctionValues[i] * weightedfunctionValue;
 
       }
       if(is_DGRefinedFiniteElement<TestSpace>::value)
