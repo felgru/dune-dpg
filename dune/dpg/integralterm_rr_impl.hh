@@ -163,7 +163,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
     unsigned int nInflowIntersections = 0;
     unsigned int nOutflowIntersections = 0;
-    for (auto&& intersection : intersections(gridView, subElement))
+    for (auto&& intersection : intersections(referenceGridView, subElement))
     {
       using intersectionType
         = typename std::decay<decltype(intersection)>::type;
@@ -196,7 +196,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
         = detail::referenceBeta(geometry,
             subGeometryInReferenceElement, lhsBeta);
 
-    for (auto&& intersection : intersections(gridView, subElement))
+    for (auto&& intersection : intersections(referenceGridView, subElement))
     {
       using intersectionType
         = typename std::decay<decltype(intersection)>::type;
