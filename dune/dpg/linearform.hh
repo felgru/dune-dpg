@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <type_traits>
+#include <cassert>
 
 #include <boost/fusion/adapted/std_tuple.hpp>
 #include <boost/fusion/adapted/array.hpp>
@@ -91,8 +92,8 @@ namespace Dune {
                 typename std::decay<FormulationType>::type
               , SaddlepointFormulation
             >::value;
-      static_assert(!isSaddlepoint,
-                    "LinearForm only implemented for DPGFormulation.");
+      //static_assert(!isSaddlepoint,
+      //              "LinearForm only implemented for DPGFormulation.");
 
       localViews = std::addressof(lv);
 
@@ -164,6 +165,9 @@ auto make_Saddlepoint_LinearForm(TestSpaces      testSpaces,
                            std::declval<SolutionSpaces>())
             )>::type, LinearTerms, SaddlepointFormulation>
 {
+  assert(false);        //TODO this does not really make sense
+                        //because of the spaceindex in LinearTerms
+  printf ("Use make_LinearForm and concatinate Spaces");
   using Spaces
     = typename std::remove_reference<decltype(
             std::tuple_cat(std::declval<TestSpaces>(),
@@ -187,6 +191,22 @@ auto make_DPG_LinearForm(TestSpaces   testSpaces,
 {
   return LinearForm<TestSpaces, LinearTerms, DPGFormulation>
                     (testSpaces, terms);
+}
+
+/**
+ * \brief Creates a LinearForm (i.e. for a saddlepoint formulation),
+ *        deducing the target type from the types of arguments.
+ *
+ * \param Spaces          a tuple of spaces
+ * \param terms           a tuple of LinearIntegralTerm
+ */
+template<class Spaces, class LinearTerms>
+auto make_LinearForm(Spaces      spaces,
+                     LinearTerms     terms)
+    -> LinearForm<Spaces, LinearTerms, SaddlepointFormulation>
+{
+  return LinearForm<Spaces, LinearTerms, SaddlepointFormulation>
+                    (spaces, terms);
 }
 
 } // end namespace Dune

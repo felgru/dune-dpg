@@ -126,8 +126,39 @@ int main()
                 make_IntegralTerm<0,0,IntegrationType::valueValue,
                                       DomainOfIntegration::interior>(1.),
                 make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                      DomainOfIntegration::interior>(1., beta)));
+                                      DomainOfIntegration::interior>(1., beta),
+                make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                      DomainOfIntegration::face>(1., beta)));
 
+    auto minInnerProduct = make_InnerProduct(solutionSpaces,
+            make_tuple(
+                make_IntegralTerm<1,1,IntegrationType::valueValue,              // (u^,u^)
+                                      DomainOfIntegration::interior>(1),
+                make_IntegralTerm<1,1,IntegrationType::gradGrad,                // (beta grad u^,beta grad u^)
+                                      DomainOfIntegration::interior>(1, beta)
+          ));
+    auto aPosterioriInnerProduct = make_InnerProduct(solutionSpaces,
+            make_tuple(
+                make_IntegralTerm<0,0,IntegrationType::valueValue,              // (u,u)
+                                      DomainOfIntegration::interior>(1),
+                make_IntegralTerm<1,1,IntegrationType::valueValue,              // (w,w)
+                                      DomainOfIntegration::interior>(1),
+                make_IntegralTerm<0,1,IntegrationType::valueValue,              // -2(u,w)
+                                      DomainOfIntegration::interior>(-2),
+                make_IntegralTerm<1,1,IntegrationType::gradGrad,              // (beta grad w,beta grad w)
+                                      DomainOfIntegration::interior>(1, beta),
+                make_IntegralTerm<1,1,IntegrationType::valueValue,              // (cw,cw)
+                                      DomainOfIntegration::interior>(c*c),
+                make_IntegralTerm<1,1,IntegrationType::gradValue,              // 2(beta grad w, cw)
+                                      DomainOfIntegration::interior>(2*c, beta)
+          ));
+    auto aPosterioriLinearForm = make_LinearForm(solutionSpaces,
+            make_tuple(
+                make_LinearIntegralTerm<1,LinearIntegrationType::gradFunction,// -2(beta grad w,f)
+                                      DomainOfIntegration::interior>([beta](const FieldVector<double, dim>& x){return (-2)*f(beta)(x);}, beta),
+                make_LinearIntegralTerm<1,LinearIntegrationType::valueFunction,    // -2(cw,f)
+                                      DomainOfIntegration::interior>([beta, c](const FieldVector<double, dim>& x){return (-2)*c*f(beta)(x);})
+          ));
     auto rhsAssembler = make_RhsAssembler(testSpaces);
 
     typedef decltype(bilinearForm) BilinearForm;
@@ -162,7 +193,9 @@ int main()
 
     auto rightHandSide
       = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
-                        std::make_tuple(make_LinearIntegralTerm<0>(fieldRHS)));
+                    std::make_tuple(make_LinearIntegralTerm<0,
+                                        LinearIntegrationType::valueFunction,
+                                        DomainOfIntegration::interior>(fieldRHS)));
 
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
@@ -262,12 +295,17 @@ int main()
     // We compute the rhs in the form given by the projection approach
     auto rightHandSideEnriched
       = make_DPG_LinearForm(rhsAssembler.getTestSpaces(),
-                        std::make_tuple(make_LinearIntegralTerm<0>(fieldRHS)));
+                    std::make_tuple(make_LinearIntegralTerm<0,
+                                        LinearIntegrationType::valueFunction,
+                                        DomainOfIntegration::interior>(fieldRHS)));
     rhsAssembler.assembleRhs(rhs, rightHandSideEnriched);
     // It is necessary to provide rhs in the above form to call this aPosterioriError method
     double aposterioriErr
         = errorTools.aPosterioriError(bilinearForm, innerProduct, x, rhs);
     std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
+    double aposterioriL2Err
+        = errorTools.aPosterioriL2Error(aPosterioriInnerProduct, aPosterioriLinearForm, f(beta), x);
+    std::cout << "A posteriori L2 error: || (u,trace u) - (u_fem,theta) || = " << aposterioriL2Err << std::endl;
 
     //////////////////////////////////////////////////////////////////////////////////////////////
     //  Write result to VTK file
@@ -286,7 +324,10 @@ int main()
     ////////////////
     const double ratio = .2;
     errorTools.DoerflerMarking(*grid, ratio,
-                               bilinearForm, innerProduct, x, rhs);
+                               bilinearForm, innerProduct,
+                               aPosterioriInnerProduct,
+                               aPosterioriLinearForm, fieldRHS,
+                               x, rhs, 0);
     grid->preAdapt();
     grid->adapt();
     grid->postAdapt();

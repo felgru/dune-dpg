@@ -43,6 +43,23 @@ namespace Dune {
                           VolumeTerms&&,
                           unsigned int = 5);
 
+    template <class InnerProduct, class LinearForm,
+              class RhsFunction, class LocalViewsSolution,
+              class LocalIndexSetSolution, class VectorType>
+    double aPosterioriL2ErrorSquareElement(InnerProduct& ,
+                                      LinearForm& ,
+                                      const RhsFunction& ,
+                                      LocalViewsSolution& ,
+                                      LocalIndexSetSolution& ,
+                                      VectorType&);
+
+    template <class InnerProduct, class LinearForm,
+              class RhsFunction, class VectorType>
+    double aPosterioriL2Error(InnerProduct& ,
+                                        LinearForm& ,
+                                        const RhsFunction& ,
+                                        const VectorType&);
+
     template <class BilinearForm,class InnerProduct,
               class LocalViewsTest, class LocalViewsSolution,
               class LocalIndexSetTest, class LocalIndexSetSolution,
@@ -63,13 +80,18 @@ namespace Dune {
                             const VectorType& );
 
     template <class Grid, class BilinearForm, class InnerProduct,
-              class VectorType>
+              class APosterioriInnerProduct, class LinearForm,
+              class RhsFunction, class VectorType>
     double DoerflerMarking(Grid& ,
                            double ,
                            BilinearForm& ,
                            InnerProduct& ,
+                           APosterioriInnerProduct& ,
+                           LinearForm& ,
+                           const RhsFunction& ,
                            const VectorType& ,
-                           const VectorType& );
+                           const VectorType& ,
+                           double );
   };
 
 //*******************************************************************
@@ -208,6 +230,150 @@ namespace Dune {
     }
 
     return std::sqrt(errSquare);
+  }
+
+/**
+ * \brief Computation of a posteriori error in (u,theta)
+ *
+ * \param innerProduct        the inner product
+ * \param solution           the computed solution
+ */
+  template <class InnerProduct, class LinearForm,
+            class RhsFunction, class LocalViewsSolution,
+            class LocalIndexSetSolution, class VectorType>
+  double ErrorTools::aPosterioriL2ErrorSquareElement(InnerProduct& innerProduct,
+                                      LinearForm& linearForm,
+                                      const RhsFunction& f,
+                                      LocalViewsSolution& localViewsSolution,
+                                      LocalIndexSetSolution& solutionLocalIndexSets,
+                                      VectorType& solution)
+  {
+    using namespace boost::fusion;
+    using namespace Dune::detail;
+
+    typedef typename InnerProduct::TestSpaces SolutionSpaces;
+
+    // Create and fill vector with offsets for global dofs
+    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+
+    fold(zip(globalSolutionSpaceOffsets, innerProduct.getTestSpaces()),
+           (size_t)0, globalOffsetHelper());
+
+    // Create and fill vector with offsets for local dofs on element
+    size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+
+    size_t localSolutionDofs = fold(zip(localSolutionSpaceOffsets,
+                                        localViewsSolution),
+                                    (size_t)0, globalOffsetHelper());
+    // Create and fill vectors with cofficients
+    // corresponding to local dofs on element
+    // for the solution and for the righthand side
+    BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
+
+    for_each(zip(localViewsSolution, solutionLocalIndexSets,
+                 localSolutionSpaceOffsets, globalSolutionSpaceOffsets),
+         getLocalCoefficients<VectorType, BlockVector<FieldVector<double,1> > >(solution, solutionElement));
+
+    double errSquare = 0;
+
+    // We grab the inner product matrix in the innerProductMatrix variable (IP)
+    Matrix<FieldMatrix<double,1,1> > innerProductMatrix;
+    innerProduct.bind(localViewsSolution);
+    innerProduct.getLocalMatrix(innerProductMatrix);
+
+    // We compute solutionElement^T * IP * solutionElement
+    BlockVector<FieldVector<double,1> > tmpVector(solutionElement);
+    tmpVector = 0;
+    innerProductMatrix.mv(solutionElement, tmpVector);
+    errSquare += tmpVector * solutionElement;
+
+    // We grab the linear term depending on B and on the rhs f
+    BlockVector<FieldVector<double,1> > linearFormVector;
+    linearForm.bind(localViewsSolution);
+    linearForm.getLocalVector(linearFormVector);
+    errSquare += linearFormVector * solutionElement;
+
+    // We grab the term depending only on the rhs f
+    // TODO Not tested for non-constant f !!!!!!!!
+    double tmpValue = 0;
+    unsigned int quadratureOrder = 5;    //TODO adjust quadrature for non-constant RHS
+    auto element = at_c<0>(localViewsSolution).element();
+    auto geometry = element.geometry();
+    typedef decltype(element) Element;
+    const int dim = Element::dimension;
+    const Dune::QuadratureRule<double, dim>& quad =
+            Dune::QuadratureRules<double, dim>::rule(element.type(),
+                                                     quadratureOrder);
+    for ( size_t pt=0, qsize=quad.size(); pt < qsize; pt++ ) {
+      // Position of the current quadrature point in the reference element
+      const FieldVector<double,dim>& quadPos = quad[pt].position();
+      // Global position of the current quadrature point
+      const FieldVector<double,dim>& globalQuadPos
+          = geometry.global(quadPos);
+      tmpValue+= geometry.integrationElement(quadPos)
+                 * quad[pt].weight()
+                 * f(globalQuadPos)
+                 * f(globalQuadPos);
+    }
+    errSquare += tmpValue;
+
+    return errSquare;
+  }
+
+/**
+ * \brief Computation of a posteriori error in (u,theta)
+ *
+ * \param bilinearForm        the bilinear form
+ * \param innerProduct        the inner product
+ * \param solution           the computed solution
+ * \param rhs                 the right-hand side
+ */
+  template <class InnerProduct, class LinearForm,
+            class RhsFunction, class VectorType>
+  double ErrorTools::aPosterioriL2Error(InnerProduct& innerProduct,
+                                        LinearForm& linearForm,
+                                        const RhsFunction& f,
+                                        const VectorType& solution)
+  {
+    using namespace boost::fusion;
+    using namespace Dune::detail;
+
+    typedef typename std::tuple_element<0,typename InnerProduct::TestSpaces>
+                        ::type::GridView GridView;
+    const GridView gridView = std::get<0>(innerProduct.getTestSpaces()).gridView();
+
+    typedef typename InnerProduct::TestSpaces SolutionSpaces;
+
+    typedef typename result_of::as_vector<typename result_of::transform<SolutionSpaces,getLocalView>::type>::type SolutionLocalViews;
+
+    SolutionLocalViews localViewsSolution = as_vector(transform(innerProduct.getTestSpaces(),getLocalView()));
+
+
+    // We get the local index sets of the solution spaces
+    auto solutionLocalIndexSets
+            = as_vector(transform(innerProduct.getTestSpaces(),
+                                  getLocalIndexSet()));
+
+    // Variable where we compute the residual
+    double res = 0.;
+
+    for(const auto& e : elements(gridView))
+    {
+      // Bind localViews and localIndexSets
+      for_each(localViewsSolution, applyBind<decltype(e)>(e));
+      for_each(zip(solutionLocalIndexSets, localViewsSolution),
+               make_fused_procedure(bindLocalIndexSet()));
+
+      res += aPosterioriL2ErrorSquareElement(innerProduct,
+                                             linearForm,
+                                             f,
+                                             localViewsSolution,
+                                             solutionLocalIndexSets,
+                                             solution);
+   }
+
+   return std::sqrt(res);
+
   }
 
 
@@ -374,18 +540,25 @@ namespace Dune {
  * \return estimate for global a posteriori error
  */
   template <class Grid, class BilinearForm, class InnerProduct,
-            class VectorType>
+            class APosterioriInnerProduct, class LinearForm,
+            class RhsFunction, class VectorType>
   double ErrorTools::DoerflerMarking(
       Grid& grid,
       double ratio,
       BilinearForm& bilinearForm,
       InnerProduct& innerProduct,
+      APosterioriInnerProduct& aPosterioriInnerProduct,
+      LinearForm& linearForm,
+      const RhsFunction& f,
       const VectorType& solution,
-      const VectorType& rhs)
+      const VectorType& rhs,
+      double splitRatio
+                                    )
   {
     using namespace boost::fusion;
     using namespace Dune::detail;
 
+    assert(splitRatio >= 0 && splitRatio <= 1);
     using GridView
         = typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>
                         ::type::GridView;
@@ -433,7 +606,7 @@ namespace Dune {
                make_fused_procedure(bindLocalIndexSet()));
 
       // Now we compute the error inside the element
-      double elementError = aPosterioriErrorSquareElement(
+      double elementError = splitRatio*aPosterioriErrorSquareElement(
                                 bilinearForm,
                                 innerProduct,
                                 localViewsTest,
@@ -442,6 +615,13 @@ namespace Dune {
                                 solutionLocalIndexSets,
                                 solution,
                                 rhs);
+      elementError += (1-splitRatio)*aPosterioriL2ErrorSquareElement(
+                                aPosterioriInnerProduct,
+                                linearForm,
+                                f,
+                                localViewsSolution,
+                                solutionLocalIndexSets,
+                                solution);
       errorEstimates.emplace_back(e.seed(), elementError);
     }
     std::sort(errorEstimates.begin(), errorEstimates.end(),
