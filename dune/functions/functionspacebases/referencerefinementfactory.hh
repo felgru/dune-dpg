@@ -33,7 +33,7 @@ namespace Functions {
 
       int numVertices = referenceGeometry.corners();
       std::vector<unsigned int> vertices(numVertices);
-      GridFactory<UGGrid<dim> > gridFactory;
+      GridFactory<GridType> gridFactory;
       for(int i=0; i<numVertices; ++i)
       {
         gridFactory.insertVertex(referenceGeometry.corner(i));
@@ -41,7 +41,7 @@ namespace Functions {
       }
       gridFactory.insertElement(gt, vertices);
 
-      std::unique_ptr<UGGrid<dim>> referenceGrid{gridFactory.createGrid()};
+      std::unique_ptr<GridType> referenceGrid{gridFactory.createGrid()};
       referenceGrid->globalRefine(level);
 
       return referenceGrid;
