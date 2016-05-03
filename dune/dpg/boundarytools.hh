@@ -230,6 +230,11 @@ namespace Dune {
       // dofs in the current finite element
       const unsigned int dofsLocal = localFEM.localCoefficients().size();
 
+      const unsigned int nFace
+          = ReferenceElements<double, dim>::general(e.type()).size(dim-1);
+      const unsigned int nVertex
+          = ReferenceElements<double, dim>::general(e.type()).size(dim);
+
       localInterp.interpolate(bc,out);
 
       for(unsigned int i=0;i<dofsLocal;i++)
