@@ -8,6 +8,8 @@
 #include <array>
 #include <tuple>
 
+#include <boost/math/constants/constants.hpp>
+
 #include <dune/common/exceptions.hh> // We use exceptions
 
 #include <dune/grid/io/file/gmshreader.hh>
@@ -86,13 +88,16 @@ int main(int argc, char** argv)
 
   // v search space
   typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
+  //typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
   typedef decltype(testSpaces) TestSpaces;
   typedef decltype(solutionSpaces) SolutionSpaces;
 
-  FieldVector<double, dim> beta = {1,1};
-  double c = 1;
+  FieldVector<double, dim> beta
+             = {cos(boost::math::constants::pi<double>()/8),
+                sin(boost::math::constants::pi<double>()/8)};
+  double c = 2;
 
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
@@ -104,10 +109,10 @@ int main(int argc, char** argv)
                                     DomainOfIntegration::face>(1., beta)));
   auto innerProduct = make_InnerProduct(testSpaces,
           make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1.),
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta)));
+                                    DomainOfIntegration::interior>(1., beta),
+              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                    DomainOfIntegration::face>(1., beta)));
 
   typedef decltype(bilinearForm) BilinearForm;
   typedef decltype(innerProduct) InnerProduct;

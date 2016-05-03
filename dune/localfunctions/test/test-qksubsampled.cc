@@ -9,6 +9,21 @@
 #include "../lagrange/qksubsampled.hh"
 #include <dune/localfunctions/test/test-localfe.hh>
 
+template<int dim, unsigned int order, unsigned int samples>
+bool testDGSubsampled()
+{
+  bool success = true;
+
+  std::cout << "order : " << order
+            << ", samples : " << samples << std::endl;
+  Dune::QkSubsampledLocalFiniteElement<double,double,dim,samples,order>
+      lagrangeSubsampledQuad;
+  TEST_FE2(lagrangeSubsampledQuad,
+           // Disable all tests that assume a standard Lagrange FE
+           DisableEvaluate);
+  return success;
+}
+
 int main(int argc, char** argv) try
 {
   bool success = true;
@@ -17,28 +32,9 @@ int main(int argc, char** argv) try
 
   std::cout << "Testing QkDGLocalFiniteElement on 2d"
             << " quadrilateral elements with double precision" << std::endl;
-  {
-    const unsigned int order=2;
-    const unsigned int samples=1;
-    std::cout << "order : " << order
-              << ", samples : " << samples << std::endl;
-    Dune::QkSubsampledLocalFiniteElement<double,double,dim,samples,order>
-        lagrangeSubsampledQuad;
-    TEST_FE2(lagrangeSubsampledQuad,
-            // Disable all tests that assume a standard Lagrange FE
-            DisableEvaluate);
-  }
-  {
-    const unsigned int order=3;
-    const unsigned int samples=3;
-    std::cout << "order : " << order
-              << ", samples : " << samples << std::endl;
-    Dune::QkSubsampledLocalFiniteElement<double,double,dim,samples,order>
-        lagrangeSubsampledQuad;
-    //TEST_FE(lagrangeSubsampledQuad);
-    TEST_FE2(lagrangeSubsampledQuad,
-            DisableEvaluate);
-  }
+
+  success &= testDGSubsampled<dim, 2, 1>();
+  success &= testDGSubsampled<dim, 3, 3>();
 
   return success ? 0 : 1;
 }

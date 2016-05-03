@@ -14,7 +14,8 @@ enum class IntegrationType {
     valueGrad,    //!<  v · ∇u
     gradGrad,     //!< ∇v · ∇u
     normalVector, //!< v u n · β, where n is the outer unit normal vector
-    normalSign
+    normalSign,
+    travelDistanceWeighted
 };
 
 enum class EvaluationType {

@@ -9,36 +9,33 @@
 #include "../lagrange/pkdgsubsampled2d.hh"
 #include <dune/localfunctions/test/test-localfe.hh>
 
-int main(int argc, char** argv) try
+template<unsigned int order, unsigned int samples>
+bool testDGSubsampled2D()
 {
   bool success = true;
 
   const int dim = 2;
 
+  std::cout << "order : " << order
+            << ", samples : " << samples << std::endl;
+  Dune::PkDGSubsampled2DLocalFiniteElement<double,double,samples,order>
+      lagrangeSubsampledTria;
+  TEST_FE2(lagrangeSubsampledTria,
+           // Disable all tests that assume a standard Lagrange FE
+           DisableLocalInterpolation | DisableEvaluate);
+  return success;
+}
+
+int main(int argc, char** argv) try
+{
+  bool success = true;
+
   std::cout << "Testing PkDGSubsampledLocalFiniteElement on 2d"
             << " triangular elements with double precision" << std::endl;
-  {
-    const unsigned int order=2;
-    const unsigned int samples=1;
-    std::cout << "order : " << order
-              << ", samples : " << samples << std::endl;
-    Dune::PkDGSubsampled2DLocalFiniteElement<double,double,samples,order>
-        lagrangeSubsampledTria;
-    TEST_FE2(lagrangeSubsampledTria,
-            // Disable all tests that assume a standard Lagrange FE
-            DisableLocalInterpolation | DisableEvaluate);
-  }
-  {
-    const unsigned int order=1;
-    const unsigned int samples=2;
-    std::cout << "order : " << order
-              << ", samples : " << samples << std::endl;
-    Dune::PkDGSubsampled2DLocalFiniteElement<double,double,samples,order>
-        lagrangeSubsampledTria;
-    //TEST_FE(lagrangeSubsampledQuad);
-    TEST_FE2(lagrangeSubsampledTria,
-            DisableLocalInterpolation | DisableEvaluate);
-  }
+
+  success &= testDGSubsampled2D<2, 1>();
+  success &= testDGSubsampled2D<1, 2>();
+  success &= testDGSubsampled2D<2, 2>();
 
   return success ? 0 : 1;
 }

@@ -139,7 +139,15 @@ int main(int argc, char** argv)
   unsigned int nelements = atoi(argv[1]);
   int epsinv = atoi(argv[2]);
 //  int muinv = atoi(argv[3]);
-  epsilon = 0;//1./double(epsinv);
+  if (epsinv == 0)
+  {
+    epsilon = 0;
+  }
+  else
+  {
+    epsilon = 1/double(epsinv);
+  }
+  //epsilon = 0;
 
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
@@ -366,6 +374,18 @@ printmatrix(file , testMatrix, "testmatrix", "--");
 
   tassembled = time(0);
 
+// computation of condition number of stiffnessMatrix (does not work)
+
+//  const bool verbose = true;
+//  const unsigned int arppp_a_verbosity_level = 2;
+//  const unsigned int pia_verbosity_level = 1;
+//  MatrixInfo<MatrixType> matrixInfo
+//      (stiffnessMatrix,verbose,arppp_a_verbosity_level,pia_verbosity_level);
+
+//  MatrixType::field_type condition = matrixInfo.getCond2(false);
+//  std::cout << "Condition number in 2 Norm = " << condition <<std::endl;
+
+
 /*  bool issymmetric = true;
   std::ofstream filesym("matrixsymmetry.txt");
   filesym <<"Stiffness Matrix Symmetry:" <<std::endl;
@@ -536,7 +556,7 @@ printmatrix(file1 , stiffnessMatrix, "matrix", "--");
   ErrorTools errorTools = ErrorTools();
 
   //We compute the L2 error between the exact and the fem solutions
-  double err = errorTools.computeL2error(feBasisInterior,u,uExact);
+  double err = errorTools.computeL2error<1>(feBasisInterior,u,uExact);
   std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl;
 
   //// todo: h-refinement
@@ -547,7 +567,7 @@ printmatrix(file1 , stiffnessMatrix, "matrix", "--");
       //We compute the rhs in the form given by the projection approach
   rhsAssembler.assembleRhs(rhs, rightHandSide);
       //It is necessary to provide rhs in the above form to call this aPosterioriError method
-  double aposterioriErr = errorTools.aPosterioriError(bilinearForm,innerProduct,u,theta,rhs);
+  double aposterioriErr = errorTools.aPosterioriError(bilinearForm,innerProduct,x,rhs);
   std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl; */
 
 
