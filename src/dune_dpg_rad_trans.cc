@@ -573,7 +573,7 @@ int main(int argc, char** argv)
       ErrorTools errorTools = ErrorTools();
       //We compute the L2 error between the exact and the fem solutions
       auto uExactSfixed = std::make_tuple([s] (const Domain& x){ return uAnalytic(x,s);});
-      double err = errorTools.computeL2error(std::get<0>(solutionSpaces),u[i],uExactSfixed);
+      double err = errorTools.computeL2error<1>(std::get<0>(solutionSpaces),u[i],uExactSfixed);
       ofs << "'Exact' error u: || u["<< i << "] - u_fem["<< i <<"] ||_L2 = " << err << std::endl;
       // We compute the a posteriori error
           // - We compute the rhs with the enriched test space ("rhs[i]=f(v_i)")
@@ -587,7 +587,9 @@ int main(int argc, char** argv)
       scatteringAssemblerEnriched.assembleScattering<0>(scattering, xPrevious, sVector, kernelS);
       rhs[i] += scattering;
           // - Computation of the a posteriori error
-      double aposterioriErr = errorTools.aPosterioriError(bilinearForms[i],innerProducts[i],u[i],theta[i],rhs[i]); //change with contribution of scattering rhs[i]
+      double aposterioriErr = errorTools.aPosterioriError(
+          bilinearForms[i], innerProducts[i], x[i], rhs[i]);
+          //change with contribution of scattering rhs[i]
       ofs << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
 
       // We compute the L2 error wrt previous iterate

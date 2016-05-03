@@ -433,7 +433,9 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
           .template assembleScattering<0>(scattering, xPrevious);
       rhs[i] += scattering;
       // - Computation of the a posteriori error
-      double aposterioriErr = errorTools.aPosterioriError(bilinearForms[i],innerProducts[i],u[i],theta[i],rhs[i]); //change with contribution of scattering rhs[i]
+      double aposterioriErr = errorTools.aPosterioriError(
+          bilinearForms[i], innerProducts[i], x[i], rhs[i]);
+          //change with contribution of scattering rhs[i]
       ofs << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
 
       // We compute the L2 error wrt previous iterate
