@@ -15,24 +15,41 @@ namespace Dune {
 namespace detail {
 
 // Compute the source term for a single element
-template <class LocalViewTest, class FactorType,
+template <LinearIntegrationType integrationType,
+          class Space,
           bool = is_RefinedFiniteElement
-                 <typename LocalViewTest::GlobalBasis>::value>
+                 <Space>::value>
 struct GetVolumeTerm_Impl
 {
+  using LocalViewTest = typename Space::LocalView;
+
+  template<class VectorType,
+           class FactorType,
+           class DirectionType>
   static void getVolumeTerm (const LocalViewTest& localViewTest,
-                      // TODO: make the vector type a template parameter
-                             BlockVector<FieldVector<double,1> >& elementVector,
-                             const FactorType& factor);
+                             VectorType& elementVector,
+                             size_t spaceOffset,
+                             const unsigned int quadratureOrder,
+                             const FactorType& factor,
+                             const DirectionType& beta);
 };
 
 
-template <class LocalViewTest, class FactorType>
-struct GetVolumeTerm_Impl<LocalViewTest, FactorType, false>
+template <LinearIntegrationType integrationType,
+          class Space>
+struct GetVolumeTerm_Impl<integrationType, Space, false>
 {
+  using LocalViewTest = typename Space::LocalView;
+
+  template<class VectorType,
+           class FactorType,
+           class DirectionType>
   static void getVolumeTerm (const LocalViewTest& localViewTest,
-                             BlockVector<FieldVector<double,1> >& elementVector,
-                             const FactorType& factor)
+                             VectorType& elementVector,
+                             size_t spaceOffset,
+                             const unsigned int quadratureOrder,
+                             const FactorType& factor,
+                             const DirectionType& beta)
   {
     static_assert(models<Functions::Concept::
          Function<double(const Dune::FieldVector<double, 2>&)>, FactorType>(),
@@ -51,13 +68,7 @@ struct GetVolumeTerm_Impl<LocalViewTest, FactorType, false>
     // Get set of shape functions for this element
     const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
 
-    // Set all entries to zero
-    elementVector.resize(localFiniteElementTest.localBasis().size());
-    elementVector = 0;
-
-    /* TODO: Quadrature order is only good enough for a constant factor. */
-    const unsigned int quadratureOrder
-        = localFiniteElementTest.localBasis().order();
+    const unsigned int nDofs(localFiniteElementTest.localBasis().size());
 
     // TODO: This does not work with transport elements, as we do not know
     //       the transport direction.
@@ -70,34 +81,51 @@ struct GetVolumeTerm_Impl<LocalViewTest, FactorType, false>
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
+      // Global position of the current quadrature point
       const FieldVector<double,dim>& globalQuadPos
           = geometry.global(quadPos);
 
       // The multiplicative factor in the integral transformation formula
-      const double integrationElement
-        = element.geometry().integrationElement(quadPos);
+      const double integrationWeight = geometry.integrationElement(quadPos)
+                                       * quad[pt].weight()
+                                       * factor(globalQuadPos);
 
-      const double weightedfunctionValue
-        = factor(globalQuadPos) * quad[pt].weight() * integrationElement;
+     constexpr auto evaluationType = (integrationType ==
+                                      LinearIntegrationType::valueFunction)
+                                      ? EvaluationType::value : EvaluationType::grad;
 
-      std::vector<FieldVector<double,1> > shapeFunctionValues;
-      localFiniteElementTest.localBasis().evaluateFunction(quadPos,
-                                                           shapeFunctionValues);
+     std::vector<FieldVector<double,1> > shapeFunctionValues =
+     detail::LocalFunctionEvaluation<dim, evaluationType,
+                                        DomainOfIntegration::interior>()
+                      (localFiniteElementTest,
+                       quadPos,
+                       geometry,
+                       beta);
 
-      for (size_t i=0, rhsSize=elementVector.size(); i<rhsSize; i++)
-        elementVector[i] += shapeFunctionValues[i] * weightedfunctionValue;
-
+      for (size_t i=0; i<nDofs; i++)
+      {
+        elementVector[i+spaceOffset] += shapeFunctionValues[i] * integrationWeight;
+      }
     }
 
   }
 };
 
-template <class LocalViewTest, class FactorType>
-struct GetVolumeTerm_Impl<LocalViewTest, FactorType, true>
+template <LinearIntegrationType integrationType,
+          class Space>
+struct GetVolumeTerm_Impl<integrationType, Space, true>
 {
+  using LocalViewTest = typename Space::LocalView;
+
+  template<class VectorType,
+           class FactorType,
+           class DirectionType>
   static void getVolumeTerm (const LocalViewTest& localViewTest,
-                             BlockVector<FieldVector<double,1> >& elementVector,
-                             const FactorType& factor)
+                             VectorType& elementVector,
+                             size_t spaceOffset,
+                             const unsigned int quadratureOrder,
+                             const FactorType& factor,
+                             const DirectionType& beta)
   {
     static_assert(models<Functions::Concept::
          Function<double(const Dune::FieldVector<double, 2>&)>, FactorType>(),
@@ -115,14 +143,6 @@ struct GetVolumeTerm_Impl<LocalViewTest, FactorType, true>
 
     // Get set of shape functions for this element
     const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
-
-    // Set all entries to zero
-    elementVector.resize(localFiniteElementTest.localBasis().size());
-    elementVector = 0;
-
-    /* TODO: Quadrature order is only good enough for a constant factor. */
-    const unsigned int quadratureOrder
-        = localFiniteElementTest.localBasis().order();
 
     // TODO: This does not work with transport elements, as we do not know
     //       the transport direction.
@@ -169,19 +189,23 @@ struct GetVolumeTerm_Impl<LocalViewTest, FactorType, true>
         ////////////////////
         // Test Functions //
         ////////////////////
+        constexpr auto evaluationType = (integrationType ==
+                            LinearIntegrationType::valueFunction)
+                            ? EvaluationType::value : EvaluationType::grad;
+
         std::vector<FieldVector<double,1> > shapeFunctionValues =
             detail::LocalRefinedFunctionEvaluation
-                    <dim, EvaluationType::value, DomainOfIntegration::interior,
+                    <dim, evaluationType, DomainOfIntegration::interior,
                      is_ContinuouslyRefinedFiniteElement<TestSpace>::value>()
                           (localFiniteElementTest,
                            subElementIndex,
                            quadPos,
                            geometry,
                            subGeometryInReferenceElement,
-                           {});
+                           beta);
 
         for (size_t i=0, rhsSize=elementVector.size(); i<rhsSize; i++)
-          elementVector[i] += shapeFunctionValues[i] * weightedfunctionValue;
+          elementVector[i+spaceOffset] += shapeFunctionValues[i] * weightedfunctionValue;
 
       }
       if(is_DGRefinedFiniteElement<TestSpace>::value)

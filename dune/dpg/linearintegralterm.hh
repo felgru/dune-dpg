@@ -28,8 +28,8 @@ namespace Dune {
    *                        we multiply the integrand
    * \tparam DirectionType  the type of the transport directions
    */
-  template <// IntegrationType type, TODO: reintroduce
-            // DomainOfIntegration domain_of_integration, TODO: reintroduce?
+  template <LinearIntegrationType type,
+            DomainOfIntegration domain_of_integration,
             class FactorType,
             class DirectionType = FieldVector<double, 2> >
   class LinearIntegralTerm
@@ -83,16 +83,22 @@ namespace Dune {
  * \tparam FactorType  the type of the factor \p c
  */
 template<size_t spaceIndex,
-         // IntegrationType integrationType,
-         // DomainOfIntegration domainOfIntegration,
+         LinearIntegrationType integrationType,
+         DomainOfIntegration domainOfIntegration,
          class FactorType>
 auto make_LinearIntegralTerm(FactorType c)
     -> std::tuple<std::integral_constant<size_t, spaceIndex>,
-                  LinearIntegralTerm<FactorType> >
+                  LinearIntegralTerm<integrationType,
+                                     domainOfIntegration,
+                                     FactorType> >
 {
   return std::tuple<std::integral_constant<size_t, spaceIndex>,
-                LinearIntegralTerm<FactorType> >
-         ({}, LinearIntegralTerm<FactorType>(c));
+                LinearIntegralTerm<integrationType,
+                                   domainOfIntegration,
+                                   FactorType> >
+         ({}, LinearIntegralTerm<integrationType,
+                                 domainOfIntegration,
+                                 FactorType>(c));
 }
 
 /**
@@ -106,23 +112,39 @@ auto make_LinearIntegralTerm(FactorType c)
  * \tparam DirectionType  the type of the transport direction \p beta
  */
 template<size_t spaceIndex,
-         // IntegrationType integrationType,
-         // DomainOfIntegration domainOfIntegration,
-         class FactorType, class DirectionType>
+         LinearIntegrationType integrationType,
+         DomainOfIntegration domainOfIntegration,
+         class FactorType,
+         class DirectionType>
 auto make_LinearIntegralTerm(FactorType c, DirectionType beta)
     -> std::tuple<std::integral_constant<size_t, spaceIndex>,
-                  LinearIntegralTerm<FactorType, DirectionType> >
+                  LinearIntegralTerm<integrationType,
+                                     domainOfIntegration,
+                                     FactorType,
+                                     DirectionType> >
 {
   return std::tuple<std::integral_constant<size_t, spaceIndex>,
-                LinearIntegralTerm<FactorType, DirectionType> >
-         ({}, LinearIntegralTerm<FactorType, DirectionType>(c, beta));
+                LinearIntegralTerm<integrationType,
+                                   domainOfIntegration,
+                                   FactorType,
+                                   DirectionType> >
+         ({}, LinearIntegralTerm<integrationType,
+                                 domainOfIntegration,
+                                 FactorType,
+                                 DirectionType>(c, beta));
 }
 
 
-template<class FactorType, class DirectionType>
+template<LinearIntegrationType integrationType,
+         DomainOfIntegration domainOfIntegration,
+         class FactorType,
+         class DirectionType>
 template <class LocalView,
           class VectorType>
-void LinearIntegralTerm<FactorType, DirectionType>
+void LinearIntegralTerm<integrationType,
+                        domainOfIntegration,
+                        FactorType,
+                        DirectionType>
      ::getLocalVector(
         const LocalView& localView,
         VectorType& elementVector,
@@ -131,17 +153,32 @@ void LinearIntegralTerm<FactorType, DirectionType>
   static_assert(std::is_same<typename std::decay<DirectionType>::type,
                              FieldVector<double, 2>
                             >::value,
-             "getLocalVector only implemented for constant flow!");
+                "getLocalVector only implemented for constant flow!");
 
-  detail::GetVolumeTerm_Impl<LocalView, FactorType>
-             ::getVolumeTerm(localView,
-                             elementVector,
-                             // SpaceOffset,
-                             // quadratureOrder,
-                             // element,
-                             factor
-                             //, beta
-                            );
+  static_assert(domainOfIntegration == DomainOfIntegration::interior,
+                "DomainOfIntegration not implemented.");  //TODO
+
+  static_assert(integrationType == LinearIntegrationType::valueFunction
+             || integrationType == LinearIntegrationType::gradFunction,
+                "LinearIntegrationType not implemented.");  //TODO
+
+  using Space = typename LocalView::GlobalBasis;
+
+  /* TODO: We might need a higher order when factor is a function. */
+  /* TODO: Assuming β const. */
+  const auto quadratureOrder = localView.tree().finiteElement().localBasis().order();
+  if(domainOfIntegration == DomainOfIntegration::interior) {
+    detail::GetVolumeTerm_Impl<integrationType, Space>
+                ::getVolumeTerm(localView,
+                                elementVector,
+                                spaceOffset,
+                                quadratureOrder,
+                                factor,
+                                beta
+                                );
+  } else {
+  //TODO
+  }
 
 }
 
