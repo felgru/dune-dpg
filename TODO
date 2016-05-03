@@ -2,7 +2,8 @@ known bugs:
 
 * evaluateFactor() in integralterm.hh is called with the *local* position
   of a given quadrature point, this should be first transformed into
-  global coordinates.
+  global coordinates. (Already fixed but not tested for interior implementation,
+  has to be fixed for face implementation)
 * PQkTransportBasis cannot be used as a test space at the moment.
   There are compile-time errors that are probably caused by using
   ChooseQuadrature without specifying the transport direction β.
@@ -17,6 +18,7 @@ known bugs:
     * Check scaling of gradients in refined FE!
     * Compare system matrix (with OptTestSpace) of dg-refined test search space
       of different refinement levels and the old one using subsampled FE.
+* Adjust quadrature order for non-constant function (rhs term) in getvolumeterm_impl.hh and in linearintegralterm.hh
 
 technical debt that needs to be paid off sooner or later:
 
