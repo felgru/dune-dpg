@@ -161,6 +161,28 @@ int main(int argc, char** argv)
               make_IntegralTerm<1,1,IntegrationType::gradGrad,                // (beta grad u^,beta grad u^)
                                     DomainOfIntegration::interior>(1, beta)
           ));
+    auto aPosterioriInnerProduct = make_InnerProduct(solutionSpaces,
+          make_tuple(
+              make_IntegralTerm<0,0,IntegrationType::valueValue,              // (u,u)
+                                    DomainOfIntegration::interior>(1),
+              make_IntegralTerm<1,1,IntegrationType::valueValue,              // (w,w)
+                                    DomainOfIntegration::interior>(1),
+              make_IntegralTerm<0,1,IntegrationType::valueValue,              // -2(u,w)
+                                    DomainOfIntegration::interior>(-2),
+              make_IntegralTerm<1,1,IntegrationType::gradGrad,              // (beta grad w,beta grad w)
+                                    DomainOfIntegration::interior>(1, beta),
+              make_IntegralTerm<1,1,IntegrationType::valueValue,              // (cw,cw)
+                                    DomainOfIntegration::interior>(c*c),
+              make_IntegralTerm<1,1,IntegrationType::gradValue,              // 2(beta grad w, cw)
+                                    DomainOfIntegration::interior>(2*c, beta)
+          ));
+    auto aPosterioriLinearForm = make_LinearForm(solutionSpaces,
+          make_tuple(
+              make_LinearIntegralTerm<1,LinearIntegrationType::gradFunction,// -2(beta grad w,f)
+                                    DomainOfIntegration::interior>([beta](const FieldVector<double, dim>& x){return (-2)*f(beta)(x);}, beta),
+              make_LinearIntegralTerm<1,LinearIntegrationType::valueFunction,    // -2(cw,f)
+                                    DomainOfIntegration::interior>([beta, c](const FieldVector<double, dim>& x){return (-2)*c*f(beta)(x);})
+          ));
 
     using BilinearForm = decltype(bilinearForm);
     using InnerProduct = decltype(innerProduct);
@@ -202,7 +224,9 @@ int main(int argc, char** argv)
 
     auto rightHandSide
       = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
-                        std::make_tuple(make_LinearIntegralTerm<0>(
+                        std::make_tuple(make_LinearIntegralTerm<0,
+                                            LinearIntegrationType::valueFunction,
+                                            DomainOfIntegration::interior>(
                                    f(beta))));
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
@@ -309,7 +333,9 @@ int main(int argc, char** argv)
     auto rhsAssembler_aposteriori = make_RhsAssembler(testSpaces_aposteriori);
     auto rightHandSide_aposteriori
       = make_DPG_LinearForm(testSpaces_aposteriori,
-                        std::make_tuple(make_LinearIntegralTerm<0>(
+                        std::make_tuple(make_LinearIntegralTerm<0,
+                                            LinearIntegrationType::valueFunction,
+                                            DomainOfIntegration::interior>(
                                    f(beta))));
     rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
 
@@ -318,7 +344,14 @@ int main(int argc, char** argv)
     err = errorTools.DoerflerMarking(*grid, ratio,
                                      bilinearForm_aposteriori,
                                      innerProduct_aposteriori,
-                                     x, rhs);
+                                     aPosterioriInnerProduct,
+                                     aPosterioriLinearForm, f(beta),
+                                     x, rhs, 1);    // the last parameter is in [0,1] and
+                                                    // determines which error indicator
+                                                    // is used
+                                                    // 1 = residuum
+                                                    // 0 = |u-lifting(u^)|_L_2^2
+                                                    //     + conforming residuum^2
 
     std::cout << "A posteriori error in iteration " << i << ": "
               << err << std::endl;

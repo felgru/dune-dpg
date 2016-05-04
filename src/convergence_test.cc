@@ -203,7 +203,9 @@ int main(int argc, char** argv)
 
   auto rightHandSide
     = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
-                      std::make_tuple(make_LinearIntegralTerm<0>(
+                      std::make_tuple(make_LinearIntegralTerm<0,
+                                            LinearIntegrationType::valueFunction,
+                                            DomainOfIntegration::interior>(
                                  f(beta))));
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
@@ -278,7 +280,9 @@ int main(int argc, char** argv)
     = make_RhsAssembler(testSpaces_aposteriori);
   auto rightHandSide_aposteriori
     = make_DPG_LinearForm(rhsAssembler_aposteriori.getTestSpaces(),
-                      std::make_tuple(make_LinearIntegralTerm<0>(
+                      std::make_tuple(make_LinearIntegralTerm<0,
+                                            LinearIntegrationType::valueFunction,
+                                            DomainOfIntegration::interior>(
                                  f(beta))));
   rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
 

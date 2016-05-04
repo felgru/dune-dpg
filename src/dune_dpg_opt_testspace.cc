@@ -149,7 +149,9 @@ int main(int argc, char** argv)
 
   auto rightHandSide
     = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
-                      std::make_tuple(make_LinearIntegralTerm<0>(
+                      std::make_tuple(make_LinearIntegralTerm<0,
+                                            LinearIntegrationType::valueFunction,
+                                            DomainOfIntegration::interior>(
                                  [] (const Domain& x) { return 1.;})));
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 

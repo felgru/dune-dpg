@@ -327,7 +327,12 @@ int main()
                                bilinearForm, innerProduct,
                                aPosterioriInnerProduct,
                                aPosterioriLinearForm, fieldRHS,
-                               x, rhs, 0);
+                               x, rhs, 0);    // the last parameter is in [0,1] and
+                                              // determines which error indicator
+                                              // is used
+                                              // 1 = residuum
+                                              // 0 = |u-lifting(u^)|_L_2^2
+                                              //     + conforming residuum^2
     grid->preAdapt();
     grid->adapt();
     grid->postAdapt();
