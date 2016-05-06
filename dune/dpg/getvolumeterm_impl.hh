@@ -178,8 +178,9 @@ struct GetVolumeTerm_Impl<LocalViewTest, VolumeTerm, true>
                            subGeometryInReferenceElement,
                            {});
 
-        for (size_t i=0, rhsSize=localRhs.size(); i<rhsSize; i++)
-          localRhs[i] += shapeFunctionValues[i] * weightedfunctionValue;
+        for (size_t i=0, rhsSize=shapeFunctionValues.size(); i<rhsSize; i++)
+          localRhs[i+subElementOffset]
+              += shapeFunctionValues[i] * weightedfunctionValue;
 
       }
       if(is_DGRefinedFiniteElement<TestSpace>::value)
