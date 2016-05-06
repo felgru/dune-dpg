@@ -204,8 +204,8 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
                            subGeometryInReferenceElement,
                            beta);
 
-        for (size_t i=0, rhsSize=elementVector.size(); i<rhsSize; i++)
-          elementVector[i+spaceOffset] += shapeFunctionValues[i] * weightedfunctionValue;
+        for (size_t i=0, rhsSize=shapeFunctionValues.size(); i<rhsSize; i++)
+          elementVector[i+spaceOffset+subElementOffset] += shapeFunctionValues[i] * weightedfunctionValue;
 
       }
       if(is_DGRefinedFiniteElement<TestSpace>::value)
