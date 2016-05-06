@@ -4,14 +4,15 @@
 #define DUNE_DPG_ERROR_TOOLS
 
 #include <algorithm>
+#include <numeric>
 #include <tuple>
 #include <type_traits>
 #include <vector>
 
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
+#include <boost/fusion/container/vector/convert.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
 #include <dune/istl/matrix.hh>
