@@ -294,7 +294,7 @@ int main()
     // A posteriori error
     // We compute the rhs in the form given by the projection approach
     auto rightHandSideEnriched
-      = make_DPG_LinearForm(rhsAssembler.getTestSpaces(),
+      = make_LinearForm(rhsAssembler.getTestSpaces(),
                     std::make_tuple(make_LinearIntegralTerm<0,
                                         LinearIntegrationType::valueFunction,
                                         DomainOfIntegration::interior>(fieldRHS)));
