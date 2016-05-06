@@ -1,6 +1,11 @@
 0.1.1:
 * dune-dpg has been made compatible with Dune 2.4.1.
-* added some missing #includes and removed unused ones.
+* A bug in the computation of the right hand side for refined test spaces
+  has been fixed. This also fixed the wrong results we were getting from
+  the a posteriori estimator when using refined a posteriori test spaces.
+* The definition of BOOST_FUSION_INVOKE_PROCEDURE_MAX_ARITY has been
+  moved to config.h.cmake.
+* Added some missing #includes and removed unused ones.
 
 0.1:
 * initial release, compatible with Dune 2.4.0
