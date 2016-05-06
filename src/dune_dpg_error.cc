@@ -112,11 +112,12 @@ int main()
 
     double beta0 = -1.0;
     double beta1 = -1.0;
+    double c = 1.;
     FieldVector<double, dim> beta = {beta0,beta1};
     auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
             make_tuple(
                 make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                      DomainOfIntegration::interior>(1.),
+                                      DomainOfIntegration::interior>(c),
                 make_IntegralTerm<0,0,IntegrationType::gradValue,
                                       DomainOfIntegration::interior>(-1., beta),
                 make_IntegralTerm<0,1,IntegrationType::normalVector,
@@ -155,9 +156,9 @@ int main()
     auto aPosterioriLinearForm = make_LinearForm(solutionSpaces,
             make_tuple(
                 make_LinearIntegralTerm<1,LinearIntegrationType::gradFunction,// -2(beta grad w,f)
-                                      DomainOfIntegration::interior>([beta](const FieldVector<double, dim>& x){return (-2)*f(beta)(x);}, beta),
+                                      DomainOfIntegration::interior>([](const FieldVector<double, dim>& x){return (-2)*fieldRHS(x);}, beta),
                 make_LinearIntegralTerm<1,LinearIntegrationType::valueFunction,    // -2(cw,f)
-                                      DomainOfIntegration::interior>([beta, c](const FieldVector<double, dim>& x){return (-2)*c*f(beta)(x);})
+                                      DomainOfIntegration::interior>([c](const FieldVector<double, dim>& x){return (-2)*c*fieldRHS(x);})
           ));
     auto rhsAssembler = make_RhsAssembler(testSpaces);
 
@@ -304,7 +305,7 @@ int main()
         = errorTools.aPosterioriError(bilinearForm, innerProduct, x, rhs);
     std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
     double aposterioriL2Err
-        = errorTools.aPosterioriL2Error(aPosterioriInnerProduct, aPosterioriLinearForm, f(beta), x);
+        = errorTools.aPosterioriL2Error(aPosterioriInnerProduct, aPosterioriLinearForm, fieldRHS, x);
     std::cout << "A posteriori L2 error: || (u,trace u) - (u_fem,theta) || = " << aposterioriL2Err << std::endl;
 
     //////////////////////////////////////////////////////////////////////////////////////////////
