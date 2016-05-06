@@ -607,7 +607,10 @@ namespace Dune {
                make_fused_procedure(bindLocalIndexSet()));
 
       // Now we compute the error inside the element
-      double elementError = splitRatio*aPosterioriErrorSquareElement(
+      double elementError = 0;
+      if (splitRatio > 0)
+      {
+        elementError += splitRatio*aPosterioriErrorSquareElement(
                                 bilinearForm,
                                 innerProduct,
                                 localViewsTest,
@@ -616,13 +619,17 @@ namespace Dune {
                                 solutionLocalIndexSets,
                                 solution,
                                 rhs);
-      elementError += (1-splitRatio)*aPosterioriL2ErrorSquareElement(
+      }
+      if (splitRatio < 1)
+      {
+        elementError += (1-splitRatio)*aPosterioriL2ErrorSquareElement(
                                 aPosterioriInnerProduct,
                                 linearForm,
                                 f,
                                 localViewsSolution,
                                 solutionLocalIndexSets,
                                 solution);
+      }
       errorEstimates.emplace_back(e.seed(), elementError);
     }
     std::sort(errorEstimates.begin(), errorEstimates.end(),
