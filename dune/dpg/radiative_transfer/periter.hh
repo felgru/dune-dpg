@@ -42,7 +42,7 @@ class Periter {
              const F& f,
              const Kernel& kernel,
              unsigned int numS,
-             /* TODO: replace with accuracy */
+             double targetAccuracy,
              unsigned int numberOfIterations);
 };
 
@@ -68,8 +68,8 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
            const F& f,
            const Kernel& kernel,
            unsigned int numS,
-           /* TODO: replace with accuracy */
-           unsigned int numberOfIterations) {
+           double targetAccuracy,
+           unsigned int maxNumberOfIterations) {
   const unsigned int dim = 2;
 
   ///////////////////////////////////
@@ -306,7 +306,8 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
   const double rho = .5;
   // The accuracy η_n:
   double accuracy = 1.;
-  for(unsigned int n = 0; accuracy > 1e-10 && n < numberOfIterations; ++n)
+  for(unsigned int n = 0; accuracy > targetAccuracy
+                          && n < maxNumberOfIterations; ++n)
   {
     accuracy *= rho/2.;
     ofs << "Iteration " << n << std::endl;

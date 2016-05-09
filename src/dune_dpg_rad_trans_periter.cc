@@ -216,7 +216,7 @@ int main(int argc, char** argv)
   auto g = [&sVector] (const Domain& x, const Direction& s)
            { return f(x, s, uAnalytic<Domain, Direction>, sVector); };
   Periter<ScatteringKernelApproximation::SVD>()
-      .solve(gridView, g, kernel<Direction>, numS, N);
+      .solve(gridView, g, kernel<Direction>, numS, 1e-10, N);
 
   return 0;
   }
