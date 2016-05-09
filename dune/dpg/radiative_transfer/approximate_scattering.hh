@@ -30,6 +30,9 @@ namespace ScatteringKernelApproximation {
       enum : unsigned int { dim = 2 };
       using Direction = FieldVector<double, dim>;
 
+      SVD() = delete;
+      SVD(const SVD&) = delete;
+
       template<class Function>
       SVD(const Function& kernel, size_t num_s)
         : kernelSVD(num_s, num_s, Eigen::ComputeThinU | Eigen::ComputeThinV),
@@ -51,7 +54,7 @@ namespace ScatteringKernelApproximation {
         kernelSVD.compute(kernelMatrix);
       }
 
-      void applyToVector(Eigen::VectorXd& v) {
+      void applyToVector(Eigen::VectorXd& v) const {
         v = kernelSVD.matrixU().leftCols(rank)
           * kernelSVD.singularValues().head(rank).asDiagonal()
           * kernelSVD.matrixV().leftCols(rank).adjoint() * v;
@@ -134,7 +137,7 @@ private:
   TestSpaces     testSpaces;
   SolutionSpaces solutionSpaces;
   const size_t si;
-  KernelApproximation kernelApproximation;
+  const KernelApproximation& kernelApproximation;
 };
 
 /**
