@@ -316,9 +316,16 @@ int main(int argc, char** argv)
 //#if 0
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
-  auto rightHandSide = std::make_tuple(fieldRHS,
-                                       [] (const Domain& x) { return 0;},
-                                       [] (const Domain& x) { return 0;});
+  auto rightHandSide
+    = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
+    // make_Saddlepoint_LinearForm(
+    //  systemAssembler.getTestSpaces(),
+    //  systemAssembler.getSolutionSpaces(),
+        std::make_tuple(
+            make_LinearIntegralTerm<0>(fieldRHS)
+          , make_LinearIntegralTerm<1>([] (const Domain& x) { return 0.;})
+          , make_LinearIntegralTerm<2>([] (const Domain& x) { return 0.;})
+          ));
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
   MatrixType testMatrix(stiffnessMatrix);
@@ -365,7 +372,7 @@ printmatrix(file , testMatrix, "testmatrix", "--");
     std::vector<bool> dirichletNodesInflow;
     boundaryTreatmentInflow(std::get<3>(solutionSpaces),
                             dirichletNodesInflow);
-    systemAssembler.applyDirichletBoundarySolution<3,double>
+    systemAssembler.applyDirichletBoundary<3,double>
         (stiffnessMatrix,
          rhs,
          dirichletNodesInflow,

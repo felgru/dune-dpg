@@ -29,6 +29,7 @@
 #include <boost/fusion/algorithm/iteration/accumulate.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
+#include <boost/fusion/sequence/intrinsic/value_at.hpp>
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -39,8 +40,8 @@
 #include "bilinearform.hh"
 #include "innerproduct.hh"
 #include "quadrature.hh"
+#include "linearform.hh"
 #include "localevaluation.hh"
-#include "getvolumeterm_impl.hh"
 
 namespace Dune {
 
@@ -303,18 +304,29 @@ public:
    * DPG system. \p matrix and \p rhs will be overwritten by this
    * function.
    *
-   * \param[out] matrix      the matrix of the DPG system
-   * \param[out] rhs         the rhs vector of the DPG system
-   * \param[in]  volumeTerms the rhs functions describing the DPG system
-   * \tparam     VolumeTerms a tuple type of rhs functions
+   * \param[out] matrix        the matrix of the DPG system
+   * \param[out] rhs           the rhs vector of the DPG system
+   * \param[in]  rhsLinearForm the linear form describing the rhs
    */
-  template <class VolumeTerms>
+  template <class LinearForm>
   void assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                       BlockVector<FieldVector<double,1> >& rhs,
-                      VolumeTerms&& volumeTerms);
+                      LinearForm& rhsLinearForm);
 
   /**
-   * \brief Apply Dirichlet boundary values on a test space
+   * \brief The same as assembleSystem but it only assembles the matrix.
+   */
+  void assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix);
+
+  /**
+   * \brief The same as assembleSystem but it only assembles the rhs.
+   */
+  template <class LinearForm>
+  void assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
+                   LinearForm& rhsLinearForm);
+
+  /**
+   * \brief Apply Dirichlet boundary values to a solution space
    *
    * \param[in,out] matrix      the matrix of the DPG system
    * \param[in,out] rhs         the rhs vector of the DPG system
@@ -325,16 +337,31 @@ public:
    * \tparam ValueType   we take either constants or functions for \p value
    */
   template <size_t spaceIndex, class ValueType>
-  void applyDirichletBoundaryTest(
+  void applyDirichletBoundary(
                               BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                               BlockVector<FieldVector<double,1> >& rhs,
                               const std::vector<bool>& dirichletNodes,
                               const ValueType& value);
 
   /**
-   * \brief Apply Dirichlet boundary values on a solution space
+   * \brief Apply Dirichlet boundary values to a solution space
    *
    * \param[in,out] matrix      the matrix of the DPG system
+   * \param[in] dirichletNodes  true marks the dofs in the Dirichlet boundary
+   * \param[in] value           the Dirichlet boundary value
+   * \tparam spaceIndex  the index of the test space on which we apply
+   *                     the boundary data
+   * \tparam ValueType   we take either constants or functions for \p value
+   */
+  template <size_t spaceIndex, class ValueType>
+  void applyDirichletBoundaryToMatrix(
+                              BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                              const std::vector<bool>& dirichletNodes,
+                              const ValueType& value);
+
+  /**
+   * \brief Apply Dirichlet boundary values to a solution space
+   *
    * \param[in,out] rhs         the rhs vector of the DPG system
    * \param[in] dirichletNodes  true marks the dofs in the Dirichlet boundary
    * \param[in] value           the Dirichlet boundary value
@@ -343,8 +370,7 @@ public:
    * \tparam ValueType   we take either constants or functions for \p value
    */
   template <size_t spaceIndex, class ValueType>
-  void applyDirichletBoundarySolution(
-                              BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+  void applyDirichletBoundaryToRhs(
                               BlockVector<FieldVector<double,1> >& rhs,
                               const std::vector<bool>& dirichletNodes,
                               const ValueType& value);
@@ -474,12 +500,23 @@ auto make_Saddlepoint_SystemAssembler(TestSpaces     testSpaces,
 template<class TestSpaces, class SolutionSpaces,
          class BilinearForm, class InnerProduct,
          class FormulationType>
-template <class VolumeTerms>
+template <class LinearForm>
 void SystemAssembler<TestSpaces, SolutionSpaces,
                      BilinearForm, InnerProduct, FormulationType>::
 assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                BlockVector<FieldVector<double,1> >& rhs,
-               VolumeTerms&& volumeTerms)
+               LinearForm& rhsLinearForm)
+{
+  assembleMatrix(matrix);
+  assembleRhs   (rhs, rhsLinearForm);
+}
+
+template<class TestSpaces, class SolutionSpaces,
+         class BilinearForm, class InnerProduct,
+         class FormulationType>
+void SystemAssembler<TestSpaces, SolutionSpaces,
+                     BilinearForm, InnerProduct, FormulationType>::
+assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 {
   using namespace boost::fusion;
   using namespace Dune::detail;
@@ -530,12 +567,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                                                      innerProduct, n);
   occupationPattern.exportIdx(matrix);
 
-  // set rhs to correct length -- the total number of basis vectors in the basis
-  rhs.resize((isSaddlepoint?globalTotalTestSize:0) + globalTotalSolutionSize);
-
   // Set all entries to zero
   matrix = 0;
-  rhs = 0;
 
   // Views on the FE bases on a single element
   auto solutionLocalViews = as_vector(transform(solutionSpaces,
@@ -602,30 +635,124 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
        testZip,
        solutionZip,
        cp, cpm);
+  }
+}
+
+template<class TestSpaces, class SolutionSpaces,
+         class BilinearForm, class InnerProduct,
+         class FormulationType>
+template <class LinearForm>
+void SystemAssembler<TestSpaces, SolutionSpaces,
+                     BilinearForm, InnerProduct, FormulationType>::
+assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
+            LinearForm& rhsLinearForm)
+{
+  using namespace boost::fusion;
+  using namespace Dune::detail;
+
+  constexpr bool isSaddlepoint =
+        std::is_same<
+             typename std::decay<FormulationType>::type
+           , SaddlepointFormulation
+        >::value;
+
+  typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
+  GridView gridView = std::get<0>(testSpaces).gridView();
+
+  /* set up global offsets */
+  size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
+  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+  size_t globalTotalTestSize = 0;
+
+  if(isSaddlepoint) {
+    globalTotalTestSize =
+        fold(zip(globalTestSpaceOffsets, testSpaces),
+             (size_t)0, globalOffsetHelper());
+  } else { /* DPG formulation */
+    for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
+    {
+      globalTestSpaceOffsets[i] = 0;
+    }
+  }
+
+  size_t globalTotalSolutionSize =
+      fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
+           isSaddlepoint?globalTotalTestSize:0, globalOffsetHelper());
+
+  globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
+
+  // set rhs to correct length -- the total number of basis vectors in the basis
+  rhs.resize((isSaddlepoint?globalTotalTestSize:0) + globalTotalSolutionSize);
+
+  // Set all entries to zero
+  rhs = 0;
+
+  // Views on the FE bases on a single element
+  auto testLocalViews     = as_vector(transform(testSpaces, getLocalView()));
+
+  auto testLocalIndexSets = as_vector(transform(testSpaces,
+                                                getLocalIndexSet()));
+
+
+  for(const auto& e : elements(gridView)) {
+
+    for_each(testLocalViews, applyBind<decltype(e)>(e));
+
+    for_each(zip(testLocalIndexSets, testLocalViews),
+             make_fused_procedure(bindLocalIndexSet()));
 
     // Now get the local contribution to the right-hand side vector
-    BlockVector<FieldVector<double,1> >
-        localRhs[std::tuple_size<
-                 typename std::remove_reference<VolumeTerms>::type>::value];
+    BlockVector<FieldVector<double,1> > localRhs;
 
-    using RHSZipHelper = vector<decltype(testLocalViews)&,
-                                decltype(localRhs)&,
-                                decltype(volumeTerms)&>;
-    for_each(zip_view<RHSZipHelper>(RHSZipHelper(testLocalViews,
-                                                 localRhs,
-                                                 volumeTerms)),
-             getVolumeTermHelper());
+    rhsLinearForm.bind(testLocalViews);
+    rhsLinearForm.getLocalVector(localRhs);
 
-    /* TODO: This will break with more than 1 test space having a rhs! */
-    auto cpr = fused_procedure<localToGlobalRHSCopier<
-                    typename std::remove_reference<decltype(rhs)>::type> >
-                 (localToGlobalRHSCopier<
-                    typename std::remove_reference<decltype(rhs)>::type>(rhs));
-    for_each(zip(localRhs,
-                 testLocalIndexSets,
-                 globalTestSpaceOffsets),
-             std::ref(cpr));
+    auto cp = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
+                   typename std::remove_reference<decltype(rhs)>::type> >
+                (localToGlobalRHSCopier<decltype(localRhs),
+                   typename std::remove_reference<decltype(rhs)>::type>
+                                        (localRhs, rhs));
 
+    /* copy every local subvector indexed by an index from
+     * lfIndices exactly once. */
+    auto testZip = zip(testLocalViews,
+                       testLocalIndexSets,
+                       rhsLinearForm.getLocalSpaceOffsets(),
+                       globalTestSpaceOffsets);
+    if(isSaddlepoint)
+    {
+      /* create set of indices to loop over when copying the local matrices
+       * into the global one.
+       */
+      typedef typename boost::mpl::fold<
+          typename boost::mpl::transform<
+              /* This as_vector is probably not needed for boost::fusion 1.58
+               * or higher. */
+              typename result_of::as_vector<typename std::remove_reference<
+                    decltype(rhsLinearForm.getTerms())>::type
+                  >::type
+            , mpl::first<boost::mpl::_1>
+            >::type
+        , boost::mpl::set0<>
+        , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
+        >::type LFIndices;
+
+      auto lfIndices = LFIndices{};
+      for_each(lfIndices,
+               localToGlobalRHSCopyHelper<decltype(testZip),
+                                          decltype(cp)>
+                                         (testZip, cp));
+    } else {
+      typedef
+          typename boost::fusion::vector<std::integral_constant<size_t, 0> >
+              LFIndices;
+
+      auto lfIndices = LFIndices{};
+      for_each(lfIndices,
+               localToGlobalRHSCopyHelper<decltype(testZip),
+                                          decltype(cp)>
+                                         (testZip, cp));
+    }
   }
 }
 
@@ -636,16 +763,16 @@ template<class TestSpaces, class SolutionSpaces,
 template <size_t spaceIndex, class ValueType>
 void SystemAssembler<TestSpaces, SolutionSpaces,
                      BilinearForm, InnerProduct, FormulationType>::
-applyDirichletBoundaryTest
+applyDirichletBoundary
                       (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                        BlockVector<FieldVector<double,1> >& rhs,
                        const std::vector<bool>& dirichletNodes,
-                       const ValueType& value)
+                       const ValueType& boundaryValue)
 {
-  applyDirichletBoundaryImpl<SpaceType::test, spaceIndex,
-                             ValueType, TestSpaces>
-                             (matrix, rhs, dirichletNodes,
-                              value, testSpaces);
+  applyDirichletBoundaryToMatrix<spaceIndex>
+          (matrix, dirichletNodes, boundaryValue);
+  applyDirichletBoundaryToRhs<spaceIndex>
+          (rhs,    dirichletNodes, boundaryValue);
 }
 
 template<class TestSpaces, class SolutionSpaces,
@@ -654,29 +781,10 @@ template<class TestSpaces, class SolutionSpaces,
 template <size_t spaceIndex, class ValueType>
 void SystemAssembler<TestSpaces, SolutionSpaces,
                      BilinearForm, InnerProduct, FormulationType>::
-applyDirichletBoundarySolution
+applyDirichletBoundaryToMatrix
                       (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
-                       BlockVector<FieldVector<double,1> >& rhs,
                        const std::vector<bool>& dirichletNodes,
-                       const ValueType& value)
-{
-  applyDirichletBoundaryImpl<SpaceType::solution, spaceIndex,
-                             ValueType, SolutionSpaces>
-                             (matrix, rhs, dirichletNodes,
-                              value, solutionSpaces);
-}
-
-template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct,
-         class FormulationType>
-template <SpaceType spaceType, size_t spaceIndex, class ValueType, class Spaces>
-void SystemAssembler<TestSpaces, SolutionSpaces,
-                     BilinearForm, InnerProduct, FormulationType>::
-applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
-                       BlockVector<FieldVector<double,1> >& rhs,
-                       const std::vector<bool>& dirichletNodes,
-                       const ValueType& boundaryValue,
-                       const Spaces& spaces)
+                       const ValueType& boundaryValue)
 {
   using namespace boost::fusion;
   using namespace Dune::detail;
@@ -688,7 +796,7 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
         >::value;
 
   const size_t spaceSize =
-        std::get<spaceIndex>(spaces).size();
+        std::get<spaceIndex>(solutionSpaces).size();
 
   size_t globalOffset;
   {
@@ -711,20 +819,7 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
          isSaddlepoint?globalTotalTestSize:0, globalOffsetHelper());
 
-    if(spaceType==SpaceType::test)
-      globalOffset = globalTestSpaceOffsets[spaceIndex];
-    else
-      globalOffset = globalSolutionSpaceOffsets[spaceIndex];
-  }
-
-  // Set Dirichlet values
-  for (size_t i=0; i<spaceSize; i++)
-  {
-    if (dirichletNodes[i])
-    {
-      /* TODO: Needs adaptation when value is a function. */
-      rhs[globalOffset+i] = detail::evaluateFactor(boundaryValue,i);
-    }
+    globalOffset = globalSolutionSpaceOffsets[spaceIndex];
   }
 
   ////////////////////////////////////////////
@@ -755,6 +850,65 @@ applyDirichletBoundaryImpl(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     }
 
   }
+}
+
+template<class TestSpaces, class SolutionSpaces,
+         class BilinearForm, class InnerProduct,
+         class FormulationType>
+template <size_t spaceIndex, class ValueType>
+void SystemAssembler<TestSpaces, SolutionSpaces,
+                     BilinearForm, InnerProduct, FormulationType>::
+applyDirichletBoundaryToRhs
+                      (BlockVector<FieldVector<double,1> >& rhs,
+                       const std::vector<bool>& dirichletNodes,
+                       const ValueType& boundaryValue)
+{
+  using namespace boost::fusion;
+  using namespace Dune::detail;
+
+  constexpr bool isSaddlepoint =
+        std::is_same<
+             typename std::decay<FormulationType>::type
+           , SaddlepointFormulation
+        >::value;
+
+  const size_t spaceSize =
+        std::get<spaceIndex>(solutionSpaces).size();
+
+  size_t globalOffset;
+  {
+    /* set up global offsets */
+    size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
+    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    size_t globalTotalTestSize = 0;
+
+    if(isSaddlepoint) {
+      globalTotalTestSize =
+          fold(zip(globalTestSpaceOffsets, testSpaces),
+               (size_t)0, globalOffsetHelper());
+    } else { /* DPG formulation */
+      for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
+      {
+        globalTestSpaceOffsets[i] = 0;
+      }
+    }
+
+    fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
+         isSaddlepoint?globalTotalTestSize:0, globalOffsetHelper());
+
+    globalOffset = globalSolutionSpaceOffsets[spaceIndex];
+  }
+
+  // Set Dirichlet values
+  for (size_t i=0; i<spaceSize; i++)
+  {
+    if (dirichletNodes[i])
+    {
+      /* TODO: Needs adaptation when value is a function. */
+      rhs[globalOffset+i] = detail::evaluateFactor(boundaryValue,i);
+    }
+  }
+
 }
 
 template<class TestSpaces, class SolutionSpaces,

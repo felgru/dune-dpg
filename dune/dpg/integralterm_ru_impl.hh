@@ -55,13 +55,16 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
+      // Global position of the current quadrature point
+      const FieldVector<double,dim>& globalQuadPos
+          = geometry.global(quadPos);
 
       // The multiplicative factor in the integral transformation formula
       const double integrationWeight
         = geometry.integrationElement(subGeometryInReferenceElement
                                                       .global(quadPos))
         * subGeometryInReferenceElement.integrationElement(quadPos)
-        * quad[pt].weight() * detail::evaluateFactor(factor, quadPos);
+        * quad[pt].weight() * detail::evaluateFactor(factor, globalQuadPos);
 
       //////////////////////////////
       // Left hand side Functions //
@@ -160,7 +163,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
     unsigned int nInflowIntersections = 0;
     unsigned int nOutflowIntersections = 0;
-    for (auto&& intersection : intersections(gridView, subElement))
+    for (auto&& intersection : intersections(referenceGridView, subElement))
     {
       using intersectionType
         = typename std::decay<decltype(intersection)>::type;
@@ -193,7 +196,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
         = detail::referenceBeta(geometry,
             subGeometryInReferenceElement, lhsBeta);
 
-    for (auto&& intersection : intersections(gridView, subElement))
+    for (auto&& intersection : intersections(referenceGridView, subElement))
     {
       using intersectionType
         = typename std::decay<decltype(intersection)>::type;

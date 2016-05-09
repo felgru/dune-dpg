@@ -388,10 +388,10 @@ namespace detail {
     return splitPoint;
   }
 
-  template <class Geometry, int dim>
+  template <class Geometry, class SubGeometry, int dim>
   FieldVector<double,dim> referenceBeta(
       const Geometry& geometry,
-      const Geometry& subGeometryInReferenceElement,
+      const SubGeometry& subGeometryInReferenceElement,
       const FieldVector<double, dim>& beta)
   {
     static_assert(dim==2, "Computation of transport direction on reference"

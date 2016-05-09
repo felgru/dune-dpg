@@ -172,6 +172,57 @@ private:
       localSolutionSpaceOffsets;
 };
 
+template <class VectorType,
+          class TestSpaces>
+struct getLocalVectorHelper
+{
+  template<class T, class Seq>
+  using array_of_same_size =
+      T[boost::fusion::result_of::size<Seq>::type::value];
+
+  //! tuple type for the local views of the test spaces
+  typedef typename boost::fusion::result_of::as_vector<
+      typename boost::fusion::result_of::
+      transform<TestSpaces, detail::getLocalView>::type>::type TestLocalViews;
+
+  getLocalVectorHelper(const TestLocalViews& testLocalViews,
+                       VectorType& elementVector,
+                       const array_of_same_size<size_t, TestLocalViews>&
+                           localTestSpaceOffsets)
+      : testLocalViews(testLocalViews),
+        elementVector(elementVector),
+        localTestSpaceOffsets(localTestSpaceOffsets)
+  {}
+
+  /**
+   * \tparam Term a LinearIntegralTerm
+   */
+  template <class testSpaceIndex,
+            class Term>
+  void operator()
+         (const std::tuple<testSpaceIndex, Term>& termTuple) const
+  {
+    using namespace boost::fusion;
+
+    const auto& term = std::get<1>(termTuple);
+
+    const auto& testLV =
+        at_c<testSpaceIndex::value>(testLocalViews);
+    size_t localTestSpaceOffset =
+        at_c<testSpaceIndex::value>(localTestSpaceOffsets);
+
+    term.getLocalVector(testLV,
+                        elementVector,
+                        localTestSpaceOffset);
+  }
+
+private:
+  const TestLocalViews& testLocalViews;
+  VectorType& elementVector;
+  const array_of_same_size<size_t, TestLocalViews>&
+      localTestSpaceOffsets;
+};
+
 template <class TestLocalViews,
           class SolutionLocalViews,
           class TestLocalIndexSets,
@@ -339,30 +390,60 @@ private:
   LocalToGlobalCopier& localToGlobalCopier;
 };
 
-template<class GlobalVector>
+template<class LocalVector, class GlobalVector>
 struct localToGlobalRHSCopier
 {
 
-  localToGlobalRHSCopier(GlobalVector& gv) :
-      rhs(gv) {}
+  localToGlobalRHSCopier(const LocalVector& lv, GlobalVector& gv) :
+      localRhs(lv), rhs(gv) {}
 
-  template<class LocalVector, class TestLocalIndexSet>
+  template<class TestLocalView, class TestLocalIndexSet>
   void operator()
-         (LocalVector& localRhs,
+         (TestLocalView const & testLocalView,
           TestLocalIndexSet const & testLocalIndexSet,
-          size_t testGlobalOffset
+          size_t testLocalOffset, size_t testGlobalOffset
          )
   {
-    for (size_t i=0, i_max=localRhs.size(); i<i_max; i++) {
-      // The global index of the i-th vertex of the element 'it'
-      auto row = testLocalIndexSet.index(i)[0]
-                 + testGlobalOffset;
-      rhs[row] += localRhs[i];
+    const size_t nTest(testLocalView.size());
+
+    for (size_t i=0; i<nTest; i++) {
+      auto row = testLocalIndexSet.index(i)[0] + testGlobalOffset;
+      rhs[row] += localRhs[i+testLocalOffset];
     }
   }
 
 private:
+  const LocalVector& localRhs;
   GlobalVector& rhs;
+};
+
+template <class TestZip,
+          class LocalToGlobalRHSCopier>
+struct localToGlobalRHSCopyHelper
+{
+  localToGlobalRHSCopyHelper(
+                       const TestZip& testZip,
+                       LocalToGlobalRHSCopier& localToGlobalRHSCopier)
+      : testZip(testZip),
+        localToGlobalRHSCopier(localToGlobalRHSCopier)
+  {}
+
+  template <class TestSpaceIndex>
+  void operator()
+         (const TestSpaceIndex& index) const
+  {
+    using namespace boost::fusion;
+
+    const auto& testData =
+        at_c<TestSpaceIndex::value>(testZip);
+
+    localToGlobalRHSCopier(testData);
+  }
+
+private:
+  const TestZip& testZip;
+
+  LocalToGlobalRHSCopier& localToGlobalRHSCopier;
 };
 
 struct offsetHelper
@@ -492,6 +573,14 @@ private:
 
 
 namespace mpl {
+  template<class Seq>
+  struct first
+  {
+    typedef typename std::remove_reference<
+      typename boost::fusion::result_of::at_c<Seq,0>::type>::type
+        type;
+  };
+
   template<class Seq>
   struct firstTwo
   {
