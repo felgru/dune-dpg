@@ -50,13 +50,13 @@ class Periter {
 template<class FieldVector>
 void extractSolution(std::vector< FieldVector >& u,
                      const std::vector< FieldVector >& x,
-                     const int offset
+                     unsigned int offset
                      )
 {
-  int numS = x.size();
-  int i_max = u[0].size();
-  for(int iDir=0;iDir<numS;iDir++){
-    for(int i=0;i<i_max;i++){
+  unsigned int numS = x.size();
+  unsigned int i_max = u[0].size();
+  for(unsigned int iDir=0;iDir<numS;iDir++){
+    for(unsigned int i=0;i<i_max;i++){
       u[iDir][i] = x[iDir][i+offset];
     }
   }
