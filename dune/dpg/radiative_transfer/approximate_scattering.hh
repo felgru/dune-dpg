@@ -214,24 +214,24 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
   scattering = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalView     = as_vector(transform(testSpaces, getLocalView()));
-  auto solutionLocalView = as_vector(transform(solutionSpaces, getLocalView()));
+  auto testLocalViews     = as_vector(transform(testSpaces, getLocalView()));
+  auto solutionLocalViews = as_vector(transform(solutionSpaces, getLocalView()));
 
-  auto testLocalIndexSet     = as_vector(transform(testSpaces,
-                                                   getLocalIndexSet()));
-  auto solutionLocalIndexSet = as_vector(transform(solutionSpaces,
-                                                   getLocalIndexSet()));
+  auto testLocalIndexSets     = as_vector(transform(testSpaces,
+                                                    getLocalIndexSet()));
+  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces,
+                                                    getLocalIndexSet()));
 
   for(const auto& e : elements(gridView)) {
 
     // Bind the local FE basis view to the current element
     /* TODO: only bind the space we use later */
-    for_each(solutionLocalView, applyBind<decltype(e)>(e));
-    for_each(testLocalView, applyBind<decltype(e)>(e));
+    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
+    for_each(testLocalViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(solutionLocalIndexSet, solutionLocalView),
+    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
              make_fused_procedure(bindLocalIndexSet()));
-    for_each(zip(testLocalIndexSet, testLocalView),
+    for_each(zip(testLocalIndexSets, testLocalViews),
              make_fused_procedure(bindLocalIndexSet()));
 
     // Now get the local contribution to the right-hand side vector
@@ -243,9 +243,9 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
 
     // Get set of shape functions for this element
     const auto& localFiniteElementTest =
-        at_c<0>(testLocalView).tree().finiteElement();
+        at_c<0>(testLocalViews).tree().finiteElement();
     const auto& localFiniteElementSolution =
-        at_c<solutionSpaceIndex>(solutionLocalView).tree().finiteElement();
+        at_c<solutionSpaceIndex>(solutionLocalViews).tree().finiteElement();
 
     BlockVector<FieldVector<double,1> >
         localScattering(localFiniteElementTest.localBasis().size());
@@ -293,12 +293,12 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
               evaluateFunction(quadPos, shapeFunctionValues);
           for (size_t j=0; j<shapeFunctionValues.size(); j++)
           {
-            /* This assumes that solutionLocalIndexSet and
+            /* This assumes that solutionLocalIndexSets and
              * globalSolutionSpaceOffset don't change for different
              * scattering angles.
              */
             auto row =
-                at_c<solutionSpaceIndex>(solutionLocalIndexSet).index(j)[0]
+                at_c<solutionSpaceIndex>(solutionLocalIndexSets).index(j)[0]
               + globalSolutionSpaceOffset;
             uValue += x[scatteringAngle][row] * shapeFunctionValues[j];
           }
@@ -315,10 +315,14 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
 
     auto rhsCopier
         = localToGlobalRHSCopier
-            <typename std::remove_reference<decltype(scattering)>::type>
-            (scattering);
-    rhsCopier(localScattering,
-              at_c<0>(testLocalIndexSet),
+            <typename std::remove_reference<decltype(localScattering)>::type,
+             typename std::remove_reference<decltype(scattering)>::type>
+            (localScattering, scattering);
+    // TODO: We should probably not hard-code the test space index
+    //       and testLocalOffset.
+    rhsCopier(at_c<0>(testLocalViews),
+              at_c<0>(testLocalIndexSets),
+              0,
               globalTestSpaceOffsets[0]
              );
   }

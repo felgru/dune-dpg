@@ -333,15 +333,23 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
     {
       Direction s = sVector[i];
 
+      auto rhsFunction = make_DPG_LinearForm(
+            systemAssemblers[i].getTestSpaces(),
+            std::make_tuple(
+              make_LinearIntegralTerm
+                < 0
+                , LinearIntegrationType::valueFunction
+                , DomainOfIntegration::interior>
+                ([s,&f] (const Domain& x) { return f(x,s); })));
       systemAssemblers[i].assembleSystem(
           stiffnessMatrix[i], rhs[i],
-          std::make_tuple([s,&f] (const Domain& x) { return f(x,s); }));
+          rhsFunction);
       VectorType scattering;
       scatteringAssemblers[i].template assembleScattering<0>(
           scattering,
           xPrevious);
       rhs[i] += scattering;
-      systemAssemblers[i].template applyDirichletBoundarySolution<1>
+      systemAssemblers[i].template applyDirichletBoundary<1>
           (stiffnessMatrix[i],
            rhs[i],
            dirichletNodesInflow[i],
@@ -424,8 +432,16 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
       // We compute the a posteriori error
       // - We compute the rhs with the enriched test space ("rhs[i]=f(v_i)")
       // -- Contribution of the source term f that has an analytic expression
+      auto rhsFunction = make_DPG_LinearForm(
+            rhsAssembler.getTestSpaces(),
+            std::make_tuple(
+              make_LinearIntegralTerm
+                < 0
+                , LinearIntegrationType::valueFunction
+                , DomainOfIntegration::interior>
+                ([s,&f] (const Domain& x) { return f(x,s); })));
       rhsAssembler.assembleRhs(rhs[i],
-          std::make_tuple([s,&f] (const Domain& x) { return f(x,s); }));
+          rhsFunction);
       // -- Contribution of the scattering term
       VectorType scattering;
       kernelApproximation.setAccuracy(0.);

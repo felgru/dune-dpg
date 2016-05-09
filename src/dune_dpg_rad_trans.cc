@@ -480,8 +480,16 @@ int main(int argc, char** argv)
     {
       Direction s = sVector[i];
 
-      //auto g = std::make_tuple([s,&f] (const Domain& x) { return f(x,s);});
-      auto g = std::make_tuple([s,&uExact,&sVector] (const Domain& x) { return f(x,s,uExact,sVector);});
+      auto g = make_DPG_LinearForm(
+          systemAssemblers[i].getTestSpaces(),
+          std::make_tuple(
+            make_LinearIntegralTerm
+              < 0
+              , LinearIntegrationType::valueFunction
+              , DomainOfIntegration::interior>
+              ([s,&uExact,&sVector] (const Domain& x)
+                  { return f(x,s,uExact,sVector);})));
+      //       [s,&f] (const Domain& x) { return f(x,s);}
 
       auto kernelS = std::make_tuple([s] (const Domain& x, const Direction& sIntegration) {return kernel(x,sIntegration,s);});
 
@@ -489,7 +497,7 @@ int main(int argc, char** argv)
       VectorType scattering;
       scatteringAssemblers[i].assembleScattering<0>(scattering, xPrevious, sVector, kernelS);
       rhs[i] += scattering;
-      systemAssemblers[i].applyDirichletBoundarySolution<1>
+      systemAssemblers[i].applyDirichletBoundary<1>
           (stiffnessMatrix[i],
            rhs[i],
            dirichletNodesInflow[i],
@@ -578,8 +586,16 @@ int main(int argc, char** argv)
       // We compute the a posteriori error
           // - We compute the rhs with the enriched test space ("rhs[i]=f(v_i)")
           // -- Contribution of the source term f that has an analytic expression
-      //auto g = std::make_tuple([s,&f] (const Domain& x) { return f(x,s);});
-      auto g = std::make_tuple([s,&uExact,&sVector] (const Domain& x) { return f(x,s,uExact,sVector);});
+      auto g = make_DPG_LinearForm(
+          rhsAssembler.getTestSpaces(),
+          std::make_tuple(
+            make_LinearIntegralTerm
+              < 0
+              , LinearIntegrationType::valueFunction
+              , DomainOfIntegration::interior>
+              ([s,&uExact,&sVector] (const Domain& x)
+                  { return f(x,s,uExact,sVector);})));
+      //       [s,&f] (const Domain& x) { return f(x,s);}
       rhsAssembler.assembleRhs(rhs[i], g);
           // -- Contribution of the scattering term
       auto kernelS = std::make_tuple([s] (const Domain& x, const Direction& sIntegration) {return kernel(x,sIntegration,s);});
