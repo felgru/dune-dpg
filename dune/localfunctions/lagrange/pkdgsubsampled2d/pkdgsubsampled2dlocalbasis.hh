@@ -133,6 +133,15 @@ namespace Dune
       }
     }
 
+    inline void partial(const std::array<unsigned int,d>& order,
+                        const typename Traits::DomainType& in,
+                        std::vector<typename Traits::RangeType>& out) const
+    {
+      DUNE_THROW(Dune::NotImplemented, "Evaluation of arbitrary "
+              "derivatives of PkDGSubsampled2DLocalBasis "
+              "not implemented, yet.");
+    }
+
     /** \brief Evaluate derivative in a given direction
      * \param [in]  direction The direction to derive in
      * \param [in]  in        Position where to evaluate
