@@ -293,12 +293,6 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
     thetaPrevious[i] = 0;
   }
 
-  VectorType diffU(feBasisInterior.indexSet().size());
-  diffU = 0;
-
-  VectorType diffTheta(feBasisTrace.indexSet().size());
-  diffTheta = 0;
-
   /////////////////////////////////////////////////////////
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
@@ -456,18 +450,6 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
           bilinearForms[i], innerProducts[i], x[i], rhs[i]);
           //change with contribution of scattering rhs[i]
       ofs << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
-
-      // We compute the L2 error wrt previous iterate
-      for (unsigned int j=0; j<feBasisInterior.indexSet().size(); j++)
-        diffU[j] = u[i][j]-uPrevious[i][j];
-
-      for (unsigned int j=0; j<feBasisTrace.indexSet().size(); j++)
-        diffTheta[j] = theta[i][j]-thetaPrevious[i][j];
-
-      ofs << "Diff wrt previous iteration: " << std::endl;
-      ofs << "  -> || u["<< i << "] - u_previous["<< i <<"] ||_L2 = " << diffU.two_norm() << std::endl;
-      ofs << "  -> || theta["<< i << "] - theta_previous["<< i <<"] ||_L2 = " << diffTheta.two_norm() << std::endl << std::endl;
-
     }
     ofs << std::endl;
     std::cout << std::endl;
