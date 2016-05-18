@@ -16,11 +16,10 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
-#include <dune/functions/functionspacebases/optimaltestbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqksubsampleddgbasis.hh>
+#include <dune/functions/functionspacebases/optimaltestbasis.hh>
+#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/pqknodalbasis.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
@@ -96,15 +95,18 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
   //   Choose a finite element space
   /////////////////////////////////////////////////////////
 
-  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
+  // u
+  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior;
   FEBasisInterior feBasisInterior(gridView);
 
-  typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
+  // bulk term corresponding to u^
+  typedef Functions::PQkNodalBasis<GridView, 2> FEBasisTrace;
   FEBasisTrace feBasisTrace(gridView);
 
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
-  typedef Functions::PQkSubsampledDGNodalBasis<GridView, 4, 3> FEBasisTest; // v enriched
+  // v search space
+  typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
   auto rhsAssembler = make_RhsAssembler(testSpaces);
@@ -125,10 +127,11 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
           BilinearForm;
   typedef decltype(make_InnerProduct(testSpaces,
             make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1.),
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                     DomainOfIntegration::interior>(1.,
+                                       FieldVector<double, dim>{1.,1.}),
+              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                    DomainOfIntegration::face>(1.,
                                        FieldVector<double, dim>{1.,1.}))))
           InnerProduct;
 
@@ -138,11 +141,7 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
       FEBasisOptimalTest;              // v
 
   typedef decltype(make_DPG_SystemAssembler(
-#if 1
               std::declval<std::tuple<FEBasisOptimalTest>>(), solutionSpaces,
-#else
-              testSpaces, solutionSpaces,
-#endif
               std::declval<BilinearForm>()))
           SystemAssembler_t;
 
@@ -198,10 +197,10 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
     innerProducts.emplace_back(
       make_InnerProduct(testSpaces,
           make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1.),
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., s))));
+                                    DomainOfIntegration::interior>(1., s),
+              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                    DomainOfIntegration::face>(1., s))));
 
     coefficientMatrices.emplace_back(bilinearForms[i], innerProducts[i]);
 
@@ -355,9 +354,11 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
            rhs[i],
            dirichletNodesInflow[i],
            rhsInflowContrib[i]);
+#if 0
       systemAssemblers[i].template defineCharacteristicFaces<1,dim>(
           stiffnessMatrix[i],
           rhs[i], s);
+#endif
     }
 
     // std::ofstream of("stiffnessNew.dat");
