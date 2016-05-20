@@ -1,4 +1,5 @@
 install(FILES approximate_scattering.hh
+              approximatelocalscattering_ru_impl.hh
               approximatelocalscattering_uu_impl.hh
               periter.hh
               scattering.hh

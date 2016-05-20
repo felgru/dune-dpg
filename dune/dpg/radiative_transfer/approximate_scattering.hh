@@ -10,6 +10,7 @@
 
 #include <dune/dpg/assemble_types.hh>
 #include <dune/dpg/assemble_helper.hh>
+#include <dune/dpg/localevaluation.hh>
 #include <dune/dpg/quadrature.hh>
 
 #include <dune/istl/bvector.hh>
@@ -173,6 +174,7 @@ namespace detail {
   struct GetLocalApproximateScattering;
 }
 #include "approximatelocalscattering_uu_impl.hh"
+#include "approximatelocalscattering_ru_impl.hh"
 
 
 template<class TestSpaces,
@@ -254,7 +256,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
     const int dim = Element::dimension;
 
     BlockVector<FieldVector<double,1> >
-        localScattering(localFiniteElementTest.localBasis().size());
+        localScattering(at_c<0>(testLocalViews).size());
     localScattering = 0;
 
     detail::GetLocalApproximateScattering
