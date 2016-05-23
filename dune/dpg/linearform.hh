@@ -165,9 +165,10 @@ auto make_Saddlepoint_LinearForm(TestSpaces      testSpaces,
                            std::declval<SolutionSpaces>())
             )>::type, LinearTerms, SaddlepointFormulation>
 {
-  assert(false);        //TODO this does not really make sense
-                        //because of the spaceindex in LinearTerms
-  printf ("Use make_LinearForm and concatinate Spaces");
+  // TODO: This does not really make sense because
+  //       of the spaceindex in LinearTerms.
+  static_assert(std::tuple_size<SolutionSpaces>::value > 0,
+      "Use make_LinearForm and concatenate spaces");
   using Spaces
     = typename std::remove_reference<decltype(
             std::tuple_cat(std::declval<TestSpaces>(),

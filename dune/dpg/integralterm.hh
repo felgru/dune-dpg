@@ -358,13 +358,16 @@ namespace detail {
   }
 
   template<class Intersection, class ReferenceCellDirection>
-  double splitPointOfInflowFace(
+  double splitPointOfInflowFaceInTriangle(
       const Intersection& intersection,
-      const ReferenceCellDirection& referenceBeta)
+      ReferenceCellDirection& referenceBeta)
   {
     // This gets a bit ugly as we have to check the orientation of the face
     double splitPoint;
-    const double tol = 1e-5;
+    const double tol = 1e-10;
+    if(fabs(referenceBeta[0]) < tol) referenceBeta[0] = 0.;
+    if(fabs(referenceBeta[1]) < tol) referenceBeta[1] = 0.;
+
     if(referenceBeta[0] > 0) {
       if((intersection.geometryInInside().global({0})
           - FieldVector<double,2>{0.,0.}).two_norm() < tol)
@@ -384,6 +387,9 @@ namespace detail {
       else
         splitPoint = 1.-referenceBeta[0]/(referenceBeta[0]+referenceBeta[1]);
     }
+    if(fabs(splitPoint)< tol)         splitPoint = 0.;
+    else if(fabs(splitPoint-1.)< tol) splitPoint = 1.;
+
     assert(splitPoint >= 0 && splitPoint <= 1);
     return splitPoint;
   }
