@@ -10,6 +10,7 @@
 
 #include <dune/dpg/assemble_types.hh>
 #include <dune/dpg/assemble_helper.hh>
+#include <dune/dpg/localevaluation.hh>
 #include <dune/dpg/quadrature.hh>
 
 #include <dune/istl/bvector.hh>
@@ -165,6 +166,16 @@ auto make_DPG_ApproximateScatteringAssembler(
                             (testSpaces, solutionSpaces, kernel, si);
 }
 
+namespace detail {
+  template <class TestSpace,
+            class SolutionSpace,
+            bool = is_RefinedFiniteElement<TestSpace>::value,
+            bool = is_RefinedFiniteElement<SolutionSpace>::value>
+  struct GetLocalApproximateScattering;
+}
+#include "approximatelocalscattering_uu_impl.hh"
+#include "approximatelocalscattering_ru_impl.hh"
+
 
 template<class TestSpaces,
          class SolutionSpaces,
@@ -183,8 +194,6 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
              typename std::decay<FormulationType>::type
            , SaddlepointFormulation
         >::value;
-
-  const int numS = x.size();
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
@@ -246,77 +255,24 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
 
     const int dim = Element::dimension;
 
-    // Get set of shape functions for this element
-    const auto& localFiniteElementTest =
-        at_c<0>(testLocalViews).tree().finiteElement();
-    const auto& localFiniteElementSolution =
-        at_c<solutionSpaceIndex>(solutionLocalViews).tree().finiteElement();
-
     BlockVector<FieldVector<double,1> >
-        localScattering(localFiniteElementTest.localBasis().size());
+        localScattering(at_c<0>(testLocalViews).size());
     localScattering = 0;
 
-    /*TODO:
-    - Find out what quadrature rule we are exactly using
-    - Adapt quadrature to the kernel k also
-    */
-    int quadratureOrder = localFiniteElementSolution.localBasis().order()
-                        + localFiniteElementTest.localBasis().order();
-    /* Remark:
-    - localFiniteElementTest.localBasis().order() is the degree of the polynomial
-    - quad.size() is the number of quadrature points
-    */
-
-    const QuadratureRule<double, dim>& quad =
-        QuadratureRules<double, dim>::rule(e.type(), quadratureOrder);
-
-    // Loop over all quadrature points
-    for ( size_t pt=0; pt < quad.size(); pt++ ) {
-
-      // Position of the current quadrature point in the reference element
-      const FieldVector<double,dim>& quadPos = quad[pt].position();
-
-      // The multiplicative factor in the integral transformation formula
-      const double integrationElement = e.geometry().integrationElement(quadPos);
-
-      // Evaluate all test shape function values at this quadrature point
-      std::vector<FieldVector<double,1>> testShapeFunctionValues;
-      localFiniteElementTest.localBasis()
-          .evaluateFunction(quadPos, testShapeFunctionValues);
-
-      Eigen::VectorXd uValues(numS);
-      {
-        std::vector<FieldVector<double,1>> shapeFunctionValues;
-        localFiniteElementSolution.localBasis().
-            evaluateFunction(quadPos, shapeFunctionValues);
-        for( size_t scatteringAngle=0;
-             scatteringAngle<numS; ++scatteringAngle) {
-          double uValue = 0; // in direction of scatteringAngle
-          // Evaluate all shape function values at this point
-          std::vector<FieldVector<double,1>> shapeFunctionValues;
-          localFiniteElementSolution.localBasis().
-              evaluateFunction(quadPos, shapeFunctionValues);
-          for (size_t j=0; j<shapeFunctionValues.size(); j++)
-          {
-            /* This assumes that solutionLocalIndexSets and
-             * globalSolutionSpaceOffset don't change for different
-             * scattering angles.
-             */
-            auto row =
-                at_c<solutionSpaceIndex>(solutionLocalIndexSets).index(j)[0]
-              + globalSolutionSpaceOffset;
-            uValue += x[scatteringAngle][row] * shapeFunctionValues[j];
-          }
-          uValues(scatteringAngle) = uValue;
-        }
-      }
-      kernelApproximation.applyToVector(uValues);
-
-      const double factor = uValues(si) * quad[pt].weight()
-                            * integrationElement;
-      for (size_t i=0, i_max=localScattering.size(); i<i_max; i++)
-        localScattering[i] += factor * testShapeFunctionValues[i];
-    }
+    detail::GetLocalApproximateScattering
+      < std::tuple_element_t<0, TestSpaces>
+      , std::tuple_element_t<solutionSpaceIndex, SolutionSpaces>
+      >::interiorImpl(
+            at_c<0>(testLocalViews),
+            at_c<solutionSpaceIndex>(solutionLocalViews),
+            localScattering,
+            at_c<solutionSpaceIndex>(solutionLocalIndexSets),
+            globalSolutionSpaceOffset,
+            // unsigned int quadratureOrder,
+            e,
+            kernelApproximation,
+            x,
+            si);
 
     auto rhsCopier
         = localToGlobalRHSCopier
