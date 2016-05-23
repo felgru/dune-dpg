@@ -236,7 +236,8 @@ faceImpl(const LhsLocalView& lhsLocalView,
           nOutflowIntersections > 1) {
         quadFace = SplitQuadratureRule<double>(
             quadFace,
-            detail::splitPointOfInflowFace(intersection, referenceBeta));
+            detail::splitPointOfInflowFaceInTriangle(intersection,
+                                                     referenceBeta));
       }
 
       for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {

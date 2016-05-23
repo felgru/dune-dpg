@@ -358,7 +358,7 @@ namespace detail {
   }
 
   template<class Intersection, class ReferenceCellDirection>
-  double splitPointOfInflowFace(
+  double splitPointOfInflowFaceInTriangle(
       const Intersection& intersection,
       const ReferenceCellDirection& referenceBeta)
   {
