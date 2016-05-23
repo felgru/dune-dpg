@@ -63,14 +63,16 @@ namespace ScatteringKernelApproximation {
       void setAccuracy(double accuracy) {
         using namespace Eigen;
         VectorXd singularValues = kernelSVD.singularValues();
-        rank = singularValues.size();
-        double err = 0;
+        size_t i = singularValues.size() - 1;
+        double err = 0,
+               rank_err = singularValues(i) * singularValues(i);
         accuracy = accuracy * accuracy;
-        while (err < accuracy && rank > 0) {
-          rank -= 1;
-          err += singularValues(rank) * singularValues(rank);
+        while (err + rank_err < accuracy && i > 0) {
+          err += rank_err;
+          i -= 1;
+          rank_err = singularValues(i) * singularValues(i);
         }
-        rank += 1;
+        rank = i+1;
         // TODO: If accuracy is low enough to allow rank = 0,
         //       this gives rank = 1.
       }
