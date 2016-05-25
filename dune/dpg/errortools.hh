@@ -234,10 +234,16 @@ namespace Dune {
   }
 
 /**
- * \brief Computation of a posteriori error in (u,theta)
+ * \brief Computation of an alternative a posteriori error in (u,theta)
  *
- * \param innerProduct        the inner product
- * \param solution           the computed solution
+ * for a detailed description see ErrorTools::aPosterioriL2Error
+ *
+ * \param innerProduct          the inner product
+ * \param linearForm            the linear form
+ * \param f                     the right-hand side function
+ * \param localViewsSolution    local views for the solution
+ * \param solutionLocalIndexSets local index sets for the solution
+ * \param solution              the computed solution
  */
   template <class InnerProduct, class LinearForm,
             class RhsFunction, class LocalViewsSolution,
@@ -322,12 +328,25 @@ namespace Dune {
   }
 
 /**
- * \brief Computation of a posteriori error in (u,theta)
+ * \brief Computation of an alternative a posteriori error in (u,theta)
  *
- * \param bilinearForm        the bilinear form
- * \param innerProduct        the inner product
+ * Computation of an alternative a posteriori error of the form
+ * (< solution, solution >_{innerProduct} + linearForm(solution) + f^2)^{1/2}
+ * in the transport case, this is used to compute
+ * ||u-w||_L_2^2 + ||Bw-f||_L_2^2
+ * where w is the lifting of theta (so we have to use a formulation
+ * where we use the lifting and not theta itself)
+ * and B is the operator of the conforming formulation
+ *
+ * In this example, we have
+ * innerProduct = < u-w,u-w>_L_2 + < Bw, BW>_L_2
+ * linearForm = -2 < Bw, f>_L_2
+ * constant term f = f
+ *
+ * \param innerProduct       the inner product
+ * \param linearForm         the linear form
+ * \param f                  the right-hand side function
  * \param solution           the computed solution
- * \param rhs                 the right-hand side
  */
   template <class InnerProduct, class LinearForm,
             class RhsFunction, class VectorType>
