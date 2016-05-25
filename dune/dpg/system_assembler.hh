@@ -208,18 +208,20 @@ struct DPGSpecializations
 /**
  * \brief This constructs the matrix and vector of a DPG system.
  *
- * \tparam TestSpaces     tuple of test spaces
- * \tparam SolutionSpaces tuple of solution spaces
+ * \tparam TSpaces        tuple of test spaces
+ * \tparam SSpaces        tuple of solution spaces
  * \tparam BilinForm      bilinear form describing the system
  * \tparam InProduct      inner product of the test space
  * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
  */
-template<class TestSpaces, class SolutionSpaces,
+template<class TSpaces, class SolSpaces,
          class BilinForm, class InProduct,
          class FormulationType>
 class SystemAssembler
 {
 public:
+  typedef TSpaces TestSpaces;
+  typedef SolSpaces SolutionSpaces;
   //! tuple type for the local views of the test spaces
   typedef typename boost::fusion::result_of::as_vector<
       typename boost::fusion::result_of::

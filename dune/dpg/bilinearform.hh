@@ -246,6 +246,17 @@ namespace detail {
 
 }
 
+template<class TestSpaces, class SolutionSpaces, class BilinearTerms,
+         class FormulationType, class NewTestSpaces>
+auto replaceTestSpaces(const BilinearForm<TestSpaces, SolutionSpaces,
+    BilinearTerms, FormulationType>& bilinearForm,
+    NewTestSpaces&& newTestSpaces) {
+  return detail::make_BilinearForm<FormulationType>
+                     (std::forward<NewTestSpaces>(newTestSpaces),
+                      bilinearForm.getSolutionSpaces(),
+                      bilinearForm.getTerms());
+}
+
 
 template<class TestSpaces, class SolutionSpaces, class BilinearTerms, class FormulationType>
 template<bool mirror>

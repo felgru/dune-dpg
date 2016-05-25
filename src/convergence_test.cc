@@ -142,14 +142,7 @@ int main(int argc, char** argv)
               make_IntegralTerm<0,1,IntegrationType::normalVector,
                                     DomainOfIntegration::face>(1., beta)));
   auto bilinearForm_aposteriori
-      = make_BilinearForm(testSpaces_aposteriori, solutionSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(c),
-              make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                    DomainOfIntegration::interior>(-1., beta),
-              make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                    DomainOfIntegration::face>(1., beta)));
+      = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
   auto innerProduct = make_InnerProduct(testSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
@@ -157,12 +150,7 @@ int main(int argc, char** argv)
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                     DomainOfIntegration::interior>(1., beta)));
   auto innerProduct_aposteriori
-      = make_InnerProduct(testSpaces_aposteriori,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1.),
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta)));
+      = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
   using BilinearForm = decltype(bilinearForm);
   using InnerProduct = decltype(innerProduct);
@@ -279,11 +267,8 @@ int main(int argc, char** argv)
   auto rhsAssembler_aposteriori
     = make_RhsAssembler(testSpaces_aposteriori);
   auto rightHandSide_aposteriori
-    = make_DPG_LinearForm(rhsAssembler_aposteriori.getTestSpaces(),
-                      std::make_tuple(make_LinearIntegralTerm<0,
-                                            LinearIntegrationType::valueFunction,
-                                            DomainOfIntegration::interior>(
-                                 f(beta))));
+    = replaceTestSpaces(rightHandSide,
+        rhsAssembler_aposteriori.getTestSpaces());
   rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
 
   double aposterioriErr

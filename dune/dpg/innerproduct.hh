@@ -155,6 +155,14 @@ auto make_InnerProduct(TestSpaces        testSpaces,
   return InnerProduct<TestSpaces, InnerProductTerms> (testSpaces, terms);
 }
 
+template<class TestSpaces, class InnerProductTerms, class NewTestSpaces>
+auto replaceTestSpaces(
+    const InnerProduct<TestSpaces, InnerProductTerms>& innerProduct,
+    NewTestSpaces&& newTestSpaces) {
+  return make_InnerProduct(std::forward<NewTestSpaces>(newTestSpaces),
+                           innerProduct.getTerms());
+}
+
 template<class TestSpaces, class InnerProductTerms>
 void InnerProduct<TestSpaces, InnerProductTerms>::
 getOccupationPattern(MatrixIndexSet& nb) const

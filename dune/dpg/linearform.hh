@@ -31,18 +31,20 @@ namespace Dune {
   /**
    * \brief This class describes a linear form.
    *
-   * \tparam Spaces          tuple of (test) spaces
+   * \tparam Sps             tuple of (test) spaces
    * \tparam LinearTerms     tuple of LinearIntegralTerm
    * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
    */
-  template<class Spaces, class LinearTerms, class FormulationType>
+  template<class Sps, class LinearTerms, class FormulationType>
   class LinearForm
   {
   public:
+    typedef std::decay_t<Sps> Spaces;
     //! tuple type for the local views of the test spaces
     typedef typename boost::fusion::result_of::as_vector<
         typename boost::fusion::result_of::
-        transform<Spaces, detail::getLocalView>::type>::type LocalViews;
+          transform<Spaces, detail::getLocalView>::type
+        >::type LocalViews;
 
     LinearForm () = delete;
     /**
@@ -208,6 +210,17 @@ auto make_LinearForm(Spaces      spaces,
 {
   return LinearForm<Spaces, LinearTerms, SaddlepointFormulation>
                     (spaces, terms);
+}
+
+template<class TestSpaces, class LinearTerms,
+         class FormulationType, class NewTestSpaces>
+auto replaceTestSpaces(
+    const LinearForm<TestSpaces, LinearTerms, FormulationType>& linearForm,
+    NewTestSpaces&& newTestSpaces)
+  -> LinearForm<NewTestSpaces, LinearTerms, FormulationType> {
+  return LinearForm<NewTestSpaces, LinearTerms, FormulationType>
+                     (std::forward<NewTestSpaces>(newTestSpaces),
+                      linearForm.getTerms());
 }
 
 } // end namespace Dune
