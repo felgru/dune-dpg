@@ -20,6 +20,12 @@ namespace Functions {
   template<class NF>
   class DefaultGlobalBasis;
 
+  template<typename GV, int k, class MI, class ST>
+  class PQkNodeFactory;
+
+  template<typename GV, int k, class MI, class ST>
+  class LagrangeDGNodeFactory;
+
   template<typename GV, int level, int k, class MI, class ST>
   class PQkDGRefinedDGNodeFactory;
 
@@ -191,6 +197,18 @@ template<class NF, class GridView>
 struct changeGridView<Functions::DefaultGlobalBasis<NF>, GridView>
 {
   typedef Functions::DefaultGlobalBasis<changeGridView_t<NF, GridView>> type;
+};
+
+template<typename GV, int k, class MI, class ST, class GridView>
+struct changeGridView<Functions::PQkNodeFactory<GV, k, MI, ST>, GridView>
+{
+  typedef Functions::PQkNodeFactory<GridView, k, MI, ST> type;
+};
+
+template<typename GV, int k, class MI, class ST, class GridView>
+struct changeGridView<Functions::LagrangeDGNodeFactory<GV, k, MI, ST>, GridView>
+{
+  typedef Functions::LagrangeDGNodeFactory<GridView, k, MI, ST> type;
 };
 
 template<typename GV, int level, int k, class MI, class ST, class GridView>
