@@ -57,7 +57,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
       const FieldVector<double,dim>& quadPos = quad[pt].position();
      // Global position of the current quadrature point
      const FieldVector<double,dim>& globalQuadPos
-          = geometry.global(quadPos);
+          = geometry.global(subGeometryInReferenceElement.global(quadPos));
 
       // The multiplicative factor in the integral transformation formula
       const double integrationWeight
