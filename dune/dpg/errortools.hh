@@ -158,7 +158,7 @@ namespace Dune {
       localFiniteElement.localBasis().evaluateFunction(quadPos, shapeFunctionValues);
 
       // Evaluation of u at the point mapQuadPos, which is quadPos mapped to the physical domain
-      for(int i=0; i<shapeFunctionValues.size(); i++)
+      for(unsigned int i=0; i<shapeFunctionValues.size(); i++)
       {
         uQuad += shapeFunctionValues[i]*u[i];
       }
@@ -212,9 +212,6 @@ namespace Dune {
       localView.bind(e);
       localIndexSet.bind(localView);
 
-      // We get the global index of the current element
-      int indexElement = gridView.indexSet().index(e);
-
       // Now we take the coefficients of u that correspond to the current element e. They are stored in uElement.
       // dof of the finite element inside the element (remark: this value will vary if we do p-refinement)
       size_t dofFEelement = localView.size();
@@ -234,10 +231,16 @@ namespace Dune {
   }
 
 /**
- * \brief Computation of a posteriori error in (u,theta)
+ * \brief Computation of an alternative a posteriori error in (u,theta)
  *
- * \param innerProduct        the inner product
- * \param solution           the computed solution
+ * for a detailed description see ErrorTools::aPosterioriL2Error
+ *
+ * \param innerProduct          the inner product
+ * \param linearForm            the linear form
+ * \param f                     the right-hand side function
+ * \param localViewsSolution    local views for the solution
+ * \param solutionLocalIndexSets local index sets for the solution
+ * \param solution              the computed solution
  */
   template <class InnerProduct, class LinearForm,
             class RhsFunction, class LocalViewsSolution,
@@ -322,12 +325,25 @@ namespace Dune {
   }
 
 /**
- * \brief Computation of a posteriori error in (u,theta)
+ * \brief Computation of an alternative a posteriori error in (u,theta)
  *
- * \param bilinearForm        the bilinear form
- * \param innerProduct        the inner product
+ * Computation of an alternative a posteriori error of the form
+ * (< solution, solution >_{innerProduct} + linearForm(solution) + f^2)^{1/2}
+ * in the transport case, this is used to compute
+ * ||u-w||_L_2^2 + ||Bw-f||_L_2^2
+ * where w is the lifting of theta (so we have to use a formulation
+ * where we use the lifting and not theta itself)
+ * and B is the operator of the conforming formulation
+ *
+ * In this example, we have
+ * innerProduct = < u-w,u-w>_L_2 + < Bw, BW>_L_2
+ * linearForm = -2 < Bw, f>_L_2
+ * constant term f = f
+ *
+ * \param innerProduct       the inner product
+ * \param linearForm         the linear form
+ * \param f                  the right-hand side function
  * \param solution           the computed solution
- * \param rhs                 the right-hand side
  */
   template <class InnerProduct, class LinearForm,
             class RhsFunction, class VectorType>
@@ -607,7 +623,10 @@ namespace Dune {
                make_fused_procedure(bindLocalIndexSet()));
 
       // Now we compute the error inside the element
-      double elementError = splitRatio*aPosterioriErrorSquareElement(
+      double elementError = 0;
+      if (splitRatio > 0)
+      {
+        elementError += splitRatio*aPosterioriErrorSquareElement(
                                 bilinearForm,
                                 innerProduct,
                                 localViewsTest,
@@ -616,13 +635,17 @@ namespace Dune {
                                 solutionLocalIndexSets,
                                 solution,
                                 rhs);
-      elementError += (1-splitRatio)*aPosterioriL2ErrorSquareElement(
+      }
+      if (splitRatio < 1)
+      {
+        elementError += (1-splitRatio)*aPosterioriL2ErrorSquareElement(
                                 aPosterioriInnerProduct,
                                 linearForm,
                                 f,
                                 localViewsSolution,
                                 solutionLocalIndexSets,
                                 solution);
+      }
       errorEstimates.emplace_back(e.seed(), elementError);
     }
     std::sort(errorEstimates.begin(), errorEstimates.end(),

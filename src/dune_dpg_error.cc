@@ -190,8 +190,6 @@ int main()
     //  Assemble the system
     /////////////////////////////////////////////////////////
 
-    using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
-
     auto rightHandSide
       = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
                     std::make_tuple(make_LinearIntegralTerm<0,

@@ -3,7 +3,8 @@
 #ifndef DUNE_DPG_TYPE_TRAITS_HH
 #define DUNE_DPG_TYPE_TRAITS_HH
 
-#include<type_traits>
+#include <type_traits>
+#include <dune/common/tupleutility.hh>
 
 namespace std {
   template<class T, class Alloc> class vector;
@@ -18,6 +19,12 @@ namespace Functions {
 
   template<class NF>
   class DefaultGlobalBasis;
+
+  template<typename GV, int k, class MI, class ST>
+  class PQkNodeFactory;
+
+  template<typename GV, int k, class MI, class ST>
+  class LagrangeDGNodeFactory;
 
   template<typename GV, int level, int k, class MI, class ST>
   class PQkDGRefinedDGNodeFactory;
@@ -34,7 +41,17 @@ namespace Functions {
   template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
            class MI, class ST>
   class OptimalTestBasisNodeFactory;
+
+  template<typename BilinForm, typename InnerProd>
+  class TestspaceCoefficientMatrix;
 }
+
+template<class TSpaces, class SolSpaces,
+         class BilinearTerms, class FormulationType>
+class BilinearForm;
+
+template<class TSpaces, class InnerProductTerms>
+class InnerProduct;
 
 template<class T, int size> class FieldVector;
 
@@ -165,6 +182,114 @@ struct is_TransportFiniteElement<Functions::DefaultGlobalBasis<
   : is_TransportFiniteElement<typename std::tuple_element<testIndex,
                                 typename TestspaceCoefficientMatrix::TestSpaces
                               >::type> {};
+
+/*****************************************
+ * Change the GridView of a nodal basis
+ *****************************************/
+
+template<class T, class GridView>
+struct changeGridView {};
+
+template<class T, class GridView>
+using changeGridView_t = typename changeGridView<T, GridView>::type;
+
+template<class NF, class GridView>
+struct changeGridView<Functions::DefaultGlobalBasis<NF>, GridView>
+{
+  typedef Functions::DefaultGlobalBasis<changeGridView_t<NF, GridView>> type;
+};
+
+template<typename GV, int k, class MI, class ST, class GridView>
+struct changeGridView<Functions::PQkNodeFactory<GV, k, MI, ST>, GridView>
+{
+  typedef Functions::PQkNodeFactory<GridView, k, MI, ST> type;
+};
+
+template<typename GV, int k, class MI, class ST, class GridView>
+struct changeGridView<Functions::LagrangeDGNodeFactory<GV, k, MI, ST>, GridView>
+{
+  typedef Functions::LagrangeDGNodeFactory<GridView, k, MI, ST> type;
+};
+
+template<typename GV, int level, int k, class MI, class ST, class GridView>
+struct changeGridView<Functions::PQkDGRefinedDGNodeFactory<GV, level, k, MI, ST>,
+                      GridView>
+{
+  typedef Functions::PQkDGRefinedDGNodeFactory<GridView, level, k, MI, ST> type;
+};
+
+template<typename GV, int s, int k, class MI, class ST, class GridView>
+struct changeGridView<Functions::PQkDGSubsampledDGNodeFactory<GV, s, k, MI, ST>,
+                      GridView>
+{
+  typedef Functions::PQkDGSubsampledDGNodeFactory<GridView, s, k, MI, ST> type;
+};
+
+template<typename GV, int s, int k, class MI, class ST, class GridView>
+struct changeGridView<Functions::PQkSubsampledDGNodeFactory<GV, s, k, MI, ST>,
+                      GridView>
+{
+  typedef Functions::PQkSubsampledDGNodeFactory<GridView, s, k, MI, ST> type;
+};
+
+template<typename GV, int k, class MI, class ST, class GridView>
+struct changeGridView<Functions::PQkTransportFactory<GV, k, MI, ST>, GridView>
+{
+  typedef Functions::PQkTransportFactory<GridView, k, MI, ST> type;
+};
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
+         class MI, class ST, class GridView>
+struct changeGridView<Functions::OptimalTestBasisNodeFactory
+                       <TestspaceCoefficientMatrix,
+                        testIndex, MI, ST>, GridView>
+{
+  typedef Functions::OptimalTestBasisNodeFactory<
+    changeGridView_t<TestspaceCoefficientMatrix, GridView>,
+    testIndex, MI, ST>   type;
+};
+
+template<typename BilinForm, typename InnerProd, class GridView>
+struct changeGridView<Functions::TestspaceCoefficientMatrix<
+                          BilinForm, InnerProd>, GridView>
+{
+  typedef Functions::TestspaceCoefficientMatrix
+      < changeGridView_t<BilinForm, GridView>
+      , changeGridView_t<InnerProd, GridView>
+      >  type;
+};
+
+template<class GridView, class... Spaces>
+struct changeGridView<std::tuple<Spaces...>, GridView>
+{
+  template<class Space>
+  struct changeGridView_
+  { typedef changeGridView_t<Space, GridView> Type; };
+
+  typedef typename ForEachType<changeGridView_, std::tuple<Spaces...>>::Type
+      type;
+};
+
+template<class TSpaces, class SolSpaces,
+         class BilinearTerms, class FormulationType, class GridView>
+struct changeGridView<
+    BilinearForm<TSpaces, SolSpaces, BilinearTerms, FormulationType>,
+    GridView>
+{
+  typedef BilinearForm
+    < changeGridView_t<TSpaces, GridView>
+    , changeGridView_t<SolSpaces, GridView>
+    , BilinearTerms
+    , FormulationType
+    >  type;
+};
+
+template<class TSpaces, class InnerProductTerms, class GridView>
+struct changeGridView<InnerProduct<TSpaces, InnerProductTerms>, GridView>
+{
+  typedef InnerProduct<changeGridView_t<TSpaces, GridView>, InnerProductTerms>
+      type;
+};
 
 } // end namespace Dune
 

@@ -155,11 +155,9 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
       = localViewTest.tree().refinedReferenceElement();
     auto referenceGridView = referenceGrid.leafGridView();
 
-    assert(element.type().isTriangle() || element.type().isQuadrilateral());
     const size_t subElementStride =
-      (element.type().isTriangle())
-      ? localViewTest.globalBasis().nodeFactory().dofsPerSubTriangle
-      : localViewTest.globalBasis().nodeFactory().dofsPerSubQuad;
+        (is_DGRefinedFiniteElement<Space>::value) ?
+          localFiniteElementTest.localBasis().size() : 0;
 
     unsigned int subElementOffset = 0;
     unsigned int subElementIndex = 0;
@@ -171,12 +169,6 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
         const FieldVector<double,dim>& quadPos = quad[pt].position();
         const FieldVector<double,dim>& globalQuadPos
             = geometry.global(subGeometryInReferenceElement.global(quadPos));
-
-        // The transposed inverse Jacobian of the map from the reference element to the element
-        const auto& jacobianSub
-            = subGeometryInReferenceElement.jacobianInverseTransposed(quadPos);
-        const auto& jacobian = geometry.jacobianInverseTransposed
-                               (subGeometryInReferenceElement.global(quadPos));
 
         // The multiplicative factor in the integral transformation formula
         const double weightedfunctionValue

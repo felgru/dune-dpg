@@ -91,9 +91,6 @@ int main(int argc, char** argv)
   //typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
-  typedef decltype(testSpaces) TestSpaces;
-  typedef decltype(solutionSpaces) SolutionSpaces;
-
   FieldVector<double, dim> beta
              = {cos(boost::math::constants::pi<double>()/8),
                 sin(boost::math::constants::pi<double>()/8)};
