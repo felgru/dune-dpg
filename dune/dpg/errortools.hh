@@ -95,7 +95,7 @@ namespace Dune {
       localFiniteElement.localBasis().evaluateFunction(quadPos, shapeFunctionValues);
 
       // Evaluation of u at the point mapQuadPos, which is quadPos mapped to the physical domain
-      for(int i=0; i<shapeFunctionValues.size(); i++)
+      for(unsigned int i=0; i<shapeFunctionValues.size(); i++)
       {
         uQuad += shapeFunctionValues[i]*u[i];
       }

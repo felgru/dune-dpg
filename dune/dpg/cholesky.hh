@@ -78,10 +78,10 @@ public:
 
   void apply(BlockVector<FieldVector<double,1> >& rhsVector)
   {
-    unsigned int n = rhsVector.size();
+    const unsigned int n = rhsVector.size();
 
     // solve LY = B
-      for (int j=0; j<n; j++)
+      for (unsigned int j=0; j<n; j++)
       {
         double summe = 0;
         for (unsigned int i=0; i<j; i++)
