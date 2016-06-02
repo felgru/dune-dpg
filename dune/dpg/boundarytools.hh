@@ -204,8 +204,6 @@ namespace Dune {
                   Function& g
                   )
 {
-    const unsigned int dim = FEBasis::GridView::dimension;
-
     typedef typename FEBasis::GridView GridView;
     GridView gridView = feBasis.gridView();
 
@@ -229,11 +227,6 @@ namespace Dune {
 
       // dofs in the current finite element
       const unsigned int dofsLocal = localFEM.localCoefficients().size();
-
-      const unsigned int nFace
-          = ReferenceElements<double, dim>::general(e.type()).size(dim-1);
-      const unsigned int nVertex
-          = ReferenceElements<double, dim>::general(e.type()).size(dim);
 
       localInterp.interpolate(bc,out);
 

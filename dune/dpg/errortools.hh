@@ -147,9 +147,6 @@ namespace Dune {
       localView.bind(e);
       localIndexSet.bind(localView);
 
-      // We get the global index of the current element
-      int indexElement = gridView.indexSet().index(e);
-
       // Now we take the coefficients of u that correspond to the current element e. They are stored in uElement.
       // dof of the finite element inside the element (remark: this value will vary if we do p-refinement)
       size_t dofFEelement = localView.size();

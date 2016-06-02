@@ -97,9 +97,6 @@ int main(int argc, char** argv)
       = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
-  using TestSpaces             = decltype(testSpaces);
-  using SolutionSpaces         = decltype(solutionSpaces);
-
   FieldVector<double, dim> beta
              = {cos(boost::math::constants::pi<double>()/8),
                 sin(boost::math::constants::pi<double>()/8)};
@@ -153,8 +150,6 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////////////
   //  Assemble the system
   /////////////////////////////////////////////////////////
-  using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
-
   auto rightHandSide = std::make_tuple(f(beta));
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
