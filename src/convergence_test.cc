@@ -124,10 +124,6 @@ int main(int argc, char** argv)
   auto testSpaces_aposteriori
       = std::make_tuple(FEBasisTest_aposteriori(gridView));
 
-  using TestSpaces             = decltype(testSpaces);
-  using TestSpaces_aposteriori = decltype(testSpaces_aposteriori);
-  using SolutionSpaces         = decltype(solutionSpaces);
-
   FieldVector<double, dim> beta
              = {cos(boost::math::constants::pi<double>()/8),
                 sin(boost::math::constants::pi<double>()/8)};
@@ -154,8 +150,6 @@ int main(int argc, char** argv)
 
   using BilinearForm = decltype(bilinearForm);
   using InnerProduct = decltype(innerProduct);
-  using BilinearForm_aposteriori = decltype(bilinearForm_aposteriori);
-  using InnerProduct_aposteriori = decltype(innerProduct_aposteriori);
 
   using TestspaceCoefficientMatrix
       = Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
@@ -177,7 +171,6 @@ int main(int argc, char** argv)
   //   Stiffness matrix and right hand side vector
   /////////////////////////////////////////////////////////
 
-
   typedef BlockVector<FieldVector<double,1> > VectorType;
   typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
 
@@ -187,7 +180,6 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////////////
   //  Assemble the system
   /////////////////////////////////////////////////////////
-  using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
   auto rightHandSide
     = make_DPG_LinearForm(systemAssembler.getTestSpaces(),

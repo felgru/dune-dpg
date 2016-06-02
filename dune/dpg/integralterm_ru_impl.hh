@@ -141,8 +141,6 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
   const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-  const auto& gridView = lhsLocalView.globalBasis().gridView();
-
   const auto& referenceGrid
     = lhsLocalView.tree().refinedReferenceElement();
   auto referenceGridView = referenceGrid.leafGridView();
@@ -161,16 +159,10 @@ faceImpl(const LhsLocalView& lhsLocalView,
     unsigned int nOutflowIntersections = 0;
     for (auto&& intersection : intersections(referenceGridView, subElement))
     {
-      using intersectionType
-        = typename std::decay<decltype(intersection)>::type;
-
       const FieldVector<double,dim> globalCorner0
         = geometry.global(intersection.geometry().global({0}));
       const FieldVector<double,dim> globalCorner1
         = geometry.global(intersection.geometry().global({1}));
-      // compute integration element for interface
-      const double integrationElement
-        = (globalCorner1 - globalCorner0).two_norm();
 
       static_assert(dim==2, "Computation of unit outer normal for subcell"
                             " only implemented in 2d!");

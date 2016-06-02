@@ -170,12 +170,6 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
         const FieldVector<double,dim>& globalQuadPos
             = geometry.global(subGeometryInReferenceElement.global(quadPos));
 
-        // The transposed inverse Jacobian of the map from the reference element to the element
-        const auto& jacobianSub
-            = subGeometryInReferenceElement.jacobianInverseTransposed(quadPos);
-        const auto& jacobian = geometry.jacobianInverseTransposed
-                               (subGeometryInReferenceElement.global(quadPos));
-
         // The multiplicative factor in the integral transformation formula
         const double weightedfunctionValue
           = factor(globalQuadPos)
