@@ -126,7 +126,7 @@ double collisionTerm(const Domain& x,
                      const Function& u,
                      const std::vector<Direction>& sVector)
 {
-  int numS = sVector.size();
+  unsigned int numS = sVector.size();
   double sum = 0.;
   for(unsigned int i=0; i<numS; i++)
   {

@@ -276,7 +276,7 @@ int main(int argc, char** argv)
 
   auto rhsAssembler = make_RhsAssembler(testSpaces);
 
-  typedef decltype(testSpaces) TestSpaces;
+  // typedef decltype(testSpaces) TestSpaces;
   typedef decltype(solutionSpaces) SolutionSpaces;
 
   typedef decltype(make_BilinearForm(testSpaces, solutionSpaces,
@@ -575,9 +575,7 @@ int main(int argc, char** argv)
       ////////////////////////////////////
       //  Error wrt exact solution
       ////////////////////////////////////
-      // Error tolerance to do h-refinement: I guess we will never do this so remove
-      double adaptivityTol = 0.001;
-      //We build an object of type ErrorTools to study errors, residuals and do hp-adaptivity
+      //We build an object of type ErrorTools to study errors, residuals and do h-adaptivity
       ErrorTools errorTools = ErrorTools();
       //We compute the L2 error between the exact and the fem solutions
       auto uExactSfixed = std::make_tuple([s] (const Domain& x){ return uAnalytic(x,s);});

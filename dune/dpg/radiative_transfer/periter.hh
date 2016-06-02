@@ -111,7 +111,7 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
 
   auto rhsAssembler = make_RhsAssembler(testSpaces);
 
-  typedef decltype(testSpaces) TestSpaces;
+  // typedef decltype(testSpaces) TestSpaces;
   typedef decltype(solutionSpaces) SolutionSpaces;
 
   typedef decltype(make_BilinearForm(testSpaces, solutionSpaces,

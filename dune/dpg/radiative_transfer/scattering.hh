@@ -162,7 +162,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
            , SaddlepointFormulation
         >::value;
 
-  const int numS = x.size();
+  const unsigned int numS = x.size();
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
@@ -267,7 +267,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
       localFiniteElementTest.localBasis()
           .evaluateFunction(quadPos, testShapeFunctionValues);
 
-      for( size_t scatteringAngle=0;
+      for( unsigned int scatteringAngle=0;
            scatteringAngle<numS; ++scatteringAngle) {
         double uValue = 0; // in direction of scatteringAngle
         // Evaluate all shape function values at this point

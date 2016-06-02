@@ -250,11 +250,6 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
 
     // Now get the local contribution to the right-hand side vector
 
-    // Get the grid element from the local FE basis view
-    typedef typename std::remove_reference<decltype(e)>::type Element;
-
-    const int dim = Element::dimension;
-
     BlockVector<FieldVector<double,1> >
         localScattering(at_c<0>(testLocalViews).size());
     localScattering = 0;
