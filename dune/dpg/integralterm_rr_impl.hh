@@ -41,11 +41,9 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
     = lhsLocalView.tree().refinedReferenceElement();
   auto referenceGridView = referenceGrid.leafGridView();
 
-  assert(element.type().isTriangle() || element.type().isQuadrilateral());
   const size_t subElementStride =
-    (element.type().isTriangle())
-    ? lhsLocalView.globalBasis().nodeFactory().dofsPerSubTriangle
-    : lhsLocalView.globalBasis().nodeFactory().dofsPerSubQuad;
+      (is_DGRefinedFiniteElement<LhsSpace>::value) ?
+        lhsLocalFiniteElement.localBasis().size() : 0;
 
   unsigned int subElementOffset = 0;
   unsigned int subElementIndex = 0;
@@ -152,11 +150,9 @@ faceImpl(const LhsLocalView& lhsLocalView,
     = lhsLocalView.tree().refinedReferenceElement();
   auto referenceGridView = referenceGrid.leafGridView();
 
-  assert(element.type().isTriangle() || element.type().isQuadrilateral());
   const size_t subElementStride =
-    (element.type().isTriangle())
-    ? lhsLocalView.globalBasis().nodeFactory().dofsPerSubTriangle
-    : lhsLocalView.globalBasis().nodeFactory().dofsPerSubQuad;
+      (is_DGRefinedFiniteElement<LhsSpace>::value) ?
+        lhsLocalFiniteElement.localBasis().size() : 0;
 
   unsigned int subElementOffset = 0;
   unsigned int subElementIndex = 0;

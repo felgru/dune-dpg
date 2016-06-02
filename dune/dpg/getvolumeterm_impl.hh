@@ -155,11 +155,9 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
       = localViewTest.tree().refinedReferenceElement();
     auto referenceGridView = referenceGrid.leafGridView();
 
-    assert(element.type().isTriangle() || element.type().isQuadrilateral());
     const size_t subElementStride =
-      (element.type().isTriangle())
-      ? localViewTest.globalBasis().nodeFactory().dofsPerSubTriangle
-      : localViewTest.globalBasis().nodeFactory().dofsPerSubQuad;
+        (is_DGRefinedFiniteElement<Space>::value) ?
+          localFiniteElementTest.localBasis().size() : 0;
 
     unsigned int subElementOffset = 0;
     unsigned int subElementIndex = 0;
