@@ -16,10 +16,11 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/optimaltestbasis.hh>
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
+#include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
+#include <dune/functions/functionspacebases/optimaltestbasis.hh>
+#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
+#include <dune/functions/functionspacebases/pqksubsampleddgbasis.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
@@ -95,18 +96,15 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
   //   Choose a finite element space
   /////////////////////////////////////////////////////////
 
-  // u
-  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior;
+  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
   FEBasisInterior feBasisInterior(gridView);
 
-  // bulk term corresponding to u^
-  typedef Functions::PQkNodalBasis<GridView, 2> FEBasisTrace;
+  typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
   FEBasisTrace feBasisTrace(gridView);
 
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
-  // v search space
-  typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
+  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest; // v enriched
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
   auto rhsAssembler = make_RhsAssembler(testSpaces);
@@ -357,7 +355,7 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
            rhs[i],
            dirichletNodesInflow[i],
            rhsInflowContrib[i]);
-#if 0
+#if 1
       systemAssemblers[i].template defineCharacteristicFaces<1,dim>(
           stiffnessMatrix[i],
           rhs[i], s);
