@@ -256,7 +256,7 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
   /////////////////////////////////////////////////
   //   Choose an initial iterate
   /////////////////////////////////////////////////
-  std::vector<VectorType> x,xPrevious;
+  std::vector<VectorType> x, xPrevious;
   x.reserve(numS);
   xPrevious.reserve(numS);
   for(unsigned int i = 0; i < numS; ++i)
@@ -273,7 +273,7 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
   // Vector to store solution of previous iteration
   // (useful to compute error between two iterates)
   ///////////////////////////////////////////////////
-  std::vector<VectorType> u,uPrevious;
+  std::vector<VectorType> u, uPrevious;
   u.reserve(numS);
   uPrevious.reserve(numS);
   for(unsigned int i = 0; i < numS; ++i)
@@ -284,7 +284,7 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
     uPrevious[i] = 0;
   }
 
-  std::vector<VectorType> theta,thetaPrevious;
+  std::vector<VectorType> theta, thetaPrevious;
   theta.reserve(numS);
   thetaPrevious.reserve(numS);
   for(unsigned int i = 0; i < numS; ++i)
