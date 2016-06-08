@@ -111,6 +111,9 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
 
   auto rhsAssembler = make_RhsAssembler(testSpaces);
 
+  typedef FEBasisTest FEBasisTestEnriched;
+  auto testSpacesEnriched = std::make_tuple(FEBasisTestEnriched(gridView));
+
   // typedef decltype(testSpaces) TestSpaces;
   typedef decltype(solutionSpaces) SolutionSpaces;
 
@@ -161,7 +164,7 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
 
   // Scattering assembler with enriched test space
   std::vector<ApproximateScatteringAssembler
-                  <std::tuple<FEBasisTest>,
+                  <std::tuple<FEBasisTestEnriched>,
                    SolutionSpaces,
                    decltype(kernelApproximation),
                    DPGFormulation>
@@ -217,7 +220,7 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
                                                 i));
     scatteringAssemblersEnriched.emplace_back(
         make_DPG_ApproximateScatteringAssembler(
-            testSpaces,
+            testSpacesEnriched,
             solutionSpaces,
             kernelApproximation,
             i));
