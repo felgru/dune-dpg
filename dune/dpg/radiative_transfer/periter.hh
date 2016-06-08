@@ -24,11 +24,12 @@
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
-#include <dune/dpg/system_assembler.hh>
-#include <dune/dpg/errortools.hh>
 #include <dune/dpg/boundarytools.hh>
-#include <dune/dpg/rhs_assembler.hh>
+#include <dune/dpg/errortools.hh>
 #include <dune/dpg/radiative_transfer/approximate_scattering.hh>
+#include <dune/dpg/rhs_assembler.hh>
+#include <dune/dpg/system_assembler.hh>
+#include <dune/dpg/type_traits.hh>
 
 #include <boost/math/constants/constants.hpp>
 
@@ -37,8 +38,8 @@ namespace Dune {
 template<class ScatteringKernelApproximation>
 class Periter {
   public:
-  template<class GridView, class F, class Kernel>
-  void solve(GridView gridView,
+  template<class Grid, class F, class Kernel>
+  void solve(Grid& grid,
              const F& f,
              const Kernel& kernel,
              unsigned int numS,
@@ -63,14 +64,17 @@ void extractSolution(std::vector< FieldVector >& u,
 }
 
 template<class ScatteringKernelApproximation>
-template<class GridView, class F, class Kernel>
-void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
+template<class Grid, class F, class Kernel>
+void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
            const F& f,
            const Kernel& kernel,
            unsigned int numS,
            double targetAccuracy,
            unsigned int maxNumberOfIterations) {
   const unsigned int dim = 2;
+
+  typedef typename Grid::LeafGridView GridView;
+  GridView gridView = grid.leafGridView();
 
   ///////////////////////////////////
   // To print information
