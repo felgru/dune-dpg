@@ -381,19 +381,56 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
     extractSolution(theta,x,feBasisInterior.indexSet().size());
 
     ////////////////////////////////////
-    //  Error computation and print in VTK file
+    //  A posteriori error
     ////////////////////////////////////
+    kernelApproximation.setAccuracy(0.);
+    std::cout << "Compute a posteriori errors\n";
     for(unsigned int i = 0; i < numS; ++i)
     {
       Direction s = sVector[i];
 
-      std::cout << "Direction " << i << std::endl;
+      std::cout << "Direction " << i << '\n';
 
-      ////////////////////////////////////////////////////////////////////////
-      //  Write result to VTK file
-      //  We need to subsample, because VTK cannot natively display
-      //  real second-order functions
-      ////////////////////////////////////////////////////////////////////////
+      ErrorTools errorTools = ErrorTools();
+      // We compute the a posteriori error
+      // - We compute the rhs with the enriched test space ("rhs[i]=f(v_i)")
+      // -- Contribution of the source term f that has an analytic expression
+      auto rhsFunction = make_DPG_LinearForm(
+            rhsAssembler.getTestSpaces(),
+            std::make_tuple(
+              make_LinearIntegralTerm
+                < 0
+                , LinearIntegrationType::valueFunction
+                , DomainOfIntegration::interior>
+                ([s,&f] (const Domain& x) { return f(x,s); })));
+      rhsAssembler.assembleRhs(rhs[i],
+          rhsFunction);
+      // -- Contribution of the scattering term
+      VectorType scattering;
+      scatteringAssemblersEnriched[i]
+          .template assembleScattering<0>(scattering, xPrevious);
+      rhs[i] += scattering;
+      // - Computation of the a posteriori error
+      double aposterioriErr = errorTools.aPosterioriError(
+          bilinearForms[i], innerProducts[i], x[i], rhs[i]);
+          //change with contribution of scattering rhs[i]
+      ofs << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
+    }
+    ofs << std::endl;
+    std::cout << std::endl;
+
+    ////////////////////////////////////////////////////////////////////////
+    //  Write result to VTK file
+    //  We need to subsample, because VTK cannot natively display
+    //  real second-order functions
+    ////////////////////////////////////////////////////////////////////////
+    std::cout << "Print solutions:\n";
+    for(unsigned int i = 0; i < numS; ++i)
+    {
+      Direction s = sVector[i];
+
+      std::cout << "Direction " << i << '\n';
+
       // - Make a discrete function from the FE basis and the coefficient vector
       auto uFunction
           = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
@@ -421,38 +458,7 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
                        + std::string("_s")
                        + std::to_string(i);
       vtkWriterTrace.write(name);
-
-      ////////////////////////////////////
-      //  A posteriori error
-      ////////////////////////////////////
-      ErrorTools errorTools = ErrorTools();
-      // We compute the a posteriori error
-      // - We compute the rhs with the enriched test space ("rhs[i]=f(v_i)")
-      // -- Contribution of the source term f that has an analytic expression
-      auto rhsFunction = make_DPG_LinearForm(
-            rhsAssembler.getTestSpaces(),
-            std::make_tuple(
-              make_LinearIntegralTerm
-                < 0
-                , LinearIntegrationType::valueFunction
-                , DomainOfIntegration::interior>
-                ([s,&f] (const Domain& x) { return f(x,s); })));
-      rhsAssembler.assembleRhs(rhs[i],
-          rhsFunction);
-      // -- Contribution of the scattering term
-      VectorType scattering;
-      kernelApproximation.setAccuracy(0.);
-      scatteringAssemblersEnriched[i]
-          .template assembleScattering<0>(scattering, xPrevious);
-      rhs[i] += scattering;
-      // - Computation of the a posteriori error
-      double aposterioriErr = errorTools.aPosterioriError(
-          bilinearForms[i], innerProducts[i], x[i], rhs[i]);
-          //change with contribution of scattering rhs[i]
-      ofs << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
     }
-    ofs << std::endl;
-    std::cout << std::endl;
   }
 }
 
