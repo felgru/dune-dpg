@@ -471,8 +471,6 @@ void Periter<ScatteringKernelApproximation>::solve(GridView gridView,
     ofs << std::endl;
     std::cout << std::endl;
   }
-
-  ofs.std::ofstream::close();
 }
 
 } // end namespace Dune
