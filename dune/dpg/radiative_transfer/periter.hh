@@ -145,23 +145,14 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
 
     std::vector<VectorType> u, theta;
 
-    /////////////////////////////////////////////////////////
-    //  Get previous solutions
-    /////////////////////////////////////////////////////////
-    std::swap(xPrevious, x);
-    size_t numDofsInterior, numDofsTrace;
+    size_t numDofsInteriorPrevious, numDofsTracePrevious;
     {
       FEBasisInterior feBasisInterior(gridView);
       FEBasisTrace feBasisTrace(gridView);
 
-      numDofsInterior = feBasisInterior.size();
-      numDofsTrace = feBasisTrace.size();
+      numDofsInteriorPrevious = feBasisInterior.size();
+      numDofsTracePrevious = feBasisTrace.size();
     }
-    std::vector<VectorType> uPrevious
-        = extractSolution(xPrevious, 0, numDofsInterior);
-    std::vector<VectorType> thetaPrevious
-        = extractSolution(xPrevious, numDofsInterior,
-                          numDofsTrace);
 
     const auto levelGridView = grid.levelGridView(grid.maxLevel());
     typedef std::decay_t<decltype(levelGridView)> LevelGridView;
@@ -182,6 +173,17 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         ++nRefinement)
     {
       std::cout << "Inner iteration " << nRefinement << std::endl;
+
+      /////////////////////////////////////////////////////////
+      //  Get previous solutions
+      /////////////////////////////////////////////////////////
+      std::swap(xPrevious, x);
+
+      std::vector<VectorType> uPrevious
+          = extractSolution(xPrevious, 0, numDofsInteriorPrevious);
+      std::vector<VectorType> thetaPrevious
+          = extractSolution(xPrevious, numDofsInteriorPrevious,
+                            numDofsTracePrevious);
 
       FEBasisInterior feBasisInterior(gridView);
       FEBasisTrace feBasisTrace(gridView);
@@ -340,10 +342,18 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       }
 
       std::vector<VectorType> uPreviousFine(numS);
-      for(unsigned int i = 0; i < numS; ++i)
+      if(nRefinement != 0)
       {
-        uPreviousFine[i] = interpolateToUniformlyRefinedGrid(
-            coarseInteriorBasis, feBasisInterior, uPrevious[i]);
+        for(unsigned int i = 0; i < numS; ++i)
+        {
+          uPreviousFine[i] = interpolateToUniformlyRefinedGrid(
+              coarseInteriorBasis, feBasisInterior, uPrevious[i]);
+        }
+      } else {
+        for(unsigned int i = 0; i < numS; ++i)
+        {
+          uPreviousFine[i] = uPrevious[i];
+        }
       }
 
       /////////////////////////////////////////////////////////
