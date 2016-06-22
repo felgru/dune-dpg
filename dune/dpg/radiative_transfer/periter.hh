@@ -427,6 +427,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       ////////////////////////////////////
       kernelApproximation.setAccuracy(0.);
       std::cout << "Compute a posteriori errors\n";
+      aposterioriErr = 0.;
       for(unsigned int i = 0; i < numS; ++i)
       {
         Direction s = sVector[i];
@@ -453,11 +454,13 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
             .template assembleScattering<0>(scattering, uPreviousFine);
         rhs[i] += scattering;
         // - Computation of the a posteriori error
-        aposterioriErr = errorTools.aPosterioriError(
+        double aposterioriErr_i = errorTools.aPosterioriError(
             bilinearForms[i], innerProducts[i], x[i], rhs[i]);
             //change with contribution of scattering rhs[i]
-        ofs << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
+        aposterioriErr += aposterioriErr_i * aposterioriErr_i;
       }
+      aposterioriErr = sqrt(aposterioriErr / numS);
+      ofs << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
       ofs << std::endl;
       std::cout << std::endl;
 
