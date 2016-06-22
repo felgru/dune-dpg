@@ -1,3 +1,4 @@
+add_subdirectory(functions)
 add_subdirectory(radiative_transfer)
 
 install(FILES assemble_helper.hh
