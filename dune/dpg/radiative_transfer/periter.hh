@@ -140,8 +140,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                           && n < maxNumberOfIterations; ++n)
   {
     accuracy *= rho/2.;
-    ofs << "Iteration " << n << std::endl;
-    std::cout << "Iteration " << n << std::endl << std::endl;
+    ofs << "\nIteration " << n << std::endl;
+    std::cout << "\nIteration " << n << std::endl << std::endl;
 
     std::vector<VectorType> u, theta;
 
