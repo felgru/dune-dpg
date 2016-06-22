@@ -198,10 +198,7 @@ int main(int argc, char** argv)
 
   //shared_ptr<GridType> grid = shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh"));
 
-  typedef GridType::LeafGridView GridView;
-  GridView gridView = grid->leafGridView();
-
-  using Domain = GridView::template Codim<0>::Geometry::GlobalCoordinate;
+  using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
   using Direction = FieldVector<double, dim>;
 
   // Vector of directions: sVector
@@ -216,7 +213,7 @@ int main(int argc, char** argv)
   auto g = [&sVector] (const Domain& x, const Direction& s)
            { return f(x, s, uAnalytic<Domain, Direction>, sVector); };
   Periter<ScatteringKernelApproximation::SVD>()
-      .solve(gridView, g, kernel<Direction>, numS, 1e-10, N);
+      .solve(*grid, g, kernel<Direction>, numS, 1e-10, N);
 
   return 0;
   }
