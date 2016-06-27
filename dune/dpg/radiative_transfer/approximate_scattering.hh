@@ -220,7 +220,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
          isSaddlepoint?globalTotalTestSize:0, globalOffsetHelper());
   globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
 
-  double globalSolutionSpaceOffset =
+  const size_t globalSolutionSpaceOffset =
       globalSolutionSpaceOffsets[solutionSpaceIndex];
 
   scattering.resize(globalTotalTestSize
