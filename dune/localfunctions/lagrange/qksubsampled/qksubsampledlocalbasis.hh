@@ -182,8 +182,13 @@ namespace Dune
                         const typename Traits::DomainType& in,
                         std::vector<typename Traits::RangeType>& out) const
     {
-      DUNE_THROW(Dune::NotImplemented, "Evaluation of arbitrary "
+      auto totalOrder = std::accumulate(order.begin(), order.end(), 0);
+      if (totalOrder == 0) {
+        evaluateFunction(in, out);
+      } else {
+        DUNE_THROW(Dune::NotImplemented, "Evaluation of arbitrary "
               "derivatives of QkSubsampledLocalBasis not implemented, yet.");
+      }
     }
 
     /** \brief Evaluate derivative in a given direction
