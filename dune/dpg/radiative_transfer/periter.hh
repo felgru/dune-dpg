@@ -382,9 +382,13 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
             stiffnessMatrix[i], rhs[i],
             rhsFunction);
         VectorType scattering;
+        VectorType scatteringFunctional;
+        scatteringAssemblers[i].template precomputeScattering<0>(
+            scatteringFunctional,
+            uPreviousFine);
         scatteringAssemblers[i].template assembleScattering<0>(
             scattering,
-            uPreviousFine);
+            scatteringFunctional);
         rhs[i] += scattering;
         systemAssemblers[i].template applyDirichletBoundary<1>
             (stiffnessMatrix[i],
@@ -450,8 +454,13 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
             rhsFunction);
         // -- Contribution of the scattering term
         VectorType scattering;
-        scatteringAssemblersEnriched[i]
-            .template assembleScattering<0>(scattering, uPreviousFine);
+        VectorType scatteringFunctional;
+        scatteringAssemblersEnriched[i].template precomputeScattering<0>(
+            scatteringFunctional,
+            uPreviousFine);
+        scatteringAssemblersEnriched[i].template assembleScattering<0>(
+            scattering,
+            scatteringFunctional);
         rhs[i] += scattering;
         // - Computation of the a posteriori error
         double aposterioriErr_i = errorTools.aPosterioriError(

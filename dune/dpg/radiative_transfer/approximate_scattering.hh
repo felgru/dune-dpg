@@ -121,8 +121,9 @@ public:
   {}
 
   /**
-   * \brief Assemble the vector corresponding to the scattering integral
-   * for a given set of discrete ordinate solutions.
+   * \brief Assemble a vector representing the scattering integral
+   *        in the solution space basis for a given set of
+   *        discrete ordinate solutions.
    *
    * \todo: For now, the scattering kernel is assumed to be constant
    *        and normed to integral 1.
@@ -132,9 +133,25 @@ public:
    *                           previous iteration
    */
   template<size_t solutionSpaceIndex>
+  void precomputeScattering
+          (BlockVector<FieldVector<double,1> >& scattering,
+           const std::vector<BlockVector<FieldVector<double,1> >>& x);
+
+  /**
+   * \brief Assemble the vector corresponding to the scattering integral
+   *        from a precomputed functional.
+   *
+   * \todo: For now, the scattering kernel is assumed to be constant
+   *        and normed to integral 1.
+   *
+   * \param[out] scattering            the scattering vector
+   * \param[in]  scatteringFunctional  the vector of the precomputed
+   *                                   scattering functional
+   */
+  template<size_t solutionSpaceIndex>
   void assembleScattering
          (BlockVector<FieldVector<double,1>>& scattering,
-          const std::vector<BlockVector<FieldVector<double,1>>>& x);
+          const BlockVector<FieldVector<double,1>>& scatteringFunctional);
 
 private:
   TestSpaces     testSpaces;
@@ -167,12 +184,206 @@ auto make_DPG_ApproximateScatteringAssembler(
 }
 
 namespace detail {
+
+template <class SolutionSpace>
+struct GetLocalApproximateScattering
+{
+using SolutionLocalView = typename SolutionSpace::LocalView;
+using SolutionLocalIndexSet = typename SolutionSpace::LocalIndexSet;
+
+template <class VectorType,
+          class Element,
+          class KernelApproximation>
+inline static void interiorImpl(
+    const SolutionLocalView& solutionLocalView,
+    VectorType& localScattering,
+    VectorType& localNormSquared,
+    const SolutionLocalIndexSet& solutionLocalIndexSet,
+    size_t globalSolutionSpaceOffset,
+    // unsigned int quadratureOrder,
+    const Element& element,
+    const KernelApproximation& kernelApproximation,
+    const std::vector<BlockVector<FieldVector<double,1> >>& x,
+    size_t si)
+{
+  const int dim = Element::dimension;
+  auto geometry = element.geometry();
+
+  // Get set of shape functions for this element
+  const auto& solutionLocalFiniteElement
+      = solutionLocalView.tree().finiteElement();
+
+  assert(localScattering.size() == solutionLocalFiniteElement.size());
+  assert(localNormSquared.size() == solutionLocalFiniteElement.size());
+
+  /* TODO:
+   * - Adapt quadrature also to the kernel k
+   */
+  const unsigned int quadratureOrder
+      = 2 * solutionLocalFiniteElement.localBasis().order();
+
+  typename detail::ChooseQuadrature<SolutionSpace, SolutionSpace, Element>::type quad
+    = detail::ChooseQuadrature<SolutionSpace, SolutionSpace, Element>
+      ::Quadrature(element, quadratureOrder, nullptr);
+
+  // Loop over all quadrature points
+  for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
+
+    // Position of the current quadrature point in the reference element
+    const FieldVector<double,dim>& quadPos = quad[pt].position();
+
+    // The multiplicative factor in the integral transformation formula
+    const double integrationElement = geometry.integrationElement(quadPos);
+
+    std::vector<FieldVector<double,1>> shapeFunctionValues;
+    solutionLocalFiniteElement.localBasis().
+        evaluateFunction(quadPos, shapeFunctionValues);
+
+    const size_t numS = x.size();
+    Eigen::VectorXd uValues(numS);
+
+    for (size_t scatteringAngle=0;
+         scatteringAngle<numS; ++scatteringAngle) {
+      double uValue = 0; // in direction of scatteringAngle
+      // Evaluate all shape function values at this point
+      std::vector<FieldVector<double,1>> shapeFunctionValues;
+      solutionLocalFiniteElement.localBasis().
+          evaluateFunction(quadPos, shapeFunctionValues);
+      for (size_t j=0, jMax=shapeFunctionValues.size(); j<jMax; j++)
+      {
+        /* This assumes that solutionLocalIndexSets and
+         * globalSolutionSpaceOffset don't change for different
+         * scattering angles.
+         */
+        auto row =
+            solutionLocalIndexSet.index(j)[0]
+          + globalSolutionSpaceOffset;
+        uValue += x[scatteringAngle][row] * shapeFunctionValues[j];
+      }
+      uValues(scatteringAngle) = uValue;
+    }
+
+    kernelApproximation.applyToVector(uValues);
+    /* TODO: shouldn't we integrate over the angles somewhere? */
+
+    const double integrationWeight = quad[pt].weight() * integrationElement;
+    const double factor = uValues(si) * integrationWeight;
+    for (size_t i=0, i_max=localScattering.size(); i<i_max; i++) {
+      localScattering[i] += factor * shapeFunctionValues[i];
+      localNormSquared[i] += shapeFunctionValues[i] * shapeFunctionValues[i]
+                           * integrationWeight;
+    }
+  }
+}
+
+};
+
+} // end namespace detail
+
+
+template<class TestSpaces,
+         class SolutionSpaces,
+         class KernelApproximation,
+         class FormulationType>
+template<size_t solutionSpaceIndex>
+void ApproximateScatteringAssembler<TestSpaces, SolutionSpaces, KernelApproximation, FormulationType>::
+precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
+                     const std::vector<BlockVector<FieldVector<double,1> >>& x)
+{
+  using namespace boost::fusion;
+  using namespace Dune::detail;
+
+  typedef typename std::tuple_element<0,SolutionSpaces>::type::GridView
+          GridView;
+  GridView gridView = std::get<0>(solutionSpaces).gridView();
+
+  /* set up global offsets */
+  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+
+  const size_t globalTotalSolutionSize =
+    fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
+         (size_t)0, globalOffsetHelper());
+
+  const size_t globalSolutionSpaceOffset =
+      globalSolutionSpaceOffsets[solutionSpaceIndex];
+
+  scattering.resize(std::get<solutionSpaceIndex>(solutionSpaces).size());
+  scattering = 0;
+  BlockVector<FieldVector<double,1>> normSquared(scattering.size());
+  normSquared = 0;
+
+  // Views on the FE bases on a single element
+  auto solutionLocalViews = as_vector(transform(solutionSpaces, getLocalView()));
+
+  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces,
+                                                    getLocalIndexSet()));
+
+  for(const auto& e : elements(gridView)) {
+
+    // Bind the local FE basis view to the current element
+    /* TODO: only bind the space we use later */
+    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
+
+    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
+             make_fused_procedure(bindLocalIndexSet()));
+
+    // Now get the local contribution to the scattering functional
+
+    BlockVector<FieldVector<double,1>>
+        localScattering(at_c<solutionSpaceIndex>(solutionLocalViews).size());
+    localScattering = 0;
+    BlockVector<FieldVector<double,1>> localNormSquared(localScattering.size());
+    localNormSquared = 0;
+
+    detail::GetLocalApproximateScattering
+      < std::tuple_element_t<solutionSpaceIndex, SolutionSpaces>
+      >::interiorImpl(
+            at_c<solutionSpaceIndex>(solutionLocalViews),
+            localScattering,
+            localNormSquared,
+            at_c<solutionSpaceIndex>(solutionLocalIndexSets),
+            globalSolutionSpaceOffset,
+            // unsigned int quadratureOrder,
+            e,
+            kernelApproximation,
+            x,
+            si);
+
+    auto scatteringCopier
+        = localToGlobalRHSCopier
+            <typename std::remove_reference<decltype(localScattering)>::type,
+             typename std::remove_reference<decltype(scattering)>::type>
+            (localScattering, scattering);
+    scatteringCopier(at_c<solutionSpaceIndex>(solutionLocalViews),
+                     at_c<solutionSpaceIndex>(solutionLocalIndexSets),
+                     0,
+                     0
+                    );
+
+    auto normCopier
+        = localToGlobalRHSCopier
+            <typename std::remove_reference<decltype(localNormSquared)>::type,
+             typename std::remove_reference<decltype(normSquared)>::type>
+            (localNormSquared, normSquared);
+    normCopier(at_c<solutionSpaceIndex>(solutionLocalViews),
+               at_c<solutionSpaceIndex>(solutionLocalIndexSets),
+               0,
+               0
+              );
+  }
+
+  for(size_t i=0, iMax=scattering.size(); i<iMax; ++i)
+    scattering[i] /= normSquared[i];
+}
+
+namespace detail {
   template <class TestSpace,
             class SolutionSpace,
             bool = is_RefinedFiniteElement<TestSpace>::value,
             bool = is_RefinedFiniteElement<SolutionSpace>::value>
-  struct GetLocalApproximateScattering;
+  struct ApplyLocalFunctional;
 }
+
 #include "approximatelocalscattering_uu_impl.hh"
 #include "approximatelocalscattering_ru_impl.hh"
 
@@ -183,8 +394,9 @@ template<class TestSpaces,
          class FormulationType>
 template<size_t solutionSpaceIndex>
 void ApproximateScatteringAssembler<TestSpaces, SolutionSpaces, KernelApproximation, FormulationType>::
-assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
-                   const std::vector<BlockVector<FieldVector<double,1> >>& x)
+assembleScattering(
+    BlockVector<FieldVector<double,1> >& scattering,
+    const BlockVector<FieldVector<double,1> >& scatteringFunctional)
 {
   using namespace boost::fusion;
   using namespace Dune::detail;
@@ -254,7 +466,8 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
         localScattering(at_c<0>(testLocalViews).size());
     localScattering = 0;
 
-    detail::GetLocalApproximateScattering
+    // TODO: compute integral over scatteringFunctional and v
+    detail::ApplyLocalFunctional
       < std::tuple_element_t<0, TestSpaces>
       , std::tuple_element_t<solutionSpaceIndex, SolutionSpaces>
       >::interiorImpl(
@@ -263,11 +476,8 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
             localScattering,
             at_c<solutionSpaceIndex>(solutionLocalIndexSets),
             globalSolutionSpaceOffset,
-            // unsigned int quadratureOrder,
             e,
-            kernelApproximation,
-            x,
-            si);
+            scatteringFunctional);
 
     auto rhsCopier
         = localToGlobalRHSCopier
