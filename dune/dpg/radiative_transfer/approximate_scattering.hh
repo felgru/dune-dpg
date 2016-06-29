@@ -300,9 +300,8 @@ precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-  const size_t globalTotalSolutionSize =
-    fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
-         (size_t)0, globalOffsetHelper());
+  fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
+       (size_t)0, globalOffsetHelper());
 
   const size_t globalSolutionSpaceOffset =
       globalSolutionSpaceOffsets[solutionSpaceIndex];
