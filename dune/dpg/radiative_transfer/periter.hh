@@ -28,6 +28,7 @@
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/functions/interpolate.hh>
+#include <dune/dpg/linearfunctionalterm.hh>
 #include <dune/dpg/radiative_transfer/approximate_scattering.hh>
 #include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/system_assembler.hh>
@@ -129,6 +130,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
     x[i] = 0;
   }
 
+  ScatteringKernelApproximation kernelApproximation(kernel, numS);
+
   /////////////////////////////////////////////////////////
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
@@ -140,6 +143,9 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                           && n < maxNumberOfIterations; ++n)
   {
     accuracy *= rho/2.;
+    // TODO: Consider the norm of the transport solver in the accuracy.
+    kernelApproximation.setAccuracy(accuracy/2.);
+
     ofs << "\nIteration " << n << std::endl;
     std::cout << "\nIteration " << n << std::endl << std::endl;
 
@@ -234,8 +240,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
 
       std::vector<SystemAssembler_t> systemAssemblers;
       systemAssemblers.reserve(numS);
-
-      ScatteringKernelApproximation kernelApproximation(kernel, numS);
 
       // Scattering assemblers with optimal test spaces
       std::vector<ApproximateScatteringAssembler
@@ -356,14 +360,17 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         }
       }
 
+      std::vector<VectorType> scatteringFunctional(numS);
+      for(unsigned int i = 0; i < numS; ++i)
+        scatteringAssemblers[i].template precomputeScattering<0>(
+            scatteringFunctional[i],
+            uPreviousFine);
+
       /////////////////////////////////////////////////////////
       //  Assemble the systems
       /////////////////////////////////////////////////////////
       // using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
       //auto f = [] (const Domain& x, const Direction& s) { return 1.;};
-
-      // TODO: Consider the norm of the transport solver in the accuracy.
-      kernelApproximation.setAccuracy(accuracy/2.);
 
       // loop of the discrete ordinates
       for(unsigned int i = 0; i < numS; ++i)
@@ -377,19 +384,12 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                   < 0
                   , LinearIntegrationType::valueFunction
                   , DomainOfIntegration::interior>
-                  ([s,&f] (const Domain& x) { return f(x,s); })));
+                  ([s,&f] (const Domain& x) { return f(x,s); }),
+                make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
+                  (scatteringFunctional[i], std::get<0>(solutionSpaces))));
         systemAssemblers[i].assembleSystem(
             stiffnessMatrix[i], rhs[i],
             rhsFunction);
-        VectorType scattering;
-        VectorType scatteringFunctional;
-        scatteringAssemblers[i].template precomputeScattering<0>(
-            scatteringFunctional,
-            uPreviousFine);
-        scatteringAssemblers[i].template assembleScattering<0>(
-            scattering,
-            scatteringFunctional);
-        rhs[i] += scattering;
         systemAssemblers[i].template applyDirichletBoundary<1>
             (stiffnessMatrix[i],
              rhs[i],
@@ -429,7 +429,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       ////////////////////////////////////
       //  A posteriori error
       ////////////////////////////////////
-      kernelApproximation.setAccuracy(0.);
       std::cout << "Compute a posteriori errors\n";
       aposterioriErr = 0.;
       for(unsigned int i = 0; i < numS; ++i)
@@ -442,6 +441,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         // We compute the a posteriori error
         // - We compute the rhs with the enriched test space ("rhs[i]=f(v_i)")
         // -- Contribution of the source term f that has an analytic expression
+        // -- Contribution of the scattering term
         auto rhsFunction = make_DPG_LinearForm(
               rhsAssembler.getTestSpaces(),
               std::make_tuple(
@@ -449,19 +449,11 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                   < 0
                   , LinearIntegrationType::valueFunction
                   , DomainOfIntegration::interior>
-                  ([s,&f] (const Domain& x) { return f(x,s); })));
+                  ([s,&f] (const Domain& x) { return f(x,s); }),
+                make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
+                  (scatteringFunctional[i], std::get<0>(solutionSpaces))));
         rhsAssembler.assembleRhs(rhs[i],
             rhsFunction);
-        // -- Contribution of the scattering term
-        VectorType scattering;
-        VectorType scatteringFunctional;
-        scatteringAssemblersEnriched[i].template precomputeScattering<0>(
-            scatteringFunctional,
-            uPreviousFine);
-        scatteringAssemblersEnriched[i].template assembleScattering<0>(
-            scattering,
-            scatteringFunctional);
-        rhs[i] += scattering;
         // - Computation of the a posteriori error
         double aposterioriErr_i = errorTools.aPosterioriError(
             bilinearForms[i], innerProducts[i], x[i], rhs[i]);

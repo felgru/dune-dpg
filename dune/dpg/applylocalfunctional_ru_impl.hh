@@ -10,15 +10,15 @@ using SolutionLocalIndexSet = typename SolutionSpace::LocalIndexSet;
 
 template <class VectorType,
           class Element,
-          class ScatteringFunctional>
+          class FunctionalVector>
 inline static void interiorImpl(
     const TestLocalView& testLocalView,
     const SolutionLocalView& solutionLocalView,
-    VectorType& localScattering,
+    VectorType& elementVector,
+    size_t spaceOffset,
     const SolutionLocalIndexSet& solutionLocalIndexSet,
-    size_t globalSolutionSpaceOffset,
     const Element& element,
-    const ScatteringFunctional& scatteringFunctional)
+    const FunctionalVector& functionalVector)
 {
   const int dim = Element::dimension;
   auto geometry = element.geometry();
@@ -28,11 +28,11 @@ inline static void interiorImpl(
   const auto& solutionLocalFiniteElement = solutionLocalView.tree().finiteElement();
 
   BlockVector<FieldVector<double,1>>
-      localScatteringFunctional(solutionLocalView.size());
-  for (size_t j=0, jMax=localScatteringFunctional.size(); j<jMax; j++)
+      localFunctionalVector(solutionLocalView.size());
+  for (size_t j=0, jMax=localFunctionalVector.size(); j<jMax; j++)
   {
     auto row = solutionLocalIndexSet.index(j)[0];
-    localScatteringFunctional[j] = scatteringFunctional[row];
+    localFunctionalVector[j] = functionalVector[row];
   }
 
   const unsigned int quadratureOrder
@@ -86,12 +86,12 @@ inline static void interiorImpl(
 
       double functionalValue = 0;
       for (size_t j=0, j_max=shapeFunctionValues.size(); j<j_max; j++)
-        functionalValue += localScatteringFunctional[j]
+        functionalValue += localFunctionalVector[j]
                          * shapeFunctionValues[j];
       functionalValue *= integrationWeight;
       for (size_t i=0, i_max=testLocalFiniteElement.localBasis().size();
            i<i_max; i++) {
-        localScattering[i+subElementOffset]
+        elementVector[i+spaceOffset+subElementOffset]
             += functionalValue * testShapeFunctionValues[i];
       }
     }
