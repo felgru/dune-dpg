@@ -7,9 +7,17 @@ install(FILES assemble_helper.hh
               boundarytools.hh
               cholesky.hh
               errortools.hh
+              getvolumeterm_impl.hh
               innerproduct.hh
               integralterm.hh
+              integralterm_rr_impl.hh
+              integralterm_ru_impl.hh
+              integralterm_uu_impl.hh
+              linearform.hh
+              linearintegralterm.hh
+              localevaluation.hh
               quadrature.hh
+              rhs_assembler.hh
               system_assembler.hh
               type_traits.hh
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/dpg)
