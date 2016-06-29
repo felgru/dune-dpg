@@ -6,8 +6,6 @@
 #include <tuple>
 #include <vector>
 
-#include <dune/istl/matrix.hh>
-
 #include "assemble_types.hh"
 #include "type_traits.hh"
 #include "quadrature.hh"
