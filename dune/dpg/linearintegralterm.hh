@@ -53,8 +53,6 @@ namespace Dune {
      * The local integrals will be added with the given offsets
      * to \p elementVector.
      *
-     * \pre The localViews have to be bound to the same element.
-     *
      * \param[in]     localView       local view of the test space
      * \param[in,out] elementVector   the local rhs vector
      * \param         spaceOffset     row offset for the test space
@@ -73,8 +71,8 @@ namespace Dune {
 
 
 /**
- * \brief Creates a Tuple of an LinearIntegralTerm and the indices
- *        of both spaces involved.
+ * \brief Creates a tuple of a LinearIntegralTerm and the index
+ *        of the space involved.
  *
  * \param c  the factor with which we multiply the integrand
  * \tparam spaceIndex the index of the test space
@@ -100,8 +98,8 @@ auto make_LinearIntegralTerm(FactorType c)
 }
 
 /**
- * \brief Creates a Tuple of an LinearIntegralTerm and the indices
- *        of both spaces involved.
+ * \brief Creates a tuple of a LinearIntegralTerm and the index
+ *        of the space involved.
  *
  * \param c     the factor with which we multiply the integrand
  * \param beta  the transport direction
