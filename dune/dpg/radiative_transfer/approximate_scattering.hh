@@ -87,14 +87,10 @@ namespace ScatteringKernelApproximation {
 /**
  * \brief This constructs the right hand side vector of a DPG system.
  *
- * \tparam TestSpaces      tuple of test spaces
  * \tparam SolutionSpaces  tuple of solution spaces
- * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
  */
-template<class TestSpaces,
-         class SolutionSpaces,
-         class KernelApproximation,
-         class FormulationType>
+template<class SolutionSpaces,
+         class KernelApproximation>
 class ApproximateScatteringAssembler
 {
 public:
@@ -110,12 +106,10 @@ public:
    * \note For your convenience, use make_ApproximateScatteringAssembler()
    *       instead.
    */
-  ApproximateScatteringAssembler (const TestSpaces& testSpaces,
-                                  const SolutionSpaces& solutionSpaces,
+  ApproximateScatteringAssembler (const SolutionSpaces& solutionSpaces,
                                   const KernelApproximation& kernel,
                                   size_t si)
-             : testSpaces(testSpaces),
-               solutionSpaces(solutionSpaces),
+             : solutionSpaces(solutionSpaces),
                si(si),
                kernelApproximation(kernel)
   {}
@@ -138,7 +132,6 @@ public:
            const std::vector<BlockVector<FieldVector<double,1> >>& x);
 
 private:
-  TestSpaces     testSpaces;
   SolutionSpaces solutionSpaces;
   const size_t si;
   const KernelApproximation& kernelApproximation;
@@ -148,23 +141,20 @@ private:
  * \brief Creates a ScatteringAssembler for a DPG discretization,
  *        deducing the target type from the types of arguments.
  *
- * \param  testSpaces       a tuple of test spaces
  * \param  solutionSpaces   a tuple of solution spaces
  * \param  kernel           an approximation of the scattering kernel
  * \param  si               index of scattering direction (0 < si < numS)
  */
-template<class TestSpaces,
-         class SolutionSpaces,
+template<class SolutionSpaces,
          class KernelApproximation>
-auto make_DPG_ApproximateScatteringAssembler(
-      const TestSpaces& testSpaces,
+auto make_ApproximateScatteringAssembler(
       const SolutionSpaces& solutionSpaces,
       const KernelApproximation& kernel,
       size_t si)
-     -> ApproximateScatteringAssembler<TestSpaces, SolutionSpaces, KernelApproximation, DPGFormulation>
+     -> ApproximateScatteringAssembler<SolutionSpaces, KernelApproximation>
 {
-  return ApproximateScatteringAssembler<TestSpaces, SolutionSpaces, KernelApproximation, DPGFormulation>
-                            (testSpaces, solutionSpaces, kernel, si);
+  return ApproximateScatteringAssembler<SolutionSpaces, KernelApproximation>
+                            (solutionSpaces, kernel, si);
 }
 
 namespace detail {
@@ -265,12 +255,10 @@ inline static void interiorImpl(
 } // end namespace detail
 
 
-template<class TestSpaces,
-         class SolutionSpaces,
-         class KernelApproximation,
-         class FormulationType>
+template<class SolutionSpaces,
+         class KernelApproximation>
 template<size_t solutionSpaceIndex>
-void ApproximateScatteringAssembler<TestSpaces, SolutionSpaces, KernelApproximation, FormulationType>::
+void ApproximateScatteringAssembler<SolutionSpaces, KernelApproximation>::
 precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
                      const std::vector<BlockVector<FieldVector<double,1> >>& x)
 {

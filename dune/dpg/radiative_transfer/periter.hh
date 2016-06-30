@@ -243,21 +243,10 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
 
       // Scattering assemblers with optimal test spaces
       std::vector<ApproximateScatteringAssembler
-                      <std::tuple<FEBasisOptimalTest>,
-                       SolutionSpaces,
-                       decltype(kernelApproximation),
-                       DPGFormulation>
+                      <SolutionSpaces,
+                       decltype(kernelApproximation)>
                  > scatteringAssemblers;
       scatteringAssemblers.reserve(numS);
-
-      // Scattering assembler with enriched test space
-      std::vector<ApproximateScatteringAssembler
-                      <std::tuple<FEBasisTestEnriched>,
-                       SolutionSpaces,
-                       decltype(kernelApproximation),
-                       DPGFormulation>
-                 > scatteringAssemblersEnriched;
-      scatteringAssemblersEnriched.reserve(numS);
 
       /* create an FEBasisOptimalTest for each direction */
       std::vector<std::tuple<FEBasisOptimalTest> > optimalTestSpaces;
@@ -302,16 +291,9 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
             make_DPG_SystemAssembler(optimalTestSpaces[i], solutionSpaces,
                                      bilinearForms[i]));
         scatteringAssemblers.emplace_back(
-            make_DPG_ApproximateScatteringAssembler(optimalTestSpaces[i],
-                                                    solutionSpaces,
-                                                    kernelApproximation,
-                                                    i));
-        scatteringAssemblersEnriched.emplace_back(
-            make_DPG_ApproximateScatteringAssembler(
-                testSpacesEnriched,
-                solutionSpaces,
-                kernelApproximation,
-                i));
+            make_ApproximateScatteringAssembler(solutionSpaces,
+                                                kernelApproximation,
+                                                i));
       }
 
       std::vector<VectorType> rhs(numS);
