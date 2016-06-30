@@ -199,10 +199,9 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest; // v enriched
       auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
-      auto rhsAssembler = make_RhsAssembler(testSpaces);
-
       typedef FEBasisTest FEBasisTestEnriched;
       auto testSpacesEnriched = std::make_tuple(FEBasisTestEnriched(gridView));
+      auto rhsAssemblerEnriched = make_RhsAssembler(testSpacesEnriched);
 
       // typedef decltype(testSpaces) TestSpaces;
       typedef decltype(solutionSpaces) SolutionSpaces;
@@ -218,6 +217,9 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                                         DomainOfIntegration::face>(1.,
                                            FieldVector<double, dim>{1.,1.}))))
               BilinearForm;
+      typedef std::decay_t<decltype(
+          replaceTestSpaces(std::declval<BilinearForm>(), testSpacesEnriched))>
+        BilinearFormEnriched;
       typedef decltype(make_InnerProduct(testSpaces,
                 make_tuple(
                   make_IntegralTerm<0,0,IntegrationType::gradGrad,
@@ -227,6 +229,9 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                                         DomainOfIntegration::face>(1.,
                                            FieldVector<double, dim>{1.,1.}))))
               InnerProduct;
+      typedef std::decay_t<decltype(
+          replaceTestSpaces(std::declval<InnerProduct>(), testSpacesEnriched))>
+        InnerProductEnriched;
 
       typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>
           TestspaceCoefficientMatrix;
@@ -258,6 +263,10 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       bilinearForms.reserve(numS);
       std::vector<InnerProduct> innerProducts;
       innerProducts.reserve(numS);
+      std::vector<BilinearFormEnriched> bilinearFormsEnriched;
+      bilinearFormsEnriched.reserve(numS);
+      std::vector<InnerProductEnriched> innerProductsEnriched;
+      innerProductsEnriched.reserve(numS);
       std::vector<TestspaceCoefficientMatrix> coefficientMatrices;
       coefficientMatrices.reserve(numS);
 
@@ -274,6 +283,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                                         DomainOfIntegration::interior>(-1., s),
                   make_IntegralTerm<0,1,IntegrationType::normalVector,
                                         DomainOfIntegration::face>(1., s))));
+        bilinearFormsEnriched.emplace_back(
+            replaceTestSpaces(bilinearForms[i], testSpacesEnriched));
         innerProducts.emplace_back(
           make_InnerProduct(testSpaces,
               make_tuple(
@@ -281,6 +292,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                                         DomainOfIntegration::interior>(1., s),
                   make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
                                         DomainOfIntegration::face>(1., s))));
+        innerProductsEnriched.emplace_back(
+            replaceTestSpaces(innerProducts[i], testSpacesEnriched));
 
         coefficientMatrices.emplace_back(bilinearForms[i], innerProducts[i]);
 
@@ -425,7 +438,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         // -- Contribution of the source term f that has an analytic expression
         // -- Contribution of the scattering term
         auto rhsFunction = make_DPG_LinearForm(
-              rhsAssembler.getTestSpaces(),
+              rhsAssemblerEnriched.getTestSpaces(),
               std::make_tuple(
                 make_LinearIntegralTerm
                   < 0
@@ -434,11 +447,11 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                   ([s,&f] (const Domain& x) { return f(x,s); }),
                 make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
                   (scatteringFunctional[i], std::get<0>(solutionSpaces))));
-        rhsAssembler.assembleRhs(rhs[i],
+        rhsAssemblerEnriched.assembleRhs(rhs[i],
             rhsFunction);
         // - Computation of the a posteriori error
         double aposterioriErr_i = errorTools.aPosterioriError(
-            bilinearForms[i], innerProducts[i], x[i], rhs[i]);
+            bilinearFormsEnriched[i], innerProductsEnriched[i], x[i], rhs[i]);
             //change with contribution of scattering rhs[i]
         aposterioriErr += aposterioriErr_i * aposterioriErr_i;
       }
