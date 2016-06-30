@@ -28,6 +28,7 @@
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/functions/interpolate.hh>
+#include <dune/dpg/linearfunctionalterm.hh>
 #include <dune/dpg/radiative_transfer/approximate_scattering.hh>
 #include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/system_assembler.hh>
@@ -117,7 +118,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
   /////////////////////////////////////////////////
   //   Solution vectors
   /////////////////////////////////////////////////
-  std::vector<VectorType> x(numS), xPrevious(numS);
+  std::vector<VectorType> x(numS);
 
   for(unsigned int i = 0; i < numS; ++i)
   {
@@ -128,6 +129,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                +feBasisInterior.size());
     x[i] = 0;
   }
+
+  ScatteringKernelApproximation kernelApproximation(kernel, numS);
 
   /////////////////////////////////////////////////////////
   //  Fixed-point iterations
@@ -140,19 +143,13 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                           && n < maxNumberOfIterations; ++n)
   {
     accuracy *= rho/2.;
+    // TODO: Consider the norm of the transport solver in the accuracy.
+    kernelApproximation.setAccuracy(accuracy/2.);
+
     ofs << "\nIteration " << n << std::endl;
     std::cout << "\nIteration " << n << std::endl << std::endl;
 
     std::vector<VectorType> u, theta;
-
-    size_t numDofsInteriorPrevious, numDofsTracePrevious;
-    {
-      FEBasisInterior feBasisInterior(gridView);
-      FEBasisTrace feBasisTrace(gridView);
-
-      numDofsInteriorPrevious = feBasisInterior.size();
-      numDofsTracePrevious = feBasisTrace.size();
-    }
 
     const auto levelGridView = grid.levelGridView(grid.maxLevel());
     typedef std::decay_t<decltype(levelGridView)> LevelGridView;
@@ -160,6 +157,25 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
     typedef changeGridView_t<FEBasisInterior, LevelGridView>
             FEBasisCoarseInterior;
     FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
+
+
+    std::vector<VectorType> scatteringFunctional(numS);
+    {
+      FEBasisInterior feBasisInterior(gridView);
+      FEBasisTrace feBasisTrace(gridView);
+      auto solutionSpaces =
+          std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
+
+      for(unsigned int i = 0; i < numS; ++i) {
+        auto scatteringAssembler_i =
+            make_ApproximateScatteringAssembler(solutionSpaces,
+                                                kernelApproximation,
+                                                i);
+        scatteringAssembler_i.template precomputeScattering<0>(
+            scatteringFunctional[i],
+            x);
+      }
+    }
 
     ////////////////////////////////////////////////////
     // Inner loop
@@ -174,17 +190,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
     {
       std::cout << "Inner iteration " << nRefinement << std::endl;
 
-      /////////////////////////////////////////////////////////
-      //  Get previous solutions
-      /////////////////////////////////////////////////////////
-      std::swap(xPrevious, x);
-
-      std::vector<VectorType> uPrevious
-          = extractSolution(xPrevious, 0, numDofsInteriorPrevious);
-      std::vector<VectorType> thetaPrevious
-          = extractSolution(xPrevious, numDofsInteriorPrevious,
-                            numDofsTracePrevious);
-
       FEBasisInterior feBasisInterior(gridView);
       FEBasisTrace feBasisTrace(gridView);
 
@@ -193,13 +198,9 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest; // v enriched
       auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
-      auto rhsAssembler = make_RhsAssembler(testSpaces);
-
       typedef FEBasisTest FEBasisTestEnriched;
       auto testSpacesEnriched = std::make_tuple(FEBasisTestEnriched(gridView));
-
-      // typedef decltype(testSpaces) TestSpaces;
-      typedef decltype(solutionSpaces) SolutionSpaces;
+      auto rhsAssemblerEnriched = make_RhsAssembler(testSpacesEnriched);
 
       typedef decltype(make_BilinearForm(testSpaces, solutionSpaces,
                 make_tuple(
@@ -212,6 +213,9 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                                         DomainOfIntegration::face>(1.,
                                            FieldVector<double, dim>{1.,1.}))))
               BilinearForm;
+      typedef std::decay_t<decltype(
+          replaceTestSpaces(std::declval<BilinearForm>(), testSpacesEnriched))>
+        BilinearFormEnriched;
       typedef decltype(make_InnerProduct(testSpaces,
                 make_tuple(
                   make_IntegralTerm<0,0,IntegrationType::gradGrad,
@@ -221,6 +225,9 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                                         DomainOfIntegration::face>(1.,
                                            FieldVector<double, dim>{1.,1.}))))
               InnerProduct;
+      typedef std::decay_t<decltype(
+          replaceTestSpaces(std::declval<InnerProduct>(), testSpacesEnriched))>
+        InnerProductEnriched;
 
       typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>
           TestspaceCoefficientMatrix;
@@ -235,26 +242,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       std::vector<SystemAssembler_t> systemAssemblers;
       systemAssemblers.reserve(numS);
 
-      ScatteringKernelApproximation kernelApproximation(kernel, numS);
-
-      // Scattering assemblers with optimal test spaces
-      std::vector<ApproximateScatteringAssembler
-                      <std::tuple<FEBasisOptimalTest>,
-                       SolutionSpaces,
-                       decltype(kernelApproximation),
-                       DPGFormulation>
-                 > scatteringAssemblers;
-      scatteringAssemblers.reserve(numS);
-
-      // Scattering assembler with enriched test space
-      std::vector<ApproximateScatteringAssembler
-                      <std::tuple<FEBasisTestEnriched>,
-                       SolutionSpaces,
-                       decltype(kernelApproximation),
-                       DPGFormulation>
-                 > scatteringAssemblersEnriched;
-      scatteringAssemblersEnriched.reserve(numS);
-
       /* create an FEBasisOptimalTest for each direction */
       std::vector<std::tuple<FEBasisOptimalTest> > optimalTestSpaces;
       optimalTestSpaces.reserve(numS);
@@ -265,6 +252,10 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       bilinearForms.reserve(numS);
       std::vector<InnerProduct> innerProducts;
       innerProducts.reserve(numS);
+      std::vector<BilinearFormEnriched> bilinearFormsEnriched;
+      bilinearFormsEnriched.reserve(numS);
+      std::vector<InnerProductEnriched> innerProductsEnriched;
+      innerProductsEnriched.reserve(numS);
       std::vector<TestspaceCoefficientMatrix> coefficientMatrices;
       coefficientMatrices.reserve(numS);
 
@@ -281,6 +272,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                                         DomainOfIntegration::interior>(-1., s),
                   make_IntegralTerm<0,1,IntegrationType::normalVector,
                                         DomainOfIntegration::face>(1., s))));
+        bilinearFormsEnriched.emplace_back(
+            replaceTestSpaces(bilinearForms[i], testSpacesEnriched));
         innerProducts.emplace_back(
           make_InnerProduct(testSpaces,
               make_tuple(
@@ -288,6 +281,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                                         DomainOfIntegration::interior>(1., s),
                   make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
                                         DomainOfIntegration::face>(1., s))));
+        innerProductsEnriched.emplace_back(
+            replaceTestSpaces(innerProducts[i], testSpacesEnriched));
 
         coefficientMatrices.emplace_back(bilinearForms[i], innerProducts[i]);
 
@@ -297,17 +292,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         systemAssemblers.emplace_back(
             make_DPG_SystemAssembler(optimalTestSpaces[i], solutionSpaces,
                                      bilinearForms[i]));
-        scatteringAssemblers.emplace_back(
-            make_DPG_ApproximateScatteringAssembler(optimalTestSpaces[i],
-                                                    solutionSpaces,
-                                                    kernelApproximation,
-                                                    i));
-        scatteringAssemblersEnriched.emplace_back(
-            make_DPG_ApproximateScatteringAssembler(
-                testSpacesEnriched,
-                solutionSpaces,
-                kernelApproximation,
-                i));
       }
 
       std::vector<VectorType> rhs(numS);
@@ -341,18 +325,15 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         x[i] = 0;
       }
 
-      std::vector<VectorType> uPreviousFine(numS);
       if(nRefinement != 0)
       {
+        std::vector<VectorType> scatteringFunctionalCoarse(numS);
+        std::swap(scatteringFunctional, scatteringFunctionalCoarse);
         for(unsigned int i = 0; i < numS; ++i)
         {
-          uPreviousFine[i] = interpolateToUniformlyRefinedGrid(
-              coarseInteriorBasis, feBasisInterior, uPrevious[i]);
-        }
-      } else {
-        for(unsigned int i = 0; i < numS; ++i)
-        {
-          uPreviousFine[i] = uPrevious[i];
+          scatteringFunctional[i] = interpolateToUniformlyRefinedGrid(
+              coarseInteriorBasis, feBasisInterior,
+              scatteringFunctionalCoarse[i]);
         }
       }
 
@@ -361,9 +342,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       /////////////////////////////////////////////////////////
       // using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
       //auto f = [] (const Domain& x, const Direction& s) { return 1.;};
-
-      // TODO: Consider the norm of the transport solver in the accuracy.
-      kernelApproximation.setAccuracy(accuracy/2.);
 
       // loop of the discrete ordinates
       for(unsigned int i = 0; i < numS; ++i)
@@ -377,15 +355,12 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                   < 0
                   , LinearIntegrationType::valueFunction
                   , DomainOfIntegration::interior>
-                  ([s,&f] (const Domain& x) { return f(x,s); })));
+                  ([s,&f] (const Domain& x) { return f(x,s); }),
+                make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
+                  (scatteringFunctional[i], std::get<0>(solutionSpaces))));
         systemAssemblers[i].assembleSystem(
             stiffnessMatrix[i], rhs[i],
             rhsFunction);
-        VectorType scattering;
-        scatteringAssemblers[i].template assembleScattering<0>(
-            scattering,
-            uPreviousFine);
-        rhs[i] += scattering;
         systemAssemblers[i].template applyDirichletBoundary<1>
             (stiffnessMatrix[i],
              rhs[i],
@@ -425,7 +400,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       ////////////////////////////////////
       //  A posteriori error
       ////////////////////////////////////
-      kernelApproximation.setAccuracy(0.);
       std::cout << "Compute a posteriori errors\n";
       aposterioriErr = 0.;
       for(unsigned int i = 0; i < numS; ++i)
@@ -438,24 +412,22 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         // We compute the a posteriori error
         // - We compute the rhs with the enriched test space ("rhs[i]=f(v_i)")
         // -- Contribution of the source term f that has an analytic expression
+        // -- Contribution of the scattering term
         auto rhsFunction = make_DPG_LinearForm(
-              rhsAssembler.getTestSpaces(),
+              rhsAssemblerEnriched.getTestSpaces(),
               std::make_tuple(
                 make_LinearIntegralTerm
                   < 0
                   , LinearIntegrationType::valueFunction
                   , DomainOfIntegration::interior>
-                  ([s,&f] (const Domain& x) { return f(x,s); })));
-        rhsAssembler.assembleRhs(rhs[i],
+                  ([s,&f] (const Domain& x) { return f(x,s); }),
+                make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
+                  (scatteringFunctional[i], std::get<0>(solutionSpaces))));
+        rhsAssemblerEnriched.assembleRhs(rhs[i],
             rhsFunction);
-        // -- Contribution of the scattering term
-        VectorType scattering;
-        scatteringAssemblersEnriched[i]
-            .template assembleScattering<0>(scattering, uPreviousFine);
-        rhs[i] += scattering;
         // - Computation of the a posteriori error
         double aposterioriErr_i = errorTools.aPosterioriError(
-            bilinearForms[i], innerProducts[i], x[i], rhs[i]);
+            bilinearFormsEnriched[i], innerProductsEnriched[i], x[i], rhs[i]);
             //change with contribution of scattering rhs[i]
         aposterioriErr += aposterioriErr_i * aposterioriErr_i;
       }

@@ -2,7 +2,7 @@ namespace detail {
 
 template <class TestSpace,
           class SolutionSpace>
-struct GetLocalApproximateScattering<TestSpace, SolutionSpace, true, false>
+struct ApplyLocalFunctional<TestSpace, SolutionSpace, true, false>
 {
 using TestLocalView = typename TestSpace::LocalView;
 using SolutionLocalView = typename SolutionSpace::LocalView;
@@ -10,18 +10,15 @@ using SolutionLocalIndexSet = typename SolutionSpace::LocalIndexSet;
 
 template <class VectorType,
           class Element,
-          class KernelApproximation>
+          class FunctionalVector>
 inline static void interiorImpl(
     const TestLocalView& testLocalView,
     const SolutionLocalView& solutionLocalView,
-    VectorType& localScattering,
+    VectorType& elementVector,
+    size_t spaceOffset,
     const SolutionLocalIndexSet& solutionLocalIndexSet,
-    size_t globalSolutionSpaceOffset,
-    // unsigned int quadratureOrder,
     const Element& element,
-    const KernelApproximation& kernelApproximation,
-    const std::vector<BlockVector<FieldVector<double,1> >>& x,
-    size_t si)
+    const FunctionalVector& functionalVector)
 {
   const int dim = Element::dimension;
   auto geometry = element.geometry();
@@ -30,9 +27,14 @@ inline static void interiorImpl(
   const auto& testLocalFiniteElement = testLocalView.tree().finiteElement();
   const auto& solutionLocalFiniteElement = solutionLocalView.tree().finiteElement();
 
-  /* TODO:
-   * - Adapt quadrature also to the kernel k
-   */
+  BlockVector<FieldVector<double,1>>
+      localFunctionalVector(solutionLocalView.size());
+  for (size_t j=0, jMax=localFunctionalVector.size(); j<jMax; j++)
+  {
+    auto row = solutionLocalIndexSet.index(j)[0];
+    localFunctionalVector[j] = functionalVector[row];
+  }
+
   const unsigned int quadratureOrder
       = solutionLocalFiniteElement.localBasis().order()
         + testLocalFiniteElement.localBasis().order();
@@ -59,15 +61,15 @@ inline static void interiorImpl(
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
-
+      const FieldVector<double,dim>& quadPosInReferenceElement =
+          subGeometryInReferenceElement.global(quadPos);
       // The multiplicative factor in the integral transformation formula
       const double integrationWeight
-        = geometry.integrationElement(subGeometryInReferenceElement
-                                                      .global(quadPos))
+        = geometry.integrationElement(quadPosInReferenceElement)
         * subGeometryInReferenceElement.integrationElement(quadPos)
         * quad[pt].weight();
 
-      // Evaluate all test shape function values at this quadrature point
+      // Evaluate all shape function values at this quadrature point
       std::vector<FieldVector<double,1>> testShapeFunctionValues =
           detail::LocalRefinedFunctionEvaluation
                   <dim, EvaluationType::value, DomainOfIntegration::interior,
@@ -78,42 +80,20 @@ inline static void interiorImpl(
                          geometry,
                          subGeometryInReferenceElement,
                          {});
+      std::vector<FieldVector<double,1>> shapeFunctionValues;
+      solutionLocalFiniteElement.localBasis().
+          evaluateFunction(quadPosInReferenceElement, shapeFunctionValues);
 
-      const size_t numS = x.size();
-      Eigen::VectorXd uValues(numS);
-      {
-        std::vector<FieldVector<double,1>> shapeFunctionValues;
-        solutionLocalFiniteElement.localBasis().
-            evaluateFunction(quadPos, shapeFunctionValues);
-        for( size_t scatteringAngle=0;
-             scatteringAngle<numS; ++scatteringAngle) {
-          double uValue = 0; // in direction of scatteringAngle
-          // Evaluate all shape function values at this point
-          std::vector<FieldVector<double,1>> shapeFunctionValues;
-          solutionLocalFiniteElement.localBasis().evaluateFunction(
-              subGeometryInReferenceElement.global(quadPos),
-              shapeFunctionValues);
-          for (size_t j=0; j<shapeFunctionValues.size(); j++)
-          {
-            /* This assumes that solutionLocalIndexSets and
-             * globalSolutionSpaceOffset don't change for different
-             * scattering angles.
-             */
-            auto row =
-                solutionLocalIndexSet.index(j)[0]
-              + globalSolutionSpaceOffset;
-            uValue += x[scatteringAngle][row] * shapeFunctionValues[j];
-          }
-          uValues(scatteringAngle) = uValue;
-        }
+      double functionalValue = 0;
+      for (size_t j=0, j_max=shapeFunctionValues.size(); j<j_max; j++)
+        functionalValue += localFunctionalVector[j]
+                         * shapeFunctionValues[j];
+      functionalValue *= integrationWeight;
+      for (size_t i=0, i_max=testLocalFiniteElement.localBasis().size();
+           i<i_max; i++) {
+        elementVector[i+spaceOffset+subElementOffset]
+            += functionalValue * testShapeFunctionValues[i];
       }
-      kernelApproximation.applyToVector(uValues);
-
-      const double factor = uValues(si) * integrationWeight;
-      for (size_t i=0, lb_size=testLocalFiniteElement.localBasis().size();
-           i<lb_size; i++)
-        localScattering[i+subElementOffset]
-            += factor * testShapeFunctionValues[i];
     }
     if(is_DGRefinedFiniteElement<TestSpace>::value)
       subElementOffset += subElementStride;
