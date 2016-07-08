@@ -10,6 +10,9 @@
 #include <iostream>
 #include <vector>
 
+#include <stdlib.h>
+#include <unistd.h>
+
 std::vector<double> exponentialDecay(size_t n) {
   std::vector<double> a(n);
   for(std::ptrdiff_t i=0; (size_t)i<n; ++i) {
@@ -41,13 +44,46 @@ Eigen::MatrixXd kernelMatrix(const std::vector<Direction>& sVector, Kernel&& ker
   return kernelMatrix;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+  enum class kernelType {
+    exponential,
+    polynomial,
+    ACP2011
+  };
+
+  kernelType kt = kernelType::exponential;
+  size_t kernelTerms = 50;
+  size_t numS = 100;
+
+  int opt;
+  while ((opt = getopt(argc,argv,"e:p:a")) != EOF)
+    switch(opt)
+    {
+      case 'e': kt = kernelType::exponential; kernelTerms = atoi(optarg); break;
+      case 'p': kt = kernelType::polynomial; kernelTerms = atoi(optarg); break;
+      case 'a': kt = kernelType::ACP2011; break;
+      default:
+      case '?':
+        std::cerr << "usuage: " << argv[0] << " [-e n|-p n] s\n"
+                     " -e n: exponential decay with n terms\n"
+                     " -p n: polynomial decay with n terms\n"
+                     " s: number of directions\n";
+        abort();
+    }
+  if(optind != argc-1) {
+    std::cerr << "usuage: " << argv[0] << " [-e n|-p n] s\n"
+                 " -e n: exponential decay with n terms\n"
+                 " -p n: polynomial decay with n terms\n"
+                 " s: number of directions\n";
+    abort();
+  }
+  numS = atoi(argv[optind]);
+
   using namespace Dune;
 
   const unsigned int dim = 2;
   using Direction = FieldVector<double, dim>;
 
-  const size_t numS = 100;
   std::vector<Direction> sVector(numS);
   for(size_t i = 0; i < numS; ++i)
   {
@@ -56,17 +92,34 @@ int main() {
                   sin(2*pi<double>()*i/numS)};
   }
 
-  auto exponentialKernel = KanschatScattering<Direction>(exponentialDecay(50));
-  auto polynomialKernel = KanschatScattering<Direction>(polynomialDecay(50));
-  auto acpKernel = ACP2011Scattering<Direction>();
-  using namespace Eigen;
-  MatrixXd m = kernelMatrix(sVector, acpKernel);
+  Eigen::MatrixXd m;
+  switch(kt) {
+    case kernelType::exponential:
+      {
+        auto exponentialKernel
+          = KanschatScattering<Direction>(exponentialDecay(kernelTerms));
+        m = kernelMatrix(sVector, exponentialKernel);
+      }
+      break;
+    case kernelType::polynomial:
+      {
+        auto polynomialKernel
+          = KanschatScattering<Direction>(polynomialDecay(kernelTerms));
+        m = kernelMatrix(sVector, polynomialKernel);
+      }
+      break;
+    case kernelType::ACP2011:
+      {
+        auto acpKernel = ACP2011Scattering<Direction>();
+        m = kernelMatrix(sVector, acpKernel);
+      }
+  }
 
   Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner>
       kernelSVD(numS, numS, Eigen::ComputeThinU | Eigen::ComputeThinV);
   kernelSVD.compute(m);
 
-  VectorXd singularValues = kernelSVD.singularValues();
+  Eigen::VectorXd singularValues = kernelSVD.singularValues();
   for(size_t i=0, size=singularValues.size(); i<size; ++i)
     std::cout << singularValues[i] << '\n';
 }
