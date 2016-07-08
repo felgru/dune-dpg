@@ -1,6 +1,8 @@
 add_subdirectory(functions)
 
-install(FILES assemble_helper.hh
+install(FILES applylocalfunctional_ru_impl.hh
+              applylocalfunctional_uu_impl.hh
+              assemble_helper.hh
               assemble_types.hh
               bilinearform.hh
               boundarytools.hh
@@ -13,6 +15,7 @@ install(FILES assemble_helper.hh
               integralterm_ru_impl.hh
               integralterm_uu_impl.hh
               linearform.hh
+              linearfunctionalterm.hh
               linearintegralterm.hh
               localevaluation.hh
               quadrature.hh
