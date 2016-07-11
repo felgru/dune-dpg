@@ -24,7 +24,7 @@ std::vector<double> exponentialDecay(size_t n) {
 std::vector<double> polynomialDecay(size_t n) {
   std::vector<double> a(n);
   for(size_t i=0; i<n; ++i) {
-    a[i] = 1./(i+1);
+    a[i] = 1./((i+1)*(i+1));
   }
   return a;
 }
