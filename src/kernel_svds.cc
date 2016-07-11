@@ -44,6 +44,15 @@ Eigen::MatrixXd kernelMatrix(const std::vector<Direction>& sVector, Kernel&& ker
   return kernelMatrix;
 }
 
+void printHelp(char* name) {
+  std::cerr << "Usage: " << name << " [-e n|-p n|-a] s\n"
+               " -e n: exponential decay with n terms\n"
+               " -p n: polynomial decay with n terms\n"
+               " -a: kernel from Avila et al. 2011\n"
+               " s: number of directions\n";
+  exit(0);
+}
+
 int main(int argc, char *argv[]) {
   enum class kernelType {
     exponential,
@@ -64,18 +73,10 @@ int main(int argc, char *argv[]) {
       case 'a': kt = kernelType::ACP2011; break;
       default:
       case '?':
-        std::cerr << "usuage: " << argv[0] << " [-e n|-p n] s\n"
-                     " -e n: exponential decay with n terms\n"
-                     " -p n: polynomial decay with n terms\n"
-                     " s: number of directions\n";
-        abort();
+        printHelp(argv[0]);
     }
   if(optind != argc-1) {
-    std::cerr << "usuage: " << argv[0] << " [-e n|-p n] s\n"
-                 " -e n: exponential decay with n terms\n"
-                 " -p n: polynomial decay with n terms\n"
-                 " s: number of directions\n";
-    abort();
+    printHelp(argv[0]);
   }
   numS = atoi(argv[optind]);
 
