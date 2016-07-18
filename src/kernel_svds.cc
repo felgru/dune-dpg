@@ -2,6 +2,7 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/dpg/radiative_transfer/kanschat_scattering.hh>
+#include <dune/dpg/radiative_transfer/henyey_greenstein_scattering.hh>
 
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -48,6 +49,7 @@ void printHelp(char* name) {
   std::cerr << "Usage: " << name << " [-e n|-p n|-a] s\n"
                " -e n: exponential decay with n terms\n"
                " -p n: polynomial decay with n terms\n"
+               " -g gamma: Henyey-Greenstein kernel with given gamma\n"
                " -a: kernel from Avila et al. 2011\n"
                " s: number of directions\n";
   exit(0);
@@ -57,19 +59,22 @@ int main(int argc, char *argv[]) {
   enum class kernelType {
     exponential,
     polynomial,
+    henyey_greenstein,
     ACP2011
   };
 
   kernelType kt = kernelType::exponential;
   size_t kernelTerms = 50;
+  double gamma = 0.;
   size_t numS = 100;
 
   int opt;
-  while ((opt = getopt(argc,argv,"e:p:a")) != EOF)
+  while ((opt = getopt(argc,argv,"e:p:g:a")) != EOF)
     switch(opt)
     {
       case 'e': kt = kernelType::exponential; kernelTerms = atoi(optarg); break;
       case 'p': kt = kernelType::polynomial; kernelTerms = atoi(optarg); break;
+      case 'g': kt = kernelType::henyey_greenstein; gamma = atof(optarg); break;
       case 'a': kt = kernelType::ACP2011; break;
       default:
       case '?':
@@ -107,6 +112,13 @@ int main(int argc, char *argv[]) {
         auto polynomialKernel
           = KanschatScattering<Direction>(polynomialDecay(kernelTerms));
         m = kernelMatrix(sVector, polynomialKernel);
+      }
+      break;
+    case kernelType::henyey_greenstein:
+      {
+        auto henyeyGreensteinKernel
+          = HenyeyGreensteinScattering<Direction>(gamma);
+        m = kernelMatrix(sVector, henyeyGreensteinKernel);
       }
       break;
     case kernelType::ACP2011:
