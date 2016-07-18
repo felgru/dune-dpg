@@ -38,7 +38,7 @@ Eigen::MatrixXd kernelMatrix(const std::vector<Direction>& sVector, Kernel&& ker
     for(size_t i = 0; i < numS; ++i) {
       Direction s_i = sVector[i];
       // TODO: maybe use a higher order quadrature
-      kernelMatrix(i,j) = kernel(s_i, s_j)/(numS*numS);
+      kernelMatrix(i,j) = kernel(s_i, s_j)/numS;
     }
   }
   return kernelMatrix;

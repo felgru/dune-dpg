@@ -48,7 +48,7 @@ namespace ScatteringKernelApproximation {
             Direction s_i = {cos(2*pi<double>()*i/num_s),
                              sin(2*pi<double>()*i/num_s)};
             // TODO: maybe use a higher order quadrature
-            kernelMatrix(i,j) = kernel(s_i, s_j)/(num_s*num_s);
+            kernelMatrix(i,j) = kernel(s_i, s_j)/num_s;
           }
         }
         /* initialize SVD of kernel (using Eigen) */
