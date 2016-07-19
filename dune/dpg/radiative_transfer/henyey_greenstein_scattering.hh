@@ -10,16 +10,30 @@
 namespace Dune {
 
 template<class Direction>
-std::function<double(const Direction& s1, const Direction& s2)>
+std::function<double(const Direction&, const Direction&)>
 HenyeyGreensteinScattering(double gamma) {
-  return [gamma](const Direction& s1, const Direction& s2) {
-    double scalarProduct = s1 * s2;
-    if (scalarProduct > 1) scalarProduct = 1;
-    if (scalarProduct < 0) scalarProduct = 0;
-    using namespace boost::math::constants;
-    return 1./(2*pi<double>())
-           *(1-gamma*gamma)/(1+gamma*gamma-2*gamma*scalarProduct);
-  };
+  if (Direction().dim() == 2) {
+    return [gamma](const Direction& s1, const Direction& s2) {
+      double scalarProduct = s1 * s2;
+      if (scalarProduct > 1) scalarProduct = 1;
+      if (scalarProduct < 0) scalarProduct = 0;
+      using namespace boost::math::constants;
+      return 1./(2*pi<double>())
+             *(1-gamma*gamma)/(1+gamma*gamma-2*gamma*scalarProduct);
+    };
+  } else if (Direction().dim() == 3) {
+    return [gamma](const Direction& s1, const Direction& s2) {
+      double scalarProduct = s1 * s2;
+      if (scalarProduct > 1) scalarProduct = 1;
+      if (scalarProduct < 0) scalarProduct = 0;
+      using namespace boost::math::constants;
+      return 1./(4*pi<double>())
+             *(1-gamma*gamma)/pow(1+gamma*gamma-2*gamma*scalarProduct,3./2.);
+    };
+  } else {
+    DUNE_THROW(Dune::NotImplemented,
+        "Henyey-Greenstein scattering only implemented in 2d and 3d.");
+  }
 }
 
 }
