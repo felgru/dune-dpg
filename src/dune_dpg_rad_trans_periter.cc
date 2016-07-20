@@ -214,7 +214,7 @@ int main(int argc, char** argv)
   auto g = [&sVector] (const Domain& x, const Direction& s)
            { return 1.; };
   Periter<ScatteringKernelApproximation::SVD>()
-      .solve(*grid, g, HenyeyGreensteinScattering<Direction>(0.5),
+      .solve(*grid, g, HenyeyGreensteinScattering<Direction>(0.9),
              numS, 1e-2, N);
 
   return 0;
