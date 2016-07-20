@@ -22,6 +22,7 @@
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
 #include <dune/dpg/radiative_transfer/periter.hh>
+#include <dune/dpg/radiative_transfer/henyey_greenstein_scattering.hh>
 
 #include <boost/math/constants/constants.hpp>
 
@@ -211,9 +212,10 @@ int main(int argc, char** argv)
   }
 
   auto g = [&sVector] (const Domain& x, const Direction& s)
-           { return f(x, s, uAnalytic<Domain, Direction>, sVector); };
+           { return 1.; };
   Periter<ScatteringKernelApproximation::SVD>()
-      .solve(*grid, g, kernel<Direction>, numS, 1e-10, N);
+      .solve(*grid, g, HenyeyGreensteinScattering<Direction>(0.5),
+             numS, 1e-2, N);
 
   return 0;
   }

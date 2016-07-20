@@ -136,7 +136,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
   // TODO: Estimate ρ from the paper.
-  const double rho = 1.7/5.;
+  const double rho = 1.;
   // The accuracy η_n:
   double accuracy = 1.;
   for(unsigned int n = 0; accuracy > targetAccuracy
