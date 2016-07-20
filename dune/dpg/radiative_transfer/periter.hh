@@ -487,6 +487,9 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                        + std::to_string(i);
       vtkWriterTrace.write(name);
     }
+    std::cout << "\nStatistics at end of inner iteration:\n";
+    std::cout << "Grid level: " << grid.maxLevel() << '\n';
+    std::cout << "A posteriori error: " << aposterioriErr << std::endl;
   }
 }
 
