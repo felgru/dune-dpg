@@ -6,6 +6,10 @@
 * The definition of BOOST_FUSION_INVOKE_PROCEDURE_MAX_ARITY has been
   moved to config.h.cmake.
 * Added some missing #includes and removed unused ones.
+* Fixed a lot of pedantic warnings like signed–unsigned comparison
+  and unused variables.
+* Consistently name tuples of spaces, localViews etc. with plural s
+  to distinguish them from single objects.
 
 0.1:
 * initial release, compatible with Dune 2.4.0
