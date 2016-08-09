@@ -6,6 +6,7 @@
 #include <cmath>
 #include <functional>
 #include <boost/math/constants/constants.hpp>
+#include <dune/common/exceptions.hh>
 
 namespace Dune {
 
