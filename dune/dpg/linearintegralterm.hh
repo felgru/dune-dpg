@@ -88,11 +88,9 @@ auto make_LinearIntegralTerm(FactorType c)
                                      domainOfIntegration,
                                      FactorType> >
 {
-  return std::tuple<std::integral_constant<size_t, spaceIndex>,
-                LinearIntegralTerm<integrationType,
-                                   domainOfIntegration,
-                                   FactorType> >
-         ({}, LinearIntegralTerm<integrationType,
+  return std::make_tuple(
+              std::integral_constant<size_t, spaceIndex>(),
+              LinearIntegralTerm<integrationType,
                                  domainOfIntegration,
                                  FactorType>(c));
 }
@@ -119,12 +117,9 @@ auto make_LinearIntegralTerm(FactorType c, DirectionType beta)
                                      FactorType,
                                      DirectionType> >
 {
-  return std::tuple<std::integral_constant<size_t, spaceIndex>,
-                LinearIntegralTerm<integrationType,
-                                   domainOfIntegration,
-                                   FactorType,
-                                   DirectionType> >
-         ({}, LinearIntegralTerm<integrationType,
+  return std::make_tuple(
+              std::integral_constant<size_t, spaceIndex>(),
+              LinearIntegralTerm<integrationType,
                                  domainOfIntegration,
                                  FactorType,
                                  DirectionType>(c, beta));
