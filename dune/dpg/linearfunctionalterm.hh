@@ -89,14 +89,12 @@ auto make_LinearFunctionalTerm(const FunctionalVector& functionalVector,
                                        SolutionSpace,
                                        FunctionalVector> >
 {
-  return std::tuple<std::integral_constant<size_t, spaceIndex>,
-                LinearFunctionalTerm<domainOfIntegration,
-                                     SolutionSpace,
-                                     FunctionalVector> >
-         ({}, LinearFunctionalTerm<domainOfIntegration,
+  return std::make_tuple(
+              std::integral_constant<size_t, spaceIndex>(),
+              LinearFunctionalTerm<domainOfIntegration,
                                    SolutionSpace,
                                    FunctionalVector>(functionalVector,
-                                               solutionSpace));
+                                                     solutionSpace));
 }
 
 
