@@ -243,12 +243,12 @@ int main(int argc, char** argv)
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
   vtkWriter.addVertexData(uFunction,
                VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter.write("transport_solution_"+std::to_string(nelements));
+  vtkWriter.write("transport_solution");
 
   SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
   vtkWriter1.addVertexData(thetaFunction,
                 VTK::FieldInfo("theta", VTK::FieldInfo::Type::scalar, 1));
-  vtkWriter1.write("transport_solution_trace_"+std::to_string(nelements));
+  vtkWriter1.write("transport_solution_trace");
 
   std::cout << "Solution of the transport problem" << std::endl
             << "  beta . grad(phi) +c phi = 1 in [0,1]x[0,1]" << std::endl
