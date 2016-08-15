@@ -143,8 +143,6 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
   const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-  const auto& gridView = lhsLocalView.globalBasis().gridView();
-
   const auto& referenceGrid
     = lhsLocalView.tree().refinedReferenceElement();
   auto referenceGridView = referenceGrid.leafGridView();

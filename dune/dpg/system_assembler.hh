@@ -894,8 +894,6 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
        (size_t)0, globalOffsetHelper());
   size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
 
-  size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-
   auto solutionLocalView = at_c<spaceIndex>(solutionSpaces).localView();
   auto localIndexSet = at_c<spaceIndex>(solutionSpaces).localIndexSet();
 

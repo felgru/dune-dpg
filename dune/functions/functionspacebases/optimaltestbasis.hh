@@ -111,7 +111,8 @@ class GeometryBuffer
 
   bool isSame(Geometry geometry)
   {
-    if (geometry.corners()==corners)
+    // TODO: The return type of Geometry::corners() should be changed to unsigned.
+    if (geometry.corners()==(int)corners)
     {
       GlobalCoordinate difference = cornerVector[0];
       difference -= geometry.corner(0);

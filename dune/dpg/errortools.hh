@@ -95,7 +95,7 @@ namespace Dune {
       localFiniteElement.localBasis().evaluateFunction(quadPos, shapeFunctionValues);
 
       // Evaluation of u at the point mapQuadPos, which is quadPos mapped to the physical domain
-      for(int i=0; i<shapeFunctionValues.size(); i++)
+      for(unsigned int i=0; i<shapeFunctionValues.size(); i++)
       {
         uQuad += shapeFunctionValues[i]*u[i];
       }
@@ -136,19 +136,12 @@ namespace Dune {
     auto localView = feBasis.localView();
     auto localIndexSet = feBasis.localIndexSet();
 
-    // Position of the coefficients
-    int posBegin = 0;
-    int posEnd   = 0;
-
     // A loop over all elements of the grid
     for(const auto& e : elements(gridView))
     {
       // Bind the local FE basis view to the current element
       localView.bind(e);
       localIndexSet.bind(localView);
-
-      // We get the global index of the current element
-      int indexElement = gridView.indexSet().index(e);
 
       // Now we take the coefficients of u that correspond to the current element e. They are stored in uElement.
       // dof of the finite element inside the element (remark: this value will vary if we do p-refinement)
