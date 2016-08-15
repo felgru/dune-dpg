@@ -84,8 +84,8 @@ In the UG folder, run
     make
     make install
 
-Detailed installation guidelines for MacOS
-==========================================
+Installation and compilation of dune and dune-dpg
+=================================================
 
 We give detailed installation guidelines using GCC and the UG grid manager.
 The URLs that are given below were still active on July 2016. We apologize
@@ -94,7 +94,18 @@ will nevertheless find his way.
 
 1) Create a folder devoted to Dune. We will call it $DUNEDIR.
 
-2) Download the following dune sources on this folder:
+Installation of dune on (Debian?) GNU/Linux
+-------------------------------------------
+2) In $DUNEDIR, run:
+
+    apt install libdune-common-dev libdune-geometry-dev libdune-grid-dev \
+                libdune-istl-dev libdune-localfunctions-dev \
+                libdune-functions-dev libdune-typetree-dev
+
+Installation of dune on MacOS
+-----------------------------
+
+2) Download the following dune sources in $DUNEDIR:
  2.a) - Version >= 2.4.1 of the following Dune source modules:
         dune-common, dune-geometry, dune-grid, dune-istl, dune-localfunctions
       - Link: https://dune-project.org/releases/2.4.1/
@@ -110,7 +121,15 @@ will nevertheless find his way.
       Remark: In the future, these modules might be associated with more
               stable releases and found in https://dune-project.org/releases/
 
-3) We assume that the dune-dpg directory is placed in $DUNEDIR.
+Installation of dune-dpg
+------------------------
+3) Download dune-dpg in $DUNEDIR:
+  git clone ..... TODO ......
+
+Remark: Future updates of the code will be pushed into this repository.
+
+Building and compiling dune and dune-dpg
+----------------------------------------
 
 4) Create a file dune.opts in $DUNEDIR and specify
 the C and C++ compiler in it. In our case, we have used gcc and g++ so
@@ -124,14 +143,11 @@ Remarks:
  - The use of clang and clang++ is in principle also possible here although
    this compiler has not been tested.
 
-Building and compiling dune and dune-dpg
-----------------------------------------
-
 5) In $DUNEDIR, run
 
      $DUNEDIR/dune-common/bin/dunecontrol --opts=$DUNEDIR/dune.opts all
 
-This command, dunecontrol, creates makefiles and compiles the sources. It
+The command dunecontrol creates makefiles and compiles the sources. It
 creates a directory build_cmake inside each Dune module where the
 executables are built. As a consequence, the user should cd into
 $DUNEDIR/dune-dpg/build_cmake to run the examples of the paper.
@@ -140,7 +156,7 @@ For more information and options on this command, run
 
     $DUNEDIR/dune-common/bin/dunecontrol --help .
 
-More information on the build system can be found under
+More information on the build system of Dune can be found under
 https://dune-project.org/doc/installation/
 https://dune-project.org/buildsystem/
 
