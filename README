@@ -28,8 +28,9 @@ libraries installed on your system:
 
 You need the DUNE core libraries in version 2.4.1. Additionally you need
 dune-typetree 2.4 and dune-functions in the version of branch
-releases/2.4-compatible from the Git repository
-https://gitlab.dune-project.org/staging/dune-functions.git.
+releases/2.4-compatible from the Git repositories
+https://gitlab.dune-project.org/pdelab/dune-typetree.git
+https://gitlab.dune-project.org/staging/dune-functions.git
 
 Installation of 3rd party libraries and programs
 ================================================
@@ -48,7 +49,21 @@ in jessie-backports. They can be installed via
 Using Homebrew on MacOS
 -----------------------
 
-TODO: Explain installing GCC, Boost and UMFPACK (suitesparse) through homebrew.
+cmake installation (it requires the previous installation of autoconf, automake and libtool):
+    brew install autoconf
+    brew install automake
+    brew install libtool
+    brew install cmake
+
+The installation of pkg-config is recommended:
+    brew install pkg-config
+
+boost installation:
+    brew install --c++11 boost
+
+umfpack installation:
+    brew tap /hombrew/science/
+    brew install /hombrew/science/suite-sparse
 
 Installation of UG
 ------------------
