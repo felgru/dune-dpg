@@ -212,10 +212,10 @@ int main(int argc, char** argv)
   ////////////////////////////////////////////////////////////////////////////
 
   VectorType phi(spacePhi.size());
-  std::copy(x.begin(), x.begin()[phi.size()], phi.begin());
+  std::copy(x.begin(), x.begin() + phi.size(), phi.begin());
 
   VectorType theta(spaceTheta.size());
-  std::copy(x.begin()[phi.size()], x.end(), theta.begin());
+  std::copy(x.begin() + phi.size(), x.end(), theta.begin());
 
   auto phiFunction
       = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
