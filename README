@@ -163,16 +163,60 @@ https://dune-project.org/buildsystem/
 Running dune-dpg
 ================
 
+In the following, we assume that we are in the folder $DUNEDIR/dune-dpg .
+
 Dune-dpg comes with two example programs:
 
-$DUNEDIR/dune-dpg/src/plot_solution.cc
-$DUNEDIR/dune-dpg/src/convergence_test.cc
+src/plot_solution.cc
+src/convergence_test.cc
 
-To run them, go to $DUNEDIR/dune-dpg/build-cmake/src/ and then run
+Both of them compute the solution with Discontinuous Petrov-Galerkin finite elements of the pure transport problem
+$$
+  \beta \cdot \phi = 1 in D
+              \phi = 0 on \partial D
+$$
+where D is the unit square in 2D. We refer to the paper for notations and also
+for indications on how to solve other Partial Differential Equations.
+
+To run the programs, go to $DUNEDIR/dune-dpg/build-cmake/src/ and then run
 the corresponding executables.
 
-To regenerate the convergence plots from the paper, it is advised to compile
-the test programs in release mode, to significantly speed up the computations.
+To visualize the solution, run in $DUNEDIR/dune-dpg/build-cmake/src/
+
+    ./plot_solution <n> (TODO: <angle> ?)
+
+where <n> is to be replaced by the desired grid resolution. This will write
+two .vtu files to the current working directory representing the numerical
+solution of the interior variable $\phi$ and the trace variable $\theta$ (cf. paper).
+The files allow to visualize $\phi$ and $\theta$ in ParaView. If you have the pvpython interpreter shipped with ParaView, you can also run
+the scripts/plot_solution.py to regenerate the solution plot given in the paper.
+(This script was run with ParaView 4.2.0. As the Python interface of ParaView
+seems to be highly unstable, we cannot guarantee, that the script will run
+unmodified on another version of ParaView.)
+
+Run in $DUNEDIR/dune-dpg/build-cmake/src/
+
+    ./convergence_test <n> (TODO: <angle> ?)
+
+to compute the solution and also analyze the error. The program prints the exact L2 error and its a posteriori estimation. (Remark: The a posteriori error indicator includes both the error on the interior variable and also the trace variable.)
+
+The paper analyses the impact of
+ - the mesh size H of the trial space
+ - the h-refinement level of the test search space
+on the error and its a posteriori estimation. To reproduce the results from the paper, call the script
+
+    scripts/run_convergence_test.sh
+
+This will take several hours. (you can first adapt this script if you
+want to change the grid resolution n=1/H, especially the test case with
+locally refined test search space of level 3 gets very slow for large n).
+
+Finally, the convergence plots can be generated with
+
+    ../scripts/convergence_plots.py
+
+Remark: To regenerate the plots from the paper, it is advised to compile
+the test programs in release mode to significantly speed up the computations.
 The release mode can be configured with
 
     cmake -DCMAKE_BUILD_TYPE=Release .
@@ -180,31 +224,6 @@ The release mode can be configured with
 Afterwards, we can compile the test programs with
 
     make
-
-To run the test programs with the right parameters, call
-
-    ../scripts/run_convergence_test.sh
-
-This will take several hours. (you can first adapt this script if you
-want to change the grid resolution n=1/H, especially the test case with
-locally refined test search space of level 3 gets very slow for large n)
-
-Finally, the convergence plots can be generated with
-
-    ../scripts/convergence_plots.py
-
-To plot the solution itself in the .vtu format readable by ParaView, run
-
-    src/plot_solution <n>
-
-where <n> is to be replaced by the desired grid resolution. This will write
-two .vtu files to the current working directory representing the numerical
-solution of the interior and trace variables.
-If you have the pvpython interpreter shipped with ParaView, you can also run
-the scripts/plot_solution.py to regenerate the solution plot given in the paper.
-(This script was run with ParaView 4.2.0. As the Python interface of ParaView
-seems to be highly unstable, we cannot guarantee, that the script will run
-unmodified on another version of ParaView.)
 
 License
 =======
