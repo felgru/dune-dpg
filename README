@@ -221,7 +221,11 @@ $$
               \phi = 0 on the boundary
 $$
 for beta=(cos(pi/8),sin(pi/8)). The additional feature that is given in this example is
-the computation of the exact L2 error and its a posteriori estimation. (Remark: The a posteriori error indicator includes both the error on the interior variable and also the trace variable.)
+the computation of the exact L2 error and its a posteriori estimation.
+
+  Remarks:
+    - The a posteriori error indicator includes both the error on the interior variable and also the trace variable.
+    - It is possible to compute the a posteriori error estimator for other PDEs. The current program is just an example.
 
 The paper takes this problem as the support for numerical tests and analyses the impact of
  - the mesh size H of the trial space
