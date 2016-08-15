@@ -8,7 +8,8 @@ scientific interest of the code can be found in the paper "The dune-dpg
 library for solving PDEs with Discontinuous Petrov-Galerkin finite elements"
 by F. Gruber, A. Klewinghaus and O. Mula.
 
-This README document explains how to install this library and run basic examples which are described in the paper.
+This README document explains how to install this library and run basic
+examples which are described in the paper.
 
 Preparing the Sources
 =====================
@@ -25,12 +26,14 @@ libraries installed on your system:
       (http://www.iwr.uni-heidelberg.de/frame/iwrwikiequipment/software/ug)
       but one could also use other managers, e.g., ALBERTA or YASPgrid.
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
-
-You need the DUNE core libraries in version 2.4.1. Additionally you need
-dune-typetree 2.4 and dune-functions in the version of branch
-releases/2.4-compatible from the Git repositories
-https://gitlab.dune-project.org/pdelab/dune-typetree.git
-https://gitlab.dune-project.org/staging/dune-functions.git
+    - DUNE core libraries 2.4.1
+      (https://dune-project.org/releases/2.4.1/)
+    - dune-typetree 2.4.1
+      (https://gitlab.dune-project.org/pdelab/dune-typetree.git
+       branch releases/2.4)
+    - dune-functions 2.4
+      (https://gitlab.dune-project.org/staging/dune-functions.git
+       branch releases/2.4-compatible)
 
 Installation of 3rd party libraries and programs
 ================================================
@@ -42,9 +45,6 @@ All necessary libraries are included in Debian Stretch and most are included
 in jessie-backports. They can be installed via
 
     apt install git cmake libboost-dev libug-dev libsuitesparse-dev
-    apt install libdune-common-dev libdune-geometry-dev libdune-grid-dev \
-                libdune-istl-dev libdune-localfunctions-dev \
-                libdune-functions-dev libdune-typetree-dev
 
 Using Homebrew on MacOS
 -----------------------
@@ -65,8 +65,7 @@ umfpack installation:
     brew tap /hombrew/science/
     brew install /hombrew/science/suite-sparse
 
-Installation of UG
-------------------
+### Installation of UG
 
 Download release 3.12.1 of UG from
 
@@ -94,15 +93,21 @@ will nevertheless find his way.
 
 1) Create a folder devoted to Dune. We will call it $DUNEDIR.
 
-Installation of dune on (Debian?) GNU/Linux
--------------------------------------------
-2) In $DUNEDIR, run:
+Installation of Dune on Debian GNU/Linux
+----------------------------------------
+
+2) If you are using Debian Stretch, the Dune 2.4.1 core libraries can be
+   installed from the Debian repositories with
 
     apt install libdune-common-dev libdune-geometry-dev libdune-grid-dev \
                 libdune-istl-dev libdune-localfunctions-dev \
                 libdune-functions-dev libdune-typetree-dev
 
-Installation of dune on MacOS
+   Alternatively, you can download the sources of the Dune core modules
+   into $DUNEDIR like it is explained below in the MacOS instructions.
+   This is necessary if you are using an older Debian release like Jessie.
+
+Installation of Dune on MacOS
 -----------------------------
 
 2) Download the following dune sources in $DUNEDIR:
@@ -121,12 +126,10 @@ Installation of dune on MacOS
       Remark: In the future, these modules might be associated with more
               stable releases and found in https://dune-project.org/releases/
 
-Installation of dune-dpg
-------------------------
-3) Download dune-dpg in $DUNEDIR:
-  git clone ..... TODO ......
+Preparing dune-dpg
+------------------
 
-Remark: Future updates of the code will be pushed into this repository.
+3) If the dune-dpg directory is not in $DUNEDIR move it there now.
 
 Building and compiling dune and dune-dpg
 ----------------------------------------
@@ -154,7 +157,7 @@ $DUNEDIR/dune-dpg/build_cmake to run the examples of the paper.
 
 For more information and options on this command, run
 
-    $DUNEDIR/dune-common/bin/dunecontrol --help .
+    $DUNEDIR/dune-common/bin/dunecontrol --help
 
 More information on the build system of Dune can be found under
 https://dune-project.org/doc/installation/
