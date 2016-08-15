@@ -136,10 +136,6 @@ namespace Dune {
     auto localView = feBasis.localView();
     auto localIndexSet = feBasis.localIndexSet();
 
-    // Position of the coefficients
-    int posBegin = 0;
-    int posEnd   = 0;
-
     // A loop over all elements of the grid
     for(const auto& e : elements(gridView))
     {
