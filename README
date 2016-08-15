@@ -173,44 +173,65 @@ Dune-dpg comes with two example programs:
 src/plot_solution.cc
 src/convergence_test.cc
 
-Both of them compute the solution with Discontinuous Petrov-Galerkin finite elements of the pure transport problem
-$$
-  \beta \cdot \phi = 1 in D
-              \phi = 0 on \partial D
-$$
-where D is the unit square in 2D. We refer to the paper for notations and also
-for indications on how to solve other Partial Differential Equations.
-
 To run the programs, go to $DUNEDIR/dune-dpg/build-cmake/src/ and then run
 the corresponding executables.
 
+Description of src/plot_solution.cc
+-----------------------------------
+
+plot_solution.cc computes the solution with Discontinuous Petrov-Galerkin finite elements of the pure transport problem
+$$
+  \beta \cdot \phi +c \phi = 1 in [0,1]x[0,1]
+                      \phi = 0 on the boundary
+$$
+We refer to the paper for notations and also
+for indications on how to solve other Partial Differential Equations.
+
 To visualize the solution, run in $DUNEDIR/dune-dpg/build-cmake/src/
 
-    ./plot_solution <n> (TODO: <angle> ?)
+    ./plot_solution <n> <c> <betaX> <betaY>
 
-where <n> is to be replaced by the desired grid resolution. This will write
-two .vtu files to the current working directory representing the numerical
-solution of the interior variable $\phi$ and the trace variable $\theta$ (cf. paper).
+where
+  <n> has to be replaced by the desired grid resolution,
+  <c> is the linear term in the transport problem
+  <betaX> <betaY> are the X and Y components of the transport direction beta=(betaX,betaY).
+
+The program will write two .vtu files to the current working directory,
+
+  transport_solution.vtu
+  transport_solution_trace.vtu
+
+They contain the numerical solution of the interior variable $\phi$ and the trace variable $\theta$ (cf. paper).
 The files allow to visualize $\phi$ and $\theta$ in ParaView. If you have the pvpython interpreter shipped with ParaView, you can also run
 the scripts/plot_solution.py to regenerate the solution plot given in the paper.
 (This script was run with ParaView 4.2.0. As the Python interface of ParaView
 seems to be highly unstable, we cannot guarantee, that the script will run
 unmodified on another version of ParaView.)
 
+Description of src/convergence_test.cc
+--------------------------------------
+
 Run in $DUNEDIR/dune-dpg/build-cmake/src/
 
-    ./convergence_test <n> (TODO: <angle> ?)
+    ./convergence_test <n>
 
-to compute the solution and also analyze the error. The program prints the exact L2 error and its a posteriori estimation. (Remark: The a posteriori error indicator includes both the error on the interior variable and also the trace variable.)
+to compute the numerical example of the paper,
+$$
+  \beta \cdot \phi = 1 in [0,1]x[0,1]
+              \phi = 0 on the boundary
+$$
+for beta=(cos(pi/8),sin(pi/8)). The additional feature that is given in this example is
+the computation of the exact L2 error and its a posteriori estimation. (Remark: The a posteriori error indicator includes both the error on the interior variable and also the trace variable.)
 
-The paper analyses the impact of
+The paper takes this problem as the support for numerical tests and analyses the impact of
  - the mesh size H of the trial space
  - the h-refinement level of the test search space
 on the error and its a posteriori estimation. To reproduce the results from the paper, call the script
 
     scripts/run_convergence_test.sh
 
-This will take several hours. (you can first adapt this script if you
+which will make a series of calls to convergence_test.cc .
+The computation takes several hours. (you can first adapt this script if you
 want to change the grid resolution n=1/H, especially the test case with
 locally refined test search space of level 3 gets very slow for large n).
 
