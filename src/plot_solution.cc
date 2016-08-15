@@ -52,11 +52,13 @@ std::function<double(const Domain&)> f(const Direction& s)
 int main(int argc, char** argv)
 {
   try{
-  if(argc != 2) {
-    std::cerr << "Usage: " << argv[0] << " n" << std::endl << std::endl
-              << "Solves the transport problem on an nxn grid." << std::endl;
+  if(argc != 5) {
+    std::cerr << "Usage: " << argv[0] << " n c betaX betaY" << std::endl << std::endl
+              << "Solves the transport problem $beta . grad(phi) +c phi = 1$ with direction beta=(betaX,betaY) on an nxn grid." << std::endl
+              << "Direction beta will be automatically normalized" << std::endl;
     std::abort();
   }
+
   ///////////////////////////////////
   //   Generate the grid
   ///////////////////////////////////
@@ -65,6 +67,11 @@ int main(int argc, char** argv)
   typedef UGGrid<dim> GridType;
 
   unsigned int nelements = atoi(argv[1]);
+
+  if(nelements==0) {
+    std::cerr << "n has to be nonzero." << std::endl;
+    std::abort();
+  }
 
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
@@ -76,6 +83,25 @@ int main(int argc, char** argv)
 
   typedef GridType::LeafGridView GridView;
   GridView gridView = grid->leafGridView();
+
+  ////////////////////////////////////////////////////
+  //   Direction of propagation beta and coefficient c
+  ////////////////////////////////////////////////////
+
+  // coefficient c
+  double c = atof(argv[2]);
+
+  // direction beta
+  double betaX=atof(argv[3]);
+  double betaY=atof(argv[4]);
+  if(betaX==0. && betaY==0.) {
+    std::cerr << "beta=(betaX,betaY) has to be a nonzero vector." << std::endl;
+    std::abort();
+  }
+  double normBeta=std::sqrt(betaX*betaX+betaY*betaY);
+  betaX=betaX/normBeta;
+  betaY=betaY/normBeta;
+  FieldVector<double, dim> beta = {betaX,betaY};
 
   /////////////////////////////////////////////////////////
   //   Choose a finite element space
@@ -96,11 +122,6 @@ int main(int argc, char** argv)
   using FEBasisTest
       = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
   auto testSpaces = std::make_tuple(FEBasisTest(gridView));
-
-  FieldVector<double, dim> beta
-             = {cos(boost::math::constants::pi<double>()/8),
-                sin(boost::math::constants::pi<double>()/8)};
-  double c = 0;
 
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
@@ -228,6 +249,13 @@ int main(int argc, char** argv)
   vtkWriter1.addVertexData(thetaFunction,
                 VTK::FieldInfo("theta", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter1.write("transport_solution_trace_"+std::to_string(nelements));
+
+  std::cout << "Solution of the transport problem" << std::endl
+            << "  beta . grad(phi) +c phi = 1 in [0,1]x[0,1]" << std::endl
+            << "                      phi = 0 on boundary," << std::endl
+            << "with beta=(" << betaX << "," << betaY << ")"
+            << " and c=" << c << "."<< std::endl
+            << "Mesh size H=1/n=" << 1./nelements << std::endl;
 
 
   return 0;
