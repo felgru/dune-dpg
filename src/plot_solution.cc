@@ -93,16 +93,16 @@ int main(int argc, char** argv)
   double c = atof(argv[2]);
 
   // direction beta
-  double betaX=atof(argv[3]);
-  double betaY=atof(argv[4]);
+  double betaX = atof(argv[3]);
+  double betaY = atof(argv[4]);
   if(betaX==0. && betaY==0.) {
     std::cerr << "beta=(betaX,betaY) has to be a nonzero vector." << std::endl;
     std::abort();
   }
-  double normBeta=std::sqrt(betaX*betaX+betaY*betaY);
-  betaX=betaX/normBeta;
-  betaY=betaY/normBeta;
-  FieldVector<double, dim> beta = {betaX,betaY};
+  const double normBeta = std::sqrt(betaX*betaX+betaY*betaY);
+  betaX = betaX/normBeta;
+  betaY = betaY/normBeta;
+  FieldVector<double, dim> beta = {betaX, betaY};
 
   ////////////////////////////////////////////////////////////////////
   //   Choose finite element spaces and weak formulation of problem
