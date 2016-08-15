@@ -1,5 +1,7 @@
 known bugs:
 
+* If you have more than one Version of Boost installed, the version
+  found by CMake and the one later used when compiling might differ.
 * evaluateFactor() in integralterm.hh is called with the *local* position
   of a given quadrature point, this should be first transformed into
   global coordinates. (Already fixed but not tested for interior implementation,
