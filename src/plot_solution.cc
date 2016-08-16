@@ -155,9 +155,8 @@ int main(int argc, char** argv)
                                 bilinearForm);
 
   /////////////////////////////////////////////////////////
-  //   Stiffness matrix and right hand side vector
+  //  Assemble the system
   /////////////////////////////////////////////////////////
-
 
   typedef BlockVector<FieldVector<double,1> > VectorType;
   typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
@@ -165,18 +164,8 @@ int main(int argc, char** argv)
   VectorType rhsVector;
   MatrixType stiffnessMatrix;
 
-  /////////////////////////////////////////////////////////
-  //  Assemble the system
-  /////////////////////////////////////////////////////////
   auto rhsFunctions = std::make_tuple(f(beta));
   systemAssembler.assembleSystem(stiffnessMatrix, rhsVector, rhsFunctions);
-
-  /////////////////////////////////////////////////
-  //   Choose an initial iterate
-  /////////////////////////////////////////////////
-  VectorType x(spaceTheta.size()
-               +spacePhi.size());
-  x = 0;
 
   // Determine Dirichlet dofs for theta (inflow boundary)
   {
@@ -195,6 +184,10 @@ int main(int argc, char** argv)
   ////////////////////////////
   //   Compute solution
   ////////////////////////////
+
+  VectorType x(spaceTheta.size()
+               +spacePhi.size());
+  x = 0;
 
   std::cout << "rhs size = " << rhsVector.size()
             << " matrix size = " << stiffnessMatrix.N()
