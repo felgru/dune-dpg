@@ -7,6 +7,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               bilinearform.hh
               boundarytools.hh
               cholesky.hh
+              dpg_system_assembler.hh
               errortools.hh
               getvolumeterm_impl.hh
               innerproduct.hh

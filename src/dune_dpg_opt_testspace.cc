@@ -30,13 +30,13 @@
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/pqkfacenodalbasis.hh>
-#include <dune/functions/functionspacebases/optimaltestbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
-#include <dune/dpg/system_assembler.hh>
+#include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/boundarytools.hh>
 
+#include <chrono>
 
 using namespace Dune;
 
@@ -113,25 +113,10 @@ int main(int argc, char** argv)
 
   typedef decltype(bilinearForm) BilinearForm;
   typedef decltype(innerProduct) InnerProduct;
-  typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>
-      TestspaceCoefficientMatrix;
-
-  TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
-
-  // v
-  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix>
-      FEBasisOptimalTest;
-  auto optimalTestSpaces
-          = make_tuple(FEBasisOptimalTest(testspaceCoefficientMatrix));
-
-  auto systemAssembler
-     = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
-                                bilinearForm);
 
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
   /////////////////////////////////////////////////////////
-
 
   typedef BlockVector<FieldVector<double,1> > VectorType;
   typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
@@ -139,18 +124,65 @@ int main(int argc, char** argv)
   VectorType rhs;
   MatrixType stiffnessMatrix;
 
+
+  auto systemAssembler
+     = make_DPGSystemAssembler(innerProduct, bilinearForm);
+//  std::chrono::steady_clock::time_point startneu = std::chrono::steady_clock::now();
+//  std::chrono::steady_clock::time_point endneu = std::chrono::steady_clock::now();
+//  std::cout << "The New assembler took "
+//              << std::chrono::duration_cast<std::chrono::microseconds>(endneu - startneu).count()
+//              << "us.\n";
+//  abort();
   /////////////////////////////////////////////////////////
   //  Assemble the system
   /////////////////////////////////////////////////////////
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
   auto rightHandSide
-    = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
+    = make_DPGLinearForm(testSpaces,
                       std::make_tuple(make_LinearIntegralTerm<0,
                                             LinearIntegrationType::valueFunction,
                                             DomainOfIntegration::interior>(
                                  [] (const Domain& x) { return 1.;})));
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
+
+/*  std::cout <<std::endl << "same?" <<std::endl;
+  for (unsigned int i=0; i<stiffnessMatrix.N(); i++)
+  {
+    for (unsigned int j=0; j<stiffnessMatrix.M(); j++)
+    {
+      if (stiffnessMatrix.exists(i,j))
+      {
+        if (stiffnessMatrixDPG.exists(i,j))
+        {
+          if (std::abs(stiffnessMatrix[i][j] - stiffnessMatrixDPG[i][j])>10e-8)
+            std::cout << "X  ";
+          else
+            std::cout << "=  ";
+        }
+        else
+        {
+          if (std::abs(stiffnessMatrix[i][j])>10e-4)
+            std::cout << "x1  ";
+          else
+            std::cout << "01 ";
+        }
+      }
+      else
+      {
+        if (stiffnessMatrixDPG.exists(i,j))
+        {
+          if (std::abs(stiffnessMatrixDPG[i][j])>10e-4)
+            std::cout << "x2  ";
+          else
+            std::cout << "02 ";
+        }
+        else
+          std::cout << "   ";
+      }
+    }
+    std::cout <<std::endl;
+  }*/
 
   /////////////////////////////////////////////////
   //   Choose an initial iterate
@@ -181,6 +213,9 @@ int main(int argc, char** argv)
          dirichletNodesInflow,
          0.);
   }
+
+
+
 
   ////////////////////////////
   //   Compute solution

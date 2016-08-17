@@ -205,11 +205,28 @@ class TestspaceCoefficientMatrix
       innerProduct_.bind(localViewsTest_);
       innerProduct_.getLocalMatrix(stiffnessMatrix);
 
+      MatrixType bilinearMatrix;
+
       bilinearForm_.bind(localViewsTest_, localViewsSolution_);
-      bilinearForm_.getLocalMatrix(coefficientMatrix_);
+      bilinearForm_.getLocalMatrix(bilinearMatrix);
 
       Cholesky<MatrixType> cholesky(stiffnessMatrix);
-      cholesky.apply(coefficientMatrix_);
+      cholesky.apply(bilinearMatrix, coefficientMatrix_);
+
+      unsigned int m = coefficientMatrix_.M();
+      localMatrix_.setSize(m, m);
+
+      for (unsigned int i=0; i<m; i++)
+      {
+        for (unsigned int j=0; j<m; j++)
+        {
+          localMatrix_[i][j]=0;
+          for (unsigned int k=0; k<coefficientMatrix_.N(); k++)
+          {
+            localMatrix_[i][j]+=(bilinearMatrix[k][i]*coefficientMatrix_[k][j]);
+          }
+        }
+      }
       geometryBufferIsSet_ = true;
     }
   }
@@ -217,6 +234,11 @@ class TestspaceCoefficientMatrix
   MatrixType& coefficientMatrix()
   {
     return coefficientMatrix_;
+  }
+
+  MatrixType& localMatrix()
+  {
+    return localMatrix_;
   }
 
   BilinearForm& bilinearForm() const
@@ -242,7 +264,8 @@ class TestspaceCoefficientMatrix
   TestLocalViews     localViewsTest_;
   GeometryBuffer<Geometry> geometryBuffer_;
   bool               geometryBufferIsSet_;
-  MatrixType         coefficientMatrix_;
+  MatrixType         coefficientMatrix_;        // G^{-1}B
+  MatrixType         localMatrix_;              // B^TG^{-1}B
 };
 
 

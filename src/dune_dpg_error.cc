@@ -25,15 +25,14 @@
 #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-#include <dune/functions/functionspacebases/optimaltestbasis.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
 #include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/rhs_assembler.hh>
-#include <dune/dpg/system_assembler.hh>
 
 
 using namespace Dune;
@@ -173,18 +172,9 @@ int main()
 
     typedef decltype(bilinearForm) BilinearForm;
     typedef decltype(innerProduct) InnerProduct;
-    typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>
-            TestspaceCoefficientMatrix;
-
-    TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
-
-    typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix> FEBasisOptimalTest;              // v
-    auto optimalTestSpaces
-        = make_tuple(FEBasisOptimalTest(testspaceCoefficientMatrix));
 
     auto systemAssembler
-       = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
-                                  bilinearForm);
+       = make_DPGSystemAssembler(innerProduct, bilinearForm);
 
     /////////////////////////////////////////////////////////
     //   Stiffness matrix and right hand side vector
@@ -201,7 +191,7 @@ int main()
     /////////////////////////////////////////////////////////
 
     auto rightHandSide
-      = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
+      = make_DPGLinearForm(testSpaces,
                     std::make_tuple(make_LinearIntegralTerm<0,
                                         LinearIntegrationType::valueFunction,
                                         DomainOfIntegration::interior>(fieldRHS)));

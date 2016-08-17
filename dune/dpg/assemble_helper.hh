@@ -582,6 +582,14 @@ namespace mpl {
   };
 
   template<class Seq>
+  struct second
+  {
+    typedef typename std::remove_reference<
+      typename boost::fusion::result_of::at_c<Seq,1>::type>::type
+        type;
+  };
+
+  template<class Seq>
   struct firstTwo
   {
     template <size_t i>
@@ -595,6 +603,22 @@ namespace mpl {
   struct tupleOf0And
   {
     typedef std::tuple<std::integral_constant<size_t,0>, T> type;
+  };
+
+  template<class I, class J>
+  struct tupleOfIAndJ
+  {
+    typedef std::tuple<I, J> type;
+  };
+
+  template<class Seq, class I>
+  struct prefixSequenceWith
+  {
+    typedef
+        typename boost::mpl::transform<
+            Seq
+          , tupleOfIAndJ<I, boost::mpl::_1>
+          >::type type;
   };
 }
 

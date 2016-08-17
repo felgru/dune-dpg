@@ -29,14 +29,13 @@
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/optimaltestbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
 #include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/rhs_assembler.hh>
-#include <dune/dpg/system_assembler.hh>
 
 
 using namespace Dune;
@@ -173,21 +172,8 @@ int main(int argc, char** argv)
     using InnerProduct = decltype(innerProduct);
     using MinInnerProduct = decltype(minInnerProduct);
 
-    using TestspaceCoefficientMatrix
-        = Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
-
-    TestspaceCoefficientMatrix
-        testspaceCoefficientMatrix(bilinearForm, innerProduct);
-
-    // v
-    using FEBasisOptimalTest
-        = Functions::OptimalTestBasis<TestspaceCoefficientMatrix>;
-    auto optimalTestSpaces
-            = make_tuple(FEBasisOptimalTest(testspaceCoefficientMatrix));
-
     auto systemAssembler
-       = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
-                                  bilinearForm);
+       = make_DPGSystemAssembler(innerProduct, bilinearForm);
 
     /////////////////////////////////////////////////////////
     //   Stiffness matrix and right hand side vector
@@ -204,7 +190,7 @@ int main(int argc, char** argv)
     //  Assemble the system
     /////////////////////////////////////////////////////////
     auto rightHandSide
-      = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
+      = make_DPGLinearForm(testSpaces,
                         std::make_tuple(make_LinearIntegralTerm<0,
                                             LinearIntegrationType::valueFunction,
                                             DomainOfIntegration::interior>(
@@ -217,6 +203,7 @@ int main(int argc, char** argv)
     VectorType x(feBasisTrace.size()
                  +feBasisInterior.size());
     x = 0;
+
 #if 1
     double delta = 1e-5;
     systemAssembler.applyMinimization<1, MinInnerProduct,2>
