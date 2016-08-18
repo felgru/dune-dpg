@@ -427,15 +427,6 @@ public:
 
 private:
 
-  template <SpaceType spaceType, size_t spaceIndex,
-            class ValueType, class Spaces>
-  void applyDirichletBoundaryImpl(
-                       BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
-                       BlockVector<FieldVector<double,1> >& rhs,
-                       const std::vector<bool>& dirichletNodes,
-                       const ValueType& value,
-                       const Spaces& spaces);
-
   TestSpaces     testSpaces;
   SolutionSpaces solutionSpaces;
   BilinearForm   bilinearForm;
