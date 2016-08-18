@@ -44,7 +44,7 @@
 #include "quadrature.hh"
 #include "linearform.hh"
 #include "localevaluation.hh"
-#include <dune/functions/functionspacebases/optimaltestbasis.hh>
+#include "testspace_coefficient_matrix.hh"
 
 
 namespace Dune {
@@ -61,7 +61,7 @@ class DPGSystemAssembler
 public:
   using InnerProduct = InnProduct;
   using BilinearForm = BilinForm;
-  using TestspaceCoefficientMatrix = Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
+  using TestspaceCoefficientMatrix = Dune::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
   using TestSearchSpaces = typename BilinearForm::TestSpaces;
   using SolutionSpaces = typename BilinearForm::SolutionSpaces;
 
