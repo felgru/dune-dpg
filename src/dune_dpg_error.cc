@@ -126,8 +126,6 @@ int main()
             make_tuple(
                 make_IntegralTerm<0,0,IntegrationType::valueValue,
                                       DomainOfIntegration::interior>(1.),
-                make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                      DomainOfIntegration::interior>(1., beta),
                 make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
                                       DomainOfIntegration::face>(1., beta)));
 
