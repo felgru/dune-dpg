@@ -154,6 +154,30 @@ struct SaddlepointSpecializations
   {
     innerProduct.bind(testLocalViews);
   }
+
+  template<class TestSpaces, class SolutionSpaces>
+  static inline auto get_rhs_localViews(const TestSpaces& testSpaces,
+                                        const SolutionSpaces& solutionSpaces)
+  {
+    using namespace boost::fusion;
+
+    auto localViews
+        = as_vector(transform(join(testSpaces, solutionSpaces),
+                              getLocalView()));
+    return localViews;
+  }
+
+  template<class TestSpaces, class SolutionSpaces>
+  static inline auto get_rhs_localIndexSets(const TestSpaces& testSpaces,
+                                            const SolutionSpaces& solutionSpaces)
+  {
+    using namespace boost::fusion;
+
+    auto localIndexSets
+        = as_vector(transform(join(testSpaces, solutionSpaces),
+                              getLocalIndexSet()));
+    return localIndexSets;
+  }
 };
 
 template<class BilinearForm>
@@ -202,6 +226,28 @@ struct DPGSpecializations
   static inline void bind_innerProduct(void * & innerProduct,
                                        const TestLocalViews& testLocalViews)
   { }
+
+  template<class TestSpaces, class SolutionSpaces>
+  static inline auto get_rhs_localViews(const TestSpaces& testSpaces,
+                                        const SolutionSpaces&)
+  {
+    using namespace boost::fusion;
+
+    auto localViews = as_vector(transform(testSpaces, getLocalView()));
+    return localViews;
+  }
+
+  template<class TestSpaces, class SolutionSpaces>
+  static inline auto get_rhs_localIndexSets(const TestSpaces& testSpaces,
+                                            const SolutionSpaces&)
+  {
+    using namespace boost::fusion;
+
+    auto localIndexSets = as_vector(transform(testSpaces,
+                                              getLocalIndexSet()));
+    return localIndexSets;
+  }
+
 };
 } // end namespace detail
 
@@ -681,23 +727,24 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   rhs = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews     = as_vector(transform(testSpaces, getLocalView()));
+  auto localViews
+      = Specialization::get_rhs_localViews(testSpaces, solutionSpaces);
 
-  auto testLocalIndexSets = as_vector(transform(testSpaces,
-                                                getLocalIndexSet()));
+  auto localIndexSets
+      = Specialization::get_rhs_localIndexSets(testSpaces, solutionSpaces);
 
 
   for(const auto& e : elements(gridView)) {
 
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    for_each(localViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(testLocalIndexSets, testLocalViews),
+    for_each(zip(localIndexSets, localViews),
              make_fused_procedure(bindLocalIndexSet()));
 
     // Now get the local contribution to the right-hand side vector
     BlockVector<FieldVector<double,1> > localRhs;
 
-    rhsLinearForm.bind(testLocalViews);
+    rhsLinearForm.bind(localViews);
     rhsLinearForm.getLocalVector(localRhs);
 
     auto cp = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
@@ -708,8 +755,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     /* copy every local subvector indexed by an index from
      * lfIndices exactly once. */
-    auto testZip = zip(testLocalViews,
-                       testLocalIndexSets,
+    auto testZip = zip(localViews,
+                       localIndexSets,
                        rhsLinearForm.getLocalSpaceOffsets(),
                        globalTestSpaceOffsets);
     if(isSaddlepoint)
