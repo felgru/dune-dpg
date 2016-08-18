@@ -21,6 +21,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               localevaluation.hh
               quadrature.hh
               rhs_assembler.hh
+              saddlepoint_system_assembler.hh
               system_assembler.hh
               type_traits.hh
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/dpg)
