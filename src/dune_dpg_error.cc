@@ -5,9 +5,9 @@
 
 #include <cmath>
 
-#include <vector>
 #include <array>
 #include <tuple>
+#include <vector>
 
 #include <dune/common/exceptions.hh> // We use exceptions
 
@@ -30,10 +30,10 @@
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
-#include <dune/dpg/system_assembler.hh>
-#include <dune/dpg/errortools.hh>
 #include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/errortools.hh>
 #include <dune/dpg/rhs_assembler.hh>
+#include <dune/dpg/system_assembler.hh>
 
 
 using namespace Dune;
@@ -98,8 +98,8 @@ int main()
     //   Choose finite element spaces
     /////////////////////////////////////////////////////////
 
-    typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
     typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
+    typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
     auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView),
                                           FEBasisTrace(gridView));
 
@@ -113,7 +113,7 @@ int main()
     double beta0 = -1.0;
     double beta1 = -1.0;
     double c = 1.;
-    FieldVector<double, dim> beta = {beta0,beta1};
+    FieldVector<double, dim> beta = {beta0, beta1};
     auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
             make_tuple(
                 make_IntegralTerm<0,0,IntegrationType::valueValue,
@@ -162,13 +162,14 @@ int main()
 
     typedef decltype(bilinearForm) BilinearForm;
     typedef decltype(innerProduct) InnerProduct;
-    typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct> TestspaceCoefficientMatrix;
+    typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>
+            TestspaceCoefficientMatrix;
 
     TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
 
     typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix> FEBasisOptimalTest;              // v
-    FEBasisOptimalTest feBasisTest(testspaceCoefficientMatrix);
-    auto optimalTestSpaces = make_tuple(feBasisTest);
+    auto optimalTestSpaces
+        = make_tuple(FEBasisOptimalTest(testspaceCoefficientMatrix));
 
     auto systemAssembler
        = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
@@ -206,7 +207,6 @@ int main()
     // Determine Dirichlet dofs for u^ (inflow boundary)
     {
       std::vector<bool> dirichletNodesInflow;
-      std::vector<bool> dirichletNodesInflowErrorTools;
 
       BoundaryTools boundaryTools = BoundaryTools();
       boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
@@ -281,11 +281,12 @@ int main()
     // to retrive the value out of this:
     // std::get<0>(uExact)(x)
 
-    // We build an object of type ErrorTools to study errors, residuals and do hp-adaptivity
+    // We build an object of type ErrorTools to study errors, residuals
+    // and do hp-adaptivity
     ErrorTools errorTools = ErrorTools();
 
     // We compute the L2 error between the exact and the fem solutions
-    err = errorTools.computeL2error<1>(innerSpace,u,uExact);
+    err = errorTools.computeL2error<1>(innerSpace, u, uExact);
     std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl;
 
     // A posteriori error

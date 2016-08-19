@@ -33,10 +33,10 @@
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
-#include <dune/dpg/system_assembler.hh>
-#include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/errortools.hh>
+#include <dune/dpg/rhs_assembler.hh>
+#include <dune/dpg/system_assembler.hh>
 
 
 using namespace Dune;
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
     GridView gridView = grid->leafGridView();
 
     /////////////////////////////////////////////////////////
-    //   Choose a finite element space
+    //   Choose finite element spaces
     /////////////////////////////////////////////////////////
 
     // u
