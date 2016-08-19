@@ -103,8 +103,14 @@ int main()
     auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView),
                                           FEBasisTrace(gridView));
 
-    typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v
+    typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;     // v
     auto testSpaces = std::make_tuple(FEBasisTest(gridView));
+
+    // enriched test space for error estimation
+    using FEBasisTest_aposteriori
+        = Functions::LagrangeDGBasis<GridView, 4>;
+    auto testSpaces_aposteriori
+        = std::make_tuple(FEBasisTest_aposteriori(gridView));
 
     /////////////////////////////////////////////////////////
     //   Choose a bilinear form
@@ -136,6 +142,12 @@ int main()
                 make_IntegralTerm<1,1,IntegrationType::gradGrad,                // (beta grad u^,beta grad u^)
                                       DomainOfIntegration::interior>(1, beta)
           ));
+
+    auto bilinearForm_aposteriori
+        = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
+    auto innerProduct_aposteriori
+        = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
+
     auto aPosterioriInnerProduct = make_InnerProduct(solutionSpaces,
             make_tuple(
                 make_IntegralTerm<0,0,IntegrationType::valueValue,              // (u,u)
@@ -158,7 +170,6 @@ int main()
                 make_LinearIntegralTerm<1,LinearIntegrationType::valueFunction,    // -2(cw,f)
                                       DomainOfIntegration::interior>([c](const FieldVector<double, dim>& x){return (-2)*c*fieldRHS(x);})
           ));
-    auto rhsAssembler = make_RhsAssembler(testSpaces);
 
     typedef decltype(bilinearForm) BilinearForm;
     typedef decltype(innerProduct) InnerProduct;
@@ -291,18 +302,18 @@ int main()
 
     // A posteriori error
     // We compute the rhs in the form given by the projection approach
-    auto rightHandSideEnriched
-      = make_LinearForm(rhsAssembler.getTestSpaces(),
-                    std::make_tuple(make_LinearIntegralTerm<0,
-                                        LinearIntegrationType::valueFunction,
-                                        DomainOfIntegration::interior>(fieldRHS)));
-    rhsAssembler.assembleRhs(rhs, rightHandSideEnriched);
+    auto rhsAssembler_aposteriori = make_RhsAssembler(testSpaces_aposteriori);
+    auto rightHandSide_aposteriori
+      = replaceTestSpaces(rightHandSide, testSpaces_aposteriori);
+    rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
     // It is necessary to provide rhs in the above form to call this aPosterioriError method
     double aposterioriErr
-        = errorTools.aPosterioriError(bilinearForm, innerProduct, x, rhs);
+        = errorTools.aPosterioriError(bilinearForm_aposteriori,
+                                      innerProduct_aposteriori, x, rhs);
     std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
     double aposterioriL2Err
-        = errorTools.aPosterioriL2Error(aPosterioriInnerProduct, aPosterioriLinearForm, fieldRHS, x);
+        = errorTools.aPosterioriL2Error(aPosterioriInnerProduct,
+                                        aPosterioriLinearForm, fieldRHS, x);
     std::cout << "A posteriori L2 error: || (u,trace u) - (u_fem,theta) || = " << aposterioriL2Err << std::endl;
 
     //////////////////////////////////////////////////////////////////////////////////////////////
@@ -322,7 +333,8 @@ int main()
     ////////////////
     const double ratio = .2;
     errorTools.DoerflerMarking(*grid, ratio,
-                               bilinearForm, innerProduct,
+                               bilinearForm_aposteriori,
+                               innerProduct_aposteriori,
                                aPosterioriInnerProduct,
                                aPosterioriLinearForm, fieldRHS,
                                x, rhs, 0);    // the last parameter is in [0,1] and
