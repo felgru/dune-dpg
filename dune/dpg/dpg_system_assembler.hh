@@ -259,8 +259,167 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                BlockVector<FieldVector<double,1> >& rhs,
                LinearForm& rhsLinearForm)
 {
-  assembleMatrix(matrix);
-  assembleRhs   (rhs, rhsLinearForm);
+  using namespace boost::fusion;
+  using namespace Dune::detail;
+
+  typedef typename std::tuple_element<0,TestSearchSpaces>::type::GridView GridView;
+  GridView gridView = std::get<0>(testSearchSpaces_).gridView();
+
+  /* set up global offsets */
+  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+
+  size_t globalTotalSolutionSize =
+      fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
+           (size_t)0, globalOffsetHelper());
+
+  globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
+
+  const auto n = globalTotalSolutionSize;
+
+
+  // Views on the FE bases on a single element
+  auto testLocalViews     = as_vector(transform(testSearchSpaces_, getLocalView()));
+
+  auto solutionLocalViews = as_vector(transform(solutionSpaces_,
+                                                getLocalView()));
+  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces_,
+                                                    getLocalIndexSet()));
+
+  // MatrixIndexSets store the occupation pattern of a sparse matrix.
+  // TODO: Might be too large??
+  MatrixIndexSet occupationPattern;
+  occupationPattern.resize(n, n);
+
+  typedef
+      typename result_of::as_vector<typename boost::mpl::range_c<
+                            size_t,0,result_of::size<SolutionSpaces>
+                         ::type::value>::type
+            >::type IndexRange;
+  typedef
+      typename boost::mpl::fold<
+            typename boost::mpl::transform<
+                IndexRange
+              , mpl::prefixSequenceWith<IndexRange, boost::mpl::_1>
+              >::type
+          , boost::mpl::empty_sequence
+          , boost::mpl::joint_view<boost::mpl::_1, boost::mpl::_2>
+          >::type Indices;
+
+  for(const auto& e : elements(gridView))
+  {
+    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
+    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
+             make_fused_procedure(bindLocalIndexSet()));
+
+    auto gOPH = getOccupationPatternHelper<decltype(solutionLocalViews),
+                                           decltype(solutionLocalViews),
+                                           decltype(solutionLocalIndexSets),
+                                           decltype(solutionLocalIndexSets),
+                                           false>
+                        (solutionLocalViews,
+                         solutionLocalViews,
+                         solutionLocalIndexSets,
+                         solutionLocalIndexSets,
+                         globalSolutionSpaceOffsets,
+                         globalSolutionSpaceOffsets,
+                         occupationPattern);
+    for_each(Indices{},
+        std::ref(gOPH));
+  }
+
+  occupationPattern.exportIdx(matrix);
+
+  // set rhs to correct length -- the total number of basis vectors in the basis
+  rhs.resize(n);
+
+  // Set all entries to zero
+  matrix = 0;
+  rhs = 0;
+
+  for(const auto& e : elements(gridView)) {
+
+    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
+    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
+             make_fused_procedure(bindLocalIndexSet()));
+
+    for_each(testLocalViews, applyBind<decltype(e)>(e));
+
+    // Now get the local contribution to the right-hand side vector
+
+    // compute the local right-hand side vector F for the enriched test space
+    BlockVector<FieldVector<double,1> > localEnrichedRhs;
+
+    rhsLinearForm.bind(testLocalViews);
+    rhsLinearForm.getLocalVector(localEnrichedRhs);
+
+    // compute the coefficient matrix C for the optimal test space
+    testspaceCoefficientMatrix_.bind(e);
+    Matrix<FieldMatrix<double,1,1> > coefficientMatrix = testspaceCoefficientMatrix_.coefficientMatrix();
+
+    // compute the local right-hand side vector C^T*F for the optimal test space
+    BlockVector<FieldVector<double,1> > localRhs;
+    localRhs.resize(coefficientMatrix.M());
+    for (unsigned int i=0; i<coefficientMatrix.M(); i++)
+      {
+        localRhs[i]=0;
+        for (unsigned int k=0; k<coefficientMatrix.N(); k++)
+        {
+          localRhs[i]+=(localEnrichedRhs[k]*coefficientMatrix[k][i]);
+        }
+      }
+
+    // compute the local stiffness matrix
+    Matrix<FieldMatrix<double,1,1> > elementMatrix = testspaceCoefficientMatrix_.localMatrix();
+
+    // Add local right-hand side onto the global right-hand side
+    auto cpRhs = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
+                   typename std::remove_reference<decltype(rhs)>::type> >
+                (localToGlobalRHSCopier<decltype(localRhs),
+                   typename std::remove_reference<decltype(rhs)>::type>
+                                        (localRhs, rhs));
+    // Add element stiffness matrix onto the global stiffness matrix
+    auto cpMatrix = fused_procedure<localToGlobalCopier<decltype(elementMatrix),
+                   typename std::remove_reference<decltype(matrix)>::type> >
+                (localToGlobalCopier<decltype(elementMatrix),
+                   typename std::remove_reference<decltype(matrix)>::type>
+                                        (elementMatrix, matrix));
+
+    auto solutionZip = zip(solutionLocalViews,
+                           solutionLocalIndexSets,
+                           bilinearForm_.getLocalSolutionSpaceOffsets(),
+                           globalSolutionSpaceOffsets);
+
+    using SolutionZip = decltype(solutionZip);
+
+    /* copy every local submatrix indexed by a pair of indices from
+     * Indices exactly once. */
+    for_each(Indices{},
+             localToGlobalCopyHelper<SolutionZip,
+                                     SolutionZip,
+                                     std::decay_t<decltype(cpMatrix)>>
+                                    (solutionZip, solutionZip, cpMatrix));
+
+    /* copy every local subvector indexed by an index from
+     * lfIndices exactly once. */
+       typedef typename boost::mpl::fold<
+        typename boost::mpl::transform<
+            /* This as_vector is probably not needed for boost::fusion 1.58
+             * or higher. */
+            typename result_of::as_vector<typename std::remove_reference<
+                  decltype(bilinearForm_.getTerms())>::type
+                >::type
+          , mpl::second<boost::mpl::_1>
+          >::type
+      , boost::mpl::set0<>
+      , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
+      >::type LFIndices;
+          auto lfIndices = LFIndices{};
+
+    for_each(lfIndices,
+            localToGlobalRHSCopyHelper<decltype(solutionZip),
+                                        decltype(cpRhs)>
+                                        (solutionZip, cpRhs));
+  }
 }
 
 
