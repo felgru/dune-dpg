@@ -49,19 +49,36 @@
 
 namespace Dune {
 
+namespace detail {
+
+struct Unbuffered {
+  template<class BilinearForm, class InnerProduct>
+  using TestspaceCoefficientMatrix
+    = Dune::UnbufferedTestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
+};
+
+struct Buffered {
+  template<class BilinearForm, class InnerProduct>
+  using TestspaceCoefficientMatrix
+    = Dune::BufferedTestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
+};
+}
+
 /**
  * \brief This constructs the system matrix and righthandside vector of a DPG system.
  *
  * \tparam InnProduct        inner product
  * \tparam BilinForm         bilinear form
+ * \tparam BufferPolicy      Buffered or Unbuffered
  */
-template<class InnProduct, class BilinForm>
+template<class InnProduct, class BilinForm, class BufferPolicy>
 class DPGSystemAssembler
 {
 public:
   using InnerProduct = InnProduct;
   using BilinearForm = BilinForm;
-  using TestspaceCoefficientMatrix = Dune::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
+  using TestspaceCoefficientMatrix
+    = typename BufferPolicy::template TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
   using TestSearchSpaces = typename BilinearForm::TestSpaces;
   using SolutionSpaces = typename BilinearForm::SolutionSpaces;
 
@@ -89,6 +106,17 @@ public:
                solutionSpaces_(bilinearForm.getSolutionSpaces()),
                bilinearForm_(bilinearForm),
                testspaceCoefficientMatrix_(bilinearForm,innerProduct)
+  { }
+
+  template <class GeometryBuffer>
+  constexpr DPGSystemAssembler (InnerProduct&      innerProduct,
+                                BilinearForm&      bilinearForm,
+                                GeometryBuffer&    geometryBuffer
+                               )
+             : testSearchSpaces_(bilinearForm.getTestSpaces()),
+               solutionSpaces_(bilinearForm.getSolutionSpaces()),
+               bilinearForm_(bilinearForm),
+               testspaceCoefficientMatrix_(bilinearForm,innerProduct,geometryBuffer)
   { }
 
   /**
@@ -233,28 +261,52 @@ private:
  * \brief Creates a SystemAssembler for a DPG formulation,
  *        deducing the target type from the types of arguments.
  *
- * \param testSearchSpaces     a tuple of test spaces
- * \param solutionSpaces a tuple of solution spaces
+ * \param innerProduct
  * \param bilinearForm   the bilinear form describing the DPG system
  */
 template<class InnerProduct,
          class BilinearForm>
 auto make_DPGSystemAssembler(InnerProduct&   innerProduct,
                              BilinearForm&   bilinearForm)
-    -> DPGSystemAssembler<InnerProduct, BilinearForm>
+    -> DPGSystemAssembler<InnerProduct, BilinearForm, detail::Unbuffered>
 {
   // set the inner product of the system assembler to nullptr as it is
   // not used in the DPG formulation (we use the inner product of the
   // optimal test space her).
-  return DPGSystemAssembler<InnerProduct, BilinearForm>
+  return DPGSystemAssembler<InnerProduct, BilinearForm, detail::Unbuffered>
                       (innerProduct,
                        bilinearForm);
 }
 
+/**
+ * \brief Creates a SystemAssembler for a DPG formulation,
+ *        deducing the target type from the types of arguments.
+ *
+ * \param innerProduct
+ * \param bilinearForm   the bilinear form describing the DPG system
+ */
+template<class InnerProduct,
+         class BilinearForm,
+         class GeometryBuffer>
+auto make_DPGSystemAssembler(InnerProduct&   innerProduct,
+                             BilinearForm&   bilinearForm,
+                             GeometryBuffer& geometryBuffer
+                            )
+    -> DPGSystemAssembler<InnerProduct, BilinearForm, detail::Buffered>
+{
+  // set the inner product of the system assembler to nullptr as it is
+  // not used in the DPG formulation (we use the inner product of the
+  // optimal test space her).
+  return DPGSystemAssembler<InnerProduct, BilinearForm, detail::Buffered>
+                      (innerProduct,
+                       bilinearForm,
+                       geometryBuffer);
+}
 
-template<class InnerProduct, class BilinearForm>
+
+template<class InnerProduct, class BilinearForm, class BufferPolicy>
 template <class LinearForm>
-void DPGSystemAssembler<InnerProduct, BilinearForm>::
+void DPGSystemAssembler<InnerProduct, BilinearForm,BufferPolicy>::
 assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                BlockVector<FieldVector<double,1> >& rhs,
                LinearForm& rhsLinearForm)
@@ -423,8 +475,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 }
 
 
-template<class InnerProduct, class BilinearForm>
-void DPGSystemAssembler<InnerProduct, BilinearForm>::
+template<class InnerProduct, class BilinearForm, class BufferPolicy>
+void DPGSystemAssembler<InnerProduct, BilinearForm, BufferPolicy>::
 assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 {
   using namespace boost::fusion;
@@ -532,9 +584,9 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 }
 
 
-template<class InnerProduct, class BilinearForm>
+template<class InnerProduct, class BilinearForm, class BufferPolicy>
 template <class LinearForm>
-void DPGSystemAssembler<InnerProduct, BilinearForm>::
+void DPGSystemAssembler<InnerProduct, BilinearForm, BufferPolicy>::
 assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
             LinearForm& rhsLinearForm)
 {
@@ -637,9 +689,9 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 }
 
 
-template<class InnerProduct, class BilinearForm>
+template<class InnerProduct, class BilinearForm, class BufferPolicy>
 template <size_t spaceIndex, class ValueType>
-void DPGSystemAssembler<InnerProduct, BilinearForm>::
+void DPGSystemAssembler<InnerProduct, BilinearForm, BufferPolicy>::
 applyDirichletBoundary
                       (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                        BlockVector<FieldVector<double,1> >& rhs,
@@ -653,9 +705,9 @@ applyDirichletBoundary
 }
 
 
-template<class InnerProduct, class BilinearForm>
+template<class InnerProduct, class BilinearForm, class BufferPolicy>
 template <size_t spaceIndex, class ValueType>
-void DPGSystemAssembler<InnerProduct, BilinearForm>::
+void DPGSystemAssembler<InnerProduct, BilinearForm, BufferPolicy>::
 applyDirichletBoundaryToMatrix
                       (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                        const std::vector<bool>& dirichletNodes,
@@ -709,9 +761,9 @@ applyDirichletBoundaryToMatrix
 }
 
 
-template<class InnerProduct, class BilinearForm>
+template<class InnerProduct, class BilinearForm, class BufferPolicy>
 template <size_t spaceIndex, class ValueType>
-void DPGSystemAssembler<InnerProduct, BilinearForm>::
+void DPGSystemAssembler<InnerProduct, BilinearForm, BufferPolicy>::
 applyDirichletBoundaryToRhs
                       (BlockVector<FieldVector<double,1> >& rhs,
                        const std::vector<bool>& dirichletNodes,
@@ -746,9 +798,9 @@ applyDirichletBoundaryToRhs
 
 }
 
-template<class InnerProduct, class BilinearForm>
+template<class InnerProduct, class BilinearForm, class BufferPolicy>
 template <size_t spaceIndex, unsigned int dim>
-void DPGSystemAssembler<InnerProduct, BilinearForm>::
+void DPGSystemAssembler<InnerProduct, BilinearForm, BufferPolicy>::
 applyWeakBoundaryCondition
                     (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                      FieldVector<double, dim> beta,
@@ -844,9 +896,9 @@ applyWeakBoundaryCondition
 }
 
 
-template<class InnerProduct, class BilinearForm>
+template<class InnerProduct, class BilinearForm, class BufferPolicy>
 template<size_t spaceIndex, unsigned int dim>
-void DPGSystemAssembler<InnerProduct, BilinearForm>::
+void DPGSystemAssembler<InnerProduct, BilinearForm, BufferPolicy>::
 defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                           BlockVector<FieldVector<double,1> >& rhs,
                           const FieldVector<double,dim>& beta,
@@ -962,9 +1014,9 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 }
 
 
-template<class InnerProduct, class BilinearForm>
+template<class InnerProduct, class BilinearForm, class BufferPolicy>
 template <size_t spaceIndex, class MinInnerProduct, unsigned int dim>
-void DPGSystemAssembler<InnerProduct, BilinearForm>::
+void DPGSystemAssembler<InnerProduct, BilinearForm, BufferPolicy>::
 applyMinimization
             (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
              MinInnerProduct minInnerProduct,

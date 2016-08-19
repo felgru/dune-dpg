@@ -124,15 +124,12 @@ int main(int argc, char** argv)
   VectorType rhs;
   MatrixType stiffnessMatrix;
 
+  typedef decltype(std::declval<typename GridView::template Codim<0>::Entity>().geometry()) Geometry;
+  GeometryBuffer<Geometry> geometryBuffer;
 
   auto systemAssembler
-     = make_DPGSystemAssembler(innerProduct, bilinearForm);
-//  std::chrono::steady_clock::time_point startneu = std::chrono::steady_clock::now();
-//  std::chrono::steady_clock::time_point endneu = std::chrono::steady_clock::now();
-//  std::cout << "The New assembler took "
-//              << std::chrono::duration_cast<std::chrono::microseconds>(endneu - startneu).count()
-//              << "us.\n";
-//  abort();
+     = make_DPGSystemAssembler(innerProduct, bilinearForm, geometryBuffer);
+
   /////////////////////////////////////////////////////////
   //  Assemble the system
   /////////////////////////////////////////////////////////
@@ -144,45 +141,8 @@ int main(int argc, char** argv)
                                             LinearIntegrationType::valueFunction,
                                             DomainOfIntegration::interior>(
                                  [] (const Domain& x) { return 1.;})));
-  systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
-/*  std::cout <<std::endl << "same?" <<std::endl;
-  for (unsigned int i=0; i<stiffnessMatrix.N(); i++)
-  {
-    for (unsigned int j=0; j<stiffnessMatrix.M(); j++)
-    {
-      if (stiffnessMatrix.exists(i,j))
-      {
-        if (stiffnessMatrixDPG.exists(i,j))
-        {
-          if (std::abs(stiffnessMatrix[i][j] - stiffnessMatrixDPG[i][j])>10e-8)
-            std::cout << "X  ";
-          else
-            std::cout << "=  ";
-        }
-        else
-        {
-          if (std::abs(stiffnessMatrix[i][j])>10e-4)
-            std::cout << "x1  ";
-          else
-            std::cout << "01 ";
-        }
-      }
-      else
-      {
-        if (stiffnessMatrixDPG.exists(i,j))
-        {
-          if (std::abs(stiffnessMatrixDPG[i][j])>10e-4)
-            std::cout << "x2  ";
-          else
-            std::cout << "02 ";
-        }
-        else
-          std::cout << "   ";
-      }
-    }
-    std::cout <<std::endl;
-  }*/
+  systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
   /////////////////////////////////////////////////
   //   Choose an initial iterate
@@ -199,7 +159,6 @@ int main(int argc, char** argv)
                      beta,
                      delta);
 #endif
-
   // Determine Dirichlet dofs for u^ (inflow boundary)
   {
     std::vector<bool> dirichletNodesInflow;
@@ -214,9 +173,6 @@ int main(int argc, char** argv)
          0.);
   }
 
-
-
-
   ////////////////////////////
   //   Compute solution
   ////////////////////////////
@@ -225,11 +181,9 @@ int main(int argc, char** argv)
             <<" matrix size = " << stiffnessMatrix.N() <<" x " << stiffnessMatrix.M()
             <<" solution size = "<< x.size() <<std::endl;
 
-
   UMFPack<MatrixType> umfPack(stiffnessMatrix, 2);
   InverseOperatorResult statistics;
   umfPack.apply(x, rhs, statistics);
-
 
   ////////////////////////////////////////////////////////////////////////////
   //  Make a discrete function from the FE basis and the coefficient vector

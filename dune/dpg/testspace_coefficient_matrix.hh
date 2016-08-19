@@ -7,6 +7,7 @@
 #include <functional>
 #include <memory>
 #include <type_traits>
+#include <cassert>
 
 #include <boost/fusion/adapted/std_tuple.hpp>
 #include <boost/fusion/adapted/array.hpp>
@@ -23,34 +24,22 @@
 #include <boost/fusion/sequence/intrinsic/size.hpp>
 
 
-
-
-
 #include <array>
 #include <dune/common/exceptions.hh>
 
-//#include <dune/localfunctions/optimaltestfunctions/optimaltest.hh>
-//#include <dune/localfunctions/optimaltestfunctions/refinedoptimaltest.hh>
 
-//#include <dune/typetree/leafnode.hh>
-
-//#include <dune/functions/functionspacebases/nodes.hh>
-//#include <dune/functions/functionspacebases/defaultglobalbasis.hh>
-//#include <dune/functions/functionspacebases/flatmultiindex.hh>
 #include <dune/dpg/assemble_helper.hh>
 #include <dune/dpg/cholesky.hh>
-//#include <dune/dpg/type_traits.hh>
-
+#include <chrono>
 
 namespace Dune {
 
 template <typename Geometry>
-class GeometryBuffer
+class GeometryComparable
 {
   typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
 
   public:
-
   void set(Geometry geometry)
   {
     corners=geometry.corners();
@@ -58,45 +47,109 @@ class GeometryBuffer
     for (unsigned int i=0; i<corners; i++)
     {
       cornerVector[i]=geometry.corner(i);
+      // First, I thought it would make sense to order the corners in some way
+      // but then I realized, that two triangles where one is just a shift of
+      // the other result in different coefficients of the optimal testspace
+      // if the corners are ordered in a different way because the
+      // basis functions on the physical domain are different
+      /*unsigned int j=0;
+      while (j<i and (cornerVector[j][0]<geometry.corner(i)[0]
+                      or (cornerVector[j][0]==geometry.corner(i)[0]
+                          and cornerVector[j][1]<=geometry.corner(i)[1])))
+      {
+        j++;
+      }
+      for (unsigned int k=i; k>j; k--)
+      {
+        cornerVector[k]=cornerVector[k-1];
+      }
+      cornerVector[j]=geometry.corner(i);*/
     }
   }
 
-  bool isSame(Geometry geometry)
+  unsigned int getNumCorners() const
   {
-    // TODO: The return type of Geometry::corners() should be changed to unsigned.
-    if (geometry.corners()==(int)corners)
+    return corners;
+  }
+
+  GlobalCoordinate getCorner(unsigned int i) const
+  {
+    assert(i<corners);
+    return cornerVector[i];
+  }
+
+  bool operator< (const GeometryComparable<Geometry>& geometryComparable) const
+  {
+    if (corners < geometryComparable.getNumCorners())
     {
-      GlobalCoordinate difference = cornerVector[0];
-      difference -= geometry.corner(0);
-      double volume = geometry.volume();    //TODO evtl. schon Volumen fuer ersten Vergleich nutzen?
+      return true;
+    }
+    if (corners > geometryComparable.getNumCorners())
+    {
+      return false;
+    }
+    for (unsigned int j=0; j<2; j++)    //TODO works only for 2d
+    {
       for (unsigned int i=1; i<corners; i++)
       {
-        for (unsigned int j=0; j<difference.size(); j++)
+        if ((cornerVector[i][j]-cornerVector[0][j])
+             <(geometryComparable.getCorner(i)[j]
+               -geometryComparable.getCorner(0)[j]
+               -((std::abs(geometryComparable.getCorner(i)[j]
+                          -geometryComparable.getCorner(0)[j])
+                  +std::abs(cornerVector[i][j]
+                           -cornerVector[0][j])
+                 )*10e-10)
+              ))
         {
-          if (std::abs(geometry.corner(i)[j]+difference[j]-cornerVector[i][j] )/volume > 1e-10)
-          {
-            return false;
-          }
+          return true;
         }
-        return true;
+        if ((cornerVector[i][j]-cornerVector[0][j])
+             >(geometryComparable.getCorner(i)[j]
+               -geometryComparable.getCorner(0)[j]
+               +((std::abs(geometryComparable.getCorner(i)[j]
+                          -geometryComparable.getCorner(0)[j])
+                  +std::abs(cornerVector[i][j]
+                           -cornerVector[0][j])
+                )*10e-10)
+              ))
+        {
+          return false;
+        }
       }
     }
-    std::cout << "different number of corners" <<std::endl;
     return false;
   }
 
   private:
-  unsigned int corners;
+  int                           corners;
   std::vector<GlobalCoordinate> cornerVector;
 };
 
 
+template <typename MatrixType>
+class CoefficientMatrices
+{
+public:
+  MatrixType& coefficientMatrix()
+  {
+    return coefficientMatrix_;
+  }
+
+  MatrixType& localMatrix()
+  {
+    return localMatrix_;
+  }
+
+private:
+  MatrixType            coefficientMatrix_;     // G^{-1}B
+  MatrixType            localMatrix_;           // B^TG^{-1}B
+};
 
 
 template<typename BilinForm, typename InnerProd>
-class TestspaceCoefficientMatrix
+class UnbufferedTestspaceCoefficientMatrix
 {
-
   public:
   typedef BilinForm BilinearForm;
   typedef InnerProd InnerProduct;
@@ -122,7 +175,7 @@ class TestspaceCoefficientMatrix
   typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
 
   public:
-  TestspaceCoefficientMatrix(BilinearForm& bilinForm, InnerProduct& innerProd) :
+  UnbufferedTestspaceCoefficientMatrix(BilinearForm& bilinForm, InnerProduct& innerProd) :
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
     gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
@@ -131,56 +184,42 @@ class TestspaceCoefficientMatrix
                                          detail::getLocalView()))),
     localViewsTest_(boost::fusion::as_vector(
                 boost::fusion::transform(bilinearForm_.getTestSpaces(),
-                                         detail::getLocalView()))),
-    geometryBufferIsSet_(false)
+                                         detail::getLocalView())))
   {}
-
-  typedef decltype(std::declval<typename GridView::template Codim<0>::Entity>().geometry()) Geometry;
-  typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
 
   void bind(const typename GridView::template Codim<0>::Entity& e)
   {
     using namespace Dune::detail;
 
-    if (geometryBufferIsSet_ and geometryBuffer_.isSame(e.geometry()))
+    for_each(localViewsTest_, applyBind<decltype(e)>(e));
+    for_each(localViewsSolution_, applyBind<decltype(e)>(e));
+
+    MatrixType stiffnessMatrix;
+
+    innerProduct_.bind(localViewsTest_);
+    innerProduct_.getLocalMatrix(stiffnessMatrix);
+
+    MatrixType bilinearMatrix;
+
+    bilinearForm_.bind(localViewsTest_, localViewsSolution_);
+    bilinearForm_.getLocalMatrix(bilinearMatrix);
+
+    Cholesky<MatrixType> cholesky(stiffnessMatrix);
+    cholesky.apply(bilinearMatrix, coefficientMatrix_);
+
+    unsigned int m = coefficientMatrix_.M();
+    localMatrix_.setSize(m, m);
+
+    for (unsigned int i=0; i<m; i++)
     {
-      //std::cout <<"Old Geometry" <<std::endl;
-    }
-    else
-    {
-      geometryBuffer_.set(e.geometry());
-      //std::cout <<"New Geometry" <<std::endl;
-      for_each(localViewsTest_, applyBind<decltype(e)>(e));
-      for_each(localViewsSolution_, applyBind<decltype(e)>(e));
-
-      MatrixType stiffnessMatrix;
-
-      innerProduct_.bind(localViewsTest_);
-      innerProduct_.getLocalMatrix(stiffnessMatrix);
-
-      MatrixType bilinearMatrix;
-
-      bilinearForm_.bind(localViewsTest_, localViewsSolution_);
-      bilinearForm_.getLocalMatrix(bilinearMatrix);
-
-      Cholesky<MatrixType> cholesky(stiffnessMatrix);
-      cholesky.apply(bilinearMatrix, coefficientMatrix_);
-
-      unsigned int m = coefficientMatrix_.M();
-      localMatrix_.setSize(m, m);
-
-      for (unsigned int i=0; i<m; i++)
+      for (unsigned int j=0; j<m; j++)
       {
-        for (unsigned int j=0; j<m; j++)
+        localMatrix_[i][j]=0;
+        for (unsigned int k=0; k<coefficientMatrix_.N(); k++)
         {
-          localMatrix_[i][j]=0;
-          for (unsigned int k=0; k<coefficientMatrix_.N(); k++)
-          {
-            localMatrix_[i][j]+=(bilinearMatrix[k][i]*coefficientMatrix_[k][j]);
-          }
+          localMatrix_[i][j]+=(bilinearMatrix[k][i]*coefficientMatrix_[k][j]);
         }
       }
-      geometryBufferIsSet_ = true;
     }
   }
 
@@ -210,17 +249,171 @@ class TestspaceCoefficientMatrix
   }
 
   private:
-  BilinearForm&      bilinearForm_;
-  InnerProduct&      innerProduct_;
-  GridView           gridView_;
-  SolutionLocalViews localViewsSolution_;
-  TestLocalViews     localViewsTest_;
-  GeometryBuffer<Geometry> geometryBuffer_;
-  bool               geometryBufferIsSet_;
-  MatrixType         coefficientMatrix_;        // G^{-1}B
-  MatrixType         localMatrix_;              // B^TG^{-1}B
+  BilinearForm&            bilinearForm_;
+  InnerProduct&            innerProduct_;
+  GridView                 gridView_;
+  SolutionLocalViews       localViewsSolution_;
+  TestLocalViews           localViewsTest_;
+  MatrixType               coefficientMatrix_;     // G^{-1}B
+  MatrixType               localMatrix_;           // B^TG^{-1}B
 };
 
+
+
+template<typename Geometry>
+class GeometryBuffer
+{
+  typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
+  typedef CoefficientMatrices<MatrixType> CoefMatrices;
+public:
+  GeometryBuffer() :
+  bufferMap()
+  {
+    bufferMap.clear();
+  }
+
+  std::pair<CoefMatrices&, bool> operator()(const GeometryComparable<Geometry> geometry)
+  {
+    CoefMatrices nullmatrix;
+    auto insert = bufferMap.insert(std::pair<const GeometryComparable<Geometry>,
+                                        CoefMatrices>(geometry, nullmatrix)
+                             );
+    return std::pair<CoefMatrices&, bool>(insert.first->second, !(insert.second));
+  }
+
+  unsigned int size() const
+  {
+    return bufferMap.size();
+  }
+private:
+  std::map<GeometryComparable<Geometry>,
+           CoefMatrices>                    bufferMap;
+};
+
+
+
+template<typename BilinForm, typename InnerProd>
+class BufferedTestspaceCoefficientMatrix
+{
+  public:
+  typedef BilinForm BilinearForm;
+  typedef InnerProd InnerProduct;
+  typedef typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView GridView;
+  typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
+  typedef typename BilinearForm::TestSpaces TestSpaces;
+  typedef decltype(std::declval<typename GridView::template Codim<0>::Entity>().geometry()) Geometry;
+  typedef GeometryBuffer<Geometry> GeoBuffer;
+  typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
+
+  private:
+  typedef typename boost::fusion::result_of::as_vector<
+             typename boost::fusion::result_of::transform<
+                         SolutionSpaces,
+                         detail::getLocalView
+                      >::type
+             >::type SolutionLocalViews;
+
+  typedef typename boost::fusion::result_of::as_vector<
+             typename boost::fusion::result_of::transform<
+                         TestSpaces,
+                         detail::getLocalView
+                      >::type
+             >::type TestLocalViews;
+
+  typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
+
+  public:
+  BufferedTestspaceCoefficientMatrix(BilinearForm& bilinForm, InnerProduct& innerProd, GeoBuffer& buffer) :
+    bilinearForm_(bilinForm),
+    innerProduct_(innerProd),
+    gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
+    localViewsSolution_(boost::fusion::as_vector(
+                boost::fusion::transform(bilinearForm_.getSolutionSpaces(),
+                                         detail::getLocalView()))),
+    localViewsTest_(boost::fusion::as_vector(
+                boost::fusion::transform(bilinearForm_.getTestSpaces(),
+                                         detail::getLocalView()))),
+    geometryBuffer_(buffer)
+  {}
+
+  void bind(const typename GridView::template Codim<0>::Entity& e)
+  {
+    using namespace Dune::detail;
+    GeometryComparable<Geometry> newGeometry;
+    newGeometry.set(e.geometry());
+    auto pair = geometryBuffer_(newGeometry);
+    coefficientMatrix_ = &pair.first.coefficientMatrix();
+    localMatrix_ = &pair.first.localMatrix();
+    if (!pair.second)
+    {
+      for_each(localViewsTest_, applyBind<decltype(e)>(e));
+      for_each(localViewsSolution_, applyBind<decltype(e)>(e));
+
+      MatrixType stiffnessMatrix;
+
+      innerProduct_.bind(localViewsTest_);
+      innerProduct_.getLocalMatrix(stiffnessMatrix);
+
+      MatrixType bilinearMatrix;
+
+      bilinearForm_.bind(localViewsTest_, localViewsSolution_);
+      bilinearForm_.getLocalMatrix(bilinearMatrix);
+
+      Cholesky<MatrixType> cholesky(stiffnessMatrix);
+      cholesky.apply(bilinearMatrix, (*coefficientMatrix_));
+
+      unsigned int m = coefficientMatrix_->M();
+      unsigned int n = coefficientMatrix_->N();
+      localMatrix_->setSize(m, m);
+
+      for (unsigned int i=0; i<m; i++)
+      {
+        for (unsigned int j=0; j<m; j++)
+        {
+          (*localMatrix_)[i][j]=0;
+          for (unsigned int k=0; k<n; k++)
+          {
+            (*localMatrix_)[i][j]+=(bilinearMatrix[k][i]*(*coefficientMatrix_)[k][j]);
+          }
+        }
+      }
+    }
+  }
+
+  const MatrixType& coefficientMatrix()
+  {
+    return *coefficientMatrix_;
+  }
+
+  const MatrixType& localMatrix()
+  {
+    return *localMatrix_;
+  }
+
+  const BilinearForm& bilinearForm() const
+  {
+    return bilinearForm_;
+  }
+
+  const InnerProduct& innerProduct() const
+  {
+    return innerProduct_;
+  }
+
+  const GridView& gridView() const
+  {
+    return gridView_;
+  }
+  private:
+  BilinearForm&         bilinearForm_;
+  InnerProduct&         innerProduct_;
+  GridView              gridView_;
+  SolutionLocalViews    localViewsSolution_;
+  TestLocalViews        localViewsTest_;
+  MatrixType*           coefficientMatrix_;     // G^{-1}B
+  MatrixType*           localMatrix_;           // B^TG^{-1}B
+  GeoBuffer&            geometryBuffer_;
+};
 
 
 } // end namespace Dune
