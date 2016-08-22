@@ -296,15 +296,17 @@ int main()
     auto rightHandSide_aposteriori
       = replaceTestSpaces(rightHandSide, testSpaces_aposteriori);
     rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
-    // It is necessary to provide rhs in the above form to call this aPosterioriError method
+
     double aposterioriErr
         = errorTools.aPosterioriError(bilinearForm_aposteriori,
                                       innerProduct_aposteriori, x, rhs);
-    std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
+    std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = "
+              << aposterioriErr << std::endl;
     double aposterioriL2Err
         = errorTools.aPosterioriL2Error(aPosterioriInnerProduct,
                                         aPosterioriLinearForm, fieldRHS, x);
-    std::cout << "A posteriori L2 error: || (u,trace u) - (u_fem,theta) || = " << aposterioriL2Err << std::endl;
+    std::cout << "A posteriori L2 error: || (u,trace u) - (u_fem,theta) || = "
+              << aposterioriL2Err << std::endl;
 
     //////////////////////////////////////////////////////////////////////////////////////////////
     //  Write result to VTK file
