@@ -58,3 +58,4 @@ add_dune_ug_flags(dune_dpg_rad_trans_periter)
 target_link_dune_default_libraries("dune_dpg_rad_trans_periter")
 
 add_executable("kernel_svds" kernel_svds.cc)
+target_link_dune_default_libraries("kernel_svds")
