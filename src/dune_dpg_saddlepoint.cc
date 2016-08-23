@@ -25,47 +25,12 @@
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
-#include <dune/dpg/system_assembler.hh>
+#include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/saddlepoint_system_assembler.hh>
 
 
 
 using namespace Dune;
-
-
-
-// This method marks all vertices on the boundary of the grid.
-// In our problem these are precisely the Dirichlet nodes.
-// The result can be found in the 'dirichletNodes' variable.  There, a bit
-// is set precisely when the corresponding vertex is on the grid boundary.
-template <class FEBasis>
-void boundaryTreatmentInflow (const FEBasis& feBasis,
-                        std::vector<bool>& dirichletNodes )
-{
-  const int dim = FEBasis::GridView::dimension;
-
-  // Interpolating the identity function wrt to a Lagrange basis
-  // yields the positions of the Lagrange nodes
-
-  // TODO: We are hacking our way around the fact that interpolation
-  // of vector-value functions is not supported yet.
-  BlockVector<FieldVector<double,dim> > lagrangeNodes;
-  interpolate(feBasis, lagrangeNodes, [](FieldVector<double,dim> x){ return x; });
-
-  dirichletNodes.resize(lagrangeNodes.size());
-
-  // Mark all Lagrange nodes on the bounding box as Dirichlet
-  for (size_t i=0; i<lagrangeNodes.size(); i++)
-  {
-    bool isBoundary = false;
-    for (int j=0; j<dim; j++)
-      isBoundary = isBoundary || lagrangeNodes[i][j] < 1e-8;
-
-    if (isBoundary)
-
-      dirichletNodes[i] = true;
-  }
-}
-
 
 
 
@@ -118,8 +83,8 @@ int main(int argc, char** argv)
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                     DomainOfIntegration::interior>(1., beta)));
   auto systemAssembler
-     = make_Saddlepoint_SystemAssembler(testSpaces, solutionSpaces,
-                                        bilinearForm, innerProduct);
+     = make_SaddlepointSystemAssembler(testSpaces, solutionSpaces,
+                                       bilinearForm, innerProduct);
 
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
@@ -142,7 +107,10 @@ int main(int argc, char** argv)
         systemAssembler.getTestSpaces(),
         systemAssembler.getSolutionSpaces(),
         std::make_tuple(
-            make_LinearIntegralTerm<0>([] (const Domain& x) { return 1.;})
+            make_LinearIntegralTerm<0,
+                                    LinearIntegrationType::valueFunction,
+                                    DomainOfIntegration::interior>
+                                   ([] (const Domain& x) { return 1.;})
           ));
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
@@ -156,8 +124,10 @@ int main(int argc, char** argv)
   // Determine Dirichlet dofs for u^ (inflow boundary)
   {
     std::vector<bool> dirichletNodesInflow;
-    boundaryTreatmentInflow(std::get<0>(solutionSpaces),
-                            dirichletNodesInflow);
+    BoundaryTools boundaryTools = BoundaryTools();
+    boundaryTools.getInflowBoundaryMask(std::get<0>(solutionSpaces),
+                                        dirichletNodesInflow,
+                                        beta);
     systemAssembler.applyDirichletBoundary<0>
         (stiffnessMatrix,
          rhs,
@@ -169,8 +139,10 @@ int main(int argc, char** argv)
   // Determine Dirichlet dofs for v (inflow boundary)
   {
     std::vector<bool> dirichletNodesInflowTest;
-    boundaryTreatmentInflow(std::get<0>(testSpaces),
-                            dirichletNodesInflowTest);
+    BoundaryTools boundaryTools = BoundaryTools();
+    boundaryTools.getInflowBoundaryMask(std::get<0>(testSpaces),
+                                        dirichletNodesInflowTest,
+                                        beta);
     /* TODO: applyDirichletBoundaryTest has been removed */
     systemAssembler.applyDirichletBoundaryTest<0>
         (stiffnessMatrix,

@@ -17,6 +17,7 @@ int main(){
 }" HAVE_BOOST_FUSION )
   if(HAVE_BOOST_FUSION)
     message(STATUS "Boost::FUSION is available")
+    set(BoostFusion_FOUND true)
   endif(HAVE_BOOST_FUSION)
 else()
   message(STATUS "Skipping check for Boost::FUSION as Boost is not available.")

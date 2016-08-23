@@ -8,6 +8,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               bilinearform.hh
               boundarytools.hh
               cholesky.hh
+              dpg_system_assembler.hh
               errortools.hh
               getvolumeterm_impl.hh
               innerproduct.hh
@@ -21,6 +22,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               localevaluation.hh
               quadrature.hh
               rhs_assembler.hh
-              system_assembler.hh
+              saddlepoint_system_assembler.hh
+              testspace_coefficient_matrix.hh
               type_traits.hh
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/dpg)

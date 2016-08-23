@@ -30,81 +30,16 @@
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/pqkfacenodalbasis.hh>
-#include <dune/functions/functionspacebases/optimaltestbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
-#include <dune/dpg/system_assembler.hh>
+#include <dune/dpg/dpg_system_assembler.hh>
+#include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/rhs_assembler.hh>
 
 #include <boost/math/constants/constants.hpp>
 
 using namespace Dune;
-
-
-
-// This method marks all vertices on the boundary of the grid.
-// In our problem these are precisely the Dirichlet nodes.
-// The result can be found in the 'dirichletNodes' variable.  There, a bit
-// is set precisely when the corresponding vertex is on the grid boundary.
-template <class FEBasis>
-void boundaryTreatmentInflow (const FEBasis& feBasis,
-                        std::vector<bool>& dirichletNodes )
-{
-  const int dim = FEBasis::GridView::dimension;
-
-  // Interpolating the identity function wrt to a Lagrange basis
-  // yields the positions of the Lagrange nodes
-
-  // TODO: We are hacking our way around the fact that interpolation
-  // of vector-value functions is not supported yet.
-  BlockVector<FieldVector<double,dim> > lagrangeNodes;
-  interpolate(feBasis, lagrangeNodes, [](FieldVector<double,dim> x){ return x; });
-
-  dirichletNodes.resize(lagrangeNodes.size());
-
-  // Mark all Lagrange nodes on the bounding box as Dirichlet
-  for (size_t i=0; i<lagrangeNodes.size(); i++)
-  {
-    bool isBoundary = false;
-    //for (int j=0; j<dim; j++)
-    int j = 0;
-      isBoundary = isBoundary || lagrangeNodes[i][j] < 1e-8;
-
-    if (isBoundary)
-
-      dirichletNodes[i] = true;
-  }
-}
-
-/*template <class FEBasis>
-void boundaryTreatment (const FEBasis& feBasis,
-                        std::vector<bool>& dirichletNodes )
-{
-  const int dim = FEBasis::GridView::dimension;
-
-  // Interpolating the identity function wrt to a Lagrange basis
-  // yields the positions of the Lagrange nodes
-
-  // TODO: We are hacking our way around the fact that interpolation
-  // of vector-value functions is not supported yet.
-  BlockVector<FieldVector<double,dim> > lagrangeNodes;
-  interpolate(feBasis, lagrangeNodes, [](FieldVector<double,dim> x){ return x; });
-
-  dirichletNodes.resize(lagrangeNodes.size());
-
-  // Mark all Lagrange nodes on the bounding box as Dirichlet
-  for (size_t i=0; i<lagrangeNodes.size(); i++)
-  {
-    bool isBoundary = false;
-    for (int j=0; j<dim; j++)
-      isBoundary = isBoundary || lagrangeNodes[i][j] < 1e-8 || lagrangeNodes[i][j] > 1-1e-8;
-
-    if (isBoundary)
-
-      dirichletNodes[i] = true;
-  }
-}*/
 
 // The right-hand side explicit expression
 
@@ -279,26 +214,10 @@ int main(int argc, char** argv)
   typedef decltype(bilinearForm) BilinearForm;
   typedef decltype(innerProduct) InnerProduct;
   typedef decltype(minInnerProduct) MinInnerProduct;
-  typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct> TestspaceCoefficientMatrix;
-
-  TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
-
-  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix, 0> FEBasisOptimalTest0;              // v
-  FEBasisOptimalTest0 feBasisTest0(testspaceCoefficientMatrix);
-  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix, 1> FEBasisOptimalTest1;              // tau1
-  FEBasisOptimalTest1 feBasisTest1(testspaceCoefficientMatrix);
-  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix, 2> FEBasisOptimalTest2;              // tau2
-  FEBasisOptimalTest2 feBasisTest2(testspaceCoefficientMatrix);
-
-
-  auto optimalTestSpaces = make_tuple(feBasisTest0, feBasisTest1, feBasisTest2);
 
   auto systemAssembler
-     = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
-                                bilinearForm);
-//  auto systemAssembler
-//     = make_Saddlepoint_SystemAssembler(testSpaces, solutionSpaces,
-//                                        bilinearForm, innerProduct);
+     = make_DPGSystemAssembler(innerProduct, bilinearForm);
+
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
   /////////////////////////////////////////////////////////
@@ -317,18 +236,22 @@ int main(int argc, char** argv)
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
   auto rightHandSide
-    = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
-    // make_Saddlepoint_LinearForm(
-    //  systemAssembler.getTestSpaces(),
-    //  systemAssembler.getSolutionSpaces(),
+    = make_DPGLinearForm(testSpaces,
         std::make_tuple(
-            make_LinearIntegralTerm<0>(fieldRHS)
-          , make_LinearIntegralTerm<1>([] (const Domain& x) { return 0.;})
-          , make_LinearIntegralTerm<2>([] (const Domain& x) { return 0.;})
+            make_LinearIntegralTerm<0,
+                   LinearIntegrationType::valueFunction,
+                   DomainOfIntegration::interior>(fieldRHS)
+          , make_LinearIntegralTerm<1,
+                   LinearIntegrationType::valueFunction,
+                   DomainOfIntegration::interior>([] (const Domain& x) { return 0.;})
+          , make_LinearIntegralTerm<2,
+                   LinearIntegrationType::valueFunction,
+                   DomainOfIntegration::interior>([] (const Domain& x) { return 0.;})
           ));
+
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
-  MatrixType testMatrix(stiffnessMatrix);
+/*  MatrixType testMatrix(stiffnessMatrix);
 
   for (unsigned int i=0; i<testMatrix.N(); i++)
   {
@@ -349,7 +272,7 @@ int main(int argc, char** argv)
                      sqrtepsilon);  //TODO is this really sqrtepsilon or something similar?
 
 std::ofstream file("testmatrix.txt");
-printmatrix(file , testMatrix, "testmatrix", "--");
+printmatrix(file , testMatrix, "testmatrix", "--");*/
 
 
   // Add minimization property for u^ on (near-)characteristic boundary if epsilon is closed to zero
@@ -360,7 +283,6 @@ printmatrix(file , testMatrix, "testmatrix", "--");
                      delta,
                      sqrtepsilon);  //TODO is this really sqrtepsilon or something similar?
 
-
   // Set weak zero-boundary conditions for u^ (outflow boundary)
   systemAssembler.applyWeakBoundaryCondition<3, 2>
                     (stiffnessMatrix,
@@ -370,9 +292,11 @@ printmatrix(file , testMatrix, "testmatrix", "--");
   // Determine Dirichlet dofs for u^ (inflow boundary) and set them to zero
   {
     std::vector<bool> dirichletNodesInflow;
-    boundaryTreatmentInflow(std::get<3>(solutionSpaces),
-                            dirichletNodesInflow);
-    systemAssembler.applyDirichletBoundary<3,double>
+    BoundaryTools boundaryTools = BoundaryTools();
+    boundaryTools.getInflowBoundaryMask(std::get<3>(solutionSpaces),
+                                        dirichletNodesInflow,
+                                        beta);
+    systemAssembler.applyDirichletBoundary<3>
         (stiffnessMatrix,
          rhs,
          dirichletNodesInflow,
@@ -431,8 +355,8 @@ printmatrix(file , testMatrix, "testmatrix", "--");
 
 //printmatrix(std::cout , stiffnessMatrix, "matrix", "--");
 
-std::ofstream file1("matrix.txt");
-printmatrix(file1 , stiffnessMatrix, "matrix", "--");
+//std::ofstream file1("matrix.txt");
+//printmatrix(file1 , stiffnessMatrix, "matrix", "--");
 
 //file <<"rhs = " <<std::endl;
 //for (unsigned int i=0; i<rhs.size(); i++)

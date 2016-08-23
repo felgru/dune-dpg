@@ -197,6 +197,22 @@ auto make_DPG_LinearForm(TestSpaces   testSpaces,
 }
 
 /**
+ * \brief Creates a LinearForm for a DPG formulation consistent with DPGSystemAssembler,
+ *        deducing the target type from the types of arguments.
+ *
+ * \param testSpaces  a tuple of test spaces
+ * \param terms       a tuple of LinearIntegralTerm
+ */
+template<class TestSpaces, class LinearTerms>
+auto make_DPGLinearForm(TestSpaces   testSpaces,
+                        LinearTerms  terms)
+    -> LinearForm<TestSpaces, LinearTerms, SaddlepointFormulation>
+{
+  return LinearForm<TestSpaces, LinearTerms, SaddlepointFormulation>
+                    (testSpaces, terms);
+}
+
+/**
  * \brief Creates a LinearForm (i.e. for a saddlepoint formulation),
  *        deducing the target type from the types of arguments.
  *

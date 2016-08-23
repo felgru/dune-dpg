@@ -3,12 +3,45 @@
 #ifndef DUNE_DPG_RHS_ASSEMBLER_HH
 #define DUNE_DPG_RHS_ASSEMBLER_HH
 
-#include <tuple>
 #include <functional>
+#include <list>
+#include <map>
 #include <memory>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 
-#include "system_assembler.hh"
+#include <boost/mpl/identity.hpp>
+#include <boost/mpl/range_c.hpp>
+#include <boost/mpl/set.hpp>
+#include <boost/mpl/transform.hpp>
+
+#include <boost/fusion/adapted/std_tuple.hpp>
+#include <boost/fusion/adapted/array.hpp>
+#include <boost/fusion/adapted/mpl.hpp>
+#include <boost/fusion/container/generation/make_vector.hpp>
+#include <boost/fusion/container/vector/convert.hpp>
+#include <boost/fusion/container/set/convert.hpp>
+#include <boost/fusion/algorithm/auxiliary/copy.hpp>
+#include <boost/fusion/algorithm/transformation/join.hpp>
+#include <boost/fusion/algorithm/transformation/transform.hpp>
+#include <boost/fusion/algorithm/transformation/zip.hpp>
+#include <boost/fusion/algorithm/iteration/accumulate.hpp>
+#include <boost/fusion/algorithm/iteration/for_each.hpp>
+#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
+#include <boost/fusion/sequence/intrinsic/value_at.hpp>
+
+#include <dune/istl/matrix.hh>
+#include <dune/istl/bcrsmatrix.hh>
+#include <dune/istl/matrixindexset.hh>
+
+#include "assemble_helper.hh"
+#include "assemble_types.hh"
+#include "bilinearform.hh"
+#include "innerproduct.hh"
+#include "quadrature.hh"
+#include "linearform.hh"
+#include "localevaluation.hh"
 
 namespace Dune {
 

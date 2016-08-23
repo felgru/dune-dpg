@@ -29,15 +29,15 @@
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/optimaltestbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
-#include <dune/dpg/system_assembler.hh>
-#include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errortools.hh>
+#include <dune/dpg/rhs_assembler.hh>
 
+#include <chrono>
 
 using namespace Dune;
 
@@ -74,15 +74,20 @@ int main(int argc, char** argv)
 
   shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
+  typedef GridType::LeafGridView GridView;
+  //TODO how to define this without GridView?
+  typedef GeometryBuffer<GridView::template Codim<0>::Geometry> GeometryBuffer;
+  GeometryBuffer geometryBuffer;
+
   double err = 1.;
   const double tol = 1e-10;
-  for(unsigned int i = 0; err > tol && i < 100; ++i)
+  for(unsigned int i = 0; err > tol && i < 200; ++i)
   {
-    typedef GridType::LeafGridView GridView;
+    std::chrono::steady_clock::time_point startiteration = std::chrono::steady_clock::now();
     GridView gridView = grid->leafGridView();
 
     /////////////////////////////////////////////////////////
-    //   Choose a finite element space
+    //   Choose finite element spaces
     /////////////////////////////////////////////////////////
 
     // u
@@ -169,26 +174,15 @@ int main(int argc, char** argv)
                                     DomainOfIntegration::interior>([beta, c](const FieldVector<double, dim>& x){return (-2)*c*f(beta)(x);})
           ));
 
-    using BilinearForm = decltype(bilinearForm);
-    using InnerProduct = decltype(innerProduct);
     using MinInnerProduct = decltype(minInnerProduct);
 
-    using TestspaceCoefficientMatrix
-        = Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
+    //  System assembler without geometry buffer
+    //auto systemAssembler
+    //   = make_DPGSystemAssembler(innerProduct, bilinearForm);
 
-    TestspaceCoefficientMatrix
-        testspaceCoefficientMatrix(bilinearForm, innerProduct);
-
-    // v
-    using FEBasisOptimalTest
-        = Functions::OptimalTestBasis<TestspaceCoefficientMatrix>;
-    auto optimalTestSpaces
-            = make_tuple(FEBasisOptimalTest(testspaceCoefficientMatrix));
-
+    //  System assembler with geometry buffer
     auto systemAssembler
-       = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
-                                  bilinearForm);
-
+     = make_DPGSystemAssembler(innerProduct, bilinearForm, geometryBuffer);
     /////////////////////////////////////////////////////////
     //   Stiffness matrix and right hand side vector
     /////////////////////////////////////////////////////////
@@ -197,26 +191,22 @@ int main(int argc, char** argv)
     typedef BlockVector<FieldVector<double,1> > VectorType;
     typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
 
-    VectorType rhs;
-    MatrixType stiffnessMatrix;
+    VectorType rhs, rhs1;
+    MatrixType stiffnessMatrix, stiffnessMatrix1;
 
     /////////////////////////////////////////////////////////
     //  Assemble the system
     /////////////////////////////////////////////////////////
     auto rightHandSide
-      = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
+      = make_DPGLinearForm(testSpaces,
                         std::make_tuple(make_LinearIntegralTerm<0,
                                             LinearIntegrationType::valueFunction,
                                             DomainOfIntegration::interior>(
                                    f(beta))));
+
+    std::chrono::steady_clock::time_point startsystemassembler = std::chrono::steady_clock::now();
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
-    /////////////////////////////////////////////////
-    //   Choose an initial iterate
-    /////////////////////////////////////////////////
-    VectorType x(feBasisTrace.size()
-                 +feBasisInterior.size());
-    x = 0;
 #if 1
     double delta = 1e-5;
     systemAssembler.applyMinimization<1, MinInnerProduct,2>
@@ -248,7 +238,18 @@ int main(int argc, char** argv)
            dirichletNodesInflow,
            0.);
     }
+    std::chrono::steady_clock::time_point endsystemassembler = std::chrono::steady_clock::now();
+    std::cout << "The system assembler took "
+              << std::chrono::duration_cast<std::chrono::microseconds>(endsystemassembler - startsystemassembler).count()
+              << "us.\n";
 
+
+    /////////////////////////////////////////////////
+    //   Choose an initial iterate
+    /////////////////////////////////////////////////
+    VectorType x(feBasisTrace.size()
+                 +feBasisInterior.size());
+    x = 0;
     ////////////////////////////
     //   Compute solution
     ////////////////////////////
@@ -257,16 +258,24 @@ int main(int argc, char** argv)
               <<" matrix size = " << stiffnessMatrix.N() <<" x " << stiffnessMatrix.M()
               <<" solution size = "<< x.size() <<std::endl;
 
+    std::chrono::steady_clock::time_point startsolve = std::chrono::steady_clock::now();
 
     UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
     InverseOperatorResult statistics;
     umfPack.apply(x, rhs, statistics);
 
+    std::chrono::steady_clock::time_point endsolve = std::chrono::steady_clock::now();
+    std::cout << "The solution took "
+              << std::chrono::duration_cast<std::chrono::microseconds>(endsolve - startsolve).count()
+              << "us.\n";
 
     ////////////////////////////////////////////////////////////////////////////
     //  Make a discrete function from the FE basis and the coefficient vector
     ////////////////////////////////////////////////////////////////////////////
-
+#if 1
+//  if ((i/10)*10 == i)
+//  {
+    std::chrono::steady_clock::time_point startresults = std::chrono::steady_clock::now();
     VectorType u(feBasisInterior.size());
     u=0;
     for (unsigned int i=0; i<feBasisInterior.size(); i++)
@@ -308,14 +317,22 @@ int main(int argc, char** argv)
     vtkWriter1.write("transport_solution_trace_"+std::to_string(nelements)
         +"_"+std::to_string(i));
 
+    std::chrono::steady_clock::time_point endresults = std::chrono::steady_clock::now();
+    std::cout << "Saving the results took "
+              << std::chrono::duration_cast<std::chrono::microseconds>(endresults - startresults).count()
+              << "us.\n";
+//  }
+#endif
     ////////////////////////////////////////////////////
     // Estimate a posteriori error and refine
     ////////////////////////////////////////////////////
+
     auto rhsAssembler_aposteriori = make_RhsAssembler(testSpaces_aposteriori);
     auto rightHandSide_aposteriori
       = replaceTestSpaces(rightHandSide, testSpaces_aposteriori);
     rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
 
+    std::chrono::steady_clock::time_point starterror = std::chrono::steady_clock::now();
     const double ratio = .2;
     ErrorTools errorTools = ErrorTools();
     err = errorTools.DoerflerMarking(*grid, ratio,
@@ -333,9 +350,19 @@ int main(int argc, char** argv)
     std::cout << "A posteriori error in iteration " << i << ": "
               << err << std::endl;
 
+    std::chrono::steady_clock::time_point enderror = std::chrono::steady_clock::now();
+    std::cout << "The error computation took "
+              << std::chrono::duration_cast<std::chrono::microseconds>(enderror - starterror).count()
+              << "us.\n";
+
     grid->preAdapt();
     grid->adapt();
     grid->postAdapt();
+
+    std::chrono::steady_clock::time_point endwholeiteration = std::chrono::steady_clock::now();
+    std::cout << "The whole iteration took "
+              << std::chrono::duration_cast<std::chrono::microseconds>(endwholeiteration - startiteration).count()
+              << "us.\n";
   }
 
 

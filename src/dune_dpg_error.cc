@@ -5,9 +5,9 @@
 
 #include <cmath>
 
-#include <vector>
 #include <array>
 #include <tuple>
+#include <vector>
 
 #include <dune/common/exceptions.hh> // We use exceptions
 
@@ -25,14 +25,13 @@
 #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-#include <dune/functions/functionspacebases/optimaltestbasis.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
-#include <dune/dpg/system_assembler.hh>
-#include <dune/dpg/errortools.hh>
 #include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/dpg_system_assembler.hh>
+#include <dune/dpg/errortools.hh>
 #include <dune/dpg/rhs_assembler.hh>
 
 
@@ -98,13 +97,19 @@ int main()
     //   Choose finite element spaces
     /////////////////////////////////////////////////////////
 
-    typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
     typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
+    typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
     auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView),
                                           FEBasisTrace(gridView));
 
-    typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v
+    typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;     // v
     auto testSpaces = std::make_tuple(FEBasisTest(gridView));
+
+    // enriched test space for error estimation
+    using FEBasisTest_aposteriori
+        = Functions::LagrangeDGBasis<GridView, 4>;
+    auto testSpaces_aposteriori
+        = std::make_tuple(FEBasisTest_aposteriori(gridView));
 
     /////////////////////////////////////////////////////////
     //   Choose a bilinear form
@@ -113,7 +118,7 @@ int main()
     double beta0 = -1.0;
     double beta1 = -1.0;
     double c = 1.;
-    FieldVector<double, dim> beta = {beta0,beta1};
+    FieldVector<double, dim> beta = {beta0, beta1};
     auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
             make_tuple(
                 make_IntegralTerm<0,0,IntegrationType::valueValue,
@@ -124,8 +129,6 @@ int main()
                                       DomainOfIntegration::face>(1., beta)));
     auto innerProduct = make_InnerProduct(testSpaces,
             make_tuple(
-                make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                      DomainOfIntegration::interior>(1.),
                 make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                       DomainOfIntegration::interior>(1., beta),
                 make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
@@ -138,6 +141,12 @@ int main()
                 make_IntegralTerm<1,1,IntegrationType::gradGrad,                // (beta grad u^,beta grad u^)
                                       DomainOfIntegration::interior>(1, beta)
           ));
+
+    auto bilinearForm_aposteriori
+        = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
+    auto innerProduct_aposteriori
+        = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
+
     auto aPosterioriInnerProduct = make_InnerProduct(solutionSpaces,
             make_tuple(
                 make_IntegralTerm<0,0,IntegrationType::valueValue,              // (u,u)
@@ -160,21 +169,9 @@ int main()
                 make_LinearIntegralTerm<1,LinearIntegrationType::valueFunction,    // -2(cw,f)
                                       DomainOfIntegration::interior>([c](const FieldVector<double, dim>& x){return (-2)*c*fieldRHS(x);})
           ));
-    auto rhsAssembler = make_RhsAssembler(testSpaces);
-
-    typedef decltype(bilinearForm) BilinearForm;
-    typedef decltype(innerProduct) InnerProduct;
-    typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct> TestspaceCoefficientMatrix;
-
-    TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
-
-    typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix> FEBasisOptimalTest;              // v
-    FEBasisOptimalTest feBasisTest(testspaceCoefficientMatrix);
-    auto optimalTestSpaces = make_tuple(feBasisTest);
 
     auto systemAssembler
-       = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
-                                  bilinearForm);
+       = make_DPGSystemAssembler(innerProduct, bilinearForm);
 
     /////////////////////////////////////////////////////////
     //   Stiffness matrix and right hand side vector
@@ -191,7 +188,7 @@ int main()
     /////////////////////////////////////////////////////////
 
     auto rightHandSide
-      = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
+      = make_DPGLinearForm(testSpaces,
                     std::make_tuple(make_LinearIntegralTerm<0,
                                         LinearIntegrationType::valueFunction,
                                         DomainOfIntegration::interior>(fieldRHS)));
@@ -208,7 +205,6 @@ int main()
     // Determine Dirichlet dofs for u^ (inflow boundary)
     {
       std::vector<bool> dirichletNodesInflow;
-      std::vector<bool> dirichletNodesInflowErrorTools;
 
       BoundaryTools boundaryTools = BoundaryTools();
       boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
@@ -283,28 +279,31 @@ int main()
     // to retrive the value out of this:
     // std::get<0>(uExact)(x)
 
-    // We build an object of type ErrorTools to study errors, residuals and do hp-adaptivity
+    // We build an object of type ErrorTools to study errors, residuals
+    // and do hp-adaptivity
     ErrorTools errorTools = ErrorTools();
 
     // We compute the L2 error between the exact and the fem solutions
-    err = errorTools.computeL2error<1>(innerSpace,u,uExact);
+    err = errorTools.computeL2error<1>(innerSpace, u, uExact);
     std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl;
 
     // A posteriori error
     // We compute the rhs in the form given by the projection approach
-    auto rightHandSideEnriched
-      = make_LinearForm(rhsAssembler.getTestSpaces(),
-                    std::make_tuple(make_LinearIntegralTerm<0,
-                                        LinearIntegrationType::valueFunction,
-                                        DomainOfIntegration::interior>(fieldRHS)));
-    rhsAssembler.assembleRhs(rhs, rightHandSideEnriched);
-    // It is necessary to provide rhs in the above form to call this aPosterioriError method
+    auto rhsAssembler_aposteriori = make_RhsAssembler(testSpaces_aposteriori);
+    auto rightHandSide_aposteriori
+      = replaceTestSpaces(rightHandSide, testSpaces_aposteriori);
+    rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
+
     double aposterioriErr
-        = errorTools.aPosterioriError(bilinearForm, innerProduct, x, rhs);
-    std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
+        = errorTools.aPosterioriError(bilinearForm_aposteriori,
+                                      innerProduct_aposteriori, x, rhs);
+    std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = "
+              << aposterioriErr << std::endl;
     double aposterioriL2Err
-        = errorTools.aPosterioriL2Error(aPosterioriInnerProduct, aPosterioriLinearForm, fieldRHS, x);
-    std::cout << "A posteriori L2 error: || (u,trace u) - (u_fem,theta) || = " << aposterioriL2Err << std::endl;
+        = errorTools.aPosterioriL2Error(aPosterioriInnerProduct,
+                                        aPosterioriLinearForm, fieldRHS, x);
+    std::cout << "A posteriori L2 error: || (u,trace u) - (u_fem,theta) || = "
+              << aposterioriL2Err << std::endl;
 
     //////////////////////////////////////////////////////////////////////////////////////////////
     //  Write result to VTK file
@@ -323,7 +322,8 @@ int main()
     ////////////////
     const double ratio = .2;
     errorTools.DoerflerMarking(*grid, ratio,
-                               bilinearForm, innerProduct,
+                               bilinearForm_aposteriori,
+                               innerProduct_aposteriori,
                                aPosterioriInnerProduct,
                                aPosterioriLinearForm, fieldRHS,
                                x, rhs, 0);    // the last parameter is in [0,1] and
