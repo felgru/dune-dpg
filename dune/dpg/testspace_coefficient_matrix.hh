@@ -122,7 +122,7 @@ class GeometryComparable
   }
 
   private:
-  int                           corners;
+  unsigned int                  corners;
   std::vector<GlobalCoordinate> cornerVector;
 };
 

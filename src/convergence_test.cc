@@ -147,9 +147,6 @@ int main(int argc, char** argv)
   auto innerProduct_aposteriori
       = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
-  using BilinearForm = decltype(bilinearForm);
-  using InnerProduct = decltype(innerProduct);
-
   auto systemAssembler
      = make_DPGSystemAssembler(innerProduct, bilinearForm);
 

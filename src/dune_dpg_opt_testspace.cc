@@ -111,9 +111,6 @@ int main(int argc, char** argv)
               make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
                                     DomainOfIntegration::face>(1., beta)));
 
-  typedef decltype(bilinearForm) BilinearForm;
-  typedef decltype(innerProduct) InnerProduct;
-
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
   /////////////////////////////////////////////////////////

@@ -170,9 +170,6 @@ int main()
                                       DomainOfIntegration::interior>([c](const FieldVector<double, dim>& x){return (-2)*c*fieldRHS(x);})
           ));
 
-    typedef decltype(bilinearForm) BilinearForm;
-    typedef decltype(innerProduct) InnerProduct;
-
     auto systemAssembler
        = make_DPGSystemAssembler(innerProduct, bilinearForm);
 

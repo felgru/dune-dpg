@@ -174,8 +174,6 @@ int main(int argc, char** argv)
                                     DomainOfIntegration::interior>([beta, c](const FieldVector<double, dim>& x){return (-2)*c*f(beta)(x);})
           ));
 
-    using BilinearForm = decltype(bilinearForm);
-    using InnerProduct = decltype(innerProduct);
     using MinInnerProduct = decltype(minInnerProduct);
 
     //  System assembler without geometry buffer
