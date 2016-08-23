@@ -74,16 +74,16 @@ int main(int argc, char** argv)
 
   shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
-  typedef GridType::LeafGridView GridView1;
-  typedef decltype(std::declval<typename GridView1::template Codim<0>::Entity>().geometry()) Geometry;   //TODO how to define this without GridView?
-  GeometryBuffer<Geometry> geometryBuffer;
+  typedef GridType::LeafGridView GridView;
+  //TODO how to define this without GridView?
+  typedef GeometryBuffer<GridView::template Codim<0>::Geometry> GeometryBuffer;
+  GeometryBuffer geometryBuffer;
 
   double err = 1.;
   const double tol = 1e-10;
   for(unsigned int i = 0; err > tol && i < 200; ++i)
   {
     std::chrono::steady_clock::time_point startiteration = std::chrono::steady_clock::now();
-    typedef GridType::LeafGridView GridView;
     GridView gridView = grid->leafGridView();
 
     /////////////////////////////////////////////////////////
