@@ -16,7 +16,6 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/functionspacebases/optimaltestbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
@@ -31,7 +30,7 @@
 #include <dune/dpg/linearfunctionalterm.hh>
 #include <dune/dpg/radiative_transfer/approximate_scattering.hh>
 #include <dune/dpg/rhs_assembler.hh>
-#include <dune/dpg/system_assembler.hh>
+#include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/type_traits.hh>
 
 #include <boost/math/constants/constants.hpp>
@@ -80,6 +79,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
   const unsigned int dim = 2;
 
   typedef typename Grid::LeafGridView GridView;
+  typedef typename GridView::template Codim<0>::Geometry Geometry;
   GridView gridView = grid.leafGridView();
 
   ///////////////////////////////////
@@ -91,7 +91,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
   // Handle directions of discrete ordinates
   ////////////////////////////////////////////
   using Domain
-    = typename GridView::template Codim<0>::Geometry::GlobalCoordinate;
+    = typename Geometry::GlobalCoordinate;
   using Direction = FieldVector<double, dim>;
   // Vector of directions: sVector
   std::vector< Direction > sVector(numS);
@@ -229,22 +229,19 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
           replaceTestSpaces(std::declval<InnerProduct>(), testSpacesEnriched))>
         InnerProductEnriched;
 
-      typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>
-          TestspaceCoefficientMatrix;
-      typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix>
-          FEBasisOptimalTest;              // v
+      typedef GeometryBuffer<typename GridView::template Codim<0>::Geometry>
+          GeometryBuffer_t;
 
-      typedef decltype(make_DPG_SystemAssembler(
-                  std::declval<std::tuple<FEBasisOptimalTest>>(), solutionSpaces,
-                  std::declval<BilinearForm>()))
+      typedef decltype(make_DPGSystemAssembler(
+                  std::declval<InnerProduct&>(),
+                  std::declval<BilinearForm&>(),
+                  std::declval<GeometryBuffer_t&>()))
               SystemAssembler_t;
 
       std::vector<SystemAssembler_t> systemAssemblers;
       systemAssemblers.reserve(numS);
+      std::vector<GeometryBuffer_t> geometryBuffers(numS);
 
-      /* create an FEBasisOptimalTest for each direction */
-      std::vector<std::tuple<FEBasisOptimalTest> > optimalTestSpaces;
-      optimalTestSpaces.reserve(numS);
       /* All the following objects have to be created outside of the
        * following for loop, as the optimalTestSpace holds references
        * to them which will otherwise go out of scope. */
@@ -256,8 +253,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       bilinearFormsEnriched.reserve(numS);
       std::vector<InnerProductEnriched> innerProductsEnriched;
       innerProductsEnriched.reserve(numS);
-      std::vector<TestspaceCoefficientMatrix> coefficientMatrices;
-      coefficientMatrices.reserve(numS);
 
       for(unsigned int i = 0; i < numS; ++i)
       {
@@ -284,14 +279,10 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         innerProductsEnriched.emplace_back(
             replaceTestSpaces(innerProducts[i], testSpacesEnriched));
 
-        coefficientMatrices.emplace_back(bilinearForms[i], innerProducts[i]);
-
-        optimalTestSpaces.emplace_back(
-                make_tuple(FEBasisOptimalTest(coefficientMatrices[i])));
-
         systemAssemblers.emplace_back(
-            make_DPG_SystemAssembler(optimalTestSpaces[i], solutionSpaces,
-                                     bilinearForms[i]));
+            make_DPGSystemAssembler(innerProducts[i],
+                                    bilinearForms[i],
+                                    geometryBuffers[i]));
       }
 
       std::vector<VectorType> rhs(numS);
@@ -349,7 +340,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         Direction s = sVector[i];
 
         auto rhsFunction = make_DPG_LinearForm(
-              systemAssemblers[i].getTestSpaces(),
+              systemAssemblers[i].getTestSearchSpaces(),
               std::make_tuple(
                 make_LinearIntegralTerm
                   < 0

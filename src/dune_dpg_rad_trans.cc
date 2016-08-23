@@ -34,7 +34,7 @@
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
-#include <dune/dpg/system_assembler.hh>
+#include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/rhs_assembler.hh>
@@ -299,18 +299,18 @@ int main(int argc, char** argv)
                                        FieldVector<double, dim>{1.,1.}))))
           InnerProduct;
 
-  typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>
+  typedef UnbufferedTestspaceCoefficientMatrix<BilinearForm, InnerProduct>
       TestspaceCoefficientMatrix;
   typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix>
       FEBasisOptimalTest;              // v
 
-  typedef decltype(make_DPG_SystemAssembler(
-#if 1
-              std::declval<std::tuple<FEBasisOptimalTest>>(), solutionSpaces,
-#else
-              testSpaces, solutionSpaces,
-#endif
-              std::declval<BilinearForm>()))
+  typedef GeometryBuffer<GridView::template Codim<0>::Geometry>
+      GeometryBuffer_t;
+
+  typedef decltype(make_DPGSystemAssembler(
+              std::declval<InnerProduct&>(),
+              std::declval<BilinearForm&>(),
+              std::declval<GeometryBuffer_t&>()))
           SystemAssembler_t;
 
   std::vector<SystemAssembler_t> systemAssemblers;
@@ -344,6 +344,7 @@ int main(int argc, char** argv)
   innerProducts.reserve(numS);
   std::vector<TestspaceCoefficientMatrix> coefficientMatrices;
   coefficientMatrices.reserve(numS);
+  std::vector<GeometryBuffer_t> geometryBuffers(numS);
 
   for(int i = 0; i < numS; ++i)
   {
@@ -372,8 +373,9 @@ int main(int argc, char** argv)
             make_tuple(FEBasisOptimalTest(coefficientMatrices[i])));
 
     systemAssemblers.emplace_back(
-        make_DPG_SystemAssembler(optimalTestSpaces[i], solutionSpaces,
-                                 bilinearForms[i]));
+        make_DPGSystemAssembler(innerProducts[i],
+                                bilinearForms[i],
+                                geometryBuffers[i]));
     scatteringAssemblers.emplace_back(
         make_DPG_ScatteringAssembler(optimalTestSpaces[i],
                                      solutionSpaces));
@@ -481,7 +483,7 @@ int main(int argc, char** argv)
       Direction s = sVector[i];
 
       auto g = make_DPG_LinearForm(
-          systemAssemblers[i].getTestSpaces(),
+          systemAssemblers[i].getTestSearchSpaces(),
           std::make_tuple(
             make_LinearIntegralTerm
               < 0
