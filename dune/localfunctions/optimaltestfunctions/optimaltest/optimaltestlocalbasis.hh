@@ -42,7 +42,7 @@ namespace Dune
     typedef LocalBasisTraits<D,d,Dune::FieldVector<D,d>,R,1,Dune::FieldVector<R,1>,Dune::FieldMatrix<R,1,d> > Traits;
 
     OptimalTestLocalBasis (const TestSearchLocalBasis& testSearchLocalBasis,
-                           MatrixType& coeffMat, size_t offset)
+                           const MatrixType& coeffMat, size_t offset)
         : testSearchLocalBasis(testSearchLocalBasis),
           coefficientMatrix(coeffMat),
           offset(offset),
@@ -127,7 +127,7 @@ namespace Dune
     }
   private:
     const TestSearchLocalBasis& testSearchLocalBasis;
-    MatrixType& coefficientMatrix;
+    const MatrixType& coefficientMatrix;
     size_t offset;
     size_t numTestSearchDOFs;
   };

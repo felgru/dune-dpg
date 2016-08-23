@@ -223,22 +223,22 @@ class UnbufferedTestspaceCoefficientMatrix
     }
   }
 
-  MatrixType& coefficientMatrix()
+  const MatrixType& coefficientMatrix()
   {
     return coefficientMatrix_;
   }
 
-  MatrixType& localMatrix()
+  const MatrixType& localMatrix()
   {
     return localMatrix_;
   }
 
-  BilinearForm& bilinearForm() const
+  const BilinearForm& bilinearForm() const
   {
     return bilinearForm_;
   }
 
-  InnerProduct& innerProduct() const
+  const InnerProduct& innerProduct() const
   {
     return innerProduct_;
   }
