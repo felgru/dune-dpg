@@ -49,6 +49,10 @@ public:
   {
     const unsigned int m = rhsMatrix.M();
     const unsigned int n = matrix.N();
+    if(!(n==rhsMatrix.N()))
+    {
+      DUNE_THROW(Dune::Exception, "rhsMatrix in Cholesky has wrong number of rows");
+    }
     for (unsigned int im=0; im<m; im++)
     {
     // solve LY = B
@@ -75,11 +79,50 @@ public:
     }
   }
 
+  void apply(MatrixType& rhsMatrix, MatrixType& solutionMatrix)
+  {
+    const unsigned int m = rhsMatrix.M();
+    const unsigned int n = matrix.N();
+    solutionMatrix.setSize(n,m);
+    if(!(n==rhsMatrix.N()))
+    {
+      DUNE_THROW(Dune::Exception, "rhsMatrix in Cholesky has wrong number of rows");
+    }
+    for (unsigned int im=0; im<m; im++)
+    {
+    // solve LY = B
+      for (unsigned int j=0; j<n; j++)
+      {
+        double summe = 0;
+        for (unsigned int i=0; i<j; i++)
+        {
+          summe+=matrix[j][i]*solutionMatrix[i][im];
+        }
+        solutionMatrix[j][im] = (rhsMatrix[j][im]-summe);
+      }
+
+     // solve L^TX = D^(-1)B
+      for (int j=n-1; j>-1; j--)
+      {
+        solutionMatrix[j][im] = solutionMatrix[j][im]/matrix[j][j];
+        double summe = 0;
+        for (unsigned int i=j+1; i<n; i++)
+        {
+          summe+=matrix[i][j]*solutionMatrix[i][im];
+        }
+        solutionMatrix[j][im] = (solutionMatrix[j][im]-summe);
+      }
+    }
+  }
+
 
   void apply(BlockVector<FieldVector<double,1> >& rhsVector)
   {
     const unsigned int n = rhsVector.size();
-
+    if(!(n==matrix.N()))
+    {
+      DUNE_THROW(Dune::Exception, "rhsVector in Cholesky has wrong number of rows");
+    }
     // solve LY = B
       for (unsigned int j=0; j<n; j++)
       {

@@ -30,13 +30,13 @@
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/pqkfacenodalbasis.hh>
-#include <dune/functions/functionspacebases/optimaltestbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
-#include <dune/dpg/system_assembler.hh>
+#include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/boundarytools.hh>
 
+#include <chrono>
 
 using namespace Dune;
 
@@ -113,25 +113,10 @@ int main(int argc, char** argv)
 
   typedef decltype(bilinearForm) BilinearForm;
   typedef decltype(innerProduct) InnerProduct;
-  typedef Functions::TestspaceCoefficientMatrix<BilinearForm, InnerProduct>
-      TestspaceCoefficientMatrix;
-
-  TestspaceCoefficientMatrix testspaceCoefficientMatrix(bilinearForm, innerProduct);
-
-  // v
-  typedef Functions::OptimalTestBasis<TestspaceCoefficientMatrix>
-      FEBasisOptimalTest;
-  auto optimalTestSpaces
-          = make_tuple(FEBasisOptimalTest(testspaceCoefficientMatrix));
-
-  auto systemAssembler
-     = make_DPG_SystemAssembler(optimalTestSpaces, solutionSpaces,
-                                bilinearForm);
 
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
   /////////////////////////////////////////////////////////
-
 
   typedef BlockVector<FieldVector<double,1> > VectorType;
   typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
@@ -139,17 +124,24 @@ int main(int argc, char** argv)
   VectorType rhs;
   MatrixType stiffnessMatrix;
 
+  typedef decltype(std::declval<typename GridView::template Codim<0>::Entity>().geometry()) Geometry;
+  GeometryBuffer<Geometry> geometryBuffer;
+
+  auto systemAssembler
+     = make_DPGSystemAssembler(innerProduct, bilinearForm, geometryBuffer);
+
   /////////////////////////////////////////////////////////
   //  Assemble the system
   /////////////////////////////////////////////////////////
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
   auto rightHandSide
-    = make_DPG_LinearForm(systemAssembler.getTestSpaces(),
+    = make_DPGLinearForm(testSpaces,
                       std::make_tuple(make_LinearIntegralTerm<0,
                                             LinearIntegrationType::valueFunction,
                                             DomainOfIntegration::interior>(
                                  [] (const Domain& x) { return 1.;})));
+
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
   /////////////////////////////////////////////////
@@ -167,7 +159,6 @@ int main(int argc, char** argv)
                      beta,
                      delta);
 #endif
-
   // Determine Dirichlet dofs for u^ (inflow boundary)
   {
     std::vector<bool> dirichletNodesInflow;
@@ -190,11 +181,9 @@ int main(int argc, char** argv)
             <<" matrix size = " << stiffnessMatrix.N() <<" x " << stiffnessMatrix.M()
             <<" solution size = "<< x.size() <<std::endl;
 
-
   UMFPack<MatrixType> umfPack(stiffnessMatrix, 2);
   InverseOperatorResult statistics;
   umfPack.apply(x, rhs, statistics);
-
 
   ////////////////////////////////////////////////////////////////////////////
   //  Make a discrete function from the FE basis and the coefficient vector

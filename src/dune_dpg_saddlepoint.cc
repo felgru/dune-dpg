@@ -26,7 +26,7 @@
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
 #include <dune/dpg/boundarytools.hh>
-#include <dune/dpg/system_assembler.hh>
+#include <dune/dpg/saddlepoint_system_assembler.hh>
 
 
 
@@ -83,8 +83,8 @@ int main(int argc, char** argv)
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                     DomainOfIntegration::interior>(1., beta)));
   auto systemAssembler
-     = make_Saddlepoint_SystemAssembler(testSpaces, solutionSpaces,
-                                        bilinearForm, innerProduct);
+     = make_SaddlepointSystemAssembler(testSpaces, solutionSpaces,
+                                       bilinearForm, innerProduct);
 
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
