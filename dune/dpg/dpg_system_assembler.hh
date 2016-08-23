@@ -78,20 +78,23 @@ public:
   using InnerProduct = InnProduct;
   using BilinearForm = BilinForm;
   using TestspaceCoefficientMatrix
-    = typename BufferPolicy::template TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
+    = typename BufferPolicy::template
+        TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
   using TestSearchSpaces = typename BilinearForm::TestSpaces;
   using SolutionSpaces = typename BilinearForm::SolutionSpaces;
 
 
   //! tuple type for the local views of the test spaces
-  typedef typename boost::fusion::result_of::as_vector<
-      typename boost::fusion::result_of::
-      transform<TestSearchSpaces, detail::getLocalView>::type>::type TestLocalViews;
+  using TestLocalViews
+    = typename boost::fusion::result_of::as_vector<
+        typename boost::fusion::result_of::
+          transform<TestSearchSpaces, detail::getLocalView>::type>::type;
   //! tuple type for the local views of the solution spaces
-  typedef typename boost::fusion::result_of::as_vector<
-      typename boost::fusion::result_of::
-      transform<SolutionSpaces, detail::getLocalView>::type
-      >::type SolutionLocalViews;
+  using SolutionLocalViews
+    = typename boost::fusion::result_of::as_vector<
+          typename boost::fusion::result_of::
+            transform<SolutionSpaces, detail::getLocalView>::type
+        >::type;
 
   DPGSystemAssembler () = delete;
   /**
@@ -105,7 +108,8 @@ public:
              : testSearchSpaces_(bilinearForm.getTestSpaces()),
                solutionSpaces_(bilinearForm.getSolutionSpaces()),
                bilinearForm_(bilinearForm),
-               testspaceCoefficientMatrix_(bilinearForm,innerProduct)
+               testspaceCoefficientMatrix_(bilinearForm,
+                                           innerProduct)
   { }
 
   template <class GeometryBuffer>
@@ -116,7 +120,9 @@ public:
              : testSearchSpaces_(bilinearForm.getTestSpaces()),
                solutionSpaces_(bilinearForm.getSolutionSpaces()),
                bilinearForm_(bilinearForm),
-               testspaceCoefficientMatrix_(bilinearForm,innerProduct,geometryBuffer)
+               testspaceCoefficientMatrix_(bilinearForm,
+                                           innerProduct,
+                                           geometryBuffer)
   { }
 
   /**
@@ -270,9 +276,6 @@ auto make_DPGSystemAssembler(InnerProduct&   innerProduct,
                              BilinearForm&   bilinearForm)
     -> DPGSystemAssembler<InnerProduct, BilinearForm, detail::Unbuffered>
 {
-  // set the inner product of the system assembler to nullptr as it is
-  // not used in the DPG formulation (we use the inner product of the
-  // optimal test space her).
   return DPGSystemAssembler<InnerProduct, BilinearForm, detail::Unbuffered>
                       (innerProduct,
                        bilinearForm);
@@ -294,9 +297,6 @@ auto make_DPGSystemAssembler(InnerProduct&   innerProduct,
                             )
     -> DPGSystemAssembler<InnerProduct, BilinearForm, detail::Buffered>
 {
-  // set the inner product of the system assembler to nullptr as it is
-  // not used in the DPG formulation (we use the inner product of the
-  // optimal test space her).
   return DPGSystemAssembler<InnerProduct, BilinearForm, detail::Buffered>
                       (innerProduct,
                        bilinearForm,
@@ -314,8 +314,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   using namespace boost::fusion;
   using namespace Dune::detail;
 
-  typedef typename std::tuple_element<0,TestSearchSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(testSearchSpaces_).gridView();
+  auto gridView = std::get<0>(testSearchSpaces_).gridView();
 
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -330,7 +329,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
 
   // Views on the FE bases on a single element
-  auto testLocalViews     = as_vector(transform(testSearchSpaces_, getLocalView()));
+  auto testLocalViews     = as_vector(transform(testSearchSpaces_,
+                                                getLocalView()));
 
   auto solutionLocalViews = as_vector(transform(solutionSpaces_,
                                                 getLocalView()));
@@ -406,7 +406,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     // compute the coefficient matrix C for the optimal test space
     testspaceCoefficientMatrix_.bind(e);
-    Matrix<FieldMatrix<double,1,1> > coefficientMatrix = testspaceCoefficientMatrix_.coefficientMatrix();
+    Matrix<FieldMatrix<double,1,1> > coefficientMatrix
+        = testspaceCoefficientMatrix_.coefficientMatrix();
 
     // compute the local right-hand side vector C^T*F for the optimal test space
     BlockVector<FieldVector<double,1> > localRhs;
@@ -421,7 +422,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       }
 
     // compute the local stiffness matrix
-    Matrix<FieldMatrix<double,1,1> > elementMatrix = testspaceCoefficientMatrix_.localMatrix();
+    Matrix<FieldMatrix<double,1,1> > elementMatrix
+        = testspaceCoefficientMatrix_.localMatrix();
 
     // Add local right-hand side onto the global right-hand side
     auto cpRhs = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
@@ -482,8 +484,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   using namespace boost::fusion;
   using namespace Dune::detail;
 
-  typedef typename std::tuple_element<0,TestSearchSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(testSearchSpaces_).gridView();
+  auto gridView = std::get<0>(testSearchSpaces_).gridView();
 
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -554,7 +555,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   for(const auto& e : elements(gridView)) {
 
     testspaceCoefficientMatrix_.bind(e);
-    Matrix<FieldMatrix<double,1,1> > elementMatrix = testspaceCoefficientMatrix_.localMatrix();
+    Matrix<FieldMatrix<double,1,1> > elementMatrix
+        = testspaceCoefficientMatrix_.localMatrix();
 
     for_each(solutionLocalViews, applyBind<decltype(e)>(e));
     for_each(zip(solutionLocalIndexSets, solutionLocalViews),
@@ -593,8 +595,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   using namespace boost::fusion;
   using namespace Dune::detail;
 
-  typedef typename std::tuple_element<0,TestSearchSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(testSearchSpaces_).gridView();
+  auto gridView = std::get<0>(testSearchSpaces_).gridView();
 
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -610,12 +611,14 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   rhs = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews     = as_vector(transform(testSearchSpaces_, getLocalView()));
+  auto testLocalViews = as_vector(transform(testSearchSpaces_,
+                                            getLocalView()));
 
-  auto solutionLocalViews     = as_vector(transform(solutionSpaces_, getLocalView()));
+  auto solutionLocalViews = as_vector(transform(solutionSpaces_,
+                                                getLocalView()));
 
   auto solutionLocalIndexSets = as_vector(transform(solutionSpaces_,
-                                                getLocalIndexSet()));
+                                                    getLocalIndexSet()));
 
   for(const auto& e : elements(gridView)) {
 
@@ -639,7 +642,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     // compute the coefficient matrix C for the optimal test space
     testspaceCoefficientMatrix_.bind(e);
-    Matrix<FieldMatrix<double,1,1> > coefficientMatrix = testspaceCoefficientMatrix_.coefficientMatrix();
+    Matrix<FieldMatrix<double,1,1> > coefficientMatrix
+        = testspaceCoefficientMatrix_.coefficientMatrix();
 
     // compute the local right-hand side vector C^T*F for the optimal test space
     BlockVector<FieldVector<double,1> > localRhs;
@@ -809,8 +813,7 @@ applyWeakBoundaryCondition
   using namespace boost::fusion;
   using namespace Dune::detail;
 
-  typedef typename std::tuple_element<0,SolutionSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(solutionSpaces_).gridView();
+  auto gridView = std::get<0>(solutionSpaces_).gridView();
 
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
   fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
@@ -839,29 +842,31 @@ applyWeakBoundaryCondition
 
     for (auto&& intersection : intersections(gridView, e))
     {
-      if (intersection.boundary()) //if the intersection is at the (physical) boundary of the domain
-      {
+      if (intersection.boundary())
+      { // the intersection is at the (physical) boundary of the domain
         const FieldVector<double,dim>& centerOuterNormal =
                 intersection.centerUnitOuterNormal();
 
-        if ((beta*centerOuterNormal) > -1e-10) //everywhere except inflow boundary
-        {
+        if ((beta*centerOuterNormal) > -1e-10)
+        { // everywhere except inflow boundary
           const QuadratureRule<double, dim-1>& quadFace =
                   QuadratureRules<double, dim-1>::rule(intersection.type(),
                                                        quadratureOrder);
 
           for (size_t pt=0; pt < quadFace.size(); pt++)
           {
-            // position of the current quadrature point in the reference element (face!)
-            const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
+            // position of the current quadrature point in the
+            // reference element (face!)
+            const FieldVector<double,dim-1>& quadFacePos
+                = quadFace[pt].position();
 
             const double integrationWeight
-              = intersection.geometry().integrationElement(quadFacePos)
-              * quadFace[pt].weight();
+                = intersection.geometry().integrationElement(quadFacePos)
+                * quadFace[pt].weight();
 
             // position of the quadrature point within the element
-            const FieldVector<double,dim> elementQuadPos =
-                intersection.geometryInInside().global(quadFacePos);
+            const FieldVector<double,dim> elementQuadPos
+                = intersection.geometryInInside().global(quadFacePos);
 
             // values of the shape functions
             std::vector<FieldVector<double,1> > solutionValues;
@@ -907,8 +912,7 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   using namespace boost::fusion;
   using namespace Dune::detail;
 
-  typedef typename std::tuple_element<spaceIndex,SolutionSpaces>::type::GridView GridView;
-  GridView gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
+  auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
 
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
   fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
@@ -1027,8 +1031,7 @@ applyMinimization
   using namespace boost::fusion;
   using namespace Dune::detail;
 
-  typedef typename std::tuple_element<spaceIndex,SolutionSpaces>::type::GridView GridView;
-  GridView gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
+  auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
 
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
   fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
@@ -1037,8 +1040,10 @@ applyMinimization
 
   size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-  // get local view for solution space (necessary if we want to use inner product) /TODO inefficient (why?)
-  auto solutionLocalView = as_vector(transform(solutionSpaces_, getLocalView()));
+  // get local view for solution space
+  // (necessary if we want to use inner product) // TODO inefficient (why?)
+  auto solutionLocalView = as_vector(transform(solutionSpaces_,
+                                               getLocalView()));
 
   auto localIndexSet = at_c<spaceIndex>(solutionSpaces_).localIndexSet();
 
@@ -1053,7 +1058,8 @@ applyMinimization
     fold(zip(localSolutionSpaceOffsets, solutionLocalView),
          (size_t)0, offsetHelper());
 
-    const auto& localFiniteElement = at_c<spaceIndex>(solutionLocalView).tree().finiteElement();
+    const auto& localFiniteElement
+        = at_c<spaceIndex>(solutionLocalView).tree().finiteElement();
 
     size_t n = localFiniteElement.localBasis().size();
 
@@ -1069,20 +1075,23 @@ applyMinimization
       const FieldVector<double,dim>& centerOuterNormal =
               intersection.centerUnitOuterNormal();
       //set relevant faces for almost characteristic faces
-      relevantFaces[intersection.indexInInside()] = (std::abs(beta*centerOuterNormal) < delta);
+      relevantFaces[intersection.indexInInside()]
+          = (std::abs(beta*centerOuterNormal) < delta);
     }
 
     std::vector<bool> relevantDOFs(n, false);
 
     for (unsigned int i=0; i<n; i++)
     {
-      if (localFiniteElement.localCoefficients().localKey(i).codim()==0) // interior DOFs
-      {
+      if (localFiniteElement.localCoefficients().localKey(i).codim()==0)
+      { // interior DOFs
         relevantDOFs[i] = true;
       }
-      else if (localFiniteElement.localCoefficients().localKey(i).codim()==1 and epsilonSmallerDelta) // edge DOFs
-      {
-        relevantDOFs[i] = relevantFaces[localFiniteElement.localCoefficients().localKey(i).subEntity()];
+      else if (localFiniteElement.localCoefficients().localKey(i).codim()==1
+               and epsilonSmallerDelta)
+      { // edge DOFs
+        relevantDOFs[i] = relevantFaces[localFiniteElement.localCoefficients()
+                                          .localKey(i).subEntity()];
       }
       // Vertex DOFs are never relevant because the corresponding
       // basis functions have support on at least two edges which can
@@ -1098,25 +1107,13 @@ applyMinimization
         {
           auto col = localIndexSet.index(j)[0];
           matrix[row+globalOffset][col+globalOffset]
-                       += elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
-                                       [localSolutionSpaceOffsets[spaceIndex]+j];
+              += elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                              [localSolutionSpaceOffsets[spaceIndex]+j];
         }
       }
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 } // end namespace Dune
 
