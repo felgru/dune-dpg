@@ -336,6 +336,12 @@ class BufferedTestspaceCoefficientMatrix
     geometryBuffer_(buffer)
   {}
 
+  BufferedTestspaceCoefficientMatrix(BufferedTestspaceCoefficientMatrix&&)
+    = default;
+
+  BufferedTestspaceCoefficientMatrix(BufferedTestspaceCoefficientMatrix&)
+    = delete;
+
   void bind(const typename GridView::template Codim<0>::Entity& e)
   {
     using namespace Dune::detail;
