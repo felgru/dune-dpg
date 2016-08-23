@@ -83,8 +83,7 @@ int main(int argc, char** argv)
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                     DomainOfIntegration::interior>(1., beta)));
   auto systemAssembler
-     = make_SaddlepointSystemAssembler(testSpaces, solutionSpaces,
-                                       bilinearForm, innerProduct);
+     = make_SaddlepointSystemAssembler(bilinearForm, innerProduct);
 
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
