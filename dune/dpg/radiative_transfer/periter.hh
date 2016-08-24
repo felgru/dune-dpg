@@ -233,8 +233,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
           GeometryBuffer_t;
 
       typedef decltype(make_DPGSystemAssembler(
-                  std::declval<InnerProduct&>(),
                   std::declval<BilinearForm&>(),
+                  std::declval<InnerProduct&>(),
                   std::declval<GeometryBuffer_t&>()))
               SystemAssembler_t;
 
@@ -280,8 +280,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
             replaceTestSpaces(innerProducts[i], testSpacesEnriched));
 
         systemAssemblers.emplace_back(
-            make_DPGSystemAssembler(innerProducts[i],
-                                    bilinearForms[i],
+            make_DPGSystemAssembler(bilinearForms[i],
+                                    innerProducts[i],
                                     geometryBuffers[i]));
       }
 

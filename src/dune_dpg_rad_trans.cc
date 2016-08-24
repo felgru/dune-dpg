@@ -308,8 +308,8 @@ int main(int argc, char** argv)
       GeometryBuffer_t;
 
   typedef decltype(make_DPGSystemAssembler(
-              std::declval<InnerProduct&>(),
               std::declval<BilinearForm&>(),
+              std::declval<InnerProduct&>(),
               std::declval<GeometryBuffer_t&>()))
           SystemAssembler_t;
 
@@ -373,8 +373,8 @@ int main(int argc, char** argv)
             make_tuple(FEBasisOptimalTest(coefficientMatrices[i])));
 
     systemAssemblers.emplace_back(
-        make_DPGSystemAssembler(innerProducts[i],
-                                bilinearForms[i],
+        make_DPGSystemAssembler(bilinearForms[i],
+                                innerProducts[i],
                                 geometryBuffers[i]));
     scatteringAssemblers.emplace_back(
         make_DPG_ScatteringAssembler(optimalTestSpaces[i],
