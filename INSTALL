@@ -59,6 +59,8 @@ will nevertheless find his way.
 Installation of Dune on Debian GNU/Linux
 ----------------------------------------
 
+TODO: add instructions to install Dune 3.0
+
 2) If you are using Debian Stretch, the Dune 2.4.1 core libraries can be
    installed from the Debian repositories with
 
@@ -74,20 +76,15 @@ Installation of Dune on MacOS
 -----------------------------
 
 2) Download the following dune sources in $DUNEDIR:
- 2.a) - Version >= 2.4.1 of the following Dune source modules:
+ 2.a) - Version >= 3.0 of the following Dune source modules:
         dune-common, dune-geometry, dune-grid, dune-istl, dune-localfunctions
-      - Link: https://dune-project.org/releases/2.4.1/
+      - Link: https://dune-project.org/groups/core/
 
- 2.b) Download dune-functions and dune-typetree by cloning the 2.4 release
+ 2.b) Download dune-functions and dune-typetree by cloning the master
       branches of their GitLab repositories
 
-        git clone -b releases/2.4-compatible \
-                  https://gitlab.dune-project.org/staging/dune-functions
-        git clone -b releases/2.4 \
-                  https://gitlab.dune-project.org/pdelab/dune-typetree
-
-      Remark: In the future, these modules might be associated with more
-              stable releases and found in https://dune-project.org/releases/
+        git clone https://gitlab.dune-project.org/staging/dune-functions
+        git clone https://gitlab.dune-project.org/pdelab/dune-typetree
 
 Preparing dune-dpg
 ------------------
