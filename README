@@ -26,12 +26,14 @@ libraries installed on your system:
       (http://www.iwr.uni-heidelberg.de/frame/iwrwikiequipment/software/ug)
       but one could also use other managers, e.g., ALBERTA or YASPgrid.
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
-    - DUNE core libraries 3.0-git (Git master branch)
-      (https://dune-project.org/groups/core/)
-    - dune-typetree 3.0-dev (Git master branch)
-      (https://gitlab.dune-project.org/pdelab/dune-typetree.git)
-    - dune-functions 3.0-dev (Git master branch)
-      (https://gitlab.dune-project.org/staging/dune-functions.git)
+    - DUNE core libraries 2.4.1
+      (https://dune-project.org/releases/2.4.1/)
+    - dune-typetree 2.4.1
+      (https://gitlab.dune-project.org/pdelab/dune-typetree.git
+       branch releases/2.4)
+    - dune-functions 2.4
+      (https://gitlab.dune-project.org/staging/dune-functions.git
+       branch releases/2.4-compatible)
 
 Instructions on how to build dune-dpg can be found in INSTALL.
 
