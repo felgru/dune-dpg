@@ -52,10 +52,13 @@ std::function<double(const Domain&)> f(const Direction& s)
 int main(int argc, char** argv)
 {
   try{
-  if(argc != 5) {
-    std::cerr << "Usage: " << argv[0] << " n c betaX betaY" << std::endl << std::endl
-              << "Solves the transport problem $beta . grad(phi) +c phi = 1$ with direction beta=(betaX,betaY) on an nxn grid." << std::endl
-              << "Direction beta will be automatically normalized" << std::endl;
+  if(argc != 5 && argc != 2) {
+    std::cerr << "Usage: " << argv[0] << " n [c betaX betaY]\n\n"
+              << "Solves the transport problem $beta . grad(phi) + c phi = 1$"
+                 " with direction beta=(betaX, betaY) on an nxn grid.\n"
+              << "Direction beta will be automatically normalized\n\n"
+              << "When unspecified, c=0 and beta=(cos(pi/8), sin(pi/8))"
+              << std::endl;
     std::abort();
   }
 
@@ -88,20 +91,28 @@ int main(int argc, char** argv)
   //   Direction of propagation beta and coefficient c
   ////////////////////////////////////////////////////
 
-  // coefficient c
-  double c = atof(argv[2]);
+  double c = 0;
+  FieldVector<double, dim> beta
+               = {cos(boost::math::constants::pi<double>()/8),
+                  sin(boost::math::constants::pi<double>()/8)};
 
-  // direction beta
-  double betaX = atof(argv[3]);
-  double betaY = atof(argv[4]);
-  if(betaX==0. && betaY==0.) {
-    std::cerr << "beta=(betaX,betaY) has to be a nonzero vector." << std::endl;
-    std::abort();
+  if(argc==5) {
+  // coefficient c
+    c = atof(argv[2]);
+
+    // direction beta
+    double betaX = atof(argv[3]);
+    double betaY = atof(argv[4]);
+    if(betaX==0. && betaY==0.) {
+      std::cerr << "beta=(betaX, betaY) has to be a nonzero vector."
+                << std::endl;
+      std::abort();
+    }
+    const double normBeta = std::sqrt(betaX*betaX+betaY*betaY);
+    betaX = betaX/normBeta;
+    betaY = betaY/normBeta;
+    beta = {betaX, betaY};
   }
-  const double normBeta = std::sqrt(betaX*betaX+betaY*betaY);
-  betaX = betaX/normBeta;
-  betaY = betaY/normBeta;
-  FieldVector<double, dim> beta = {betaX, betaY};
 
   ////////////////////////////////////////////////////////////////////
   //   Choose finite element spaces and weak formulation of problem
@@ -226,7 +237,7 @@ int main(int argc, char** argv)
   std::cout << "Solution of the transport problem" << std::endl
             << "  beta . grad(phi) +c phi = 1 in [0,1]x[0,1]" << std::endl
             << "                      phi = 0 on boundary," << std::endl
-            << "with beta=(" << betaX << "," << betaY << ")"
+            << "with beta=(" << beta[0] << ", " << beta[1] << ")"
             << " and c=" << c << "."<< std::endl
             << "Mesh size H=1/n=" << 1./nelements << std::endl;
 
