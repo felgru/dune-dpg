@@ -148,7 +148,7 @@ int main(int argc, char** argv)
       = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
   auto systemAssembler
-     = make_DPGSystemAssembler(innerProduct, bilinearForm);
+     = make_DPGSystemAssembler(bilinearForm, innerProduct);
 
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
