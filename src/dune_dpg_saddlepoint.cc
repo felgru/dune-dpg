@@ -186,14 +186,14 @@ int main(int argc, char** argv)
   auto uFunction
       = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
             (innerSpace, Dune::TypeTree::hybridTreePath(), u);
-  auto localUFunction = localFunction(uFunction);
 
   //////////////////////////////////////////////////////////////////////////////////////////////
   //  Write result to VTK file
   //  We need to subsample, because VTK cannot natively display real second-order functions
   //////////////////////////////////////////////////////////////////////////////////////////////
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
-  vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter.addVertexData(uFunction,
+               VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write("solution_transport");
     return 0;
   }

@@ -203,12 +203,10 @@ int main(int argc, char** argv)
   auto uFunction
       = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
             (feBasisInterior, Dune::TypeTree::hybridTreePath(), u);
-  auto localUFunction = localFunction(uFunction);
 
   auto uhatFunction
       = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
             (feBasisTrace, Dune::TypeTree::hybridTreePath(), uhat);
-  auto localUhatFunction = localFunction(uhatFunction);
 
   /////////////////////////////////////////////////////////////////////////
   //  Write result to VTK file
@@ -216,11 +214,11 @@ int main(int argc, char** argv)
   //  real second-order functions
   /////////////////////////////////////////////////////////////////////////
   SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
-  vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter.addVertexData(uFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write("transport_simplex_"+std::to_string(nelements) +"_"+ std::to_string(beta[0]) + "_" + std::to_string(beta[1]));
 
   SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-  vtkWriter1.addVertexData(localUhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter1.addVertexData(uhatFunction, VTK::FieldInfo("uhat", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter1.write("transport_simplex_trace_"+std::to_string(nelements) +"_"+ std::to_string(beta[0]) + "_" + std::to_string(beta[1]));
 
     return 0;

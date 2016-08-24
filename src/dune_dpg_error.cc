@@ -260,13 +260,11 @@ int main()
     auto uFunction
         = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
               (innerSpace, Dune::TypeTree::hybridTreePath(), u);
-    auto localUFunction = localFunction(uFunction);
 
     auto feBasisTrace = std::get<1>(solutionSpaces);
     auto thetaFunction
         = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
               (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta);
-    auto localThetaFunction = localFunction(thetaFunction);
 
 
     ////////////////////////////////////////////////////////////////////////////
@@ -310,11 +308,13 @@ int main()
     //  We need to subsample, because VTK cannot natively display real second-order functions
     //////////////////////////////////////////////////////////////////////////////////////////////
     SubsamplingVTKWriter<GridView> vtkWriter(gridView,0);
-    vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
+    vtkWriter.addVertexData(uFunction,
+                 VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
     vtkWriter.write(std::string{"solution_transport_"}+std::to_string(i));
 
     SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-    vtkWriter1.addVertexData(localThetaFunction, VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
+    vtkWriter1.addVertexData(thetaFunction,
+                  VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
     vtkWriter1.write(std::string{"solution_trace_"}+std::to_string(i));
 
     ////////////////
