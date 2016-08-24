@@ -48,18 +48,15 @@ namespace Dune {
 /**
  * \brief This constructs the matrix and vector of a DPG system.
  *
- * \tparam TSpaces        tuple of test spaces
- * \tparam SSpaces        tuple of solution spaces
  * \tparam BilinForm      bilinear form describing the system
  * \tparam InProduct      inner product of the test space
  */
-template<class TSpaces, class SolSpaces,
-         class BilinForm, class InProduct>
+template<class BilinForm, class InProduct>
 class SaddlepointSystemAssembler
 {
 public:
-  typedef TSpaces TestSpaces;
-  typedef SolSpaces SolutionSpaces;
+  typedef typename BilinForm::TestSpaces TestSpaces;
+  typedef typename BilinForm::SolutionSpaces SolutionSpaces;
   //! tuple type for the local views of the test spaces
   typedef typename boost::fusion::result_of::as_vector<
       typename boost::fusion::result_of::
@@ -83,18 +80,15 @@ public:
    * \note For your convenience, use make_SaddlepointSystemAssembler()
    *       instead.
    */
-  constexpr SaddlepointSystemAssembler (TestSpaces     testSpaces,
-                                        SolutionSpaces solutionSpaces,
-                                        BilinForm      bilinearForm,
+  constexpr SaddlepointSystemAssembler (BilinForm      bilinearForm,
                                         InProduct      innerProduct)
-             : testSpaces(testSpaces),
-               solutionSpaces(solutionSpaces),
+             : testSpaces(bilinearForm.getTestSpaces()),
+               solutionSpaces(bilinearForm.getSolutionSpaces()),
                bilinearForm(detail::make_BilinearForm<SaddlepointFormulation>
                                              (testSpaces,
                                               solutionSpaces,
                                               bilinearForm.getTerms())),
-               innerProduct(make_InnerProduct(testSpaces,
-                                              innerProduct.getTerms()))
+               innerProduct(innerProduct)
   { }
 
   /**
@@ -239,34 +233,23 @@ private:
  * \brief Creates a SaddlepointSystemAssembler for a saddlepoint formulation,
  *        deducing the target type from the types of arguments.
  *
- * \param testSpaces     a tuple of test spaces
- * \param solutionSpaces a tuple of solution spaces
  * \param bilinearForm   the bilinear form describing the DPG system
  * \param innerProduct   the inner product of the test spaces
  */
-template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
-auto make_SaddlepointSystemAssembler(TestSpaces     testSpaces,
-                                     SolutionSpaces solutionSpaces,
-                                     BilinearForm   bilinearForm,
+template<class BilinearForm, class InnerProduct>
+auto make_SaddlepointSystemAssembler(BilinearForm   bilinearForm,
                                      InnerProduct   innerProduct)
-    -> SaddlepointSystemAssembler<TestSpaces, SolutionSpaces,
-                       BilinearForm, InnerProduct>
+    -> SaddlepointSystemAssembler<BilinearForm, InnerProduct>
 {
-  return SaddlepointSystemAssembler<TestSpaces, SolutionSpaces,
-                         BilinearForm, InnerProduct>
-                      (testSpaces,
-                       solutionSpaces,
-                       bilinearForm,
+  return SaddlepointSystemAssembler<BilinearForm, InnerProduct>
+                      (bilinearForm,
                        innerProduct);
 }
 
 
-template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+template<class BilinearForm, class InnerProduct>
 template <class LinearForm>
-void SaddlepointSystemAssembler<TestSpaces, SolutionSpaces,
-                     BilinearForm, InnerProduct>::
+void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                BlockVector<FieldVector<double,1> >& rhs,
                LinearForm& rhsLinearForm)
@@ -275,10 +258,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   assembleRhs   (rhs, rhsLinearForm);
 }
 
-template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
-void SaddlepointSystemAssembler<TestSpaces, SolutionSpaces,
-                     BilinearForm, InnerProduct>::
+template<class BilinearForm, class InnerProduct>
+void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 {
   using namespace boost::fusion;
@@ -393,11 +374,9 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   }
 }
 
-template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+template<class BilinearForm, class InnerProduct>
 template <class LinearForm>
-void SaddlepointSystemAssembler<TestSpaces, SolutionSpaces,
-                     BilinearForm, InnerProduct>::
+void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
             LinearForm& rhsLinearForm)
 {
@@ -480,11 +459,9 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 }
 
 
-template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+template<class BilinearForm, class InnerProduct>
 template <size_t spaceIndex, class ValueType>
-void SaddlepointSystemAssembler<TestSpaces, SolutionSpaces,
-                     BilinearForm, InnerProduct>::
+void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 applyDirichletBoundary
                       (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                        BlockVector<FieldVector<double,1> >& rhs,
@@ -497,11 +474,9 @@ applyDirichletBoundary
           (rhs,    dirichletNodes, boundaryValue);
 }
 
-template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+template<class BilinearForm, class InnerProduct>
 template <size_t spaceIndex, class ValueType>
-void SaddlepointSystemAssembler<TestSpaces, SolutionSpaces,
-                     BilinearForm, InnerProduct>::
+void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 applyDirichletBoundaryToMatrix
                       (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                        const std::vector<bool>& dirichletNodes,
@@ -560,11 +535,9 @@ applyDirichletBoundaryToMatrix
   }
 }
 
-template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+template<class BilinearForm, class InnerProduct>
 template <size_t spaceIndex, class ValueType>
-void SaddlepointSystemAssembler<TestSpaces, SolutionSpaces,
-                     BilinearForm, InnerProduct>::
+void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 applyDirichletBoundaryToRhs
                       (BlockVector<FieldVector<double,1> >& rhs,
                        const std::vector<bool>& dirichletNodes,
@@ -606,11 +579,9 @@ applyDirichletBoundaryToRhs
 }
 
 
-template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+template<class BilinearForm, class InnerProduct>
 template<size_t spaceIndex, unsigned int dim>
-void SaddlepointSystemAssembler<TestSpaces, SolutionSpaces,
-                     BilinearForm, InnerProduct>::
+void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                           BlockVector<FieldVector<double,1> >& rhs,
                           const FieldVector<double,dim>& beta,
@@ -622,11 +593,9 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 }
 
 
-template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+template<class BilinearForm, class InnerProduct>
 template <size_t spaceIndex, class MinInnerProduct, unsigned int dim>
-void SaddlepointSystemAssembler<TestSpaces, SolutionSpaces,
-                                BilinearForm, InnerProduct>::
+void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 applyMinimization
             (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
              MinInnerProduct minInnerProduct,
@@ -639,11 +608,9 @@ applyMinimization
                 "for Saddlepointformulation ");
 }
 
-template<class TestSpaces, class SolutionSpaces,
-         class BilinearForm, class InnerProduct>
+template<class BilinearForm, class InnerProduct>
 template<class TestZip, class SolutionZip, class CP, class CPM>
-inline void SaddlepointSystemAssembler<TestSpaces, SolutionSpaces,
-                                       BilinearForm, InnerProduct>::
+inline void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 copy_local_matrix_to_global
     (const BilinearForm& bilinearForm,
      const InnerProduct& innerProduct,

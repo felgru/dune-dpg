@@ -125,7 +125,7 @@ int main(int argc, char** argv)
   GeometryBuffer<Geometry> geometryBuffer;
 
   auto systemAssembler
-     = make_DPGSystemAssembler(innerProduct, bilinearForm, geometryBuffer);
+     = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
 
   /////////////////////////////////////////////////////////
   //  Assemble the system

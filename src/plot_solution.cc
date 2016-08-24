@@ -178,11 +178,11 @@ int main(int argc, char** argv)
 
     //  System assembler without geometry buffer
     //auto systemAssembler
-    //   = make_DPGSystemAssembler(innerProduct, bilinearForm);
+    //   = make_DPGSystemAssembler(bilinearForm, innerProduct);
 
     //  System assembler with geometry buffer
     auto systemAssembler
-     = make_DPGSystemAssembler(innerProduct, bilinearForm, geometryBuffer);
+     = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
     /////////////////////////////////////////////////////////
     //   Stiffness matrix and right hand side vector
     /////////////////////////////////////////////////////////

@@ -171,7 +171,7 @@ int main()
           ));
 
     auto systemAssembler
-       = make_DPGSystemAssembler(innerProduct, bilinearForm);
+       = make_DPGSystemAssembler(bilinearForm, innerProduct);
 
     /////////////////////////////////////////////////////////
     //   Stiffness matrix and right hand side vector
