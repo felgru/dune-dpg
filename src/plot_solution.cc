@@ -53,11 +53,11 @@ int main(int argc, char** argv)
 {
   try{
   if(argc != 5 && argc != 2) {
-    std::cerr << "Usage: " << argv[0] << " n [c betaX betaY]\n\n"
-              << "Solves the transport problem $beta . grad(phi) + c phi = 1$"
-                 " with direction beta=(betaX, betaY) on an nxn grid.\n"
-              << "Direction beta will be automatically normalized\n\n"
-              << "When unspecified, c=0 and beta=(cos(pi/8), sin(pi/8))"
+    std::cerr << "Usage: " << argv[0] << " n [c βx βy]\n\n"
+              << "Solves the transport problem β.∇ϕ + c ϕ = 1"
+                 " with direction β=(βx, βy) on an nxn grid.\n"
+              << "Direction β will be automatically normalized.\n\n"
+              << "When unspecified, c=0 and β=(cos(π/8), sin(π/8))."
               << std::endl;
     std::abort();
   }
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
     double betaX = atof(argv[3]);
     double betaY = atof(argv[4]);
     if(betaX==0. && betaY==0.) {
-      std::cerr << "beta=(betaX, betaY) has to be a nonzero vector."
+      std::cerr << "β=(βx, βy) has to be a nonzero vector."
                 << std::endl;
       std::abort();
     }
@@ -235,9 +235,9 @@ int main(int argc, char** argv)
   vtkWriter1.write("transport_solution_trace");
 
   std::cout << "Solution of the transport problem" << std::endl
-            << "  beta . grad(phi) +c phi = 1 in [0,1]x[0,1]" << std::endl
-            << "                      phi = 0 on boundary," << std::endl
-            << "with beta=(" << beta[0] << ", " << beta[1] << ")"
+            << "  β.∇ϕ + c ϕ = 1 in [0,1]x[0,1]" << std::endl
+            << "           ϕ = 0 on boundary," << std::endl
+            << "with β=(" << beta[0] << ", " << beta[1] << ")"
             << " and c=" << c << "."<< std::endl
             << "Mesh size H=1/n=" << 1./nelements << std::endl;
 
