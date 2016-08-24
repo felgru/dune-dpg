@@ -408,7 +408,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     // compute the coefficient matrix C for the optimal test space
     testspaceCoefficientMatrix_.bind(e);
-    Matrix<FieldMatrix<double,1,1> > coefficientMatrix
+    const Matrix<FieldMatrix<double,1,1> >& coefficientMatrix
         = testspaceCoefficientMatrix_.coefficientMatrix();
 
     // compute the local right-hand side vector C^T*F for the optimal test space
@@ -424,7 +424,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       }
 
     // compute the local stiffness matrix
-    Matrix<FieldMatrix<double,1,1> > elementMatrix
+    const Matrix<FieldMatrix<double,1,1> >& elementMatrix
         = testspaceCoefficientMatrix_.localMatrix();
 
     // Add local right-hand side onto the global right-hand side
@@ -557,7 +557,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   for(const auto& e : elements(gridView)) {
 
     testspaceCoefficientMatrix_.bind(e);
-    Matrix<FieldMatrix<double,1,1> > elementMatrix
+    const Matrix<FieldMatrix<double,1,1> >& elementMatrix
         = testspaceCoefficientMatrix_.localMatrix();
 
     for_each(solutionLocalViews, applyBind<decltype(e)>(e));
@@ -644,7 +644,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     // compute the coefficient matrix C for the optimal test space
     testspaceCoefficientMatrix_.bind(e);
-    Matrix<FieldMatrix<double,1,1> > coefficientMatrix
+    const Matrix<FieldMatrix<double,1,1> >& coefficientMatrix
         = testspaceCoefficientMatrix_.coefficientMatrix();
 
     // compute the local right-hand side vector C^T*F for the optimal test space
