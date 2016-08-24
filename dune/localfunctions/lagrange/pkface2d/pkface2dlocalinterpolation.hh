@@ -28,7 +28,6 @@ namespace Dune
       typename LB::Traits::RangeType y;
       // typedef typename LB::Traits::DomainFieldType D;
       out.resize(N);
-      int n=0;
       for (int l=0; l<=k; l++)
       {
         x[0]=1.0*l/kdiv;

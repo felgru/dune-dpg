@@ -60,7 +60,7 @@ namespace Dune
         return;
       }
 
-      int n=0;
+      unsigned int n=0;
       for (unsigned int i=0; i<=k; i++)
       {
         out[n] = 1.0;
@@ -105,7 +105,7 @@ namespace Dune
         return;
       }
 
-      int n=0;
+      unsigned int n=0;
       // j=0
       for (unsigned int i=0; i<=k; i++)
       {

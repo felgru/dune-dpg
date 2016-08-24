@@ -25,10 +25,10 @@ namespace Dune
   class PkFace2DLocalBasis
   {
     // ith Lagrange polynomial of degree k in one dimension
-    static R p (int i, D x)
+    static R p (unsigned int i, D x)
     {
       R result(1.0);
-      for (int j=0; j<=k; j++)
+      for (unsigned int j=0; j<=k; j++)
         if (j!=i) result *= (k*x-j)/(i-j);
       return result;
     }

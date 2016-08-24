@@ -101,26 +101,29 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////////////
 
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
-  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisSigma; // sigma 1 und 2
+  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisSigma; // sigma 1 and 2
   typedef Functions::PQkNodalBasis<GridView, 2> FEBasisTrace; // u^
   typedef Functions::PQkFaceNodalBasis<GridView, 2> FEBasisFace; // sigma_n^
+
+  // solutionSpaces = (u, sigma1, sigma2, u^, sigma_n^)
   auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView),
                                         FEBasisSigma(gridView),
                                         FEBasisSigma(gridView),
                                         FEBasisTrace(gridView),
                                         FEBasisFace(gridView));
 
-  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestV;   // v search space
-  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestTau; // tau search space
-  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestNu; // nu search space
+  // v search space
+  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestV;
+  // tau search space
+  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestTau;
+  // nu search space
+  typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTestNu;
+
+  // testSpaces = (v, tau1, tau2, nu)
   auto testSpaces = std::make_tuple(FEBasisTestV(gridView),
                                     FEBasisTestTau(gridView),
                                     FEBasisTestTau(gridView),
                                     FEBasisTestNu(gridView));
-
-  typedef decltype(testSpaces) TestSpaces;          // testSpaces = (v, tau1, tau2, nu)
-  typedef decltype(solutionSpaces) SolutionSpaces;  // solutionSpaces =
-                                                      // (u, sigma1, sigma2, u^, sigma_n^)
 
 //  FieldVector<double, dim> beta = {1,0};
   FieldVector<double, dim> beta = {1,0};
@@ -138,7 +141,10 @@ int main(int argc, char** argv)
   double scale_v(1);
   double scale_nu(1);
 
-  std::cout <<"c = " << c <<" epsilon = " <<epsilon <<" sqrtepsilon = " << sqrtepsilon << " beta = [" << beta[0] <<"," << beta[1] <<"] mu = " <<mu <<std::endl;
+  std::cout << "c = " << c << " epsilon = " << epsilon
+            << " sqrtepsilon = " << sqrtepsilon
+            << " beta = [" << beta[0] << "," << beta[1] << "] mu = "
+            << mu << std::endl;
 
   FieldVector<double, dim> firstcomponent = {1,0};
   FieldVector<double, dim> secondcomponent = {0,1};
@@ -230,8 +236,6 @@ int main(int argc, char** argv)
                                     DomainOfIntegration::interior>(epsilon, secondcomponent)
           ));
 
-  typedef decltype(bilinearForm) BilinearForm;
-  typedef decltype(innerProduct) InnerProduct;
   typedef decltype(minInnerProduct) MinInnerProduct;
 
   auto systemAssembler
