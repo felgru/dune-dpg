@@ -134,7 +134,11 @@ int main(int argc, char** argv)
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                     DomainOfIntegration::interior>(1., beta)));
 
-  auto systemAssembler = make_DPGSystemAssembler(bilinearForm, innerProduct);
+  typedef GeometryBuffer<GridView::template Codim<0>::Geometry> GeometryBuffer;
+  GeometryBuffer geometryBuffer;
+
+  auto systemAssembler
+      = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
 
   /////////////////////////////////////////////////////////
   //  Assemble the system

@@ -147,8 +147,11 @@ int main(int argc, char** argv)
   auto innerProduct_aposteriori
       = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
+  typedef GeometryBuffer<GridView::template Codim<0>::Geometry> GeometryBuffer;
+  GeometryBuffer geometryBuffer;
+
   auto systemAssembler
-     = make_DPGSystemAssembler(bilinearForm, innerProduct);
+     = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
 
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
