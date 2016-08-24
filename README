@@ -88,26 +88,45 @@ unmodified on another version of ParaView.)
 Description of src/convergence_test.cc
 --------------------------------------
 
-Run in $DUNEDIR/dune-dpg/build-cmake/src/
+convergence_test.cc uses several preprocessor variables to set the
+refinement level and polynomial degree of the test search space and the
+search space used in the computation of the a posteriori error.
+These variables get instantiated with different values by CMake to create
+executables of the form
 
-    ./convergence_test <n>
+    src/convergence_test_ls$LS_ks$KS_la$LA_ka$KA
+
+where $LS is the refinement level of the test search space,
+      $KS is the polynomial degree of the test search space,
+      $LA is the refinement level of the a posteriori search space,
+      $KA is the polynomial degree of the a posteriori search space.
+
+They can be run in $DUNEDIR/dune-dpg/build-cmake/src/ by e.g.
+
+    ./convergence_test_ls0_ks3_la0_ka5 <n>
 
 to compute the numerical example of the paper,
 $$
   \beta \cdot \phi = 1 in [0,1]x[0,1]
               \phi = 0 on the boundary
 $$
-for beta=(cos(pi/8),sin(pi/8)). The additional feature that is given in this example is
-the computation of the exact L2 error and its a posteriori estimation.
+for beta=(cos(pi/8),sin(pi/8)). The additional feature that is given in
+this example is the computation of the exact L2 error and its a posteriori
+estimation.
 
-  Remarks:
-    - The a posteriori error indicator includes both the error on the interior variable and also the trace variable.
-    - It is possible to compute the a posteriori error estimator for other PDEs. The current program is just an example.
+Remarks:
+    - The a posteriori error indicator includes both the error on the
+      interior variable and also the trace variable.
+    - It is possible to compute the a posteriori error estimator for
+      other PDEs. The current program is just an example.
 
-The paper takes this problem as the support for numerical tests and analyses the impact of
+The paper takes this problem as the support for numerical tests and
+analyses the impact of
  - the mesh size H of the trial space
  - the h-refinement level of the test search space
-on the error and its a posteriori estimation. To reproduce the results from the paper, call the script
+on the error and its a posteriori estimation.
+
+To reproduce the results from the paper, call the script
 
     scripts/run_convergence_test.sh
 
