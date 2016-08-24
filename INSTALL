@@ -1,0 +1,127 @@
+Installation of 3rd party libraries and programs
+================================================
+
+On Debian GNU/Linux
+-------------------
+
+All necessary libraries are included in Debian Stretch and most are included
+in jessie-backports. They can be installed via
+
+    apt install git cmake libboost-dev libug-dev libsuitesparse-dev
+
+Using Homebrew on MacOS
+-----------------------
+
+cmake installation (it requires the previous installation of autoconf, automake and libtool):
+    brew install autoconf
+    brew install automake
+    brew install libtool
+    brew install cmake
+
+The installation of pkg-config is recommended:
+    brew install pkg-config
+
+boost installation:
+    brew install --c++11 boost
+
+umfpack installation:
+    brew tap /hombrew/science/
+    brew install /hombrew/science/suite-sparse
+
+### Installation of UG
+
+Download release 3.12.1 of UG from
+
+    http://conan.iwr.uni-heidelberg.de/download/ug-3.12.1.tar.gz
+
+and unpack it.
+
+Remark: The latest release 3.13.0 is incompatible with Dune 2.4.1.
+        (see https://gitlab.dune-project.org/core/dune-grid/issues/13)
+
+In the UG folder, run
+
+    autoreconf -is
+    ./configure --enable-dune --without-x CXX=g++
+    make
+    make install
+
+Installation and compilation of dune and dune-dpg
+=================================================
+
+We give detailed installation guidelines using GCC and the UG grid manager.
+The URLs that are given below were still active on July 2016. We apologize
+for possible future inconsistencies in the links and hope that the user
+will nevertheless find his way.
+
+1) Create a folder devoted to Dune. We will call it $DUNEDIR.
+
+Installation of Dune on Debian GNU/Linux
+----------------------------------------
+
+2) If you are using Debian Stretch, the Dune 2.4.1 core libraries can be
+   installed from the Debian repositories with
+
+    apt install libdune-common-dev libdune-geometry-dev libdune-grid-dev \
+                libdune-istl-dev libdune-localfunctions-dev \
+                libdune-functions-dev libdune-typetree-dev
+
+   Alternatively, you can download the sources of the Dune core modules
+   into $DUNEDIR like it is explained below in the MacOS instructions.
+   This is necessary if you are using an older Debian release like Jessie.
+
+Installation of Dune on MacOS
+-----------------------------
+
+2) Download the following dune sources in $DUNEDIR:
+ 2.a) - Version >= 2.4.1 of the following Dune source modules:
+        dune-common, dune-geometry, dune-grid, dune-istl, dune-localfunctions
+      - Link: https://dune-project.org/releases/2.4.1/
+
+ 2.b) Download dune-functions and dune-typetree by cloning the 2.4 release
+      branches of their GitLab repositories
+
+        git clone -b releases/2.4-compatible \
+                  https://gitlab.dune-project.org/staging/dune-functions
+        git clone -b releases/2.4 \
+                  https://gitlab.dune-project.org/pdelab/dune-typetree
+
+      Remark: In the future, these modules might be associated with more
+              stable releases and found in https://dune-project.org/releases/
+
+Preparing dune-dpg
+------------------
+
+3) If the dune-dpg directory is not in $DUNEDIR move it there now.
+
+Building and compiling dune and dune-dpg
+----------------------------------------
+
+4) Create a file dune.opts in $DUNEDIR and specify
+the C and C++ compiler in it. In our case, we have used gcc and g++ so
+the file reads
+
+CMAKE_FLAGS="-DCMAKE_C_COMPILER='gcc' -DCMAKE_CXX_COMPILER='g++'"
+
+Remarks:
+ - In MacOS, the C compiler is set to clang by default so the previous
+   configuration option cannot be omitted.
+ - The use of clang and clang++ is in principle also possible here although
+   this compiler has not been tested.
+
+5) In $DUNEDIR, run
+
+     $DUNEDIR/dune-common/bin/dunecontrol --opts=$DUNEDIR/dune.opts all
+
+The command dunecontrol creates makefiles and compiles the sources. It
+creates a directory build_cmake inside each Dune module where the
+executables are built. As a consequence, the user should cd into
+$DUNEDIR/dune-dpg/build_cmake to run the examples of the paper.
+
+For more information and options on this command, run
+
+    $DUNEDIR/dune-common/bin/dunecontrol --help
+
+More information on the build system of Dune can be found under
+https://dune-project.org/doc/installation/
+https://dune-project.org/buildsystem/

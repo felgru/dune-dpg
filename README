@@ -1,79 +1,125 @@
-Preparing the Sources
-=========================
+Description
+===========
 
-Additional to the software mentioned in README you'll need the
-following programs installed on your system:
+This folder contains the sources of the dune-dpg library, which allows to
+solve Partial Differential Equations with Discontinuous Petrov-Galerkin
+finite elements. It is built upon the finite element package Dune. The
+scientific interest of the code can be found in the paper "The dune-dpg
+library for solving PDEs with Discontinuous Petrov-Galerkin finite elements"
+by F. Gruber, A. Klewinghaus and O. Mula.
 
-  a C++11-compatible compiler (e.g. GCC >= 4.9)
-  cmake >= 2.8.12
+This README document explains how to install this library and run basic
+examples which are described in the paper.
 
-In addition to the DUNE libraries mentioned in dune.module, you'll
-need the following libraries:
+Required Software and Libraries
+===============================
 
-  Boost Fusion >= 1.54
-  ug
-  UMFPACK
+Additional to the Dune libraries, you'll need the following programs and
+libraries installed on your system:
 
-Getting started
----------------
+  - Programs:
+    - a C++11-compatible compiler (e.g. GCC >= 4.9)
+    - cmake >= 2.8.12
+  - Libraries:
+    - Boost Fusion >= 1.59
+    - A grid manager. Our examples use UG 3.12.1
+      (http://www.iwr.uni-heidelberg.de/frame/iwrwikiequipment/software/ug)
+      but one could also use other managers, e.g., ALBERTA or YASPgrid.
+    - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
+    - DUNE core libraries 2.4.1
+      (https://dune-project.org/releases/2.4.1/)
+    - dune-typetree 2.4.1
+      (https://gitlab.dune-project.org/pdelab/dune-typetree.git
+       branch releases/2.4)
+    - dune-functions 2.4
+      (https://gitlab.dune-project.org/staging/dune-functions.git
+       branch releases/2.4-compatible)
 
-If these preliminaries are met, you should run
+Instructions on how to build dune-dpg can be found in INSTALL.
 
-  dunecontrol all
+Running dune-dpg
+================
 
-which will find all installed dune modules as well as all dune modules
-(not installed) which sources reside in a subdirectory of the current
-directory. Note that if dune is not installed properly you will either
-have to add the directory where the dunecontrol script resides (probably
-./dune-common/bin) to your path or specify the relative path of the script.
+In the following, we assume that we are in the directory
+$DUNEDIR/dune-dpg/build-cmake .
 
-On your project and all uninstalled DUNE source modules found the script
-will then call CMake to create the Makefiles. Afterwards the modules will
-be build using make all
+Dune-dpg comes with two example programs:
 
-Most probably you'll have to provide additional information to dunecontrol
-(e. g. compilers, configure options) and/or make options.
+src/plot_solution.cc
+src/convergence_test.cc
 
-The most convenient way is to use an options file in this case. This file
-defines two variables:
+After compilation (see INSTALL for instructions), the example programs
+are found in $DUNEDIR/dune-dpg/build-cmake/src/ .
 
-CMAKE_FLAGS      flags passed to cmake
-MAKE_FLAGS       flags passed to make
+Description of src/plot_solution.cc
+-----------------------------------
 
-An example options file might look like this:
+plot_solution.cc computes the solution with Discontinuous Petrov-Galerkin finite elements of the pure transport problem
+$$
+  \beta \cdot \phi +c \phi = 1 in [0,1]x[0,1]
+                      \phi = 0 on the boundary
+$$
+We refer to the paper for notations and also
+for indications on how to solve other Partial Differential Equations.
 
-#use this options to cmake and make if no other options are given
-CMAKE_FLAGS=" \
--DCMAKE_CXX_COMPILER=g++-4.9 \
--DCMAKE_CXX_FLAGS='-Wall -pedantic' \
--DCMAKE_INSTALL_PREFIX=/install/path" #Force g++-4.9 and set compiler flags
-MAKE_FLAGS=install #Per default run make install instead of simply make
+To visualize the solution, run in $DUNEDIR/dune-dpg/build-cmake/src/
 
-If you save this information into example.opts you can pass the opts file to
-dunecontrol via the --opts option, e. g.
+    ./plot_solution <n> <c> <betaX> <betaY>
 
-  dunecontrol --opts=example.opts all
+where
+  <n> has to be replaced by the desired grid resolution,
+  <c> is the linear term in the transport problem
+  <betaX> <betaY> are the X and Y components of the transport direction beta=(betaX,betaY).
 
-More info
----------
+The program will write two .vtu files to the current working directory,
 
-See
+  transport_solution.vtu
+  transport_solution_trace.vtu
 
-     dunecontrol --help
+They contain the numerical solution of the interior variable $\phi$ and the trace variable $\theta$ (cf. paper).
+The files allow to visualize $\phi$ and $\theta$ in ParaView. If you have the pvpython interpreter shipped with ParaView, you can also run
+the scripts/plot_solution.py to regenerate the solution plot given in the paper.
+(This script was run with ParaView 4.2.0. As the Python interface of ParaView
+seems to be highly unstable, we cannot guarantee, that the script will run
+unmodified on another version of ParaView.)
 
-for further options.
+Description of src/convergence_test.cc
+--------------------------------------
 
+Run in $DUNEDIR/dune-dpg/build-cmake/src/
 
-The full build-system is described in the dune-common/doc/buildsystem (Git version) or under share/doc/dune-common/buildsystem if you installed DUNE!
+    ./convergence_test <n>
 
-Running example programs
-------------------------
+to compute the numerical example of the paper,
+$$
+  \beta \cdot \phi = 1 in [0,1]x[0,1]
+              \phi = 0 on the boundary
+$$
+for beta=(cos(pi/8),sin(pi/8)). The additional feature that is given in this example is
+the computation of the exact L2 error and its a posteriori estimation.
 
-[It is assumed that all the following commands are run from the build directory
- and that the build directory is a subdirectory of the dune-dpg root directory.]
+  Remarks:
+    - The a posteriori error indicator includes both the error on the interior variable and also the trace variable.
+    - It is possible to compute the a posteriori error estimator for other PDEs. The current program is just an example.
 
-To regenerate the convergence plots from the paper, it is advised to compile
-the test programs in release mode, to significantly speed up the computations.
+The paper takes this problem as the support for numerical tests and analyses the impact of
+ - the mesh size H of the trial space
+ - the h-refinement level of the test search space
+on the error and its a posteriori estimation. To reproduce the results from the paper, call the script
+
+    scripts/run_convergence_test.sh
+
+which will make a series of calls to convergence_test.cc .
+The computation takes several hours. (you can first adapt this script if you
+want to change the grid resolution n=1/H, especially the test case with
+locally refined test search space of level 3 gets very slow for large n).
+
+Finally, the convergence plots can be generated with
+
+    ../scripts/convergence_plots.py
+
+Remark: To regenerate the plots from the paper, it is advised to compile
+the test programs in release mode to significantly speed up the computations.
 The release mode can be configured with
 
     cmake -DCMAKE_BUILD_TYPE=Release .
@@ -82,19 +128,8 @@ Afterwards, we can compile the test programs with
 
     make
 
-To run the test programs with the right parameters, call
-
-    ../scripts/run_convergence_test.sh
-
-This will take quite a while. (you can first adapt this script if you
-want to change the grid parameter n=1/H)
-
-Finally, the convergence plots can be generated with
-
-    ../scripts/convergence_plots.py
-
 License
--------
+=======
 
 Licensing information for dune-dpg can be found in the accompanying file
 COPYING.
