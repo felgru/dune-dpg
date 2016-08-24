@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cstdlib> // for std::abort()
 
+#include <algorithm>
 #include <array>
 #include <functional>
 #include <tuple>
@@ -32,12 +33,11 @@
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
-#include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
-#include <dune/dpg/errortools.hh>
 #include <dune/dpg/rhs_assembler.hh>
+#include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/errortools.hh>
 
-#include <chrono>
 
 using namespace Dune;
 
@@ -52,11 +52,13 @@ std::function<double(const Domain&)> f(const Direction& s)
 int main(int argc, char** argv)
 {
   try{
-  if(argc != 2) {
-    std::cerr << "Usage: " << argv[0] << " n" << std::endl << std::endl
-              << "Solves the transport problem on an nxn grid." << std::endl;
+  if(argc != 5) {
+    std::cerr << "Usage: " << argv[0] << " n c betaX betaY" << std::endl << std::endl
+              << "Solves the transport problem $beta . grad(phi) +c phi = 1$ with direction beta=(betaX,betaY) on an nxn grid." << std::endl
+              << "Direction beta will be automatically normalized" << std::endl;
     std::abort();
   }
+
   ///////////////////////////////////
   //   Generate the grid
   ///////////////////////////////////
@@ -65,6 +67,11 @@ int main(int argc, char** argv)
   typedef UGGrid<dim> GridType;
 
   unsigned int nelements = atoi(argv[1]);
+
+  if(nelements==0) {
+    std::cerr << "n has to be nonzero." << std::endl;
+    std::abort();
+  }
 
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
@@ -75,295 +82,149 @@ int main(int argc, char** argv)
   shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
   typedef GridType::LeafGridView GridView;
-  //TODO how to define this without GridView?
-  typedef GeometryBuffer<GridView::template Codim<0>::Geometry> GeometryBuffer;
-  GeometryBuffer geometryBuffer;
+  GridView gridView = grid->leafGridView();
 
-  double err = 1.;
-  const double tol = 1e-10;
-  for(unsigned int i = 0; err > tol && i < 200; ++i)
-  {
-    std::chrono::steady_clock::time_point startiteration = std::chrono::steady_clock::now();
-    GridView gridView = grid->leafGridView();
+  ////////////////////////////////////////////////////
+  //   Direction of propagation beta and coefficient c
+  ////////////////////////////////////////////////////
 
-    /////////////////////////////////////////////////////////
-    //   Choose finite element spaces
-    /////////////////////////////////////////////////////////
+  // coefficient c
+  double c = atof(argv[2]);
 
-    // u
-    using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
-    FEBasisInterior feBasisInterior(gridView);
-
-    // bulk term corresponding to theta
-    using FEBasisTrace = Functions::PQkNodalBasis<GridView, 2>;
-    FEBasisTrace feBasisTrace(gridView);
-
-    auto solutionSpaces
-        = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
-
-    // v search space
-    using FEBasisTest
-#if 0
-        = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
-#else
-        = Functions::LagrangeDGBasis<GridView, 3>;
-#endif
-    auto testSpaces = std::make_tuple(FEBasisTest(gridView));
-
-    // enriched test space for error estimation
-    using FEBasisTest_aposteriori
-#if 0
-        = Functions::PQkDGRefinedDGBasis<GridView, 1, 4>;
-#else
-        = Functions::LagrangeDGBasis<GridView, 4>;
-#endif
-    auto testSpaces_aposteriori
-        = std::make_tuple(FEBasisTest_aposteriori(gridView));
-
-    FieldVector<double, dim> beta
-               = {cos(boost::math::constants::pi<double>()/8),
-                  sin(boost::math::constants::pi<double>()/8)};
-    double c = 0;
-
-    auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
-            make_tuple(
-                make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                      DomainOfIntegration::interior>(c),
-                make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                      DomainOfIntegration::interior>(-1., beta),
-                make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                      DomainOfIntegration::face>(1., beta)));
-    auto bilinearForm_aposteriori
-        = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
-     auto innerProduct = make_InnerProduct(testSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta),
-              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                    DomainOfIntegration::face>(1., beta)));
-     auto innerProduct_aposteriori
-        = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
-
-    auto minInnerProduct = make_InnerProduct(solutionSpaces,
-          make_tuple(
-              make_IntegralTerm<1,1,IntegrationType::valueValue,              // (u^,u^)
-                                    DomainOfIntegration::interior>(1),
-              make_IntegralTerm<1,1,IntegrationType::gradGrad,                // (beta grad u^,beta grad u^)
-                                    DomainOfIntegration::interior>(1, beta)
-          ));
-    auto aPosterioriInnerProduct = make_InnerProduct(solutionSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,              // (u,u)
-                                    DomainOfIntegration::interior>(1),
-              make_IntegralTerm<1,1,IntegrationType::valueValue,              // (w,w)
-                                    DomainOfIntegration::interior>(1),
-              make_IntegralTerm<0,1,IntegrationType::valueValue,              // -2(u,w)
-                                    DomainOfIntegration::interior>(-2),
-              make_IntegralTerm<1,1,IntegrationType::gradGrad,              // (beta grad w,beta grad w)
-                                    DomainOfIntegration::interior>(1, beta),
-              make_IntegralTerm<1,1,IntegrationType::valueValue,              // (cw,cw)
-                                    DomainOfIntegration::interior>(c*c),
-              make_IntegralTerm<1,1,IntegrationType::gradValue,              // 2(beta grad w, cw)
-                                    DomainOfIntegration::interior>(2*c, beta)
-          ));
-    auto aPosterioriLinearForm = make_LinearForm(solutionSpaces,
-          make_tuple(
-              make_LinearIntegralTerm<1,LinearIntegrationType::gradFunction,// -2(beta grad w,f)
-                                    DomainOfIntegration::interior>([beta](const FieldVector<double, dim>& x){return (-2)*f(beta)(x);}, beta),
-              make_LinearIntegralTerm<1,LinearIntegrationType::valueFunction,    // -2(cw,f)
-                                    DomainOfIntegration::interior>([beta, c](const FieldVector<double, dim>& x){return (-2)*c*f(beta)(x);})
-          ));
-
-    using MinInnerProduct = decltype(minInnerProduct);
-
-    //  System assembler without geometry buffer
-    //auto systemAssembler
-    //   = make_DPGSystemAssembler(bilinearForm, innerProduct);
-
-    //  System assembler with geometry buffer
-    auto systemAssembler
-     = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
-    /////////////////////////////////////////////////////////
-    //   Stiffness matrix and right hand side vector
-    /////////////////////////////////////////////////////////
-
-
-    typedef BlockVector<FieldVector<double,1> > VectorType;
-    typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
-
-    VectorType rhs, rhs1;
-    MatrixType stiffnessMatrix, stiffnessMatrix1;
-
-    /////////////////////////////////////////////////////////
-    //  Assemble the system
-    /////////////////////////////////////////////////////////
-    auto rightHandSide
-      = make_DPGLinearForm(testSpaces,
-                        std::make_tuple(make_LinearIntegralTerm<0,
-                                            LinearIntegrationType::valueFunction,
-                                            DomainOfIntegration::interior>(
-                                   f(beta))));
-
-    std::chrono::steady_clock::time_point startsystemassembler = std::chrono::steady_clock::now();
-    systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
-
-#if 1
-    double delta = 1e-5;
-    systemAssembler.applyMinimization<1, MinInnerProduct,2>
-                    (stiffnessMatrix,
-                     minInnerProduct,
-                     beta,
-                     delta,
-                     1);
-#endif
-#if 0
-    double delta = 1e-5;
-    systemAssembler.defineCharacteristicFaces<1,2>
-                      (stiffnessMatrix,
-                       rhs,
-                       beta,
-                       delta);
-#endif
-
-    // Determine Dirichlet dofs for theta (inflow boundary)
-    {
-      std::vector<bool> dirichletNodesInflow;
-      BoundaryTools boundaryTools = BoundaryTools();
-      boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
-                                          dirichletNodesInflow,
-                                          beta);
-      systemAssembler.applyDirichletBoundary<1>
-          (stiffnessMatrix,
-           rhs,
-           dirichletNodesInflow,
-           0.);
-    }
-    std::chrono::steady_clock::time_point endsystemassembler = std::chrono::steady_clock::now();
-    std::cout << "The system assembler took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(endsystemassembler - startsystemassembler).count()
-              << "us.\n";
-
-
-    /////////////////////////////////////////////////
-    //   Choose an initial iterate
-    /////////////////////////////////////////////////
-    VectorType x(feBasisTrace.size()
-                 +feBasisInterior.size());
-    x = 0;
-    ////////////////////////////
-    //   Compute solution
-    ////////////////////////////
-
-    std::cout <<"rhs size = "<< rhs.size()
-              <<" matrix size = " << stiffnessMatrix.N() <<" x " << stiffnessMatrix.M()
-              <<" solution size = "<< x.size() <<std::endl;
-
-    std::chrono::steady_clock::time_point startsolve = std::chrono::steady_clock::now();
-
-    UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
-    InverseOperatorResult statistics;
-    umfPack.apply(x, rhs, statistics);
-
-    std::chrono::steady_clock::time_point endsolve = std::chrono::steady_clock::now();
-    std::cout << "The solution took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(endsolve - startsolve).count()
-              << "us.\n";
-
-    ////////////////////////////////////////////////////////////////////////////
-    //  Make a discrete function from the FE basis and the coefficient vector
-    ////////////////////////////////////////////////////////////////////////////
-#if 1
-//  if ((i/10)*10 == i)
-//  {
-    std::chrono::steady_clock::time_point startresults = std::chrono::steady_clock::now();
-    VectorType u(feBasisInterior.size());
-    u=0;
-    for (unsigned int i=0; i<feBasisInterior.size(); i++)
-    {
-      u[i] = x[i];
-    }
-
-    VectorType theta(feBasisTrace.size());
-    theta=0;
-    for (unsigned int i=0; i<feBasisTrace.size(); i++)
-    {
-      theta[i] = x[i+feBasisInterior.size()];
-    }
-
-    auto uFunction
-        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-              (feBasisInterior, Dune::TypeTree::hybridTreePath(), u);
-    auto localUFunction = localFunction(uFunction);
-
-    auto thetaFunction
-        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-              (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta);
-    auto localThetaFunction = localFunction(thetaFunction);
-
-    /////////////////////////////////////////////////////////////////////////
-    //  Write result to VTK file
-    //  We need to subsample, because VTK cannot natively display
-    //  real second-order functions
-    /////////////////////////////////////////////////////////////////////////
-    SubsamplingVTKWriter<GridView> vtkWriter(gridView,0);
-    vtkWriter.addVertexData(localUFunction,
-                 VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter.write("transport_solution_"+std::to_string(nelements)
-        +"_"+std::to_string(i));
-
-    SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-    vtkWriter1.addVertexData(localThetaFunction,
-                  VTK::FieldInfo("theta", VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter1.write("transport_solution_trace_"+std::to_string(nelements)
-        +"_"+std::to_string(i));
-
-    std::chrono::steady_clock::time_point endresults = std::chrono::steady_clock::now();
-    std::cout << "Saving the results took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(endresults - startresults).count()
-              << "us.\n";
-//  }
-#endif
-    ////////////////////////////////////////////////////
-    // Estimate a posteriori error and refine
-    ////////////////////////////////////////////////////
-
-    auto rhsAssembler_aposteriori = make_RhsAssembler(testSpaces_aposteriori);
-    auto rightHandSide_aposteriori
-      = replaceTestSpaces(rightHandSide, testSpaces_aposteriori);
-    rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
-
-    std::chrono::steady_clock::time_point starterror = std::chrono::steady_clock::now();
-    const double ratio = .2;
-    ErrorTools errorTools = ErrorTools();
-    err = errorTools.DoerflerMarking(*grid, ratio,
-                                     bilinearForm_aposteriori,
-                                     innerProduct_aposteriori,
-                                     aPosterioriInnerProduct,
-                                     aPosterioriLinearForm, f(beta),
-                                     x, rhs, 1);    // the last parameter is in [0,1] and
-                                                    // determines which error indicator
-                                                    // is used
-                                                    // 1 = residuum
-                                                    // 0 = |u-lifting(u^)|_L_2^2
-                                                    //     + conforming residuum^2
-
-    std::cout << "A posteriori error in iteration " << i << ": "
-              << err << std::endl;
-
-    std::chrono::steady_clock::time_point enderror = std::chrono::steady_clock::now();
-    std::cout << "The error computation took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(enderror - starterror).count()
-              << "us.\n";
-
-    grid->preAdapt();
-    grid->adapt();
-    grid->postAdapt();
-
-    std::chrono::steady_clock::time_point endwholeiteration = std::chrono::steady_clock::now();
-    std::cout << "The whole iteration took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(endwholeiteration - startiteration).count()
-              << "us.\n";
+  // direction beta
+  double betaX = atof(argv[3]);
+  double betaY = atof(argv[4]);
+  if(betaX==0. && betaY==0.) {
+    std::cerr << "beta=(betaX,betaY) has to be a nonzero vector." << std::endl;
+    std::abort();
   }
+  const double normBeta = std::sqrt(betaX*betaX+betaY*betaY);
+  betaX = betaX/normBeta;
+  betaY = betaY/normBeta;
+  FieldVector<double, dim> beta = {betaX, betaY};
+
+  ////////////////////////////////////////////////////////////////////
+  //   Choose finite element spaces and weak formulation of problem
+  ////////////////////////////////////////////////////////////////////
+
+  using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
+  FEBasisInterior spacePhi(gridView);
+
+  using FEBasisTrace = Functions::PQkNodalBasis<GridView, 2>;
+  FEBasisTrace spaceTheta(gridView);
+
+  auto solutionSpaces = std::make_tuple(spacePhi, spaceTheta);
+
+  using FEBasisTest
+      = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
+  auto testSearchSpaces = std::make_tuple(FEBasisTest(gridView));
+
+  auto bilinearForm = make_BilinearForm(testSearchSpaces, solutionSpaces,
+          make_tuple(
+              make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                    DomainOfIntegration::interior>(c),
+              make_IntegralTerm<0,0,IntegrationType::gradValue,
+                                    DomainOfIntegration::interior>(-1., beta),
+              make_IntegralTerm<0,1,IntegrationType::normalVector,
+                                    DomainOfIntegration::face>(1., beta)));
+  auto innerProduct = make_InnerProduct(testSearchSpaces,
+          make_tuple(
+              make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                    DomainOfIntegration::interior>(1.),
+              make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                    DomainOfIntegration::interior>(1., beta)));
+
+  auto systemAssembler = make_DPGSystemAssembler(bilinearForm, innerProduct);
+
+  /////////////////////////////////////////////////////////
+  //  Assemble the system
+  /////////////////////////////////////////////////////////
+
+  typedef BlockVector<FieldVector<double,1> > VectorType;
+  typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
+
+  VectorType rhsVector;
+  MatrixType stiffnessMatrix;
+
+  auto rhsFunctions
+    = make_DPGLinearForm(testSearchSpaces,
+          std::make_tuple(make_LinearIntegralTerm<0,
+                                LinearIntegrationType::valueFunction,
+                                DomainOfIntegration::interior>(f(beta))));
+  systemAssembler.assembleSystem(stiffnessMatrix, rhsVector, rhsFunctions);
+
+  // Determine Dirichlet dofs for theta (inflow boundary)
+  {
+    std::vector<bool> dirichletNodesInflow;
+    BoundaryTools boundaryTools = BoundaryTools();
+    boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
+                                        dirichletNodesInflow,
+                                        beta);
+    systemAssembler.applyDirichletBoundary<1>
+        (stiffnessMatrix,
+         rhsVector,
+         dirichletNodesInflow,
+         0.);
+  }
+
+  ////////////////////////////
+  //   Compute solution
+  ////////////////////////////
+
+  VectorType x(spaceTheta.size()
+               +spacePhi.size());
+  x = 0;
+
+  std::cout << "rhs size = " << rhsVector.size()
+            << " matrix size = " << stiffnessMatrix.N()
+                        << " x " << stiffnessMatrix.M()
+            << " solution size = " << x.size() << std::endl;
+
+
+  UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
+  InverseOperatorResult statistics;
+  umfPack.apply(x, rhsVector, statistics);
+
+
+  ////////////////////////////////////////////////////////////////////////////
+  //  Make a discrete function from the FE basis and the coefficient vector
+  ////////////////////////////////////////////////////////////////////////////
+
+  VectorType phi(spacePhi.size());
+  std::copy(x.begin(), x.begin() + phi.size(), phi.begin());
+
+  VectorType theta(spaceTheta.size());
+  std::copy(x.begin() + phi.size(), x.end(), theta.begin());
+
+  auto phiFunction
+      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+            (spacePhi, Dune::TypeTree::hybridTreePath(), phi);
+
+  auto thetaFunction
+      = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+            (spaceTheta, Dune::TypeTree::hybridTreePath(), theta);
+
+  /////////////////////////////////////////////////////////////////////////
+  //  Write result to VTK file
+  //  We need to subsample, because VTK cannot natively display
+  //  real second-order functions
+  /////////////////////////////////////////////////////////////////////////
+  SubsamplingVTKWriter<GridView> vtkWriter(gridView,2);
+  vtkWriter.addVertexData(phiFunction,
+               VTK::FieldInfo("phi", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter.write("transport_solution");
+
+  SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
+  vtkWriter1.addVertexData(thetaFunction,
+                VTK::FieldInfo("theta", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter1.write("transport_solution_trace");
+
+  std::cout << "Solution of the transport problem" << std::endl
+            << "  beta . grad(phi) +c phi = 1 in [0,1]x[0,1]" << std::endl
+            << "                      phi = 0 on boundary," << std::endl
+            << "with beta=(" << betaX << "," << betaY << ")"
+            << " and c=" << c << "."<< std::endl
+            << "Mesh size H=1/n=" << 1./nelements << std::endl;
 
 
   return 0;
