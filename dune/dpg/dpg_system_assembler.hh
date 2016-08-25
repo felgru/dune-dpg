@@ -425,7 +425,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     // compute the local stiffness matrix
     const Matrix<FieldMatrix<double,1,1> >& elementMatrix
-        = testspaceCoefficientMatrix_.localMatrix();
+        = testspaceCoefficientMatrix_.systemMatrix();
 
     // Add local right-hand side onto the global right-hand side
     auto cpRhs = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
@@ -558,7 +558,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
     testspaceCoefficientMatrix_.bind(e);
     const Matrix<FieldMatrix<double,1,1> >& elementMatrix
-        = testspaceCoefficientMatrix_.localMatrix();
+        = testspaceCoefficientMatrix_.systemMatrix();
 
     for_each(solutionLocalViews, applyBind<decltype(e)>(e));
     for_each(zip(solutionLocalIndexSets, solutionLocalViews),
