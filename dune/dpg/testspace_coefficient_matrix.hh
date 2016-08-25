@@ -143,21 +143,22 @@ public:
 
 private:
   MatrixType            coefficientMatrix_;     // G^{-1}B
-  MatrixType            systemMatrix_;           // B^TG^{-1}B
+  MatrixType            systemMatrix_;          // B^TG^{-1}B
 };
 
 
 template<typename BilinForm, typename InnerProd>
 class UnbufferedTestspaceCoefficientMatrix
 {
-  public:
+public:
   typedef BilinForm BilinearForm;
   typedef InnerProd InnerProduct;
-  typedef typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView GridView;
+  typedef typename std::tuple_element<0,
+             typename BilinearForm::SolutionSpaces>::type::GridView GridView;
   typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
   typedef typename BilinearForm::TestSpaces TestSpaces;
 
-  private:
+private:
   typedef typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<
                          SolutionSpaces,
@@ -174,8 +175,9 @@ class UnbufferedTestspaceCoefficientMatrix
 
   typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
 
-  public:
-  UnbufferedTestspaceCoefficientMatrix(BilinearForm& bilinForm, InnerProduct& innerProd) :
+public:
+  UnbufferedTestspaceCoefficientMatrix(BilinearForm& bilinForm,
+                                       InnerProduct& innerProd) :
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
     gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
