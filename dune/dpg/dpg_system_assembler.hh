@@ -468,7 +468,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       , boost::mpl::set0<>
       , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
       >::type LFIndices;
-          auto lfIndices = LFIndices{};
+    auto lfIndices = LFIndices{};
 
     for_each(lfIndices,
             localToGlobalRHSCopyHelper<decltype(solutionZip),
