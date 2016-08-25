@@ -81,14 +81,11 @@ public:
    * \note For your convenience, use make_SaddlepointSystemAssembler()
    *       instead.
    */
-  constexpr SaddlepointSystemAssembler (BilinForm      bilinearForm,
-                                        InProduct      innerProduct)
+  constexpr SaddlepointSystemAssembler (const BilinForm&   bilinearForm,
+                                        const InProduct&   innerProduct)
              : testSpaces(bilinearForm.getTestSpaces()),
                solutionSpaces(bilinearForm.getSolutionSpaces()),
-               bilinearForm(detail::make_BilinearForm<SaddlepointFormulation>
-                                             (testSpaces,
-                                              solutionSpaces,
-                                              bilinearForm.getTerms())),
+               bilinearForm(bilinearForm),
                innerProduct(innerProduct)
   { }
 
@@ -238,8 +235,8 @@ private:
  * \param innerProduct   the inner product of the test spaces
  */
 template<class BilinearForm, class InnerProduct>
-auto make_SaddlepointSystemAssembler(BilinearForm   bilinearForm,
-                                     InnerProduct   innerProduct)
+auto make_SaddlepointSystemAssembler(const BilinearForm&  bilinearForm,
+                                     const InnerProduct&  innerProduct)
     -> SaddlepointSystemAssembler<BilinearForm, InnerProduct>
 {
   return SaddlepointSystemAssembler<BilinearForm, InnerProduct>

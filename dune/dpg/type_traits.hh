@@ -46,8 +46,7 @@ namespace Functions {
   class TestspaceCoefficientMatrix;
 }
 
-template<class TSpaces, class SolSpaces,
-         class BilinearTerms, class FormulationType>
+template<class TSpaces, class SolSpaces, class BilinearTerms>
 class BilinearForm;
 
 template<class TSpaces, class InnerProductTerms>
@@ -270,17 +269,15 @@ struct changeGridView<std::tuple<Spaces...>, GridView>
       type;
 };
 
-template<class TSpaces, class SolSpaces,
-         class BilinearTerms, class FormulationType, class GridView>
+template<class TSpaces, class SolSpaces, class BilinearTerms, class GridView>
 struct changeGridView<
-    BilinearForm<TSpaces, SolSpaces, BilinearTerms, FormulationType>,
+    BilinearForm<TSpaces, SolSpaces, BilinearTerms>,
     GridView>
 {
   typedef BilinearForm
     < changeGridView_t<TSpaces, GridView>
     , changeGridView_t<SolSpaces, GridView>
     , BilinearTerms
-    , FormulationType
     >  type;
 };
 
