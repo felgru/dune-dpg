@@ -324,11 +324,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
            (size_t)0, globalOffsetHelper());
 
-  globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
-
-  const auto n = globalTotalSolutionSize;
-
-
   // Views on the FE bases on a single element
   auto testLocalViews     = as_vector(transform(testSearchSpaces_,
                                                 getLocalView()));
@@ -341,7 +336,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
   MatrixIndexSet occupationPattern;
-  occupationPattern.resize(n, n);
+  occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
 
   typedef
       typename result_of::as_vector<typename boost::mpl::range_c<
@@ -383,7 +378,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   occupationPattern.exportIdx(matrix);
 
   // set rhs to correct length -- the total number of basis vectors in the basis
-  rhs.resize(n);
+  rhs.resize(globalTotalSolutionSize);
 
   // Set all entries to zero
   matrix = 0;
@@ -395,20 +390,24 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     for_each(zip(solutionLocalIndexSets, solutionLocalViews),
              make_fused_procedure(bindLocalIndexSet()));
 
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    fold(zip(localSolutionSpaceOffsets, solutionLocalViews),
+               (size_t)0, offsetHelper());
+
+    // compute the coefficient matrix C for the optimal test space
+    testspaceCoefficientMatrix_.bind(e);
+    const Matrix<FieldMatrix<double,1,1> >& coefficientMatrix
+        = testspaceCoefficientMatrix_.coefficientMatrix();
 
     // Now get the local contribution to the right-hand side vector
+
+    for_each(testLocalViews, applyBind<decltype(e)>(e));
 
     // compute the local right-hand side vector F for the enriched test space
     BlockVector<FieldVector<double,1> > localEnrichedRhs;
 
     rhsLinearForm.bind(testLocalViews);
     rhsLinearForm.getLocalVector(localEnrichedRhs);
-
-    // compute the coefficient matrix C for the optimal test space
-    testspaceCoefficientMatrix_.bind(e);
-    const Matrix<FieldMatrix<double,1,1> >& coefficientMatrix
-        = testspaceCoefficientMatrix_.coefficientMatrix();
 
     // compute the local right-hand side vector C^T*F for the optimal test space
     BlockVector<FieldVector<double,1> > localRhs;
@@ -441,7 +440,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     auto solutionZip = zip(solutionLocalViews,
                            solutionLocalIndexSets,
-                           bilinearForm_.getLocalSolutionSpaceOffsets(),
+                           localSolutionSpaceOffsets,
                            globalSolutionSpaceOffsets);
 
     using SolutionZip = decltype(solutionZip);
@@ -494,11 +493,6 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
       fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
            (size_t)0, globalOffsetHelper());
 
-  globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
-
-  const auto n = globalTotalSolutionSize;
-
-
   // Views on the FE bases on a single element
   auto solutionLocalViews = as_vector(transform(solutionSpaces_,
                                                 getLocalView()));
@@ -508,7 +502,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
   MatrixIndexSet occupationPattern;
-  occupationPattern.resize(n, n);
+  occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
 
   typedef
       typename result_of::as_vector<typename boost::mpl::range_c<
@@ -571,7 +565,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
                                         (elementMatrix, matrix));
 
     /* copy every local submatrix indexed by a pair of indices from
-     * Indices exactly once. */    auto solutionZip = zip(solutionLocalViews,
+     * Indices exactly once. */
+    auto solutionZip = zip(solutionLocalViews,
                            solutionLocalIndexSets,
                            bilinearForm_.getLocalSolutionSpaceOffsets(),
                            globalSolutionSpaceOffsets);
@@ -631,20 +626,20 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     fold(zip(localSolutionSpaceOffsets, solutionLocalViews),
                (size_t)0, offsetHelper());
 
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    // compute the coefficient matrix C for the optimal test space
+    testspaceCoefficientMatrix_.bind(e);
+    const Matrix<FieldMatrix<double,1,1> >& coefficientMatrix
+        = testspaceCoefficientMatrix_.coefficientMatrix();
 
     // Now get the local contribution to the right-hand side vector
+
+    for_each(testLocalViews, applyBind<decltype(e)>(e));
 
     // compute the local right-hand side vector F for the enriched test space
     BlockVector<FieldVector<double,1> > localEnrichedRhs;
 
     rhsLinearForm.bind(testLocalViews);
     rhsLinearForm.getLocalVector(localEnrichedRhs);
-
-    // compute the coefficient matrix C for the optimal test space
-    testspaceCoefficientMatrix_.bind(e);
-    const Matrix<FieldMatrix<double,1,1> >& coefficientMatrix
-        = testspaceCoefficientMatrix_.coefficientMatrix();
 
     // compute the local right-hand side vector C^T*F for the optimal test space
     BlockVector<FieldVector<double,1> > localRhs;
