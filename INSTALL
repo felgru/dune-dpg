@@ -54,7 +54,13 @@ The URLs that are given below were still active on July 2016. We apologize
 for possible future inconsistencies in the links and hope that the user
 will nevertheless find his way.
 
-1) Create a folder devoted to Dune. We will call it $DUNEDIR.
+1) Create a directory to harbor the source code of the Dune modules.
+   We will call this directory $DUNEDIR.
+
+   Remark: Make sure that there are no whitespaces in the $DUNEDIR path
+           as our build-system might not be able to cope with them.
+           (Make is known to handle spaces in filenames quite badly and
+            other CMake backends might have similar problems.)
 
 Installation of Dune on Debian GNU/Linux
 ----------------------------------------
