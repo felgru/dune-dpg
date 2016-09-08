@@ -122,9 +122,9 @@ int main(int argc, char** argv)
   FEBasisInterior spacePhi(gridView);
 
   using FEBasisTrace = Functions::PQkNodalBasis<GridView, 2>;
-  FEBasisTrace spaceTheta(gridView);
+  FEBasisTrace spaceW(gridView);
 
-  auto solutionSpaces = std::make_tuple(spacePhi, spaceTheta);
+  auto solutionSpaces = std::make_tuple(spacePhi, spaceW);
 
   using FEBasisTest
       = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
@@ -168,7 +168,7 @@ int main(int argc, char** argv)
                                 DomainOfIntegration::interior>(f(beta))));
   systemAssembler.assembleSystem(stiffnessMatrix, rhsVector, rhsFunctions);
 
-  // Determine Dirichlet dofs for theta (inflow boundary)
+  // Determine Dirichlet dofs for w (inflow boundary)
   {
     std::vector<bool> dirichletNodesInflow;
     BoundaryTools boundaryTools = BoundaryTools();
@@ -186,7 +186,7 @@ int main(int argc, char** argv)
   //   Compute solution
   ////////////////////////////
 
-  VectorType x(spaceTheta.size()
+  VectorType x(spaceW.size()
                +spacePhi.size());
   x = 0;
 
@@ -208,16 +208,16 @@ int main(int argc, char** argv)
   VectorType phi(spacePhi.size());
   std::copy(x.begin(), x.begin() + phi.size(), phi.begin());
 
-  VectorType theta(spaceTheta.size());
-  std::copy(x.begin() + phi.size(), x.end(), theta.begin());
+  VectorType w(spaceW.size());
+  std::copy(x.begin() + phi.size(), x.end(), w.begin());
 
   auto phiFunction
       = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
             (spacePhi, Dune::TypeTree::hybridTreePath(), phi);
 
-  auto thetaFunction
+  auto wFunction
       = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-            (spaceTheta, Dune::TypeTree::hybridTreePath(), theta);
+            (spaceW, Dune::TypeTree::hybridTreePath(), w);
 
   /////////////////////////////////////////////////////////////////////////
   //  Write result to VTK file
@@ -230,8 +230,8 @@ int main(int argc, char** argv)
   vtkWriter.write("transport_solution");
 
   SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-  vtkWriter1.addVertexData(thetaFunction,
-                VTK::FieldInfo("theta", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter1.addVertexData(wFunction,
+                VTK::FieldInfo("w", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter1.write("transport_solution_trace");
 
   std::cout << "Solution of the transport problem" << std::endl
