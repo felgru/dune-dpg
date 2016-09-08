@@ -122,3 +122,29 @@ For more information and options on this command, run
 More information on the build system of Dune can be found under
 https://dune-project.org/doc/installation/
 https://dune-project.org/buildsystem/
+
+
+Troubleshooting
+---------------
+
+On MacOS it might be possible that the following linker error appears:
+```
+Undefined symbols for architecture x86_64:
+"__gfortran_st_write", referenced from:
+_xerbla_ in libf77blas.a(xerbla.o)
+"__gfortran_st_write_done", referenced from:
+_xerbla_ in libf77blas.a(xerbla.o)
+"__gfortran_stop_string", referenced from:
+_xerbla_ in libf77blas.a(xerbla.o)
+"__gfortran_transfer_character_write", referenced from:
+_xerbla_ in libf77blas.a(xerbla.o)
+"__gfortran_transfer_integer_write", referenced from:
+_xerbla_ in libf77blas.a(xerbla.o)
+```
+In that case, adding the lines
+```
+target_link_libraries("plot_solution" "gfortran")
+target_link_libraries(${convergence_test} "gfortran")
+```
+to $DUNEDIR/dune-dpg/src/CMakeLists.txt should help to correctly
+link the example programs.
