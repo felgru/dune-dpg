@@ -121,8 +121,8 @@ int main(int argc, char** argv)
   using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
   FEBasisInterior spacePhi(gridView);
 
-  using FEBasisTrace = Functions::PQkNodalBasis<GridView, 2>;
-  FEBasisTrace spaceW(gridView);
+  using FEBasisTraceLifting = Functions::PQkNodalBasis<GridView, 2>;
+  FEBasisTraceLifting spaceW(gridView);
 
   auto solutionSpaces = std::make_tuple(spacePhi, spaceW);
 
