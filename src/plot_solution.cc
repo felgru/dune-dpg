@@ -114,6 +114,13 @@ int main(int argc, char** argv)
     beta = {betaX, betaY};
   }
 
+  std::cout << "Computing solution of the transport problem" << std::endl
+            << "  β.∇ϕ + c ϕ = 1 in [0,1]x[0,1]" << std::endl
+            << "           ϕ = 0 on boundary," << std::endl
+            << "with β=(" << beta[0] << ", " << beta[1] << ")"
+            << " and c=" << c << "."<< std::endl
+            << "Mesh size H=1/n=" << 1./nelements << std::endl;
+
   ////////////////////////////////////////////////////////////////////
   //   Choose finite element spaces and weak formulation of problem
   ////////////////////////////////////////////////////////////////////
@@ -233,13 +240,6 @@ int main(int argc, char** argv)
   vtkWriter1.addVertexData(wFunction,
                 VTK::FieldInfo("w", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter1.write("transport_solution_trace");
-
-  std::cout << "Solution of the transport problem" << std::endl
-            << "  β.∇ϕ + c ϕ = 1 in [0,1]x[0,1]" << std::endl
-            << "           ϕ = 0 on boundary," << std::endl
-            << "with β=(" << beta[0] << ", " << beta[1] << ")"
-            << " and c=" << c << "."<< std::endl
-            << "Mesh size H=1/n=" << 1./nelements << std::endl;
 
 
   return 0;
