@@ -3,6 +3,12 @@ add_dune_umfpack_flags(plot_solution)
 add_dune_ug_flags(plot_solution)
 target_link_dune_default_libraries("plot_solution")
 
+add_executable("profile_testspacecoefficientmatrix"
+               profile_testspacecoefficientmatrix.cc)
+add_dune_umfpack_flags(profile_testspacecoefficientmatrix)
+add_dune_ug_flags(profile_testspacecoefficientmatrix)
+target_link_dune_default_libraries("profile_testspacecoefficientmatrix")
+
 foreach(level RANGE 0 3)
   set(degree 3)
   set(alevel 0)
