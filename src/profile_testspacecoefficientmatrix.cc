@@ -122,8 +122,13 @@ int main(int argc, char** argv)
 
   auto solutionSpaces = std::make_tuple(spacePhi, spaceW);
 
+#if LEVEL_SEARCH>0
   using FEBasisTest
-      = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
+      = Functions::PQkDGRefinedDGBasis<GridView, LEVEL_SEARCH, K_SEARCH>;
+#else
+  using FEBasisTest
+      = Functions::LagrangeDGBasis<GridView, K_SEARCH>;
+#endif
   auto testSearchSpaces = std::make_tuple(FEBasisTest(gridView));
 
   auto bilinearForm = make_BilinearForm(testSearchSpaces, solutionSpaces,
@@ -197,6 +202,15 @@ int main(int argc, char** argv)
               << std::chrono::duration_cast<std::chrono::microseconds>
                     (endsystemassembler - startsystemassembler).count()
               << "us.\n";
+
+#if LEVEL_SEARCH==0
+    double delta = 1e-8;
+    unbufferedSystemAssembler.defineCharacteristicFaces<1,2>
+                      (stiffnessMatrix,
+                       rhsVector,
+                       beta,
+                       delta);
+#endif
 
     // Determine Dirichlet dofs for w (inflow boundary)
     {
