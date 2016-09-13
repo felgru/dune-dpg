@@ -8,8 +8,12 @@ scientific interest of the code can be found in the paper "The dune-dpg
 library for solving PDEs with Discontinuous Petrov-Galerkin finite elements"
 by F. Gruber, A. Klewinghaus and O. Mula.
 
-This README document explains how to install this library and run basic
-examples which are described in the paper.
+For build instruction see the accompanying INSTALL file.
+See section "Running dune-dpg" in this README document for explainations
+on how to run basic examples which are described in the paper.
+If you are interested in an API documentation of dune-dpg, see the
+instructions in section "Generating API documentation with Doxygen" in
+the INSTALL file.
 
 Required Software and Libraries
 ===============================
