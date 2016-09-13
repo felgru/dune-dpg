@@ -20,6 +20,20 @@ add_dune_suitesparse_flags(plot_solution)
 add_dune_ug_flags(plot_solution)
 target_link_dune_default_libraries("plot_solution")
 
+foreach(level 0 1 2)
+  set(degree 3)
+  set(profile_executable
+      "profile_testspacecoefficientmatrix_ls${level}_ks${degree}")
+  add_executable(${profile_executable}
+                 profile_testspacecoefficientmatrix.cc)
+  add_dune_suitesparse_flags(${profile_executable})
+  add_dune_ug_flags(${profile_executable})
+  target_link_dune_default_libraries(${profile_executable})
+  target_compile_definitions(${profile_executable}
+                             PUBLIC LEVEL_SEARCH=${level};
+                                    K_SEARCH=${degree})
+endforeach()
+
 foreach(level RANGE 0 3)
   set(degree 3)
   set(alevel 0)
