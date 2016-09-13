@@ -145,6 +145,22 @@ More information on the build system of Dune can be found under
 https://dune-project.org/doc/installation/
 https://dune-project.org/buildsystem/
 
+Generating API documentation with Doxygen
+-----------------------------------------
+
+We have some (rudimentary) API documentation for our classes and function
+that can be generated from special comments in our source code with the
+[Doxygen](http://doxygen.org) documentation generator by calling
+
+    make doc
+
+in $DUNEDIR/dune-dpg/build-cmake. The generated html files of the
+API documentation can then be read by opening
+
+    $DUNEDIR/dune-dpg/build-cmake/doc/doxygen/html/index.html
+
+in your favorite browser.
+
 
 Troubleshooting
 ---------------
