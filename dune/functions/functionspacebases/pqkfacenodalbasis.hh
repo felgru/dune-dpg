@@ -87,7 +87,8 @@ public:
       triangleOffset_      = 0;
       GeometryType triangle;
       triangle.makeTriangle();
-      quadrilateralOffset_ = triangleOffset_        + dofsPerTriangle * gridView_.size(triangle);
+      quadrilateralOffset_ = triangleOffset_
+                           + dofsPerTriangle * gridView_.size(triangle);
     }
   }
 
@@ -115,20 +116,24 @@ public:
     switch (dim)
     {
       case 1:
-        DUNE_THROW(Dune::NotImplemented, "PQkFaceNodalBasis for 1D grids is not implemented");
+        DUNE_THROW(Dune::NotImplemented,
+                   "PQkFaceNodalBasis for 1D grids is not implemented");
         return 2*gridView_.size(dim)-2;
       case 2:
         return dofsPerEdge*gridView_.size(1);
       case 3:
       {
-        DUNE_THROW(Dune::NotImplemented, "PQkFaceNodalBasis for 3D grids is not implemented");
+        DUNE_THROW(Dune::NotImplemented,
+                   "PQkFaceNodalBasis for 3D grids is not implemented");
         GeometryType triangle, quad;
         triangle.makeTriangle();
         quad.makeQuadrilateral();
-        return dofsPerTriangle*gridView_.size(triangle) + dofsPerQuad*gridView_.size(quad);
+        return dofsPerTriangle * gridView_.size(triangle)
+             + dofsPerQuad * gridView_.size(quad);
       }
     }
-    DUNE_THROW(Dune::NotImplemented, "No size method for " << dim << "d grids available yet!");
+    DUNE_THROW(Dune::NotImplemented,
+               "No size method for " << dim << "d grids available yet!");
   }
 
   //! Return number possible values for next position in multi index
@@ -152,9 +157,9 @@ public:
 //protected:
   const GridView gridView_;
 
-  size_t edgeOffset_;
-  size_t triangleOffset_;
-  size_t quadrilateralOffset_;
+  size_type edgeOffset_;
+  size_type triangleOffset_;
+  size_type quadrilateralOffset_;
 
 };
 
@@ -299,13 +304,16 @@ public:
     {
       if (dim==2)   // element dof -- any local numbering is fine
       {
-        DUNE_THROW(Dune::NotImplemented, "faces have no elements of codimension 0");
+        DUNE_THROW(Dune::NotImplemented,
+                   "faces have no elements of codimension 0");
       } else
       {
-        DUNE_THROW(Dune::NotImplemented, "PQkFaceNodalBasis for 3D grids is not implemented");
+        DUNE_THROW(Dune::NotImplemented,
+                   "PQkFaceNodalBasis for 3D grids is not implemented");
       }
     }
-    DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the PQkFaceNodalBasis");
+    DUNE_THROW(Dune::NotImplemented,
+        "Grid contains elements not supported for the PQkFaceNodalBasis");
   }
 
 protected:

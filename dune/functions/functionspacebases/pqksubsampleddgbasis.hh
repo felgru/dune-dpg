@@ -105,11 +105,13 @@ public:
 
         GeometryType prism;
         prism.makePrism();
-        hexahedronOffset_    = prismOffset_         +   dofsPerPrism * gridView_.size(prism);
+        hexahedronOffset_    = prismOffset_
+                             + dofsPerPrism * gridView_.size(prism);
 
         GeometryType hexahedron;
         hexahedron.makeCube(3);
-        pyramidOffset_       = hexahedronOffset_    +   dofsPerHexahedron * gridView_.size(hexahedron);
+        pyramidOffset_       = hexahedronOffset_
+                             + dofsPerHexahedron * gridView_.size(hexahedron);
         break;
       }
     }
@@ -145,7 +147,8 @@ public:
         GeometryType triangle, quad;
         triangle.makeTriangle();
         quad.makeQuadrilateral();
-        return dofsPerTriangle*gridView_.size(triangle) + dofsPerQuad*gridView_.size(quad);
+        return dofsPerTriangle * gridView_.size(triangle)
+             + dofsPerQuad * gridView_.size(quad);
       }
       case 3:
       {
@@ -154,13 +157,16 @@ public:
         pyramid.makePyramid();
         prism.makePrism();
         hexahedron.makeCube(3);
-        return dofsPerTetrahedron*gridView_.size(tetrahedron) + dofsPerPyramid*gridView_.size(pyramid)
-             + dofsPerPrism*gridView_.size(prism) + dofsPerHexahedron*gridView_.size(hexahedron);
+        return dofsPerTetrahedron * gridView_.size(tetrahedron)
+             + dofsPerPyramid * gridView_.size(pyramid)
+             + dofsPerPrism * gridView_.size(prism)
+             + dofsPerHexahedron * gridView_.size(hexahedron);
       }
 
     }
 
-    DUNE_THROW(Dune::NotImplemented, "No size method for " << dim << "d grids available yet!");
+    DUNE_THROW(Dune::NotImplemented,
+               "No size method for " << dim << "d grids available yet!");
   }
 
   //! Return number possible values for next position in multi index
@@ -184,10 +190,10 @@ public:
 //protected:
   const GridView gridView_;
 
-  size_t quadrilateralOffset_;
-  size_t pyramidOffset_;
-  size_t prismOffset_;
-  size_t hexahedronOffset_;
+  size_type quadrilateralOffset_;
+  size_type pyramidOffset_;
+  size_type prismOffset_;
+  size_type hexahedronOffset_;
 
 };
 

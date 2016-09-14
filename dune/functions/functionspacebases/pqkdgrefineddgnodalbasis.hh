@@ -129,17 +129,18 @@ public:
     switch (dim)
     {
       case 1:
-        return dofsPerEdge*gridView_.size(0);
+        return dofsPerEdge * gridView_.size(0);
       case 2:
       {
         GeometryType triangle, quad;
         triangle.makeTriangle();
         quad.makeQuadrilateral();
-        return dofsPerTriangle*gridView_.size(triangle)
-             + dofsPerQuad*gridView_.size(quad);
+        return dofsPerTriangle * gridView_.size(triangle)
+             + dofsPerQuad * gridView_.size(quad);
       }
     }
-    DUNE_THROW(Dune::NotImplemented, "No size method for " << dim << "d grids available yet!");
+    DUNE_THROW(Dune::NotImplemented, "No size method for " << dim
+                                     << "d grids available yet!");
   }
 
   //! Return number possible values for next position in multi index
@@ -163,7 +164,7 @@ public:
 //protected:
   const GridView gridView_;
 
-  size_t quadrilateralOffset_;
+  size_type quadrilateralOffset_;
 };
 
 
