@@ -47,10 +47,11 @@ Running dune-dpg
 In the following, we assume that we are in the directory
 $DUNEDIR/dune-dpg/build-cmake .
 
-Dune-dpg comes with two example programs:
+Dune-dpg comes with three example programs:
 
 src/plot_solution.cc
 src/convergence_test.cc
+src/profile_testspacecoefficientmatrix.cc
 
 After compilation (see INSTALL for instructions), the example programs
 are found in $DUNEDIR/dune-dpg/build-cmake/src/ .
@@ -145,6 +146,52 @@ locally refined test search space of level 3 gets very slow for large n).
 Finally, the convergence plots can be generated with
 
     ../scripts/convergence_plots.py
+
+Remark: To regenerate the plots from the paper, it is advised to compile
+the test programs in release mode to significantly speed up the computations.
+The release mode can be configured with
+
+    cmake -DCMAKE_BUILD_TYPE=Release .
+
+Afterwards, we can compile the test programs with
+
+    make
+
+Description of src/profile_testspacecoefficientmatrix.cc
+--------------------------------------------------------
+
+profile_testspacecoefficientmatrix.cc uses the preprocessor variables
+LEVEL_SEARCH and K_SEARCH to set the refinement level and polynomial
+degree of the test search space.
+These variables get instantiated with different values by CMake to create
+executables of the form
+
+    src/profile_testspacecoefficientmatrix_ls$LS_ks$KS
+
+where $LS is the refinement level of the test search space,
+      $KS is the polynomial degree of the test search space.
+
+They can be run in $DUNEDIR/dune-dpg/build-cmake/src/ by e.g.
+
+    ./profile_testspacecoefficientmatrix_ls0_ks3 <n>
+
+to measure the time to compute the numerical example of the paper,
+$$
+  \beta \cdot \phi = 1 in [0,1]x[0,1]
+              \phi = 0 on the boundary
+$$
+for beta=(cos(pi/8),sin(pi/8)).
+
+To reproduce the results from the paper, call the script
+
+    ../scripts/run_profile.sh > profile
+
+which will make a series of calls to profile_testspacecoefficientmatrix.cc .
+The computation takes several minutes.
+
+Finally, the profile plots can be generated with
+
+    ../scripts/profile_plots.py -o profile.pdf profile
 
 Remark: To regenerate the plots from the paper, it is advised to compile
 the test programs in release mode to significantly speed up the computations.
