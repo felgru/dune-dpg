@@ -37,6 +37,8 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
 
+#include <dune/functions/functionspacebases/interpolate.hh>
+
 #include "assemble_helper.hh"
 #include "assemble_types.hh"
 #include "bilinearform.hh"
@@ -206,6 +208,25 @@ public:
                               BlockVector<FieldVector<double,1> >& rhs,
                               const std::vector<bool>& dirichletNodes,
                               const ValueType& value);
+
+  /**
+   * \brief Apply Dirichlet boundary values to a solution space
+   *
+   * \param[in,out] matrix      the matrix of the DPG system
+   * \param[in,out] rhs         the rhs vector of the DPG system
+   * \param[in] dirichletNodes  true marks the dofs in the Dirichlet boundary
+   * \param[in] value           the Dirichlet boundary value
+   * \tparam spaceIndex  the index of the solution space on which we apply
+   *                     the boundary data
+   * \tparam ValueType   for functions for \p value
+   */
+  template <size_t spaceIndex, class ValueType>
+  void applyNonzeroDirichletBoundary(
+                              BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                              BlockVector<FieldVector<double,1> >& rhs,
+                              const std::vector<bool>& dirichletNodes,
+                              const ValueType& value);
+
 
   template <size_t spaceIndex, unsigned int dim>
   void applyWeakBoundaryCondition(
@@ -797,6 +818,88 @@ applyDirichletBoundaryToRhs
   }
 
 }
+
+
+template<class BilinearForm, class InnerProduct, class BufferPolicy>
+template <size_t spaceIndex, class ValueType>
+void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
+applyNonzeroDirichletBoundary(
+                              BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                              BlockVector<FieldVector<double,1> >& rhs,
+                              const std::vector<bool>& dirichletNodes,
+                              const ValueType& value)
+{
+  using namespace boost::fusion;
+  using namespace Dune::detail;
+
+  const size_t spaceSize =
+        std::get<spaceIndex>(solutionSpaces_).size();
+
+  size_t globalOffset;
+  {
+    /* set up global offsets */
+    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+
+    fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
+         (size_t)0, globalOffsetHelper());
+
+    globalOffset = globalSolutionSpaceOffsets[spaceIndex];
+  }
+
+  ////////////////////////////////////////////
+  //    Modify rhs vector
+  ////////////////////////////////////////////
+
+  // compute the coefficients for the Dirichlet nodes
+  std::vector<double> dirichletValues;
+  dirichletValues.resize(std::get<spaceIndex>(solutionSpaces_).size());
+  interpolate(std::get<spaceIndex>(solutionSpaces_), Dune::TypeTree::hybridTreePath(),
+              dirichletValues, value,
+              dirichletNodes);
+
+  ////////////////////////////////////////////
+  //   Modify Dirichlet rows in matrix
+  ////////////////////////////////////////////
+
+  // loop over the matrix rows
+  for (size_t i=0; i<spaceSize; i++)
+  {
+    if (dirichletNodes[i])
+    {
+      auto cIt    = matrix[globalOffset+i].begin();
+      auto cEndIt = matrix[globalOffset+i].end();
+      // loop over nonzero matrix entries in current row
+      for (; cIt!=cEndIt; ++cIt)
+      {
+        if (globalOffset+i==cIt.index())
+        {
+          *cIt = 1;
+        }
+        else
+        {
+          /* Zero out row and column to keep symmetry. Modify RHS accordingly*/
+          *cIt = 0;
+          rhs[cIt.index()]-=(matrix[cIt.index()][globalOffset+i]*dirichletValues[i]);
+          matrix[cIt.index()][globalOffset+i]=0;
+        }
+      }
+    }
+
+  }
+
+  // Set Dirichlet values in rhs
+  for (size_t i=0; i<spaceSize; i++)
+  {
+    if (dirichletNodes[i])
+    {
+      rhs[globalOffset+i] = dirichletValues[i];
+    }
+  }
+}
+
+
+
+
 
 template<class BilinearForm, class InnerProduct, class BufferPolicy>
 template <size_t spaceIndex, unsigned int dim>
