@@ -54,7 +54,13 @@ The URLs that are given below were still active on July 2016. We apologize
 for possible future inconsistencies in the links and hope that the user
 will nevertheless find his way.
 
-1) Create a folder devoted to Dune. We will call it $DUNEDIR.
+1) Create a directory to harbor the source code of the Dune modules.
+   We will call this directory $DUNEDIR.
+
+   Remark: Make sure that there are no whitespaces in the $DUNEDIR path
+           as our build-system might not be able to cope with them.
+           (Make is known to handle spaces in filenames quite badly and
+            other CMake backends might have similar problems.)
 
 Installation of Dune on Debian GNU/Linux
 ----------------------------------------
@@ -115,10 +121,44 @@ creates a directory build_cmake inside each Dune module where the
 executables are built. As a consequence, the user should cd into
 $DUNEDIR/dune-dpg/build_cmake to run the examples of the paper.
 
-For more information and options on this command, run
+Remark: If there were any problems with the build system it might be
+        helpful to remove all build_cmake directories by running
+
+            rm -rf */build-cmake
+
+        in $DUNEDIR. This removes all build products and old CMake
+        configuration files that might cause conflicts.
+
+For more information and options on dunecontrol, run
 
     $DUNEDIR/dune-common/bin/dunecontrol --help
 
 More information on the build system of Dune can be found under
 https://dune-project.org/doc/installation/
 https://dune-project.org/buildsystem/
+
+
+Troubleshooting
+---------------
+
+On MacOS it might be possible that the following linker error appears:
+```
+Undefined symbols for architecture x86_64:
+"__gfortran_st_write", referenced from:
+_xerbla_ in libf77blas.a(xerbla.o)
+"__gfortran_st_write_done", referenced from:
+_xerbla_ in libf77blas.a(xerbla.o)
+"__gfortran_stop_string", referenced from:
+_xerbla_ in libf77blas.a(xerbla.o)
+"__gfortran_transfer_character_write", referenced from:
+_xerbla_ in libf77blas.a(xerbla.o)
+"__gfortran_transfer_integer_write", referenced from:
+_xerbla_ in libf77blas.a(xerbla.o)
+```
+In that case, adding the lines
+```
+target_link_libraries("plot_solution" "gfortran")
+target_link_libraries(${convergence_test} "gfortran")
+```
+to $DUNEDIR/dune-dpg/src/CMakeLists.txt should help to correctly
+link the example programs.

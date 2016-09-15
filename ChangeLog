@@ -1,3 +1,32 @@
+0.2:
+* Split SystemAssembler into DPGSystemAssembler and
+  SaddlepointSystemAssembler.
+* Compute near optimal test spaces like in Roberts 2014.
+  This gives a significant speedup and simplifies the interface of
+  make_DPGSystemAssembler.
+* Add the possibility to cache the test space coefficient matrices
+  with the newly introduced GeometryBuffer class when using a uniform
+  grid and constant coefficients.
+* Add LinearForm to better describe the rhs functions.
+  This allows more easily to modify the rhs than the previous tuple
+  of functions.
+* Implement the travel distance weighted inner product from
+  Broersen, Dahmen and Stevenson, 2015.
+* Add a function to do adaptive grid refinements with Dörfler marking.
+  This is not used in our examples yet.
+  See function DoerflerMarking in dune/dpg/errortools.hh
+* Add new aposteriori error indicator
+  ||u-lifting(theta)||_L_2^2 + conforming residual(lifting(theta))^2
+  used by Broersen, Dahmen and Stevenson.
+* New replaceTestSpaces function to easily create BilinearForm,
+  InnerProduct and LinearForm for computation of a posteriori errors.
+* Bump CMake dependency to 2.8.12 to be compatible with latest Dune
+  requirements.
+* Add dummy implementation for partial() in local bases for newer
+  versions of dune-localfunctions.
+* Add .editorconfig to define indentations, etc
+  (see http://editorconfig.org for more information)
+
 0.1.2:
 * Completely rewritten build instructions can now be found in INSTALL.
 * Describe the example programs more detailedly in README.

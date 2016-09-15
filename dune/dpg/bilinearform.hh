@@ -40,9 +40,8 @@ namespace Dune {
    * \tparam TSpaces         tuple of test spaces
    * \tparam SolSpaces       tuple of solution spaces
    * \tparam BilinearTerms   tuple of IntegralTerm
-   * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
    */
-  template<class TSpaces, class SolSpaces, class BilinearTerms, class FormulationType>
+  template<class TSpaces, class SolSpaces, class BilinearTerms>
   class BilinearForm
   {
   public:
@@ -127,32 +126,15 @@ namespace Dune {
      */
     void bind(const TestLocalViews& tlv, const SolutionLocalViews& slv)
     {
-      constexpr bool isSaddlepoint =
-                std::is_same<
-                typename std::decay<FormulationType>::type
-              , SaddlepointFormulation
-            >::value;
-
       testLocalViews     = std::addressof(tlv);
       solutionLocalViews = std::addressof(slv);
 
       using namespace boost::fusion;
       using namespace Dune::detail;
 
-      constexpr size_t testSize = result_of::size<TestLocalViews>::value;
-
       /* set up local offsets */
-      if(isSaddlepoint) {
-        fold(zip(localTestSpaceOffsets, tlv), (size_t)0, offsetHelper());
-      } else { /* DPG formulation */
-        for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
-        {
-          localTestSpaceOffsets[i] = 0;
-        }
-      }
       localTotalTestSize =
-          localTestSpaceOffsets[testSize-1]
-          + at_c<testSize-1>(tlv).size();
+        fold(zip(localTestSpaceOffsets, tlv), (size_t)0, offsetHelper());
 
       localTotalSolutionSize =
           fold(zip(localSolutionSpaceOffsets, slv),
@@ -221,70 +203,39 @@ template<class TestSpaces, class SolutionSpaces, class BilinearTerms>
 auto make_BilinearForm(TestSpaces     testSpaces,
                        SolutionSpaces solutionSpaces,
                        BilinearTerms  terms)
-    -> BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms, SaddlepointFormulation>
+    -> BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>
 {
-  return BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms, SaddlepointFormulation>
+  return BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>
                       (testSpaces,
                        solutionSpaces,
                        terms);
 }
 
-
-namespace detail {
-
-  template<class FormulationType, class TestSpaces, class SolutionSpaces, class BilinearTerms>
-  auto make_BilinearForm(TestSpaces     testSpaces,
-                         SolutionSpaces solutionSpaces,
-                         BilinearTerms  terms)
-      -> BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms, FormulationType>
-  {
-    return BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms, FormulationType>
-                        (testSpaces,
-                         solutionSpaces,
-                         terms);
-  }
-
-}
-
 template<class TestSpaces, class SolutionSpaces, class BilinearTerms,
-         class FormulationType, class NewTestSpaces>
-auto replaceTestSpaces(const BilinearForm<TestSpaces, SolutionSpaces,
-    BilinearTerms, FormulationType>& bilinearForm,
+         class NewTestSpaces>
+auto replaceTestSpaces(
+    const BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>& bilinearForm,
     NewTestSpaces&& newTestSpaces) {
-  return detail::make_BilinearForm<FormulationType>
+  return make_BilinearForm
                      (std::forward<NewTestSpaces>(newTestSpaces),
                       bilinearForm.getSolutionSpaces(),
                       bilinearForm.getTerms());
 }
 
 
-template<class TestSpaces, class SolutionSpaces, class BilinearTerms, class FormulationType>
+template<class TestSpaces, class SolutionSpaces, class BilinearTerms>
 template<bool mirror>
-void BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms, FormulationType>::
+void BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>::
 getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift) const
 {
   using namespace boost::fusion;
   using namespace Dune::detail;
 
-  constexpr bool isSaddlepoint =
-        std::is_same<
-             typename std::decay<FormulationType>::type
-           , SaddlepointFormulation
-        >::value;
-
-
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  if(isSaddlepoint) {
-    fold(zip(globalTestSpaceOffsets, testSpaces),
-         testShift, globalOffsetHelper());
-  } else { /* DPG formulation */
-    for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
-    {
-      globalTestSpaceOffsets[i] = 0;
-    }
-  }
+  fold(zip(globalTestSpaceOffsets, testSpaces),
+       testShift, globalOffsetHelper());
   fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
        solutionShift, globalOffsetHelper());
 

@@ -81,14 +81,16 @@ public:
   void initializeIndices()
   {
     vertexOffset_        = 0;
-    edgeOffset_          = vertexOffset_          + gridView_.size(dim);
+    edgeOffset_          = vertexOffset_ + gridView_.size(dim);
     if (dim==3)
     {
-      triangleOffset_      = edgeOffset_            + dofsPerEdge * gridView_.size(dim-1);
+      triangleOffset_      = edgeOffset_
+                           + dofsPerEdge * gridView_.size(dim-1);
 
       GeometryType triangle;
       triangle.makeTriangle();
-      quadrilateralOffset_ = triangleOffset_        + dofsPerTriangle * gridView_.size(triangle);
+      quadrilateralOffset_ = triangleOffset_
+                           + dofsPerTriangle * gridView_.size(triangle);
     }
   }
 
@@ -118,17 +120,19 @@ public:
       case 1:
         return gridView_.size(dim);
       case 2:
-        return gridView_.size(dim) + dofsPerEdge*gridView_.size(1);
+        return gridView_.size(dim) + dofsPerEdge * gridView_.size(1);
       case 3:
       {
         GeometryType triangle, quad;
         triangle.makeTriangle();
         quad.makeQuadrilateral();
-        return gridView_.size(dim) + dofsPerEdge*gridView_.size(2)
-             + dofsPerTriangle*gridView_.size(triangle) + dofsPerQuad*gridView_.size(quad);
+        return gridView_.size(dim) + dofsPerEdge * gridView_.size(2)
+             + dofsPerTriangle * gridView_.size(triangle)
+             + dofsPerQuad * gridView_.size(quad);
       }
     }
-    DUNE_THROW(Dune::NotImplemented, "No size method for " << dim << "d grids available yet!");
+    DUNE_THROW(Dune::NotImplemented,
+               "No size method for " << dim << "d grids available yet!");
   }
 
   //! Return number possible values for next position in multi index
@@ -153,10 +157,10 @@ public:
 //protected:
   const GridView gridView_;
 
-  size_t vertexOffset_;
-  size_t edgeOffset_;
-  size_t triangleOffset_;
-  size_t quadrilateralOffset_;
+  size_type vertexOffset_;
+  size_type edgeOffset_;
+  size_type triangleOffset_;
+  size_type quadrilateralOffset_;
 
 };
 

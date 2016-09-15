@@ -37,6 +37,8 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
 
+#include <dune/functions/functionspacebases/interpolate.hh>
+
 #include "assemble_helper.hh"
 #include "assemble_types.hh"
 #include "bilinearform.hh"
@@ -207,6 +209,25 @@ public:
                               const std::vector<bool>& dirichletNodes,
                               const ValueType& value);
 
+  /**
+   * \brief Apply Dirichlet boundary values to a solution space
+   *
+   * \param[in,out] matrix      the matrix of the DPG system
+   * \param[in,out] rhs         the rhs vector of the DPG system
+   * \param[in] dirichletNodes  true marks the dofs in the Dirichlet boundary
+   * \param[in] value           the Dirichlet boundary value
+   * \tparam spaceIndex  the index of the solution space on which we apply
+   *                     the boundary data
+   * \tparam ValueType   for functions for \p value
+   */
+  template <size_t spaceIndex, class ValueType>
+  void applyNonzeroDirichletBoundary(
+                              BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                              BlockVector<FieldVector<double,1> >& rhs,
+                              const std::vector<bool>& dirichletNodes,
+                              const ValueType& value);
+
+
   template <size_t spaceIndex, unsigned int dim>
   void applyWeakBoundaryCondition(
                               BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
@@ -324,11 +345,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
            (size_t)0, globalOffsetHelper());
 
-  globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
-
-  const auto n = globalTotalSolutionSize;
-
-
   // Views on the FE bases on a single element
   auto testLocalViews     = as_vector(transform(testSearchSpaces_,
                                                 getLocalView()));
@@ -341,7 +357,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
   MatrixIndexSet occupationPattern;
-  occupationPattern.resize(n, n);
+  occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
 
   typedef
       typename result_of::as_vector<typename boost::mpl::range_c<
@@ -383,7 +399,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   occupationPattern.exportIdx(matrix);
 
   // set rhs to correct length -- the total number of basis vectors in the basis
-  rhs.resize(n);
+  rhs.resize(globalTotalSolutionSize);
 
   // Set all entries to zero
   matrix = 0;
@@ -395,20 +411,24 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     for_each(zip(solutionLocalIndexSets, solutionLocalViews),
              make_fused_procedure(bindLocalIndexSet()));
 
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    fold(zip(localSolutionSpaceOffsets, solutionLocalViews),
+               (size_t)0, offsetHelper());
+
+    // compute the coefficient matrix C for the optimal test space
+    testspaceCoefficientMatrix_.bind(e);
+    const Matrix<FieldMatrix<double,1,1> >& coefficientMatrix
+        = testspaceCoefficientMatrix_.coefficientMatrix();
 
     // Now get the local contribution to the right-hand side vector
+
+    for_each(testLocalViews, applyBind<decltype(e)>(e));
 
     // compute the local right-hand side vector F for the enriched test space
     BlockVector<FieldVector<double,1> > localEnrichedRhs;
 
     rhsLinearForm.bind(testLocalViews);
     rhsLinearForm.getLocalVector(localEnrichedRhs);
-
-    // compute the coefficient matrix C for the optimal test space
-    testspaceCoefficientMatrix_.bind(e);
-    Matrix<FieldMatrix<double,1,1> > coefficientMatrix
-        = testspaceCoefficientMatrix_.coefficientMatrix();
 
     // compute the local right-hand side vector C^T*F for the optimal test space
     BlockVector<FieldVector<double,1> > localRhs;
@@ -423,8 +443,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       }
 
     // compute the local stiffness matrix
-    Matrix<FieldMatrix<double,1,1> > elementMatrix
-        = testspaceCoefficientMatrix_.localMatrix();
+    const Matrix<FieldMatrix<double,1,1> >& elementMatrix
+        = testspaceCoefficientMatrix_.systemMatrix();
 
     // Add local right-hand side onto the global right-hand side
     auto cpRhs = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
@@ -441,7 +461,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     auto solutionZip = zip(solutionLocalViews,
                            solutionLocalIndexSets,
-                           bilinearForm_.getLocalSolutionSpaceOffsets(),
+                           localSolutionSpaceOffsets,
                            globalSolutionSpaceOffsets);
 
     using SolutionZip = decltype(solutionZip);
@@ -468,7 +488,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       , boost::mpl::set0<>
       , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
       >::type LFIndices;
-          auto lfIndices = LFIndices{};
+    auto lfIndices = LFIndices{};
 
     for_each(lfIndices,
             localToGlobalRHSCopyHelper<decltype(solutionZip),
@@ -494,11 +514,6 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
       fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
            (size_t)0, globalOffsetHelper());
 
-  globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
-
-  const auto n = globalTotalSolutionSize;
-
-
   // Views on the FE bases on a single element
   auto solutionLocalViews = as_vector(transform(solutionSpaces_,
                                                 getLocalView()));
@@ -508,7 +523,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
   MatrixIndexSet occupationPattern;
-  occupationPattern.resize(n, n);
+  occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
 
   typedef
       typename result_of::as_vector<typename boost::mpl::range_c<
@@ -556,8 +571,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   for(const auto& e : elements(gridView)) {
 
     testspaceCoefficientMatrix_.bind(e);
-    Matrix<FieldMatrix<double,1,1> > elementMatrix
-        = testspaceCoefficientMatrix_.localMatrix();
+    const Matrix<FieldMatrix<double,1,1> >& elementMatrix
+        = testspaceCoefficientMatrix_.systemMatrix();
 
     for_each(solutionLocalViews, applyBind<decltype(e)>(e));
     for_each(zip(solutionLocalIndexSets, solutionLocalViews),
@@ -571,7 +586,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
                                         (elementMatrix, matrix));
 
     /* copy every local submatrix indexed by a pair of indices from
-     * Indices exactly once. */    auto solutionZip = zip(solutionLocalViews,
+     * Indices exactly once. */
+    auto solutionZip = zip(solutionLocalViews,
                            solutionLocalIndexSets,
                            bilinearForm_.getLocalSolutionSpaceOffsets(),
                            globalSolutionSpaceOffsets);
@@ -631,20 +647,20 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     fold(zip(localSolutionSpaceOffsets, solutionLocalViews),
                (size_t)0, offsetHelper());
 
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    // compute the coefficient matrix C for the optimal test space
+    testspaceCoefficientMatrix_.bind(e);
+    const Matrix<FieldMatrix<double,1,1> >& coefficientMatrix
+        = testspaceCoefficientMatrix_.coefficientMatrix();
 
     // Now get the local contribution to the right-hand side vector
+
+    for_each(testLocalViews, applyBind<decltype(e)>(e));
 
     // compute the local right-hand side vector F for the enriched test space
     BlockVector<FieldVector<double,1> > localEnrichedRhs;
 
     rhsLinearForm.bind(testLocalViews);
     rhsLinearForm.getLocalVector(localEnrichedRhs);
-
-    // compute the coefficient matrix C for the optimal test space
-    testspaceCoefficientMatrix_.bind(e);
-    Matrix<FieldMatrix<double,1,1> > coefficientMatrix
-        = testspaceCoefficientMatrix_.coefficientMatrix();
 
     // compute the local right-hand side vector C^T*F for the optimal test space
     BlockVector<FieldVector<double,1> > localRhs;
@@ -802,6 +818,88 @@ applyDirichletBoundaryToRhs
   }
 
 }
+
+
+template<class BilinearForm, class InnerProduct, class BufferPolicy>
+template <size_t spaceIndex, class ValueType>
+void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
+applyNonzeroDirichletBoundary(
+                              BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                              BlockVector<FieldVector<double,1> >& rhs,
+                              const std::vector<bool>& dirichletNodes,
+                              const ValueType& value)
+{
+  using namespace boost::fusion;
+  using namespace Dune::detail;
+
+  const size_t spaceSize =
+        std::get<spaceIndex>(solutionSpaces_).size();
+
+  size_t globalOffset;
+  {
+    /* set up global offsets */
+    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+
+    fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
+         (size_t)0, globalOffsetHelper());
+
+    globalOffset = globalSolutionSpaceOffsets[spaceIndex];
+  }
+
+  ////////////////////////////////////////////
+  //    Modify rhs vector
+  ////////////////////////////////////////////
+
+  // compute the coefficients for the Dirichlet nodes
+  std::vector<double> dirichletValues;
+  dirichletValues.resize(std::get<spaceIndex>(solutionSpaces_).size());
+  interpolate(std::get<spaceIndex>(solutionSpaces_), Dune::TypeTree::hybridTreePath(),
+              dirichletValues, value,
+              dirichletNodes);
+
+  ////////////////////////////////////////////
+  //   Modify Dirichlet rows in matrix
+  ////////////////////////////////////////////
+
+  // loop over the matrix rows
+  for (size_t i=0; i<spaceSize; i++)
+  {
+    if (dirichletNodes[i])
+    {
+      auto cIt    = matrix[globalOffset+i].begin();
+      auto cEndIt = matrix[globalOffset+i].end();
+      // loop over nonzero matrix entries in current row
+      for (; cIt!=cEndIt; ++cIt)
+      {
+        if (globalOffset+i==cIt.index())
+        {
+          *cIt = 1;
+        }
+        else
+        {
+          /* Zero out row and column to keep symmetry. Modify RHS accordingly*/
+          *cIt = 0;
+          rhs[cIt.index()]-=(matrix[cIt.index()][globalOffset+i]*dirichletValues[i]);
+          matrix[cIt.index()][globalOffset+i]=0;
+        }
+      }
+    }
+
+  }
+
+  // Set Dirichlet values in rhs
+  for (size_t i=0; i<spaceSize; i++)
+  {
+    if (dirichletNodes[i])
+    {
+      rhs[globalOffset+i] = dirichletValues[i];
+    }
+  }
+}
+
+
+
+
 
 template<class BilinearForm, class InnerProduct, class BufferPolicy>
 template <size_t spaceIndex, unsigned int dim>

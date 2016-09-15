@@ -136,28 +136,29 @@ public:
     return coefficientMatrix_;
   }
 
-  MatrixType& localMatrix()
+  MatrixType& systemMatrix()
   {
-    return localMatrix_;
+    return systemMatrix_;
   }
 
 private:
   MatrixType            coefficientMatrix_;     // G^{-1}B
-  MatrixType            localMatrix_;           // B^TG^{-1}B
+  MatrixType            systemMatrix_;          // B^TG^{-1}B
 };
 
 
 template<typename BilinForm, typename InnerProd>
 class UnbufferedTestspaceCoefficientMatrix
 {
-  public:
+public:
   typedef BilinForm BilinearForm;
   typedef InnerProd InnerProduct;
-  typedef typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView GridView;
+  typedef typename std::tuple_element<0,
+             typename BilinearForm::SolutionSpaces>::type::GridView GridView;
   typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
   typedef typename BilinearForm::TestSpaces TestSpaces;
 
-  private:
+private:
   typedef typename boost::fusion::result_of::as_vector<
              typename boost::fusion::result_of::transform<
                          SolutionSpaces,
@@ -174,8 +175,9 @@ class UnbufferedTestspaceCoefficientMatrix
 
   typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
 
-  public:
-  UnbufferedTestspaceCoefficientMatrix(BilinearForm& bilinForm, InnerProduct& innerProd) :
+public:
+  UnbufferedTestspaceCoefficientMatrix(BilinearForm& bilinForm,
+                                       InnerProduct& innerProd) :
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
     gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
@@ -208,16 +210,16 @@ class UnbufferedTestspaceCoefficientMatrix
     cholesky.apply(bilinearMatrix, coefficientMatrix_);
 
     unsigned int m = coefficientMatrix_.M();
-    localMatrix_.setSize(m, m);
+    systemMatrix_.setSize(m, m);
 
     for (unsigned int i=0; i<m; i++)
     {
       for (unsigned int j=0; j<m; j++)
       {
-        localMatrix_[i][j]=0;
+        systemMatrix_[i][j]=0;
         for (unsigned int k=0; k<coefficientMatrix_.N(); k++)
         {
-          localMatrix_[i][j]+=(bilinearMatrix[k][i]*coefficientMatrix_[k][j]);
+          systemMatrix_[i][j]+=(bilinearMatrix[k][i]*coefficientMatrix_[k][j]);
         }
       }
     }
@@ -228,9 +230,9 @@ class UnbufferedTestspaceCoefficientMatrix
     return coefficientMatrix_;
   }
 
-  const MatrixType& localMatrix()
+  const MatrixType& systemMatrix()
   {
-    return localMatrix_;
+    return systemMatrix_;
   }
 
   const BilinearForm& bilinearForm() const
@@ -255,7 +257,7 @@ class UnbufferedTestspaceCoefficientMatrix
   SolutionLocalViews       localViewsSolution_;
   TestLocalViews           localViewsTest_;
   MatrixType               coefficientMatrix_;     // G^{-1}B
-  MatrixType               localMatrix_;           // B^TG^{-1}B
+  MatrixType               systemMatrix_;          // B^TG^{-1}B
 };
 
 
@@ -349,7 +351,7 @@ class BufferedTestspaceCoefficientMatrix
     newGeometry.set(e.geometry());
     auto pair = geometryBuffer_(newGeometry);
     coefficientMatrix_ = &pair.first.coefficientMatrix();
-    localMatrix_ = &pair.first.localMatrix();
+    systemMatrix_ = &pair.first.systemMatrix();
     if (!pair.second)
     {
       for_each(localViewsTest_, applyBind<decltype(e)>(e));
@@ -370,16 +372,16 @@ class BufferedTestspaceCoefficientMatrix
 
       unsigned int m = coefficientMatrix_->M();
       unsigned int n = coefficientMatrix_->N();
-      localMatrix_->setSize(m, m);
+      systemMatrix_->setSize(m, m);
 
       for (unsigned int i=0; i<m; i++)
       {
         for (unsigned int j=0; j<m; j++)
         {
-          (*localMatrix_)[i][j]=0;
+          (*systemMatrix_)[i][j]=0;
           for (unsigned int k=0; k<n; k++)
           {
-            (*localMatrix_)[i][j]+=(bilinearMatrix[k][i]*(*coefficientMatrix_)[k][j]);
+            (*systemMatrix_)[i][j]+=(bilinearMatrix[k][i]*(*coefficientMatrix_)[k][j]);
           }
         }
       }
@@ -391,9 +393,9 @@ class BufferedTestspaceCoefficientMatrix
     return *coefficientMatrix_;
   }
 
-  const MatrixType& localMatrix()
+  const MatrixType& systemMatrix()
   {
-    return *localMatrix_;
+    return *systemMatrix_;
   }
 
   const BilinearForm& bilinearForm() const
@@ -417,7 +419,7 @@ class BufferedTestspaceCoefficientMatrix
   SolutionLocalViews    localViewsSolution_;
   TestLocalViews        localViewsTest_;
   MatrixType*           coefficientMatrix_;     // G^{-1}B
-  MatrixType*           localMatrix_;           // B^TG^{-1}B
+  MatrixType*           systemMatrix_;          // B^TG^{-1}B
   GeoBuffer&            geometryBuffer_;
 };
 

@@ -155,7 +155,7 @@ public:
 //protected:
   const GridView gridView_;
 
-  size_t quadrilateralOffset_;
+  size_type quadrilateralOffset_;
 
 };
 

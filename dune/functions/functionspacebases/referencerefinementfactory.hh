@@ -31,13 +31,13 @@ namespace Functions {
         = ReferenceElements<D, dim>::general(gt);
       auto referenceGeometry = referenceElement.template geometry<0>(0);
 
-      int numVertices = referenceGeometry.corners();
+      const unsigned int numVertices = referenceGeometry.corners();
       std::vector<unsigned int> vertices(numVertices);
       GridFactory<GridType> gridFactory;
-      for(int i=0; i<numVertices; ++i)
+      for(unsigned int i=0; i<numVertices; ++i)
       {
         gridFactory.insertVertex(referenceGeometry.corner(i));
-        vertices[i]=i;
+        vertices[i] = i;
       }
       gridFactory.insertElement(gt, vertices);
 
@@ -62,7 +62,8 @@ namespace Functions {
   {
   protected:
     typedef UGGrid<dim> Grid;
-    typedef typename std::map<GeometryType,std::unique_ptr<Grid>> RefinementMap;
+    typedef typename std::map<GeometryType, std::unique_ptr<Grid>>
+        RefinementMap;
 
   public:
     /** \brief Type of the grid stored in this cache */
@@ -71,7 +72,7 @@ namespace Functions {
     /** \brief Default constructor */
     ReferenceRefinementCache() {}
 
-    /** \brief Copy constructor does nothing as, we cannot copy the grids
+    /** \brief Copy constructor does nothing as we cannot copy the grids
      *         used for the refinements */
     ReferenceRefinementCache(const ReferenceRefinementCache& other)
       : cache_{}
@@ -86,7 +87,9 @@ namespace Functions {
         std::unique_ptr<GridType> refinement
           = ReferenceRefinementFactory<D,dim,level>::create(gt);
         if (refinement==nullptr)
-          DUNE_THROW(Dune::NotImplemented,"No refined reference element available for geometry type " << gt << " and refinement level " << level);
+          DUNE_THROW(Dune::NotImplemented,
+              "No refined reference element available for geometry type "
+              << gt << " and refinement level " << level);
 
         auto res = cache_.emplace(gt, std::move(refinement));
         return *(res.first->second);
