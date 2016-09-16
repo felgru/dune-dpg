@@ -7,6 +7,8 @@
 * Add the possibility to cache the test space coefficient matrices
   with the newly introduced GeometryBuffer class when using a uniform
   grid and constant coefficients.
+* Add new test program to profile the runtime difference between
+  buffered and unbuffered test space coefficient matrices.
 * Add LinearForm to better describe the rhs functions.
   This allows more easily to modify the rhs than the previous tuple
   of functions.
@@ -20,10 +22,15 @@
   used by Broersen, Dahmen and Stevenson.
 * New replaceTestSpaces function to easily create BilinearForm,
   InnerProduct and LinearForm for computation of a posteriori errors.
+* scripts/run_convergence_test.sh now takes a list of grid resolutions
+  as argument.
+* CMake now complains if Boost Fusion is older than 1.59.
 * Bump CMake dependency to 2.8.12 to be compatible with latest Dune
   requirements.
+* Remove now unused template parameter FormulationType from BilinearForm.
 * Add dummy implementation for partial() in local bases for newer
   versions of dune-localfunctions.
+* Improve documentation in INSTALL and README.
 * Add .editorconfig to define indentations, etc
   (see http://editorconfig.org for more information)
 
