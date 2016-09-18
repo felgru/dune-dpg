@@ -1,7 +1,5 @@
 known bugs:
 
-* If you have more than one Version of Boost installed, the version
-  found by CMake and the one later used when compiling might differ.
 * evaluateFactor() in integralterm.hh is called with the *local* position
   of a given quadrature point, this should be first transformed into
   global coordinates. (Already fixed but not tested for interior implementation,
@@ -9,7 +7,8 @@ known bugs:
 * PQkTransportBasis cannot be used as a test space at the moment.
   There are compile-time errors that are probably caused by using
   ChooseQuadrature without specifying the transport direction β.
-* Adjust quadrature order for non-constant function (rhs term) in getvolumeterm_impl.hh and in linearintegralterm.hh
+* Adjust quadrature order for non-constant function (rhs term) in
+  getvolumeterm_impl.hh and in linearintegralterm.hh
 
 technical debt that needs to be paid off sooner or later:
 
