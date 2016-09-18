@@ -570,13 +570,17 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
   for(const auto& e : elements(gridView)) {
 
+    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
+    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
+             make_fused_procedure(bindLocalIndexSet()));
+
     testspaceCoefficientMatrix_.bind(e);
     const Matrix<FieldMatrix<double,1,1> >& elementMatrix
         = testspaceCoefficientMatrix_.systemMatrix();
 
-    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    fold(zip(localSolutionSpaceOffsets, solutionLocalViews),
+               (size_t)0, offsetHelper());
 
     // Add element stiffness matrix onto the global stiffness matrix
     auto cp = fused_procedure<localToGlobalCopier<decltype(elementMatrix),
@@ -589,7 +593,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
      * Indices exactly once. */
     auto solutionZip = zip(solutionLocalViews,
                            solutionLocalIndexSets,
-                           bilinearForm_.getLocalSolutionSpaceOffsets(),
+                           localSolutionSpaceOffsets,
                            globalSolutionSpaceOffsets);
 
     using SolutionZip = decltype(solutionZip);
