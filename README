@@ -57,7 +57,8 @@ are found in $DUNEDIR/dune-dpg/build-cmake/src/ .
 Description of src/plot_solution.cc
 -----------------------------------
 
-plot_solution.cc computes the solution with Discontinuous Petrov-Galerkin finite elements of the pure transport problem
+plot_solution.cc computes the solution with Discontinuous Petrov-Galerkin
+finite elements of the pure transport problem
 $$
   \beta \cdot \phi +c \phi = 1 in [0,1]x[0,1]
                       \phi = 0 on the boundary
@@ -72,16 +73,20 @@ To visualize the solution, run in $DUNEDIR/dune-dpg/build-cmake/src/
 where
   <n> has to be replaced by the desired grid resolution,
   <c> is the linear term in the transport problem
-  <betaX> <betaY> are the X and Y components of the transport direction beta=(betaX,betaY).
+  <betaX> <betaY> are the X and Y components of the transport direction
+                  beta=(betaX, betaY).
+  (When unspecified, c=0 and beta=(cos(π/8), sin(π/8)).)
 
 The program will write two .vtu files to the current working directory,
 
   transport_solution.vtu
   transport_solution_trace.vtu
 
-They contain the numerical solution of the interior variable $\phi$ and the trace variable $\theta$ (cf. paper).
-The files allow to visualize $\phi$ and $\theta$ in ParaView. If you have the pvpython interpreter shipped with ParaView, you can also run
-the scripts/plot_solution.py to regenerate the solution plot given in the paper.
+They contain the numerical solution of the interior variable $\phi$ and
+the lifting $w$ of the trace variable (cf. paper).
+The files allow to visualize $\phi$ and $w$ in ParaView. If you have the
+pvpython interpreter shipped with ParaView, you can also run
+scripts/plot_solution.py to regenerate the solution plot given in the paper.
 (This script was run with ParaView 4.2.0. As the Python interface of ParaView
 seems to be highly unstable, we cannot guarantee, that the script will run
 unmodified on another version of ParaView.)
