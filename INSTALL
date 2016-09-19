@@ -105,16 +105,14 @@ the C and C++ compiler in it. In our case, we have used gcc and g++ so
 the file reads
 
 CMAKE_FLAGS="-DCMAKE_C_COMPILER='gcc' -DCMAKE_CXX_COMPILER='g++'"
-CMAKE_FLAGS+=" -DCMAKE_CXX_FLAGS='-pedantic -Wall -Wno-deprecated-declarations'"
+CMAKE_FLAGS+=" -DCMAKE_CXX_FLAGS='-pedantic -Wall'"
 
 Remarks:
  - In MacOS, the C compiler is set to clang by default so the previous
    configuration option cannot be omitted.
  - The use of clang and clang++ is in principle also possible here although
    this compiler has not been tested.
- - The second line adds some compile flags to give more warnings and
-   disable deprecation warnings. Otherwise dune-grid 2.4.1 will spill a lot
-   of deprecation warnings when using UG.
+ - The second line adds some compile flags to give more warnings.
  - If you have installed UG into a non-standard prefix $UGPREFIX, you can
    specify it by adding a line
    CMAKE_FLAGS+=" -DUG_ROOT=$UGPREFIX"
