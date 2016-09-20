@@ -16,6 +16,7 @@
 #include <dune/istl/bvector.hh>
 
 #include "svdkernelapproximation.hh"
+#include "waveletkernelapproximation.hh"
 
 namespace Dune {
 
