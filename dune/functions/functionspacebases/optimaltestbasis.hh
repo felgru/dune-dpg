@@ -124,28 +124,28 @@ struct EmptyNodeFactoryConstants {};
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex, typename ST, typename TP>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, typename TP>
 class OptimalTestBasisNode;
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, class TP, class ST>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, class TP>
 class OptimalTestBasisNodeIndexSet;
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, class ST>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
 class OptimalTestBasisNodeFactory;
 
 
 template<typename Space>
 struct RefinementConstants : public EmptyNodeFactoryConstants {};
 
-template<class GV, int level, int k, class ST>
+template<class GV, int level, int k>
 struct RefinementConstants
        < DefaultGlobalBasis<
              PQkDGRefinedDGNodeFactory
-             <GV, level, k, FlatMultiIndex<ST>, ST> > >
-  : public PQkDGRefinedDGNodeFactory<GV, level, k, FlatMultiIndex<ST>, ST>
+             <GV, level, k, FlatMultiIndex<std::size_t> > > >
+  : public PQkDGRefinedDGNodeFactory<GV, level, k, FlatMultiIndex<std::size_t> >
            ::RefinementConstants {};
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, class ST>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
 class OptimalTestBasisNodeFactory
   : public RefinementConstants<
                typename std::tuple_element<testIndex,
@@ -159,14 +159,14 @@ public:
 
   /** \brief The grid view that the FE space is defined on */
   using GridView = typename TestspaceCoefficientMatrix::GridView;
-  using size_type = ST;
+  using size_type = std::size_t;
 
 
   template<class TP>
-  using Node = OptimalTestBasisNode<TestspaceCoefficientMatrix, testIndex, size_type, TP>;
+  using Node = OptimalTestBasisNode<TestspaceCoefficientMatrix, testIndex, TP>;
 
   template<class TP>
-  using IndexSet = OptimalTestBasisNodeIndexSet<TestspaceCoefficientMatrix, testIndex, MI, TP, ST>;
+  using IndexSet = OptimalTestBasisNodeIndexSet<TestspaceCoefficientMatrix, testIndex, MI, TP>;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -258,9 +258,9 @@ public:
 
 
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex, typename ST, typename TP>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, typename TP>
 class OptimalTestBasisNode :
-  public LeafBasisNode<ST, TP>,
+  public LeafBasisNode<std::size_t, TP>,
   public std::conditional
            < Dune::is_RefinedFiniteElement<
                typename std::tuple_element<testIndex,
@@ -291,7 +291,7 @@ private:
   // TODO: maxSize does not seem to be needed.
   // static const int maxSize = see NodeFactory::maxNodeSize();
 
-  using Base = LeafBasisNode<ST,TP>;
+  using Base = LeafBasisNode<std::size_t, TP>;
   using TestSearchFiniteElement
       = typename TestSearchSpace::LocalView::Tree::FiniteElement;
 
@@ -315,7 +315,7 @@ private:
 
 public:
 
-  using size_type = ST;
+  using size_type = std::size_t;
   using TreePath = TP;
   using Element = typename GV::template Codim<0>::Entity;
   using FiniteElement = typename std::conditional
@@ -405,7 +405,7 @@ protected:
 
 
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, class TP, class ST>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, class TP>
 class OptimalTestBasisNodeIndexSet
 {
   using GV = typename TestspaceCoefficientMatrix::GridView;
@@ -413,12 +413,12 @@ class OptimalTestBasisNodeIndexSet
 
 public:
 
-  using size_type = ST;
+  using size_type = std::size_t;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using NodeFactory = OptimalTestBasisNodeFactory<TestspaceCoefficientMatrix, testIndex, MI, ST>;
+  using NodeFactory = OptimalTestBasisNodeFactory<TestspaceCoefficientMatrix, testIndex, MI>;
 
   using Node = typename NodeFactory::template Node<TP>;
 
@@ -517,8 +517,8 @@ protected:
  *                                    optimal test spaces
  * \tparam testIndex  index of the optimal test space in the test space tuple
  */
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex = 0, class ST = std::size_t>
-using OptimalTestBasis = DefaultGlobalBasis<OptimalTestBasisNodeFactory<TestspaceCoefficientMatrix, testIndex, FlatMultiIndex<ST>, ST> >;
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex = 0>
+using OptimalTestBasis = DefaultGlobalBasis<OptimalTestBasisNodeFactory<TestspaceCoefficientMatrix, testIndex, FlatMultiIndex<std::size_t> > >;
 
 
 

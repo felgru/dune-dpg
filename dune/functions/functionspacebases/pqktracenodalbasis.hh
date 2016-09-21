@@ -32,18 +32,18 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int k, typename ST, typename TP>
+template<typename GV, int k, typename TP>
 class PQkTraceNode;
 
-template<typename GV, int k, class MI, class TP, class ST>
+template<typename GV, int k, class MI, class TP>
 class PQkTraceNodeIndexSet;
 
-template<typename GV, int k, class MI, class ST>
+template<typename GV, int k, class MI>
 class PQkTraceNodeFactory;
 
 
 
-template<typename GV, int k, class MI, class ST>
+template<typename GV, int k, class MI>
 class PQkTraceNodeFactory
 {
   static const int dim = GV::dimension;
@@ -52,7 +52,7 @@ public:
 
   /** \brief The grid view that the FE space is defined on */
   using GridView = GV;
-  using size_type = ST;
+  using size_type = std::size_t;
 
 
   // Precompute the number of dofs per entity type
@@ -62,10 +62,10 @@ public:
 
 
   template<class TP>
-  using Node = PQkTraceNode<GV, k, size_type, TP>;
+  using Node = PQkTraceNode<GV, k, TP>;
 
   template<class TP>
-  using IndexSet = PQkTraceNodeIndexSet<GV, k, MI, TP, ST>;
+  using IndexSet = PQkTraceNodeIndexSet<GV, k, MI, TP>;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -166,21 +166,21 @@ public:
 
 
 
-template<typename GV, int k, typename ST, typename TP>
+template<typename GV, int k, typename TP>
 class PQkTraceNode :
-  public LeafBasisNode<ST, TP>
+  public LeafBasisNode<std::size_t, TP>
 {
   static const int dim = GV::dimension;
   static const int maxSize = StaticPower<(k+1),GV::dimension>::power
                              - StaticPower<(k-1),GV::dimension>::power;
 
-  using Base = LeafBasisNode<ST,TP>;
+  using Base = LeafBasisNode<std::size_t, TP>;
   using FiniteElementCache = typename Dune::PQkTraceLocalFiniteElementCache
                                         <typename GV::ctype, double, dim, k>;
 
 public:
 
-  using size_type = ST;
+  using size_type = std::size_t;
   using TreePath = TP;
   using Element = typename GV::template Codim<0>::Entity;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
@@ -223,19 +223,19 @@ protected:
 
 
 
-template<typename GV, int k, class MI, class TP, class ST>
+template<typename GV, int k, class MI, class TP>
 class PQkTraceNodeIndexSet
 {
   enum {dim = GV::dimension};
 
 public:
 
-  using size_type = ST;
+  using size_type = std::size_t;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using NodeFactory = PQkTraceNodeFactory<GV, k, MI, ST>;
+  using NodeFactory = PQkTraceNodeFactory<GV, k, MI>;
 
   using Node = typename NodeFactory::template Node<TP>;
 
@@ -339,9 +339,9 @@ struct PQkTraceNodeFactoryBuilder
 {
   static const std::size_t requiredMultiIndexSize=1;
 
-  template<class MultiIndex, class GridView, class size_type=std::size_t>
+  template<class MultiIndex, class GridView>
   auto build(const GridView& gridView)
-    -> PQkTraceNodeFactory<GridView, k, MultiIndex, size_type>
+    -> PQkTraceNodeFactory<GridView, k, MultiIndex>
   {
     return {gridView};
   }
@@ -374,8 +374,8 @@ Imp::PQkTraceNodeFactoryBuilder<k> pqTrace()
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
  */
-template<typename GV, int k, class ST = std::size_t>
-using PQkTraceNodalBasis = DefaultGlobalBasis<PQkTraceNodeFactory<GV, k, FlatMultiIndex<ST>, ST> >;
+template<typename GV, int k>
+using PQkTraceNodalBasis = DefaultGlobalBasis<PQkTraceNodeFactory<GV, k, FlatMultiIndex<std::size_t> > >;
 
 
 
