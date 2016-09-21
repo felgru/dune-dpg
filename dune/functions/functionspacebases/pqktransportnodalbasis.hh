@@ -35,18 +35,18 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int k, typename ST, typename TP>
+template<typename GV, int k, typename TP>
 class PQkTransportNode;
 
-template<typename GV, int k, class MI, class TP, class ST>
+template<typename GV, int k, class MI, class TP>
 class PQkTransportIndexSet;
 
-template<typename GV, int k, class MI, class ST>
+template<typename GV, int k, class MI>
 class PQkTransportFactory;
 
 
 
-template<typename GV, int k, class MI, class ST>
+template<typename GV, int k, class MI>
 class PQkTransportFactory
 {
   static const int dim = GV::dimension;
@@ -55,14 +55,14 @@ public:
 
   /** \brief The grid view that the FE space is defined on */
   using GridView = GV;
-  using size_type = ST;
+  using size_type = std::size_t;
 
 
   template<class TP>
-  using Node = PQkTransportNode<GV, k, size_type, TP>;
+  using Node = PQkTransportNode<GV, k, TP>;
 
   template<class TP>
-  using IndexSet = PQkTransportIndexSet<GV, k, MI, TP, ST>;
+  using IndexSet = PQkTransportIndexSet<GV, k, MI, TP>;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -85,6 +85,11 @@ public:
   const GridView& gridView() const
   {
     return gridView_;
+  }
+
+  void update (const GridView& gv)
+  {
+    gridView_ = gv;
   }
 
   template<class TP>
@@ -137,7 +142,7 @@ public:
   }
 
 //protected:
-  const GridView gridView_;
+  GridView gridView_;
 
   Pk2DLocalFiniteElement<double,double,k> localFiniteElementP;
   QkLocalFiniteElement<double,double,dim,k> localFiniteElementQ;
@@ -151,20 +156,20 @@ public:
 
 
 
-template<typename GV, int k, typename ST, typename TP>
+template<typename GV, int k, typename TP>
 class PQkTransportNode :
-  public LeafBasisNode<ST, TP>
+  public LeafBasisNode<std::size_t, TP>
 {
   static const int dim = GV::dimension;
 
-  using Base = LeafBasisNode<ST,TP>;
+  using Base = LeafBasisNode<std::size_t, TP>;
   using FiniteElementCache
       = typename Dune::PQkTransportLocalFiniteElementCache
                    <typename GV::ctype, double, dim,k>;
 
 public:
 
-  using size_type = ST;
+  using size_type = std::size_t;
   using TreePath = TP;
   using Element = typename GV::template Codim<0>::Entity;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
@@ -233,19 +238,19 @@ protected:
 
 
 
-template<typename GV, int k, class MI, class TP, class ST>
+template<typename GV, int k, class MI, class TP>
 class PQkTransportIndexSet
 {
   enum {dim = GV::dimension};
 
 public:
 
-  using size_type = ST;
+  using size_type = std::size_t;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using NodeFactory = PQkTransportFactory<GV, k, MI, ST>;
+  using NodeFactory = PQkTransportFactory<GV, k, MI>;
 
   using Node = typename NodeFactory::template Node<TP>;
 
@@ -319,8 +324,8 @@ protected:
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
  */
-template<typename GV, int k, class ST = std::size_t>
-using PQkTransportBasis = DefaultGlobalBasis<PQkTransportFactory<GV, k, FlatMultiIndex<ST>, ST> >;
+template<typename GV, int k>
+using PQkTransportBasis = DefaultGlobalBasis<PQkTransportFactory<GV, k, FlatMultiIndex<std::size_t> > >;
 
 
 

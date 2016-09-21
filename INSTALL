@@ -105,12 +105,18 @@ the C and C++ compiler in it. In our case, we have used gcc and g++ so
 the file reads
 
 CMAKE_FLAGS="-DCMAKE_C_COMPILER='gcc' -DCMAKE_CXX_COMPILER='g++'"
+CMAKE_FLAGS+=" -DCMAKE_CXX_FLAGS='-pedantic -Wall'"
 
 Remarks:
  - In MacOS, the C compiler is set to clang by default so the previous
    configuration option cannot be omitted.
  - The use of clang and clang++ is in principle also possible here although
    this compiler has not been tested.
+ - The second line adds some compile flags to give more warnings.
+ - If you have installed UG into a non-standard prefix $UGPREFIX, you can
+   specify it by adding a line
+   CMAKE_FLAGS+=" -DUG_ROOT=$UGPREFIX"
+   to your dune.opts file.
 
 5) In $DUNEDIR, run
 
@@ -136,6 +142,22 @@ For more information and options on dunecontrol, run
 More information on the build system of Dune can be found under
 https://dune-project.org/doc/installation/
 https://dune-project.org/buildsystem/
+
+Generating API documentation with Doxygen
+-----------------------------------------
+
+We have some (rudimentary) API documentation for our classes and function
+that can be generated from special comments in our source code with the
+[Doxygen](http://doxygen.org) documentation generator by calling
+
+    make doc
+
+in $DUNEDIR/dune-dpg/build-cmake. The generated html files of the
+API documentation can then be read by opening
+
+    $DUNEDIR/dune-dpg/build-cmake/doc/doxygen/html/index.html
+
+in your favorite browser.
 
 
 Troubleshooting

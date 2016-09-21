@@ -32,18 +32,18 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int s, int k, typename ST, typename TP>
+template<typename GV, int s, int k, typename TP>
 class PQkSubsampledDGNode;
 
-template<typename GV, int s, int k, class MI, class TP, class ST>
+template<typename GV, int s, int k, class MI, class TP>
 class PQkSubsampledDGNodeIndexSet;
 
-template<typename GV, int s, int k, class MI, class ST>
+template<typename GV, int s, int k, class MI>
 class PQkSubsampledDGNodeFactory;
 
 
 
-template<typename GV, int s, int k, class MI, class ST>
+template<typename GV, int s, int k, class MI>
 class PQkSubsampledDGNodeFactory
 {
   static const int dim = GV::dimension;
@@ -52,7 +52,7 @@ public:
 
   /** \brief The grid view that the FE space is defined on */
   using GridView = GV;
-  using size_type = ST;
+  using size_type = std::size_t;
 
 
   // Precompute the number of dofs per entity type
@@ -66,10 +66,10 @@ public:
 
 
   template<class TP>
-  using Node = PQkSubsampledDGNode<GV, s, k, size_type, TP>;
+  using Node = PQkSubsampledDGNode<GV, s, k, TP>;
 
   template<class TP>
-  using IndexSet = PQkSubsampledDGNodeIndexSet<GV, s, k, MI, TP, ST>;
+  using IndexSet = PQkSubsampledDGNodeIndexSet<GV, s, k, MI, TP>;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -122,6 +122,11 @@ public:
   const GridView& gridView() const
   {
     return gridView_;
+  }
+
+  void update (const GridView& gv)
+  {
+    gridView_ = gv;
   }
 
   template<class TP>
@@ -188,7 +193,7 @@ public:
   }
 
 //protected:
-  const GridView gridView_;
+  GridView gridView_;
 
   size_type quadrilateralOffset_;
   size_type pyramidOffset_;
@@ -199,21 +204,21 @@ public:
 
 
 
-template<typename GV, int s, int k, typename ST, typename TP>
+template<typename GV, int s, int k, typename TP>
 class PQkSubsampledDGNode :
-  public LeafBasisNode<ST, TP>
+  public LeafBasisNode<std::size_t, TP>
 {
   static const int dim = GV::dimension;
   static const int maxSize = StaticPower<(s*k+1),GV::dimension>::power;
 
-  using Base = LeafBasisNode<ST,TP>;
+  using Base = LeafBasisNode<std::size_t, TP>;
   using FiniteElementCache
       = typename Dune::PQkSubsampledLocalFiniteElementCache
                         <typename GV::ctype, double, dim, s, k>;
 
 public:
 
-  using size_type = ST;
+  using size_type = std::size_t;
   using TreePath = TP;
   using Element = typename GV::template Codim<0>::Entity;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
@@ -256,19 +261,19 @@ protected:
 
 
 
-template<typename GV, int s, int k, class MI, class TP, class ST>
+template<typename GV, int s, int k, class MI, class TP>
 class PQkSubsampledDGNodeIndexSet
 {
   enum {dim = GV::dimension};
 
 public:
 
-  using size_type = ST;
+  using size_type = std::size_t;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using NodeFactory = PQkSubsampledDGNodeFactory<GV, s, k, MI, ST>;
+  using NodeFactory = PQkSubsampledDGNodeFactory<GV, s, k, MI>;
 
   using Node = typename NodeFactory::template Node<TP>;
 
@@ -367,9 +372,9 @@ struct PQkSubsampledDGNodeFactoryBuilder
 {
   static const std::size_t requiredMultiIndexSize=1;
 
-  template<class MultiIndex, class GridView, class size_type=std::size_t>
+  template<class MultiIndex, class GridView>
   auto build(const GridView& gridView)
-    -> PQkSubsampledDGNodeFactory<GridView, s, k, MultiIndex, size_type>
+    -> PQkSubsampledDGNodeFactory<GridView, s, k, MultiIndex>
   {
     return {gridView};
   }
@@ -401,8 +406,8 @@ Imp::PQkSubsampledDGNodeFactoryBuilder<s, k> pqSubsampledDG()
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
  */
-template<typename GV, int s, int k, class ST = std::size_t>
-using PQkSubsampledDGNodalBasis = DefaultGlobalBasis<PQkSubsampledDGNodeFactory<GV, s, k, FlatMultiIndex<ST>, ST> >;
+template<typename GV, int s, int k>
+using PQkSubsampledDGNodalBasis = DefaultGlobalBasis<PQkSubsampledDGNodeFactory<GV, s, k, FlatMultiIndex<std::size_t> > >;
 
 
 

@@ -8,8 +8,12 @@ scientific interest of the code can be found in the paper "The dune-dpg
 library for solving PDEs with Discontinuous Petrov-Galerkin finite elements"
 by F. Gruber, A. Klewinghaus and O. Mula.
 
-This README document explains how to install this library and run basic
-examples which are described in the paper.
+For build instruction see the accompanying INSTALL file.
+See section "Running dune-dpg" in this README document for explainations
+on how to run basic examples which are described in the paper.
+If you are interested in an API documentation of dune-dpg, see the
+instructions in section "Generating API documentation with Doxygen" in
+the INSTALL file.
 
 Required Software and Libraries
 ===============================
@@ -55,7 +59,8 @@ are found in $DUNEDIR/dune-dpg/build-cmake/src/ .
 Description of src/plot_solution.cc
 -----------------------------------
 
-plot_solution.cc computes the solution with Discontinuous Petrov-Galerkin finite elements of the pure transport problem
+plot_solution.cc computes the solution with Discontinuous Petrov-Galerkin
+finite elements of the pure transport problem
 $$
   \beta \cdot \phi +c \phi = 1 in [0,1]x[0,1]
                       \phi = 0 on the boundary
@@ -70,16 +75,20 @@ To visualize the solution, run in $DUNEDIR/dune-dpg/build-cmake/src/
 where
   <n> has to be replaced by the desired grid resolution,
   <c> is the linear term in the transport problem
-  <betaX> <betaY> are the X and Y components of the transport direction beta=(betaX,betaY).
+  <betaX> <betaY> are the X and Y components of the transport direction
+                  beta=(betaX, betaY).
+  (When unspecified, c=0 and beta=(cos(π/8), sin(π/8)).)
 
 The program will write two .vtu files to the current working directory,
 
   transport_solution.vtu
   transport_solution_trace.vtu
 
-They contain the numerical solution of the interior variable $\phi$ and the trace variable $\theta$ (cf. paper).
-The files allow to visualize $\phi$ and $\theta$ in ParaView. If you have the pvpython interpreter shipped with ParaView, you can also run
-the scripts/plot_solution.py to regenerate the solution plot given in the paper.
+They contain the numerical solution of the interior variable $\phi$ and
+the lifting $w$ of the trace variable (cf. paper).
+The files allow to visualize $\phi$ and $w$ in ParaView. If you have the
+pvpython interpreter shipped with ParaView, you can also run
+scripts/plot_solution.py to regenerate the solution plot given in the paper.
 (This script was run with ParaView 4.2.0. As the Python interface of ParaView
 seems to be highly unstable, we cannot guarantee, that the script will run
 unmodified on another version of ParaView.)
@@ -125,14 +134,17 @@ analyses the impact of
  - the h-refinement level of the test search space
 on the error and its a posteriori estimation.
 
-To reproduce the results from the paper, call the script
+To reproduce the convergence results from the paper, call the script
 
-    scripts/run_convergence_test.sh
+    ../scripts/run_convergence_test.sh 10 20 40 60 80 100 120 140 \
+                                       160 200 250 300
 
-which will make a series of calls to convergence_test.cc .
-The computation takes several hours. (you can first adapt this script if you
-want to change the grid resolution n=1/H, especially the test case with
-locally refined test search space of level 3 gets very slow for large n).
+which will call the convergence_test_* programs with the given grid
+resolutions n=1/H.
+The computation takes several hours. (You can leave out some of the larger
+grid resolutions n, if you don't want to wait for this long. Especially
+the test case with locally refined test search space of level 3 gets very
+slow for large n).
 
 Finally, the convergence plots can be generated with
 
@@ -175,10 +187,11 @@ for beta=(cos(pi/8),sin(pi/8)).
 
 To reproduce the results from the paper, call the script
 
-    ../scripts/run_profile.sh > profile
+    ../scripts/run_profile.sh 10 20 40 60 80 100 120 140 160 200 250 300 \
+                              > profile
 
-which will make a series of calls to profile_testspacecoefficientmatrix.cc .
-The computation takes several minutes.
+which will call profile_testspacecoefficientmatrix_* for the given
+grid resolutions n=1/H.  The computation takes several minutes.
 
 Finally, the profile plots can be generated with
 

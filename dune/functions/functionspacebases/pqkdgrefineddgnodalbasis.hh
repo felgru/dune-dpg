@@ -35,14 +35,14 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int level, int k, typename ST, typename TP>
+template<typename GV, int level, int k, typename TP>
 class PQkDGRefinedDGNode;
 
-template<typename GV, int level, int k, class MI, class TP, class ST>
+template<typename GV, int level, int k, class MI, class TP>
 class PQkDGRefinedDGNodeIndexSet;
 
 
-template<typename GV, int level, int k, class MI, class ST>
+template<typename GV, int level, int k, class MI>
 class PQkDGRefinedDGNodeFactory
   : public DGRefinedNodeFactoryConstants<GV::dimension, level, k>
 {
@@ -52,7 +52,7 @@ public:
 
   /** \brief The grid view that the FE space is defined on */
   using GridView = GV;
-  using size_type = ST;
+  using size_type = std::size_t;
 
   using RefinementConstants = DGRefinedNodeFactoryConstants<dim, level, k>;
 
@@ -66,10 +66,10 @@ public:
 
 
   template<class TP>
-  using Node = PQkDGRefinedDGNode<GV, level, k, size_type, TP>;
+  using Node = PQkDGRefinedDGNode<GV, level, k, TP>;
 
   template<class TP>
-  using IndexSet = PQkDGRefinedDGNodeIndexSet<GV, level, k, MI, TP, ST>;
+  using IndexSet = PQkDGRefinedDGNodeIndexSet<GV, level, k, MI, TP>;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -110,6 +110,11 @@ public:
   const GridView& gridView() const
   {
     return gridView_;
+  }
+
+  void update (const GridView& gv)
+  {
+    gridView_ = gv;
   }
 
   template<class TP>
@@ -162,23 +167,23 @@ public:
   }
 
 //protected:
-  const GridView gridView_;
+  GridView gridView_;
 
   size_type quadrilateralOffset_;
 };
 
 
 
-template<typename GV, int level, int k, typename ST, typename TP>
+template<typename GV, int level, int k, typename TP>
 class PQkDGRefinedDGNode :
-  public LeafBasisNode<ST, TP>,
+  public LeafBasisNode<std::size_t, TP>,
   public RefinedNode < typename GV::template Codim<0>::Entity
                      , typename GV::ctype, GV::dimension, level>
 {
   static const int dim = GV::dimension;
   static const int maxSize = StaticPower<(k+1),GV::dimension>::power;
 
-  using Base = LeafBasisNode<ST,TP>;
+  using Base = LeafBasisNode<std::size_t, TP>;
   using RefinedNodeBase =
           RefinedNode < typename GV::template Codim<0>::Entity
                       , typename GV::ctype, dim, level>;
@@ -186,7 +191,7 @@ class PQkDGRefinedDGNode :
 
 public:
 
-  using size_type = ST;
+  using size_type = std::size_t;
   using TreePath = TP;
   using Element = typename GV::template Codim<0>::Entity;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
@@ -217,7 +222,7 @@ public:
   {
     this->element_ = &e;
     finiteElement_ = &(feCache_.get(this->element_->type()));
-    using Factory = PQkDGRefinedDGNodeFactory<GV, level, k, void, ST>;
+    using Factory = PQkDGRefinedDGNodeFactory<GV, level, k, void>;
     size_type numberOfSubElements;
     if(e.type().isTriangle()) {
       numberOfSubElements = Factory::numberOfSubTriangles;
@@ -239,7 +244,7 @@ protected:
 
 
 
-template<typename GV, int level, int k, class MI, class TP, class ST>
+template<typename GV, int level, int k, class MI, class TP>
 class PQkDGRefinedDGNodeIndexSet
 {
   // Cannot be an enum -- otherwise the switch statement below produces compiler warnings
@@ -247,12 +252,12 @@ class PQkDGRefinedDGNodeIndexSet
 
 public:
 
-  using size_type = ST;
+  using size_type = std::size_t;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using NodeFactory = PQkDGRefinedDGNodeFactory<GV, level, k, MI, ST>;
+  using NodeFactory = PQkDGRefinedDGNodeFactory<GV, level, k, MI>;
 
   using Node = typename NodeFactory::template Node<TP>;
 
@@ -330,8 +335,8 @@ protected:
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
  */
-template<typename GV, int level, int k, class ST = std::size_t>
-using PQkDGRefinedDGBasis = DefaultGlobalBasis<PQkDGRefinedDGNodeFactory<GV, level, k, FlatMultiIndex<ST>, ST> >;
+template<typename GV, int level, int k>
+using PQkDGRefinedDGBasis = DefaultGlobalBasis<PQkDGRefinedDGNodeFactory<GV, level, k, FlatMultiIndex<std::size_t> > >;
 
 
 

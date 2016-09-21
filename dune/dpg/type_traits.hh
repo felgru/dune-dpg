@@ -20,26 +20,26 @@ namespace Functions {
   template<class NF>
   class DefaultGlobalBasis;
 
-  template<typename GV, int k, class MI, class ST>
+  template<typename GV, int k, class MI>
   class PQkNodeFactory;
 
-  template<typename GV, int k, class MI, class ST>
+  template<typename GV, int k, class MI>
   class LagrangeDGNodeFactory;
 
-  template<typename GV, int level, int k, class MI, class ST>
+  template<typename GV, int level, int k, class MI>
   class PQkDGRefinedDGNodeFactory;
 
-  template<typename GV, int s, int k, class MI, class ST>
+  template<typename GV, int s, int k, class MI>
   class PQkDGSubsampledDGNodeFactory;
 
-  template<typename GV, int s, int k, class MI, class ST>
+  template<typename GV, int s, int k, class MI>
   class PQkSubsampledDGNodeFactory;
 
-  template<typename GV, int k, class MI, class ST>
+  template<typename GV, int k, class MI>
   class PQkTransportFactory;
 
   template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
-           class MI, class ST>
+           class MI>
   class OptimalTestBasisNodeFactory;
 
   template<typename BilinForm, typename InnerProd>
@@ -74,20 +74,20 @@ struct is_RefinedFiniteElement;
 template <typename FiniteElement>
 struct is_DGRefinedFiniteElement : std::false_type {};
 
-template<typename GV, int level, int k, class ST>
+template<typename GV, int level, int k>
 struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
                Functions::PQkDGRefinedDGNodeFactory
-                   <GV, level, k, Functions::FlatMultiIndex<ST>, ST> > >
+                   <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
 
 template <typename FiniteElement>
 struct is_ContinuouslyRefinedFiniteElement : std::false_type {};
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class ST>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct is_ContinuouslyRefinedFiniteElement<Functions::DefaultGlobalBasis<
             Functions::OptimalTestBasisNodeFactory<
                 TestspaceCoefficientMatrix, testIndex,
-                Functions::FlatMultiIndex<ST>, ST> > >
+                Functions::FlatMultiIndex<std::size_t> > > >
   : is_RefinedFiniteElement<typename std::tuple_element<testIndex,
                               typename TestspaceCoefficientMatrix::TestSpaces
                             >::type> {};
@@ -101,17 +101,17 @@ struct is_RefinedFiniteElement
 template <typename FiniteElement>
 struct levelOfFE : std::integral_constant<int, 0> {};
 
-template<class GV, int level, int k, class ST>
+template<class GV, int level, int k>
 struct levelOfFE<Functions::DefaultGlobalBasis<
              Functions::PQkDGRefinedDGNodeFactory
-                 <GV, level, k, Functions::FlatMultiIndex<ST>, ST> > >
+                 <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::integral_constant<int, level> {};
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class ST>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct levelOfFE<Functions::DefaultGlobalBasis<
             Functions::OptimalTestBasisNodeFactory<
                 TestspaceCoefficientMatrix, testIndex,
-                Functions::FlatMultiIndex<ST>, ST> > >
+                Functions::FlatMultiIndex<std::size_t> > > >
   : levelOfFE<typename std::tuple_element<testIndex,
                 typename TestspaceCoefficientMatrix::TestSpaces
               >::type> {};
@@ -119,23 +119,23 @@ struct levelOfFE<Functions::DefaultGlobalBasis<
 template <typename FiniteElement>
 struct is_SubsampledFiniteElement : std::false_type {};
 
-template<class GV, int s, int k, class ST>
+template<class GV, int s, int k>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
              Functions::PQkDGSubsampledDGNodeFactory
-                 <GV, s, k, Functions::FlatMultiIndex<ST>, ST> > >
+                 <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
 
-template<class GV, int s, int k, class ST>
+template<class GV, int s, int k>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
              Functions::PQkSubsampledDGNodeFactory
-                 <GV, s, k, Functions::FlatMultiIndex<ST>, ST> > >
+                 <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class ST>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
             Functions::OptimalTestBasisNodeFactory<
                 TestspaceCoefficientMatrix, testIndex,
-                Functions::FlatMultiIndex<ST>, ST> > >
+                Functions::FlatMultiIndex<std::size_t> > > >
   : is_SubsampledFiniteElement<typename std::tuple_element<testIndex,
                                  typename TestspaceCoefficientMatrix::TestSpaces
                                >::type> {};
@@ -143,23 +143,23 @@ struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
 template <typename FiniteElement>
 struct numberOfSamples : std::integral_constant<int, 1> {};
 
-template<class GV, int s, int k, class ST>
+template<class GV, int s, int k>
 struct numberOfSamples<Functions::DefaultGlobalBasis<
              Functions::PQkDGSubsampledDGNodeFactory
-                 <GV, s, k, Functions::FlatMultiIndex<ST>, ST> > >
+                 <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::integral_constant<int, s> {};
 
-template<class GV, int s, int k, class ST>
+template<class GV, int s, int k>
 struct numberOfSamples<Functions::DefaultGlobalBasis<
              Functions::PQkSubsampledDGNodeFactory
-                 <GV, s, k, Functions::FlatMultiIndex<ST>, ST> > >
+                 <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::integral_constant<int, s> {};
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class ST>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct numberOfSamples<Functions::DefaultGlobalBasis<
             Functions::OptimalTestBasisNodeFactory<
                 TestspaceCoefficientMatrix, testIndex,
-                Functions::FlatMultiIndex<ST>, ST> > >
+                Functions::FlatMultiIndex<std::size_t> > > >
   : numberOfSamples<typename std::tuple_element<testIndex,
                       typename TestspaceCoefficientMatrix::TestSpaces
                     >::type> {};
@@ -167,17 +167,17 @@ struct numberOfSamples<Functions::DefaultGlobalBasis<
 template<typename FiniteElement>
 struct is_TransportFiniteElement : std::false_type {};
 
-template<typename GV, int k, class ST>
+template<typename GV, int k>
 struct is_TransportFiniteElement<Functions::DefaultGlobalBasis<
              Functions::PQkTransportFactory
-                 <GV, k, Functions::FlatMultiIndex<ST>, ST> > >
+                 <GV, k, Functions::FlatMultiIndex<std::size_t> > > >
            : std::true_type {};
 
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class ST>
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct is_TransportFiniteElement<Functions::DefaultGlobalBasis<
             Functions::OptimalTestBasisNodeFactory<
                 TestspaceCoefficientMatrix, testIndex,
-                Functions::FlatMultiIndex<ST>, ST> > >
+                Functions::FlatMultiIndex<std::size_t> > > >
   : is_TransportFiniteElement<typename std::tuple_element<testIndex,
                                 typename TestspaceCoefficientMatrix::TestSpaces
                               >::type> {};
@@ -198,54 +198,54 @@ struct changeGridView<Functions::DefaultGlobalBasis<NF>, GridView>
   typedef Functions::DefaultGlobalBasis<changeGridView_t<NF, GridView>> type;
 };
 
-template<typename GV, int k, class MI, class ST, class GridView>
-struct changeGridView<Functions::PQkNodeFactory<GV, k, MI, ST>, GridView>
+template<typename GV, int k, class MI, class GridView>
+struct changeGridView<Functions::PQkNodeFactory<GV, k, MI>, GridView>
 {
-  typedef Functions::PQkNodeFactory<GridView, k, MI, ST> type;
+  typedef Functions::PQkNodeFactory<GridView, k, MI> type;
 };
 
-template<typename GV, int k, class MI, class ST, class GridView>
-struct changeGridView<Functions::LagrangeDGNodeFactory<GV, k, MI, ST>, GridView>
+template<typename GV, int k, class MI, class GridView>
+struct changeGridView<Functions::LagrangeDGNodeFactory<GV, k, MI>, GridView>
 {
-  typedef Functions::LagrangeDGNodeFactory<GridView, k, MI, ST> type;
+  typedef Functions::LagrangeDGNodeFactory<GridView, k, MI> type;
 };
 
-template<typename GV, int level, int k, class MI, class ST, class GridView>
-struct changeGridView<Functions::PQkDGRefinedDGNodeFactory<GV, level, k, MI, ST>,
+template<typename GV, int level, int k, class MI, class GridView>
+struct changeGridView<Functions::PQkDGRefinedDGNodeFactory<GV, level, k, MI>,
                       GridView>
 {
-  typedef Functions::PQkDGRefinedDGNodeFactory<GridView, level, k, MI, ST> type;
+  typedef Functions::PQkDGRefinedDGNodeFactory<GridView, level, k, MI> type;
 };
 
-template<typename GV, int s, int k, class MI, class ST, class GridView>
-struct changeGridView<Functions::PQkDGSubsampledDGNodeFactory<GV, s, k, MI, ST>,
+template<typename GV, int s, int k, class MI, class GridView>
+struct changeGridView<Functions::PQkDGSubsampledDGNodeFactory<GV, s, k, MI>,
                       GridView>
 {
-  typedef Functions::PQkDGSubsampledDGNodeFactory<GridView, s, k, MI, ST> type;
+  typedef Functions::PQkDGSubsampledDGNodeFactory<GridView, s, k, MI> type;
 };
 
-template<typename GV, int s, int k, class MI, class ST, class GridView>
-struct changeGridView<Functions::PQkSubsampledDGNodeFactory<GV, s, k, MI, ST>,
+template<typename GV, int s, int k, class MI, class GridView>
+struct changeGridView<Functions::PQkSubsampledDGNodeFactory<GV, s, k, MI>,
                       GridView>
 {
-  typedef Functions::PQkSubsampledDGNodeFactory<GridView, s, k, MI, ST> type;
+  typedef Functions::PQkSubsampledDGNodeFactory<GridView, s, k, MI> type;
 };
 
-template<typename GV, int k, class MI, class ST, class GridView>
-struct changeGridView<Functions::PQkTransportFactory<GV, k, MI, ST>, GridView>
+template<typename GV, int k, class MI, class GridView>
+struct changeGridView<Functions::PQkTransportFactory<GV, k, MI>, GridView>
 {
-  typedef Functions::PQkTransportFactory<GridView, k, MI, ST> type;
+  typedef Functions::PQkTransportFactory<GridView, k, MI> type;
 };
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
-         class MI, class ST, class GridView>
+         class MI, class GridView>
 struct changeGridView<Functions::OptimalTestBasisNodeFactory
                        <TestspaceCoefficientMatrix,
-                        testIndex, MI, ST>, GridView>
+                        testIndex, MI>, GridView>
 {
   typedef Functions::OptimalTestBasisNodeFactory<
     changeGridView_t<TestspaceCoefficientMatrix, GridView>,
-    testIndex, MI, ST>   type;
+    testIndex, MI>   type;
 };
 
 template<typename BilinForm, typename InnerProd, class GridView>
