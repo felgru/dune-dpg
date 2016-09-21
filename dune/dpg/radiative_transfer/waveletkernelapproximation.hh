@@ -84,6 +84,7 @@ namespace ScatteringKernelApproximation {
         return x;
       }
 
+    public:
       // Discrete Haar wavelet transform
       // data is used for in- and output and is assumed to be of size 2^n
       // for a natural number n.
@@ -117,7 +118,6 @@ namespace ScatteringKernelApproximation {
         }
       }
 
-    public:
       enum : unsigned int { dim = 2 };
       using Direction = FieldVector<double, dim>;
 

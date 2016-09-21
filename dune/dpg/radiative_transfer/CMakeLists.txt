@@ -1,3 +1,5 @@
+add_subdirectory(test)
+
 install(FILES approximate_scattering.hh
               kanschat_scattering.hh
               periter.hh
