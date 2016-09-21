@@ -99,6 +99,12 @@ namespace ScatteringKernelApproximation {
           }
           data.head(2*len) = tmp.head(2*len);
         }
+        double scaling_factor = sqrt(2*boost::math::constants::pi<double>());
+        data.segment(0, 1) *= scaling_factor;
+        for(size_t len=1, max_len=data.size()>>1; len < max_len; len <<=1) {
+          scaling_factor /= sqrt(2);
+          data.segment(len, len) *= scaling_factor;
+        }
       }
 
       // Inverse discrete Haar wavelet transform
@@ -106,6 +112,12 @@ namespace ScatteringKernelApproximation {
       // for a natural number n.
       static void IDWT(Eigen::VectorXd& data) {
         Eigen::VectorXd tmp(data.size());
+        double scaling_factor = 1./sqrt(2*boost::math::constants::pi<double>());
+        data.segment(0, 1) *= scaling_factor;
+        for(size_t len=1, max_len=data.size()>>1; len < max_len; len <<=1) {
+          scaling_factor *= sqrt(2);
+          data.segment(len, len) *= scaling_factor;
+        }
         size_t max_len = data.size();
         for(size_t len = 1; len < max_len; len <<=1) {
           for(size_t i = 0; i < len; i++) {
