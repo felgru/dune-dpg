@@ -416,10 +416,10 @@ int main(int argc, char** argv)
   xPrevious.reserve(numS);
   for(int i = 0; i < numS; ++i)
   {
-    x.emplace_back(feBasisTrace.indexSet().size()
-                   +feBasisInterior.indexSet().size());
-    xPrevious.emplace_back(feBasisTrace.indexSet().size()
-                   +feBasisInterior.indexSet().size());
+    x.emplace_back(feBasisTrace.size()
+                   +feBasisInterior.size());
+    xPrevious.emplace_back(feBasisTrace.size()
+                   +feBasisInterior.size());
     x[i] = 0;
     xPrevious[i] = 0;
   }
@@ -433,9 +433,9 @@ int main(int argc, char** argv)
   uPrevious.reserve(numS);
   for(int i = 0; i < numS; ++i)
   {
-    u.emplace_back(feBasisInterior.indexSet().size());
+    u.emplace_back(feBasisInterior.size());
     u[i] = 0;
-    uPrevious.emplace_back(feBasisInterior.indexSet().size());
+    uPrevious.emplace_back(feBasisInterior.size());
     uPrevious[i] = 0;
   }
 
@@ -444,16 +444,16 @@ int main(int argc, char** argv)
   thetaPrevious.reserve(numS);
   for(int i = 0; i < numS; ++i)
   {
-    theta.emplace_back(feBasisTrace.indexSet().size());
+    theta.emplace_back(feBasisTrace.size());
     theta[i] = 0;
-    thetaPrevious.emplace_back(feBasisTrace.indexSet().size());
+    thetaPrevious.emplace_back(feBasisTrace.size());
     thetaPrevious[i] = 0;
   }
 
-  VectorType diffU(feBasisInterior.indexSet().size());
+  VectorType diffU(feBasisInterior.size());
   diffU = 0;
 
-  VectorType diffTheta(feBasisTrace.indexSet().size());
+  VectorType diffTheta(feBasisTrace.size());
   diffTheta = 0;
 
   /////////////////////////////////////////////////////////
@@ -468,8 +468,8 @@ int main(int argc, char** argv)
     //  Update solutions
     /////////////////////////////////////////////////////////
     xPrevious = x;
-    extractSolution(uPrevious,xPrevious,0);
-    extractSolution(thetaPrevious,xPrevious,feBasisInterior.indexSet().size());
+    extractSolution(uPrevious, xPrevious, 0);
+    extractSolution(thetaPrevious, xPrevious, feBasisInterior.size());
 
     /////////////////////////////////////////////////////////
     //  Assemble the systems
@@ -529,8 +529,8 @@ int main(int argc, char** argv)
       umfPack.apply(x[i], rhs[i], statistics);
     }
 
-    extractSolution(u,x,0);
-    extractSolution(theta,x,feBasisInterior.indexSet().size());
+    extractSolution(u, x, 0);
+    extractSolution(theta, x, feBasisInterior.size());
 
     ////////////////////////////////////
     //  Error computation and print in VTK file
@@ -609,10 +609,10 @@ int main(int argc, char** argv)
       ofs << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
 
       // We compute the L2 error wrt previous iterate
-      for (unsigned int j=0; j<feBasisInterior.indexSet().size(); j++)
+      for (unsigned int j=0; j<feBasisInterior.size(); j++)
         diffU[j] = u[i][j]-uPrevious[i][j];
 
-      for (unsigned int j=0; j<feBasisTrace.indexSet().size(); j++)
+      for (unsigned int j=0; j<feBasisTrace.size(); j++)
         diffTheta[j] = theta[i][j]-thetaPrevious[i][j];
 
       ofs << "Diff wrt previous iteration: " << std::endl;
