@@ -87,6 +87,11 @@ public:
     return gridView_;
   }
 
+  void update (const GridView& gv)
+  {
+    gridView_ = gv;
+  }
+
   template<class TP>
   Node<TP> node(const TP& tp) const
   {
@@ -137,7 +142,7 @@ public:
   }
 
 //protected:
-  const GridView gridView_;
+  GridView gridView_;
 
   Pk2DLocalFiniteElement<double,double,k> localFiniteElementP;
   QkLocalFiniteElement<double,double,dim,k> localFiniteElementQ;

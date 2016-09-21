@@ -250,6 +250,11 @@ public:
     return gridView_;
   }
 
+  void update (const GridView& gv)
+  {
+    gridView_ = gv;
+  }
+
   private:
   BilinearForm&            bilinearForm_;
   InnerProduct&            innerProduct_;
@@ -412,6 +417,12 @@ class BufferedTestspaceCoefficientMatrix
   {
     return gridView_;
   }
+
+  void update (const GridView& gv)
+  {
+    gridView_ = gv;
+  }
+
   private:
   BilinearForm&         bilinearForm_;
   InnerProduct&         innerProduct_;

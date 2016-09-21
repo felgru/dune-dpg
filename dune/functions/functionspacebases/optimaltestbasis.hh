@@ -201,6 +201,11 @@ public:
     return testspaceCoefficientMatrix_.gridView();
   }
 
+  void update (const GridView& gv)
+  {
+    testspaceCoefficientMatrix_.update(gv);
+  }
+
   template<class TP>
   Node<TP> node(const TP& tp) const
   {
