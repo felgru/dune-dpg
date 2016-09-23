@@ -185,24 +185,16 @@ plt.clf()
 # this is usually not such a good idea, because they don't
 # occur on nice boundaries, but we do it here for purposes
 # of illustration.
-origin = 'lower'
 x=np.linspace(-r,r,num=ngrid,endpoint=True)
-y=x
-X, Y = np.meshgrid(x, y)
-PHI=phi(X,Y,g)
-# TODO: plot phi as a function of θ-θ'
-CS = plt.contourf(X, Y, PHI, 20,
-                  alpha=0.8,
-                  cmap=plt.cm.bone,
-                  origin=origin)
-# Make a colorbar for the ContourSet returned by the contourf call.
-cbar = plt.colorbar(CS)
-# cbar.ax.set_ylabel('title of colorbar')
+# plot phi as a function of θ-θ'
+PHI=phi(x, 0, g)
+plt.plot(x, PHI)
+plt.xlim(-r, r)
 
-titleStr=r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))}$"+r'$,\ \gamma=$'+str(g)
+titleStr=r"$\phi(\theta,0)=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta))}$"+r'$,\ \gamma=$'+str(g)
 plt.title(titleStr)
 plt.xlabel(r"$\theta$")
-plt.ylabel(r"$\theta'$")
+plt.ylabel(r"$\phi(\theta,0)$")
 # plt.show()
 
 titleSave="phi"+"-gamma_"+str(g)+".pdf"
