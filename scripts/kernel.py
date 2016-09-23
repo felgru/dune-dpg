@@ -142,7 +142,7 @@ for jy in range(J):
 
 # Plot with mathshow
 # mpl.rc('text',usetex=True)
-MS = plt.matshow(result)
+MS = plt.matshow(result, cmap=plt.cm.autumn)
 cbar = plt.colorbar(MS)
 titleStr='Wlt analysis with $0\leq j\leq$'+str(J)+' for \n' \
     + r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))}$"+r'$,\ \gamma=$'+str(g)
@@ -158,17 +158,12 @@ plt.clf()
 # plot logarithmic wavelet representation
 log_result = []
 for row in result:
-    def log_if_nonzero(x):
-        if abs(x)>0:
-            return np.log(abs(x))
-        else:
-            return -32.
-    log_row = map(log_if_nonzero, row)
+    log_row = map(abs, row)
     log_result.append(log_row)
-MS = plt.matshow(log_result)
+MS = plt.matshow(log_result, norm=mpl.colors.LogNorm(), cmap=plt.cm.autumn)
 cbar = plt.colorbar(MS)
 titleStr='Wlt analysis with $0\leq j\leq$'+str(J)+' for \n' \
-    + r"$\ln\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))}$"+r'$,\ \gamma=$'+str(g)
+    + r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))}$"+r'$,\ \gamma=$'+str(g)
 plt.title(titleStr)
 plt.xlabel('$(j,k)$')
 plt.ylabel('$(j\',k\')$')
