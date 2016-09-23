@@ -138,14 +138,33 @@ for jy in range(J):
 # mpl.rc('text',usetex=True)
 MS = plt.matshow(result)
 cbar = plt.colorbar(MS)
-titleStr='Wlt analysis with $0\leq j\leq$'+str(J)+r' for '+'\n'+ r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))}$"+r'$,\ \gamma=$'+str(g)
+titleStr='Wlt analysis with $0\leq j\leq$'+str(J)+' for \n' \
+    + r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))}$"+r'$,\ \gamma=$'+str(g)
 plt.title(titleStr)
 plt.xlabel('$(j,k)$')
 plt.ylabel('$(j\',k\')$')
 # plt.show()
 
 titleSave="wlt_analysis-J_"+str(J)+"-gamma_"+str(g)+".pdf"
-plt.savefig(titleSave,bbox_inches="tight")
+plt.savefig(titleSave, bbox_inches="tight")
+plt.clf()
+
+# plot logarithmic wavelet representation
+log_result = []
+for row in result:
+    log_row = map(lambda x: np.log(abs(x)), row)
+    log_result.append(log_row)
+MS = plt.matshow(log_result)
+cbar = plt.colorbar(MS)
+titleStr='Wlt analysis with $0\leq j\leq$'+str(J)+' for \n' \
+    + r"$\ln\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))}$"+r'$,\ \gamma=$'+str(g)
+plt.title(titleStr)
+plt.xlabel('$(j,k)$')
+plt.ylabel('$(j\',k\')$')
+# plt.show()
+
+titleSave="wlt_analysis-J_"+str(J)+"-gamma_"+str(g)+"-log.pdf"
+plt.savefig(titleSave, bbox_inches="tight")
 plt.clf()
 
 # ============
@@ -160,6 +179,7 @@ x=np.linspace(-r,r,num=ngrid,endpoint=True)
 y=x
 X, Y = np.meshgrid(x, y)
 PHI=phi(X,Y,g)
+# TODO: plot phi as a function of θ-θ'
 CS = plt.contourf(X, Y, PHI, 20,
                   alpha=0.8,
                   cmap=plt.cm.bone,
