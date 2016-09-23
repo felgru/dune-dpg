@@ -14,8 +14,6 @@ bool testDGSubsampled2D()
 {
   bool success = true;
 
-  const int dim = 2;
-
   std::cout << "order : " << order
             << ", samples : " << samples << std::endl;
   Dune::PkDGSubsampled2DLocalFiniteElement<double,double,samples,order>
