@@ -1,9 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
+from __future__ import (absolute_import, print_function)
 import numpy as np
 from scipy.linalg import norm # to compute norm of an array
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import sys
 
 # Scaling function $\phi_{0,0}$ on the interval [-r,r[
 def sf(x,r):
@@ -40,10 +42,14 @@ def quadpoints(jx, kx, r):
 # ============
 # Main program
 # ============
-ngrid=100 # Size mesh
-J=7
-r=np.pi
-g=0.5 # forward peak coef
+if len(sys.argv) != 2:
+    print('Usage: {} gamma'.format(sys.argv[0]))
+    print('  where gamma is the parameter of the Henyey-Greenstein kernel')
+    sys.exit(1)
+ngrid = 100 # Size mesh
+J = 7
+r = np.pi
+g = float(sys.argv[1]) # forward peak coef
 
 jy=0
 ky=0
@@ -152,7 +158,12 @@ plt.clf()
 # plot logarithmic wavelet representation
 log_result = []
 for row in result:
-    log_row = map(lambda x: np.log(abs(x)), row)
+    def log_if_nonzero(x):
+        if abs(x)>0:
+            return np.log(abs(x))
+        else:
+            return -32.
+    log_row = map(log_if_nonzero, row)
     log_result.append(log_row)
 MS = plt.matshow(log_result)
 cbar = plt.colorbar(MS)
