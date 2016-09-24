@@ -15,6 +15,8 @@
 #include <dune/localfunctions/lagrange/pk2d.hh>
 #include <dune/localfunctions/lagrange/prismp1.hh>
 
+#include <numeric>
+
 namespace Dune
 {
 /**@ingroup LocalBasisImplementation

@@ -7,6 +7,8 @@
 
 #include <dune/localfunctions/common/localbasis.hh>
 
+#include <numeric>
+
 namespace Dune
 {
   /**@ingroup LocalBasisImplementation

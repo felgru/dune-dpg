@@ -17,6 +17,8 @@
 #include <dune/localfunctions/common/localbasis.hh>
 #include <dune/localfunctions/common/localfiniteelementtraits.hh>
 
+#include <numeric>
+
 
 namespace Dune
 {
