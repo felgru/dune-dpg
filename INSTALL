@@ -76,6 +76,15 @@ Installation of Dune on Debian GNU/Linux
    into $DUNEDIR like it is explained below in the MacOS instructions.
    This is necessary if you are using an older Debian release like Jessie.
 
+   Since Debian Stretch now has Boost 1.61 which causes problems with
+   dune-dpg, you can download Boost 1.59 from the Boost website and
+   add the following line to your dune.opts file
+
+   CMAKE_FLAGS+=" -DBOOST_INCLUDEDIR=$DUNEDIR/boost_1_59_0/"
+
+   assuming that you extracted Boost to $DUNEDIR, otherwise you have to
+   adjust the path accordingly.
+
 Installation of Dune on MacOS
 -----------------------------
 
