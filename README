@@ -25,9 +25,8 @@ libraries installed on your system:
     - a C++11-compatible compiler (e.g. GCC >= 4.9)
     - cmake >= 2.8.12
   - Libraries:
-    - Boost Fusion >= 1.59
-      (Boost Fusion 1.61 is known to cause compilation problems.
-       1.60 wasn't tested yet. Thus it would be best to stick with 1.59.)
+    - Boost Fusion >= 1.59, < 1.60
+      (Boost Fusion 1.60 and 1.61 are known to cause compilation errors.)
     - A grid manager. Our examples use UG 3.12.1
       (http://www.iwr.uni-heidelberg.de/frame/iwrwikiequipment/software/ug)
       but one could also use other managers, e.g., ALBERTA or YASPgrid.
