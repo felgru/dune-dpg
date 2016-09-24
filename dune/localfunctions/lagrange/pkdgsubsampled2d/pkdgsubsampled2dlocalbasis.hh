@@ -14,6 +14,8 @@
 #include <dune/localfunctions/common/localfiniteelementtraits.hh>
 #include <dune/localfunctions/lagrange/pk2d/pk2dlocalbasis.hh>
 
+#include <numeric>
+
 
 namespace Dune
 {
