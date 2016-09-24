@@ -15,6 +15,7 @@ set(HAVE_DUNE_BOOST ${Boost_FOUND})
 # register all boost related flags
 # TODO What about boost libraries? Do we even rely on such?
 if(HAVE_DUNE_BOOST)
+  include_directories(${Boost_INCLUDE_DIRS})
   dune_register_package_flags(COMPILE_DEFINITIONS "ENABLE_BOOST=1"
                               INCLUDE_DIRS "${Boost_INCLUDE_DIRS}")
 endif()

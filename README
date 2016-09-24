@@ -26,6 +26,8 @@ libraries installed on your system:
     - cmake >= 2.8.12
   - Libraries:
     - Boost Fusion >= 1.59
+      (Boost Fusion 1.61 is known to cause compilation problems.
+       1.60 wasn't tested yet. Thus it would be best to stick with 1.59.)
     - Eigen >= 3.2
       (http://eigen.tuxfamily.org)
     - A grid manager. Our examples use UG 3.12.1
