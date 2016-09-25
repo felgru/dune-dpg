@@ -51,6 +51,7 @@ J = 7
 r = np.pi
 g = float(sys.argv[1]) # forward peak coef
 
+mpl.rc('text', usetex=True)
 
 nwlt=0
 result = []
