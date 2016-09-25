@@ -440,49 +440,53 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       }
     }
 
-    ////////////////////////////////////////////////////////////////////////
-    //  Write result to VTK file
-    //  We need to subsample, because VTK cannot natively display
-    //  real second-order functions
-    ////////////////////////////////////////////////////////////////////////
-    std::cout << "Print solutions:\n";
+    const bool plotSolutions = false;
+    if(plotSolutions) {
+      ////////////////////////////////////////////////////////////////////////
+      //  Write result to VTK file
+      //  We need to subsample, because VTK cannot natively display
+      //  real second-order functions
+      ////////////////////////////////////////////////////////////////////////
+      std::cout << "Print solutions:\n";
 
-    FEBasisInterior feBasisInterior(gridView);
-    FEBasisTrace feBasisTrace(gridView);
+      FEBasisInterior feBasisInterior(gridView);
+      FEBasisTrace feBasisTrace(gridView);
 
-    for(unsigned int i = 0; i < numS; ++i)
-    {
-      Direction s = sVector[i];
+      for(unsigned int i = 0; i < numS; ++i)
+      {
+        Direction s = sVector[i];
 
-      std::cout << "Direction " << i << '\n';
+        std::cout << "Direction " << i << '\n';
 
-      // - Make a discrete function from the FE basis and the coefficient vector
-      auto uFunction
-          = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-                (feBasisInterior, Dune::TypeTree::hybridTreePath(), u[i]);
-      auto localUFunction = localFunction(uFunction);
+        // - Make a discrete function from the FE basis and the coefficient vector
+        auto uFunction
+            = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+                  (feBasisInterior, Dune::TypeTree::hybridTreePath(), u[i]);
+        auto localUFunction = localFunction(uFunction);
 
-      auto thetaFunction
-          = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-                (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta[i]);
-      auto localThetaFunction = localFunction(thetaFunction);
-      // - VTK writer
-      SubsamplingVTKWriter<GridView> vtkWriterInterior(gridView,0);
-      vtkWriterInterior.addVertexData(localUFunction,
-                      VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-      std::string name = std::string("u_rad_trans_n")
-                       + std::to_string(n)
-                       + std::string("_s")
-                       + std::to_string(i);
-      vtkWriterInterior.write(name);
+        auto thetaFunction
+            = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+                  (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta[i]);
+        auto localThetaFunction = localFunction(thetaFunction);
+        // - VTK writer
+        SubsamplingVTKWriter<GridView> vtkWriterInterior(gridView,0);
+        vtkWriterInterior.addVertexData(localUFunction,
+                        VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
+        std::string name = std::string("u_rad_trans_n")
+                        + std::to_string(n)
+                        + std::string("_s")
+                        + std::to_string(i);
+        vtkWriterInterior.write(name);
 
-      SubsamplingVTKWriter<GridView> vtkWriterTrace(gridView,2);
-      vtkWriterTrace.addVertexData(localThetaFunction, VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
-      name = std::string("theta_rad_trans_n")
-                       + std::to_string(n)
-                       + std::string("_s")
-                       + std::to_string(i);
-      vtkWriterTrace.write(name);
+        SubsamplingVTKWriter<GridView> vtkWriterTrace(gridView,2);
+        vtkWriterTrace.addVertexData(localThetaFunction,
+                    VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
+        name = std::string("theta_rad_trans_n")
+                        + std::to_string(n)
+                        + std::string("_s")
+                        + std::to_string(i);
+        vtkWriterTrace.write(name);
+      }
     }
   }
 }
