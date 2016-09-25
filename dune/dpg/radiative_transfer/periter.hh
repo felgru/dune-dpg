@@ -423,9 +423,15 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         aposterioriErr += aposterioriErr_i * aposterioriErr_i;
       }
       aposterioriErr = sqrt(aposterioriErr / numS);
-      ofs << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
-      ofs << std::endl;
+      ofs << "Iteration " << n << '.' << nRefinement << ": "
+          << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
+          << aposterioriErr << ", grid level: " << grid.maxLevel()
+          << std::endl;
       std::cout << std::endl;
+
+      std::cout << "\nStatistics at end of inner iteration:\n";
+      std::cout << "Grid level: " << grid.maxLevel() << '\n';
+      std::cout << "A posteriori error: " << aposterioriErr << std::endl;
 
       if(aposterioriErr < accuracy/2.) {
         break;
@@ -478,9 +484,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                        + std::to_string(i);
       vtkWriterTrace.write(name);
     }
-    std::cout << "\nStatistics at end of inner iteration:\n";
-    std::cout << "Grid level: " << grid.maxLevel() << '\n';
-    std::cout << "A posteriori error: " << aposterioriErr << std::endl;
   }
 }
 
