@@ -51,19 +51,17 @@ J = 7
 r = np.pi
 g = float(sys.argv[1]) # forward peak coef
 
-jy=0
-ky=0
 
 nwlt=0
 result = []
 (y, yquadweight) = quadpoints(0, 0, r)
-# get wlt_{jy,ky}(y)
+# get sf(y)
 sfy=sf(y,r)
 # print(np.sqrt((ymax-ymin)*np.mean(wlty*wlty))) # L2 norm wlt
 # initialize resultx list
 resultx = []
 (x, xquadweight) = quadpoints(0, 0, r)
-# get wlt_{jx,kx}(x)
+# get sf(x)
 sfx=sf(x,r)
 # Values of the kernel
 X, Y = np.meshgrid(x, y)
@@ -97,7 +95,7 @@ for jy in range(J):
         # initialize resultx list
         resultx = []
         (x, xquadweight) = quadpoints(0, 0, r)
-        # get wlt_{jx,kx}(x)
+        # get sf(x)
         sfx=sf(x,r)
         # Values of the kernel
         X, Y = np.meshgrid(x, y)
@@ -145,7 +143,7 @@ for jy in range(J):
 MS = plt.matshow(result, cmap=plt.cm.autumn)
 cbar = plt.colorbar(MS)
 titleStr='Wlt analysis with $0\leq j\leq$'+str(J)+' for \n' \
-    + r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))}$"+r'$,\ \gamma=$'+str(g)
+    + r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))$"+r'$,\ \gamma=$'+str(g)
 plt.title(titleStr)
 plt.xlabel('$(j,k)$')
 plt.ylabel('$(j\',k\')$')
@@ -163,7 +161,7 @@ for row in result:
 MS = plt.matshow(log_result, norm=mpl.colors.LogNorm(), cmap=plt.cm.autumn)
 cbar = plt.colorbar(MS)
 titleStr='Wlt analysis with $0\leq j\leq$'+str(J)+' for \n' \
-    + r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))}$"+r'$,\ \gamma=$'+str(g)
+    + r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))$"+r'$,\ \gamma=$'+str(g)
 plt.title(titleStr)
 plt.xlabel('$(j,k)$')
 plt.ylabel('$(j\',k\')$')
@@ -186,7 +184,7 @@ PHI=phi(x, 0, g)
 plt.plot(x, PHI)
 plt.xlim(-r, r)
 
-titleStr=r"$\phi(\theta,0)=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta))}$"+r'$,\ \gamma=$'+str(g)
+titleStr=r"$\phi(\theta,0)=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta))$"+r'$,\ \gamma=$'+str(g)
 plt.title(titleStr)
 plt.xlabel(r"$\theta$")
 plt.ylabel(r"$\phi(\theta,0)$")
