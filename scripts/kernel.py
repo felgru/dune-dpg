@@ -37,7 +37,7 @@ def quadpoints(jx, kx, r):
     xmin=r*kx*pow(2,-jx+1)-r
     xmax=r*(kx+1)*pow(2,-jx+1)-r
     x=np.linspace(xmin,xmax,num=ngrid,endpoint=True)
-    return (x, (xmax-xmin)/ngrid)
+    return (x, (xmax-xmin)/(ngrid-1))
 
 # ============
 # Main program
