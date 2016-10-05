@@ -73,7 +73,12 @@ namespace ScatteringKernelApproximation {
                   * quadweight * xValues[i] * yValues[j];
           }
         }
-        kernelMatrix(xIndex, yIndex) = eval;
+        // scale integral to be a probability measure
+        // TODO: maybe the scaling factor should be included in the
+        //       kernel, as in the original definition of
+        //       Henyey and Greenstein.
+        kernelMatrix(xIndex, yIndex) = eval /
+            (2*boost::math::constants::pi<double>());
       }
 
       static std::tuple<Eigen::VectorXd, double> computeQuadPoints(
