@@ -68,6 +68,9 @@ sfx=sf(x,r)
 X, Y = np.meshgrid(x, y)
 PHI=phi(X,Y,g)
 # Product quadweight*kernel*wlt(x)*wlt(y)
+# TODO: in the summed trapezoidal rule, the outer
+#       quadrature points have to be weighted with
+#       factor 1/2.
 quadweight = yquadweight * xquadweight
 prod=quadweight*PHI*np.outer(sfx,sfy)
 # Integral over [-pi,pi]x[-pi,pi]
@@ -81,6 +84,9 @@ for jx in range(J):
         X, Y = np.meshgrid(x, y)
         PHI=phi(X,Y,g)
         # Product quadweight*kernel*wlt(x)*wlt(y)
+        # TODO: in the summed trapezoidal rule, the outer
+        #       quadrature points have to be weighted with
+        #       factor 1/2.
         quadweight = yquadweight * xquadweight
         prod=quadweight*PHI*np.outer(wltx,sfy)
         # Integral over [-pi,pi]x[-pi,pi]
@@ -102,6 +108,9 @@ for jy in range(J):
         X, Y = np.meshgrid(x, y)
         PHI=phi(X,Y,g)
         # Product quadweight*kernel*wlt(x)*wlt(y)
+        # TODO: in the summed trapezoidal rule, the outer
+        #       quadrature points have to be weighted with
+        #       factor 1/2.
         quadweight = yquadweight * xquadweight
         prod=quadweight*PHI*np.outer(sfx,wlty)
         # Integral over [-pi,pi]x[-pi,pi]
@@ -115,6 +124,9 @@ for jy in range(J):
                 X, Y = np.meshgrid(x, y)
                 PHI=phi(X,Y,g)
                 # Product quadweight*kernel*wlt(x)*wlt(y)
+                # TODO: in the summed trapezoidal rule, the outer
+                #       quadrature points have to be weighted with
+                #       factor 1/2.
                 quadweight = yquadweight * xquadweight
                 prod=quadweight*PHI*np.outer(wltx,wlty)
                 # Integral over [-pi,pi]x[-pi,pi]
