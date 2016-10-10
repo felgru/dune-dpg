@@ -55,18 +55,18 @@ namespace ScatteringKernelApproximation {
           Eigen::MatrixXd& kernelMatrix, KernelFunction& kernelFunction,
           size_t xIndex, size_t yIndex,
           const Eigen::VectorXd& x, const Eigen::VectorXd& xValues,
-          const Eigen::VectorXd& y, const Eigen::VectorXd& yValues
+          double quadweightx,
+          const Eigen::VectorXd& y, const Eigen::VectorXd& yValues,
+          double quadweighty
           ) {
         // evaluate the kernel function
-        size_t nquad = x.size();
-        double xmin = x[0], xmax = x[nquad-1];
-        double ymin = y[0], ymax = y[nquad-1];
-        double quadweight = (ymax-ymin) * (xmax-xmin)
-                          / ((nquad-1)*(nquad-1));
+        const size_t nquadx = x.size();
+        const size_t nquady = y.size();
+        const double quadweight = quadweighty * quadweightx;
         double eval = 0.;
-        for(size_t i = 0; i < nquad; i++) {
+        for(size_t i = 0; i < nquadx; i++) {
           Direction s_i = {cos(x[i]), sin(x[i])};
-          for(size_t j = 0; j < nquad; j++) {
+          for(size_t j = 0; j < nquady; j++) {
             Direction s_j = {cos(y[j]), sin(y[j])};
             // Integral over [-pi,pi]x[-pi,pi]
             eval += kernelFunction(s_i, s_j)
@@ -76,12 +76,17 @@ namespace ScatteringKernelApproximation {
         kernelMatrix(xIndex, yIndex) = eval;
       }
 
-      static Eigen::VectorXd computeQuadPoints(
-          size_t jx, size_t kx, double r, size_t nquad) {
+      static std::tuple<Eigen::VectorXd, double> computeQuadPoints(
+          size_t jx, size_t kx, double r, size_t maxLevel) {
         double xmin = r *   kx   * std::exp2(-(double)jx+1) - r;
         double xmax = r * (kx+1) * std::exp2(-(double)jx+1) - r;
-        Eigen::VectorXd x = Eigen::VectorXd::LinSpaced(nquad, xmin, xmax);
-        return x;
+        size_t nquad = 1 << (maxLevel - jx);
+        Eigen::VectorXd x(nquad);
+        for(size_t i=0; i < nquad; i++) {
+          x[i] = xmin + (2*i+1)/(2.*nquad) * (xmax - xmin);
+        }
+        double quadweight = (xmax - xmin) / nquad;
+        return std::make_tuple(x, quadweight);
       }
 
     public:
@@ -149,49 +154,54 @@ namespace ScatteringKernelApproximation {
 
         /* compute wavelet transform of the kernel matrix */
         double r = pi<double>();
-        size_t nquad = 100;
 
         // jy, ky = 0
         {
-          VectorXd y = computeQuadPoints(0, 0, r, nquad);
+          VectorXd y; double qwy;
+          std::tie(y, qwy) = computeQuadPoints(0, 0, r, maxLevel);
           VectorXd sfy = sf(y, r);
           // jx, kx = 0
           {
-            VectorXd x = computeQuadPoints(0, 0, r, nquad);
+            VectorXd x; double qwx;
+            std::tie(x, qwx) = computeQuadPoints(0, 0, r, maxLevel);
             VectorXd sfx = sf(x, r);
             evalKernel(kernelMatrix, kernelFunction,
-                0, 0, x, sfx, y, sfy);
+                0, 0, x, sfx, qwx, y, sfy, qwy);
           }
           for(size_t jx = 0; jx < maxLevel; jx++) {
             for(size_t kx = 0, kx_max = 1 << jx; kx < kx_max; kx++) {
-              VectorXd x = computeQuadPoints(jx, kx, r, nquad);
+              VectorXd x; double qwx;
+              std::tie(x, qwx) = computeQuadPoints(jx, kx, r, maxLevel);
               VectorXd wltx = wlt(jx, kx, x, r);
               size_t i = (1 << jx) + kx;
               evalKernel(kernelMatrix, kernelFunction,
-                  i, 0, x, wltx, y, sfy);
+                  i, 0, x, wltx, qwx, y, sfy, qwy);
             }
           }
         }
         for(size_t jy = 0; jy < maxLevel; jy++) {
           for(size_t ky = 0, ky_max = 1 << jy; ky < ky_max; ky++) {
-            VectorXd y = computeQuadPoints(jy, ky, r, nquad);
+            VectorXd y; double qwy;
+            std::tie(y, qwy) = computeQuadPoints(jy, ky, r, maxLevel);
             VectorXd wlty = wlt(jy, ky, y, r);
             // jx, kx = 0
             {
-              VectorXd x = computeQuadPoints(0, 0, r, nquad);
+              VectorXd x; double qwx;
+              std::tie(x, qwx) = computeQuadPoints(0, 0, r, maxLevel);
               VectorXd sfx = sf(x, r);
               size_t j = (1 << jy) + ky;
               evalKernel(kernelMatrix, kernelFunction,
-                  0, j, x, sfx, y, wlty);
+                  0, j, x, sfx, qwx, y, wlty, qwy);
             }
             for(size_t jx = 0; jx < maxLevel; jx++) {
               for(size_t kx = 0, kx_max = 1 << jx; kx < kx_max; kx++) {
-                VectorXd x = computeQuadPoints(jx, kx, r, nquad);
+                VectorXd x; double qwx;
+                std::tie(x, qwx) = computeQuadPoints(jx, kx, r, maxLevel);
                 VectorXd wltx = wlt(jx, kx, x, r);
                 size_t i = (1 << jx) + kx;
                 size_t j = (1 << jy) + ky;
                 evalKernel(kernelMatrix, kernelFunction,
-                    i, j, x, wltx, y, wlty);
+                    i, j, x, wltx, qwx, y, wlty, qwy);
               }
             }
           }
