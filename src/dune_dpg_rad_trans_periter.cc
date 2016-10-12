@@ -217,7 +217,7 @@ int main(int argc, char** argv)
   const double rho = 1.;
   // TODO: Estimate the constant C_T.
   const double CT = 1;
-  Periter<ScatteringKernelApproximation::HaarWavelet::MatrixCompression>()
+  Periter<ScatteringKernelApproximation::HaarWavelet::SVD>()
       .solve(*grid, g, HenyeyGreensteinScattering<Direction>(0.9),
              numS, rho, CT, 1e-2, N);
 

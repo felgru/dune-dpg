@@ -36,23 +36,30 @@ int main() try
   const size_t num_s = 16;
 
   using namespace Dune::ScatteringKernelApproximation;
-  HaarWavelet::MatrixCompression waveletApproximation(kernel, num_s);
+  HaarWavelet::MatrixCompression matrixCompressionApproximation(kernel, num_s);
+  HaarWavelet::SVD waveletSVDApproximation(kernel, num_s);
   SVD svdApproximation(kernel, num_s);
 
   Eigen::VectorXd x(num_s);
   for(size_t i=0; i < num_s; i++) x[i] = 1.;
   Eigen::VectorXd y = x;
+  Eigen::VectorXd z = x;
 
-  waveletApproximation.applyToVector(y);
+  waveletSVDApproximation.applyToVector(z);
+  matrixCompressionApproximation.applyToVector(y);
   svdApproximation.applyToVector(x);
   success &= sameVector(x, y);
+  success &= sameVector(x, z);
 
   for(size_t i=0; i < num_s; i++) x[i] = (double)(i*i);
   y = x;
+  z = x;
 
-  waveletApproximation.applyToVector(y);
+  waveletSVDApproximation.applyToVector(z);
+  matrixCompressionApproximation.applyToVector(y);
   svdApproximation.applyToVector(x);
   success &= sameVector(x, y);
+  success &= sameVector(x, z);
 
   return success ? 0 : 1;
 }

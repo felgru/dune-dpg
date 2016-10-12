@@ -12,6 +12,7 @@
 #include <boost/math/constants/constants.hpp>
 
 #include <Eigen/Core>
+#include <Eigen/SVD>
 
 namespace Dune {
 
@@ -241,6 +242,66 @@ namespace ScatteringKernelApproximation {
         Eigen::MatrixXd kernelMatrix;
         size_t maxLevel;
         size_t level;
+      };
+
+      class SVD {
+      public:
+        enum : unsigned int { dim = 2 };
+        using Direction = FieldVector<double, dim>;
+
+        SVD() = delete;
+        SVD(const SVD&) = delete;
+
+        template<class Function>
+        SVD(const Function& kernelFunction, size_t num_s)
+          : kernelSVD(num_s, num_s, Eigen::ComputeThinU | Eigen::ComputeThinV),
+            maxLevel(std::ilogb(num_s)),
+            level(maxLevel),
+            rank(num_s) {
+          if((1u << maxLevel) != num_s)
+            DUNE_THROW(MathError, "You are using " << num_s
+                << " directions, but only powers of 2 are supported.");
+
+          Eigen::MatrixXd kernelMatrix(waveletKernelMatrix(kernelFunction,
+                                                           std::ilogb(num_s)));
+          /* initialize SVD of kernel (using Eigen) */
+          kernelSVD.compute(kernelMatrix);
+        }
+
+        void applyToVector(Eigen::VectorXd& v) const {
+          DWT(v);
+          // TODO: trunkate matrix (and vector?) to level
+          v = kernelSVD.matrixU().leftCols(rank)
+            * kernelSVD.singularValues().head(rank).asDiagonal()
+            * kernelSVD.matrixV().leftCols(rank).adjoint() * v;
+          IDWT(v);
+        }
+
+        void setAccuracy(double accuracy) {
+          using namespace Eigen;
+          VectorXd singularValues = kernelSVD.singularValues();
+          size_t i = singularValues.size() - 1;
+          double err = 0,
+                rank_err = singularValues(i) * singularValues(i);
+          accuracy = accuracy * accuracy;
+          while (err + rank_err < accuracy && i > 0) {
+            err += rank_err;
+            i -= 1;
+            rank_err = singularValues(i) * singularValues(i);
+          }
+          rank = i+1;
+          // TODO: If accuracy is low enough to allow rank = 0,
+          //       this gives rank = 1.
+
+          // TODO: properly set level dependent on accuracy
+          level = maxLevel;
+        }
+
+      private:
+        Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner> kernelSVD;
+        size_t maxLevel;
+        size_t level;
+        size_t rank;
       };
   }
 }
