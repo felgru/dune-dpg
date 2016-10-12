@@ -51,9 +51,8 @@ namespace ScatteringKernelApproximation {
       }
 
       template<class KernelFunction>
-      static void evalKernel(
-          Eigen::MatrixXd& kernelMatrix, KernelFunction& kernelFunction,
-          size_t xIndex, size_t yIndex,
+      static double evalKernel(
+          KernelFunction& kernelFunction,
           const Eigen::VectorXd& x, const Eigen::VectorXd& xValues,
           double quadweightx,
           const Eigen::VectorXd& y, const Eigen::VectorXd& yValues,
@@ -77,8 +76,7 @@ namespace ScatteringKernelApproximation {
         // TODO: maybe the scaling factor should be included in the
         //       kernel, as in the original definition of
         //       Henyey and Greenstein.
-        kernelMatrix(xIndex, yIndex) = eval /
-            (2*boost::math::constants::pi<double>());
+        return eval / (2*boost::math::constants::pi<double>());
       }
 
       static std::tuple<Eigen::VectorXd, double> computeQuadPoints(
@@ -170,17 +168,17 @@ namespace ScatteringKernelApproximation {
             VectorXd x; double qwx;
             std::tie(x, qwx) = computeQuadPoints(0, 0, r, maxLevel);
             VectorXd sfx = sf(x, r);
-            evalKernel(kernelMatrix, kernelFunction,
-                0, 0, x, sfx, qwx, y, sfy, qwy);
+            kernelMatrix(0, 0)
+                = evalKernel(kernelFunction, x, sfx, qwx, y, sfy, qwy);
           }
           for(size_t jx = 0; jx < maxLevel; jx++) {
             for(size_t kx = 0, kx_max = 1 << jx; kx < kx_max; kx++) {
               VectorXd x; double qwx;
               std::tie(x, qwx) = computeQuadPoints(jx, kx, r, maxLevel);
               VectorXd wltx = wlt(jx, kx, x, r);
-              size_t i = (1 << jx) + kx;
-              evalKernel(kernelMatrix, kernelFunction,
-                  i, 0, x, wltx, qwx, y, sfy, qwy);
+              const size_t i = (1 << jx) + kx;
+              kernelMatrix(i, 0)
+                  = evalKernel(kernelFunction, x, wltx, qwx, y, sfy, qwy);
             }
           }
         }
@@ -194,19 +192,19 @@ namespace ScatteringKernelApproximation {
               VectorXd x; double qwx;
               std::tie(x, qwx) = computeQuadPoints(0, 0, r, maxLevel);
               VectorXd sfx = sf(x, r);
-              size_t j = (1 << jy) + ky;
-              evalKernel(kernelMatrix, kernelFunction,
-                  0, j, x, sfx, qwx, y, wlty, qwy);
+              const size_t j = (1 << jy) + ky;
+              kernelMatrix(0, j)
+                  = evalKernel(kernelFunction, x, sfx, qwx, y, wlty, qwy);
             }
             for(size_t jx = 0; jx < maxLevel; jx++) {
               for(size_t kx = 0, kx_max = 1 << jx; kx < kx_max; kx++) {
                 VectorXd x; double qwx;
                 std::tie(x, qwx) = computeQuadPoints(jx, kx, r, maxLevel);
                 VectorXd wltx = wlt(jx, kx, x, r);
-                size_t i = (1 << jx) + kx;
-                size_t j = (1 << jy) + ky;
-                evalKernel(kernelMatrix, kernelFunction,
-                    i, j, x, wltx, qwx, y, wlty, qwy);
+                const size_t i = (1 << jx) + kx;
+                const size_t j = (1 << jy) + ky;
+                kernelMatrix(i, j)
+                    = evalKernel(kernelFunction, x, wltx, qwx, y, wlty, qwy);
               }
             }
           }
