@@ -36,7 +36,7 @@ int main() try
   const size_t num_s = 16;
 
   using namespace Dune::ScatteringKernelApproximation;
-  HaarWavelet waveletApproximation(kernel, num_s);
+  HaarWavelet::MatrixCompression waveletApproximation(kernel, num_s);
   SVD svdApproximation(kernel, num_s);
 
   Eigen::VectorXd x(num_s);

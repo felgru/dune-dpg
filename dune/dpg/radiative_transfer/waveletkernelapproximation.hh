@@ -16,10 +16,9 @@
 namespace Dune {
 
 namespace ScatteringKernelApproximation {
-  class HaarWavelet {
-    private:
+  namespace HaarWavelet {
       // Scaling function $\phi_{0,0}$ on the interval [-r,r)
-      static Eigen::VectorXd sf(const Eigen::VectorXd& x, double r) {
+      Eigen::VectorXd sf(const Eigen::VectorXd& x, double r) {
         double normfactor = 1./sqrt(2*r);
         Eigen::VectorXd res(x.size());
         for(size_t i=0, imax=x.size(); i<imax; i++) {
@@ -33,8 +32,8 @@ namespace ScatteringKernelApproximation {
       // Its support is in [xmin,xmax] where
       // 	xmin = r*k*pow(2,-j+1)-r
       // 	xmax = r*(k+1)*pow(2,-j+1)-r
-      static Eigen::VectorXd wlt(size_t j, size_t k,
-                                 const Eigen::VectorXd& x, double r) {
+      Eigen::VectorXd wlt(size_t j, size_t k,
+                          const Eigen::VectorXd& x, double r) {
         double xmin = r *   k   * std::exp2(-(double)j+1) - r;
         double xmax = r * (k+1) * std::exp2(-(double)j+1) - r;
         double xmiddle = (xmin + xmax)/2;
@@ -51,13 +50,16 @@ namespace ScatteringKernelApproximation {
       }
 
       template<class KernelFunction>
-      static double evalKernel(
+      double evalKernel(
           KernelFunction& kernelFunction,
           const Eigen::VectorXd& x, const Eigen::VectorXd& xValues,
           double quadweightx,
           const Eigen::VectorXd& y, const Eigen::VectorXd& yValues,
           double quadweighty
           ) {
+        enum : unsigned int { dim = 2 };
+        using Direction = FieldVector<double, dim>;
+
         // evaluate the kernel function
         const size_t nquadx = x.size();
         const size_t nquady = y.size();
@@ -79,7 +81,7 @@ namespace ScatteringKernelApproximation {
         return eval / (2*boost::math::constants::pi<double>());
       }
 
-      static std::tuple<Eigen::VectorXd, double> computeQuadPoints(
+      std::tuple<Eigen::VectorXd, double> computeQuadPoints(
           size_t jx, size_t kx, double r, size_t maxLevel) {
         double xmin = r *   kx   * std::exp2(-(double)jx+1) - r;
         double xmax = r * (kx+1) * std::exp2(-(double)jx+1) - r;
@@ -92,11 +94,10 @@ namespace ScatteringKernelApproximation {
         return std::make_tuple(x, quadweight);
       }
 
-    public:
       // Discrete Haar wavelet transform
       // data is used for in- and output and is assumed to be of size 2^n
       // for a natural number n.
-      static void DWT(Eigen::VectorXd& data) {
+      void DWT(Eigen::VectorXd& data) {
         Eigen::VectorXd tmp(data.size());
         for(size_t len = data.size() >> 1; len > 0; len >>=1) {
           for(size_t i = 0; i < len; i++) {
@@ -118,7 +119,7 @@ namespace ScatteringKernelApproximation {
       // Inverse discrete Haar wavelet transform
       // data is used for in- and output and is assumed to be of size 2^n
       // for a natural number n.
-      static void IDWT(Eigen::VectorXd& data) {
+      void IDWT(Eigen::VectorXd& data) {
         Eigen::VectorXd tmp(data.size());
         double scaling_factor = 1./sqrt(2*boost::math::constants::pi<double>());
         data.segment(0, 1) *= scaling_factor;
@@ -138,25 +139,18 @@ namespace ScatteringKernelApproximation {
         }
       }
 
-      enum : unsigned int { dim = 2 };
-      using Direction = FieldVector<double, dim>;
-
-      HaarWavelet() = delete;
-      HaarWavelet(const HaarWavelet&) = delete;
-
       template<class Function>
-      HaarWavelet(const Function& kernelFunction, size_t num_s)
-        : kernelMatrix(num_s, num_s),
-          maxLevel(std::ilogb(num_s)),
-          level(maxLevel) {
+      Eigen::MatrixXd waveletKernelMatrix(const Function& kernelFunction,
+                                          size_t maxLevel)
+      {
         using namespace Eigen;
         using namespace boost::math::constants;
-        if((1u << maxLevel) != num_s)
-          DUNE_THROW(MathError, "You are using " << num_s
-              << " directions, but only powers of 2 are supported.");
+
+        const size_t num_s = 1ul << maxLevel;
+        MatrixXd kernelMatrix(num_s, num_s);
 
         /* compute wavelet transform of the kernel matrix */
-        double r = pi<double>();
+        const double r = pi<double>();
 
         // jy, ky = 0
         {
@@ -209,25 +203,46 @@ namespace ScatteringKernelApproximation {
             }
           }
         }
+        return kernelMatrix;
       }
 
-      void applyToVector(Eigen::VectorXd& v) const {
-        DWT(v);
-        // TODO: trunkate matrix (and vector?) to level
-        v = kernelMatrix * v;
-        IDWT(v);
-      }
+      class MatrixCompression {
+      public:
+        enum : unsigned int { dim = 2 };
+        using Direction = FieldVector<double, dim>;
 
-      void setAccuracy(double accuracy) {
-        // TODO: properly set level dependent on accuracy
-        level = maxLevel;
-      }
+        MatrixCompression() = delete;
+        MatrixCompression(const MatrixCompression&) = delete;
 
-    private:
-      Eigen::MatrixXd kernelMatrix;
-      size_t maxLevel;
-      size_t level;
-  };
+        template<class Function>
+        MatrixCompression(const Function& kernelFunction, size_t num_s)
+          : kernelMatrix(waveletKernelMatrix(kernelFunction,
+                                             std::ilogb(num_s))),
+            maxLevel(std::ilogb(num_s)),
+            level(maxLevel) {
+          if((1u << maxLevel) != num_s)
+            DUNE_THROW(MathError, "You are using " << num_s
+                << " directions, but only powers of 2 are supported.");
+        }
+
+        void applyToVector(Eigen::VectorXd& v) const {
+          DWT(v);
+          // TODO: trunkate matrix (and vector?) to level
+          v = kernelMatrix * v;
+          IDWT(v);
+        }
+
+        void setAccuracy(double accuracy) {
+          // TODO: properly set level dependent on accuracy
+          level = maxLevel;
+        }
+
+      private:
+        Eigen::MatrixXd kernelMatrix;
+        size_t maxLevel;
+        size_t level;
+      };
+  }
 }
 
 }
