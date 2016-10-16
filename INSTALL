@@ -126,6 +126,10 @@ Remarks:
    specify it by adding a line
    CMAKE_FLAGS+=" -DUG_ROOT=$UGPREFIX"
    to your dune.opts file.
+ - Currently, dune-dpg does not yet support parallel computing.
+   So, if you have installed MPI, you can disable it to avoid errors by adding
+   -DCMAKE_DISABLE_FIND_PACKAGE_MPI=TRUE
+   in the CMAKE_FLAGS of your dune.opts file
 
 5) In $DUNEDIR, run
 
@@ -193,3 +197,16 @@ target_link_libraries(${convergence_test} "gfortran")
 ```
 to $DUNEDIR/dune-dpg/src/CMakeLists.txt should help to correctly
 link the example programs.
+
+
+On Linux:
+If MPI is installed, this might lead to the following error when running
+your dpg-program (i.e. plot_solution):
+
+"Dune reported error: ParallelError
+[CollectiveCommunication:$DUNEDIR/dune-common/dune/common/parallel/mpicollectivecommunication.hh:156]:
+You must call MPIHelper::instance(argc,argv) in your main() function
+before using the MPI CollectiveCommunication!"
+
+This can be fixed by disabeling MPI by adding -DCMAKE_DISABLE_FIND_PACKAGE_MPI=TRUE
+in the CMAKE_FLAGS of your dune.opts file
