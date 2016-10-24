@@ -24,6 +24,8 @@
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
+#include <dune/common/hybridutilities.hh>
+#include <dune/common/tupleutility.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -47,9 +49,9 @@ namespace Dune {
     //! tuple type of test spaces
     typedef TSpaces TestSpaces;
     //! tuple type for the local views of the test spaces
-    typedef typename boost::fusion::result_of::as_vector<
-        typename boost::fusion::result_of::
-        transform<TestSpaces, detail::getLocalView>::type>::type TestLocalViews;
+    using TestLocalViews
+        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               TestSpaces>::Type;
 
     InnerProduct () = delete;
     /**
@@ -79,7 +81,7 @@ namespace Dune {
                             localTotalTestSize);
       elementMatrix = 0;
 
-      boost::fusion::for_each(terms,
+      Hybrid::forEach(terms,
               detail::getLocalMatrixHelper
                       <MatrixType,
                        TestSpaces,
@@ -110,12 +112,8 @@ namespace Dune {
     {
       testLocalViews = std::addressof(tlv);
 
-      using namespace boost::fusion;
-      using namespace Dune::detail;
-
       /* set up local offsets */
-      localTotalTestSize =
-          fold(zip(localTestSpaceOffsets, tlv), (size_t)0, offsetHelper());
+      localTotalTestSize = detail::computeOffsets(localTestSpaceOffsets, tlv);
     }
 
     /**
@@ -172,11 +170,10 @@ getOccupationPattern(MatrixIndexSet& nb) const
 
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-  fold(zip(globalTestSpaceOffsets, testSpaces),
-       (size_t)0, globalOffsetHelper());
+  computeOffsets(globalTestSpaceOffsets, testSpaces);
 
-  auto testLocalViews = as_vector(transform(testSpaces,
-                                            getLocalView()));
+  auto testLocalViews     = genericTransformTuple(testSpaces,
+                                                  getLocalViewFunctor());
   auto testLocalIndexSets = as_vector(transform(testSpaces,
                                                 getLocalIndexSet()));
 
@@ -198,7 +195,7 @@ getOccupationPattern(MatrixIndexSet& nb) const
 
   for(const auto& e : elements(gridView))
   {
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
 
     for_each(zip(testLocalIndexSets, testLocalViews),
              make_fused_procedure(bindLocalIndexSet()));

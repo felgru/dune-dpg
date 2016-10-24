@@ -31,6 +31,8 @@
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 #include <boost/fusion/sequence/intrinsic/value_at.hpp>
 
+#include <dune/common/hybridutilities.hh>
+#include <dune/common/tupleutility.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -58,14 +60,11 @@ public:
   typedef typename BilinForm::TestSpaces TestSpaces;
   typedef typename BilinForm::SolutionSpaces SolutionSpaces;
   //! tuple type for the local views of the test spaces
-  typedef typename boost::fusion::result_of::as_vector<
-      typename boost::fusion::result_of::
-      transform<TestSpaces, detail::getLocalView>::type>::type TestLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               TestSpaces>::Type  TestLocalViews;
   //! tuple type for the local views of the solution spaces
-  typedef typename boost::fusion::result_of::as_vector<
-      typename boost::fusion::result_of::
-      transform<SolutionSpaces, detail::getLocalView>::type
-      >::type SolutionLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               SolutionSpaces>::Type  SolutionLocalViews;
   //! type of the bilinear form describing this DPG system
   typedef BilinForm BilinearForm;
   //! type of the inner product on the test spaces
@@ -270,17 +269,12 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  size_t globalTotalTestSize = 0;
+  const size_t globalTotalTestSize = computeOffsets(globalTestSpaceOffsets,
+                                                    testSpaces);
 
-  globalTotalTestSize =
-      fold(zip(globalTestSpaceOffsets, testSpaces),
-           (size_t)0, globalOffsetHelper());
-
-  size_t globalTotalSolutionSize =
-      fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
-           globalTotalTestSize, globalOffsetHelper());
-
-  globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
+  const size_t globalTotalSolutionSize =
+      computeOffsets(globalSolutionSpaceOffsets, solutionSpaces,
+                     globalTotalTestSize) - globalTotalTestSize;
 
   const auto n = globalTotalSolutionSize + globalTotalTestSize;
 
@@ -305,10 +299,10 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   matrix = 0;
 
   // Views on the FE bases on a single element
-  auto solutionLocalViews = as_vector(transform(solutionSpaces,
-                                                getLocalView()));
-  auto testLocalViews     = as_vector(transform(testSpaces,
-                                                getLocalView()));
+  auto solutionLocalViews = genericTransformTuple(solutionSpaces,
+                                                  getLocalViewFunctor());
+  auto testLocalViews     = genericTransformTuple(testSpaces,
+                                                  getLocalViewFunctor());
 
   auto solutionLocalIndexSets = as_vector(transform(solutionSpaces,
                                                     getLocalIndexSet()));
@@ -317,8 +311,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
   for(const auto& e : elements(gridView)) {
 
-    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
 
     for_each(zip(solutionLocalIndexSets, solutionLocalViews),
              make_fused_procedure(bindLocalIndexSet()));
@@ -387,8 +381,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   size_t globalSpaceOffsets[std::tuple_size<TestSpaces>::value
                             + std::tuple_size<SolutionSpaces>::value];
   const size_t globalTotalSpaceSize =
-      fold(zip(globalSpaceOffsets, join(testSpaces, solutionSpaces)),
-           (size_t)0, globalOffsetHelper());
+      computeOffsets(globalSpaceOffsets,
+                     std::tuple_cat(testSpaces, solutionSpaces));
 
   // set rhs to correct length -- the total number of basis vectors in the bases
   rhs.resize(globalTotalSpaceSize);
@@ -398,8 +392,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
   // Views on the FE bases on a single element
   auto localViews
-        = as_vector(transform(join(testSpaces, solutionSpaces),
-                              getLocalView()));
+        = genericTransformTuple(std::tuple_cat(testSpaces, solutionSpaces),
+                                getLocalViewFunctor());
 
   auto localIndexSets
         = as_vector(transform(join(testSpaces, solutionSpaces),
@@ -408,7 +402,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
   for(const auto& e : elements(gridView)) {
 
-    for_each(localViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(localViews, applyBind<decltype(e)>(e));
 
     for_each(zip(localIndexSets, localViews),
              make_fused_procedure(bindLocalIndexSet()));
@@ -479,28 +473,13 @@ applyDirichletBoundaryToMatrix
                        const std::vector<bool>& dirichletNodes,
                        const ValueType& boundaryValue)
 {
-  using namespace boost::fusion;
-  using namespace Dune::detail;
-
   const size_t spaceSize =
         std::get<spaceIndex>(solutionSpaces).size();
 
-  size_t globalOffset;
-  {
-    /* set up global offsets */
-    size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-    size_t globalTotalTestSize = 0;
-
-    globalTotalTestSize =
-        fold(zip(globalTestSpaceOffsets, testSpaces),
-             (size_t)0, globalOffsetHelper());
-
-    fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
-         globalTotalTestSize, globalOffsetHelper());
-
-    globalOffset = globalSolutionSpaceOffsets[spaceIndex];
-  }
+  const size_t globalOffset
+      = detail::computeOffset<spaceIndex>(solutionSpaces,
+              detail::computeOffset<std::tuple_size<TestSpaces>::value>
+                                   (testSpaces));
 
   ////////////////////////////////////////////
   //   Modify Dirichlet rows
@@ -540,28 +519,13 @@ applyDirichletBoundaryToRhs
                        const std::vector<bool>& dirichletNodes,
                        const ValueType& boundaryValue)
 {
-  using namespace boost::fusion;
-  using namespace Dune::detail;
-
   const size_t spaceSize =
         std::get<spaceIndex>(solutionSpaces).size();
 
-  size_t globalOffset;
-  {
-    /* set up global offsets */
-    size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-    size_t globalTotalTestSize = 0;
-
-    globalTotalTestSize =
-        fold(zip(globalTestSpaceOffsets, testSpaces),
-             (size_t)0, globalOffsetHelper());
-
-    fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
-         globalTotalTestSize, globalOffsetHelper());
-
-    globalOffset = globalSolutionSpaceOffsets[spaceIndex];
-  }
+  const size_t globalOffset
+      = detail::computeOffset<spaceIndex>(solutionSpaces,
+              detail::computeOffset<std::tuple_size<TestSpaces>::value>
+                                   (testSpaces));
 
   // Set Dirichlet values
   for (size_t i=0; i<spaceSize; i++)
@@ -569,7 +533,7 @@ applyDirichletBoundaryToRhs
     if (dirichletNodes[i])
     {
       /* TODO: Needs adaptation when value is a function. */
-      rhs[globalOffset+i] = detail::evaluateFactor(boundaryValue,i);
+      rhs[globalOffset+i] = detail::evaluateFactor(boundaryValue, i);
     }
   }
 

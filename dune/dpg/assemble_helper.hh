@@ -6,10 +6,12 @@
 #include <functional>
 #include <utility>
 #include <tuple>
+#include <dune/common/hybridutilities.hh>
 #include <dune/common/std/memory.hh>
 #include <dune/istl/matrixindexset.hh>
 #include <boost/fusion/container/vector/convert.hpp>
 #include <boost/fusion/sequence/intrinsic/size.hpp>
+#include <boost/fusion/algorithm/transformation/join.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 
 namespace Dune {
@@ -47,6 +49,21 @@ struct getLocalView
 
   template<class T>
   typename result<getLocalView(T)>::type operator()(const T& t) const
+  {
+    return t.localView();
+  }
+};
+
+struct getLocalViewFunctor
+{
+  template<class T>
+  struct TypeEvaluator
+  {
+    typedef typename T::LocalView Type;
+  };
+
+  template<class T>
+  typename TypeEvaluator<T>::Type operator()(const T& t) const
   {
     return t.localView();
   }
@@ -446,55 +463,37 @@ private:
   LocalToGlobalRHSCopier& localToGlobalRHSCopier;
 };
 
-struct offsetHelper
+template<class SpacesOrLocalViews, class Offsets>
+inline size_t computeOffsets(Offsets& offsets, const SpacesOrLocalViews& s,
+                             size_t start = 0)
 {
-  template<class T>
-  struct result;
+  size_t numDofs = start;
 
-  template<class T>
-  struct result<offsetHelper(const size_t&, T)>
-  {
-    typedef size_t type;
-  };
+  Hybrid::forEach(
+      Std::make_index_sequence<
+          std::tuple_size<SpacesOrLocalViews>::value>{},
+      [&](auto i) {
+        offsets[i] = numDofs;
+        numDofs += std::get<i>(s).size();
+      });
 
-  template<class T>
-  size_t operator()(const size_t& s, const T& t) const
-  {
-    using namespace boost::fusion;
+  return numDofs;
+}
 
-    // TODO: böser const_cast!
-    //       Can we put offset into a reference_wrappers to fix this?
-    size_t & offset = const_cast<size_t&>(at_c<0>(t));
-    auto const & localView = at_c<1>(t);
-    offset = s;
-    return s + localView.size();
-  }
-};
-
-struct globalOffsetHelper
+template<size_t spaceIndex, class SpacesOrLocalViews>
+inline size_t computeOffset(const SpacesOrLocalViews& s,
+                            size_t start = 0)
 {
-  template<class T>
-  struct result;
+  size_t numDofs = start;
 
-  template<class T>
-  struct result<globalOffsetHelper(const size_t&, T)>
-  {
-    typedef size_t type;
-  };
+  Hybrid::forEach(
+      Std::make_index_sequence<spaceIndex>{},
+      [&](auto i) {
+        numDofs += std::get<i>(s).size();
+      });
 
-  template<class T>
-  size_t operator()(const size_t& s, const T& t) const
-  {
-    using namespace boost::fusion;
-
-    // TODO: böser const_cast!
-    //       Can we put offset into a reference_wrappers to fix this?
-    size_t & offset = const_cast<size_t&>(at_c<0>(t));
-    auto const & space = at_c<1>(t);
-    offset = s;
-    return s + space.size();
-  }
-};
+  return numDofs;
+}
 
 
 struct getMaxNodeSize

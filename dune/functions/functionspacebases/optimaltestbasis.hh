@@ -3,6 +3,7 @@
 #ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_OPTIMALTESTBASIS_HH
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_OPTIMALTESTBASIS_HH
 
+#include <array>
 #include <tuple>
 #include <functional>
 #include <memory>
@@ -25,9 +26,9 @@
 
 
 
-
-#include <array>
 #include <dune/common/exceptions.hh>
+#include <dune/common/hybridutilities.hh>
+#include <dune/common/tupleutility.hh>
 
 #include <dune/localfunctions/optimaltestfunctions/optimaltest.hh>
 #include <dune/localfunctions/optimaltestfunctions/refinedoptimaltest.hh>
@@ -185,13 +186,9 @@ public:
 
   void initializeIndices()
   {
-    using namespace boost::fusion;
-    using namespace Dune::detail;
-
-    /* set up global offsets */
-    fold(zip(globalOffsets,
-             testspaceCoefficientMatrix_.bilinearForm().getSolutionSpaces()),
-         (size_t)0, globalOffsetHelper());
+    detail::computeOffsets(
+             globalOffsets,
+             testspaceCoefficientMatrix_.bilinearForm().getSolutionSpaces());
   }
 
   /** \brief Obtain the grid view that the basis is defined on
@@ -301,19 +298,11 @@ private:
       = typename TestSearchSpace::LocalView::Tree::FiniteElement;
 
   using SolutionLocalViews
-        = typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<
-                         SolutionSpaces,
-                         detail::getLocalView
-                      >::type
-             >::type;
+        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               SolutionSpaces>::Type;
   using TestLocalViews
-        = typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<
-                         TestSearchSpaces,
-                         detail::getLocalView
-                      >::type
-             >::type;
+        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               TestSearchSpaces>::Type;
 
   static const bool testSearchSpaceIsRefined
     = is_RefinedFiniteElement<TestSearchSpace>::value;
@@ -345,14 +334,12 @@ public:
     testspaceCoefficientMatrix(testCoeffMat),
     finiteElement_(nullptr),
     testSearchSpace_(nullptr),
-    localViewsSolution_(boost::fusion::as_vector(
-                boost::fusion::transform(testCoeffMat.bilinearForm()
+    localViewsSolution_(genericTransformTuple(testCoeffMat.bilinearForm()
                                                 .getSolutionSpaces(),
-                                         detail::getLocalView()))),
-    localViewsTest(boost::fusion::as_vector(
-                boost::fusion::transform(testCoeffMat.bilinearForm()
+                                              detail::getLocalViewFunctor())),
+    localViewsTest(genericTransformTuple(testCoeffMat.bilinearForm()
                                                     .getTestSpaces(),
-                                         detail::getLocalView())))
+                                          detail::getLocalViewFunctor()))
   {}
 
   //! Return current element, throw if unbound
@@ -374,19 +361,16 @@ public:
   void bind(const Element& e)
   {
     using namespace Dune::detail;
-    using namespace boost::fusion;
 
     this->element_ = &e;
-    for_each(localViewsTest, applyBind<decltype(e)>(e));
+    Hybrid::forEach(localViewsTest, applyBind<decltype(e)>(e));
     testSearchSpace_ =
-        &(at_c<testIndex>(localViewsTest).tree().finiteElement());
-    for_each(localViewsSolution_, applyBind<decltype(e)>(e));
+        &(std::get<testIndex>(localViewsTest).tree().finiteElement());
+    Hybrid::forEach(localViewsSolution_, applyBind<decltype(e)>(e));
 
     testspaceCoefficientMatrix.bind(e);
 
-    size_t localTestSpaceOffsets[std::tuple_size<TestSearchSpaces>::value];
-    fold(zip(localTestSpaceOffsets, localViewsTest), (size_t)0, offsetHelper());
-    size_t offset = at_c<testIndex>(localTestSpaceOffsets);
+    const size_t offset = computeOffset<testIndex>(localViewsTest);
 
     finiteElement_ = std::make_unique<FiniteElement>
                         (testspaceCoefficientMatrix.coefficientMatrix(),

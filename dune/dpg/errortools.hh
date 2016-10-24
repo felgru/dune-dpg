@@ -15,6 +15,8 @@
 #include <boost/fusion/container/vector/convert.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
+#include <dune/common/hybridutilities.hh>
+#include <dune/common/tupleutility.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -274,16 +276,13 @@ namespace Dune {
 
     // Create and fill vector with offsets for global dofs
     size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-
-    fold(zip(globalSolutionSpaceOffsets, innerProduct.getTestSpaces()),
-         (size_t)0, globalOffsetHelper());
+    computeOffsets(globalSolutionSpaceOffsets, innerProduct.getTestSpaces());
 
     // Create and fill vector with offsets for local dofs on element
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    const size_t localSolutionDofs
+        = computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
 
-    size_t localSolutionDofs = fold(zip(localSolutionSpaceOffsets,
-                                        solutionLocalViews),
-                                    (size_t)0, globalOffsetHelper());
     // Create and fill vectors with cofficients
     // corresponding to local dofs on element
     // for the solution and for the righthand side
@@ -379,12 +378,12 @@ namespace Dune {
 
     typedef typename InnerProduct::TestSpaces SolutionSpaces;
 
-    typedef typename result_of::as_vector<typename
-                result_of::transform<SolutionSpaces, getLocalView>::type
-            >::type SolutionLocalViews;
+    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                                 SolutionSpaces>::Type  SolutionLocalViews;
 
     SolutionLocalViews solutionLocalViews
-        = as_vector(transform(innerProduct.getTestSpaces(), getLocalView()));
+        = genericTransformTuple(innerProduct.getTestSpaces(),
+                                getLocalViewFunctor());
 
 
     // We get the local index sets of the solution spaces
@@ -398,7 +397,7 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       // Bind localViews and localIndexSets
-      for_each(solutionLocalViews, applyBind<decltype(e)>(e));
+      Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
       for_each(zip(solutionLocalIndexSets, solutionLocalViews),
                make_fused_procedure(bindLocalIndexSet()));
 
@@ -447,21 +446,19 @@ namespace Dune {
     size_t globalTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
     size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-    fold(zip(globalTestSpaceOffsets, bilinearForm.getTestSpaces()),
-           (size_t)0, globalOffsetHelper());
-    fold(zip(globalSolutionSpaceOffsets, bilinearForm.getSolutionSpaces()),
-           (size_t)0, globalOffsetHelper());
+    computeOffsets(globalTestSpaceOffsets, bilinearForm.getTestSpaces());
+    computeOffsets(globalSolutionSpaceOffsets,
+                   bilinearForm.getSolutionSpaces());
 
     // Create and fill vector with offsets for local dofs on element
     size_t localTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-    size_t localSolutionDofs = fold(zip(localSolutionSpaceOffsets,
-                                        solutionLocalViews),
-                                    (size_t)0, globalOffsetHelper());
-    size_t localTestDofs = fold(zip(localTestSpaceOffsets,
-                                    testLocalViews),
-                                (size_t)0, globalOffsetHelper());
+    const size_t localSolutionDofs
+        = computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
+    const size_t localTestDofs
+        = computeOffsets(localTestSpaceOffsets, testLocalViews);
+
     // Create and fill vectors with cofficients
     // corresponding to local dofs on element
     // for the solution and for the righthand side
@@ -527,18 +524,17 @@ namespace Dune {
     typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
     typedef typename BilinearForm::TestSpaces EnrichedTestspaces;
 
-    typedef typename result_of::as_vector<
-          typename result_of::transform<SolutionSpaces, getLocalView>::type
-        >::type SolutionLocalViews;
-    typedef typename result_of::as_vector<
-          typename result_of::transform<EnrichedTestspaces, getLocalView>::type
-        >::type TestLocalViews;
+    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                                 SolutionSpaces>::Type  SolutionLocalViews;
+    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                                 EnrichedTestspaces>::Type  TestLocalViews;
 
     SolutionLocalViews solutionLocalViews
-        = as_vector(transform(bilinearForm.getSolutionSpaces(),
-                              getLocalView()));
+        = genericTransformTuple(bilinearForm.getSolutionSpaces(),
+                                getLocalViewFunctor());
     TestLocalViews testLocalViews
-        = as_vector(transform(bilinearForm.getTestSpaces(), getLocalView()));
+        = genericTransformTuple(bilinearForm.getTestSpaces(),
+                                getLocalViewFunctor());
 
     // We get the local index sets of the test spaces
     auto testLocalIndexSets = as_vector(transform(bilinearForm.getTestSpaces(),
@@ -554,8 +550,8 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       // Bind localViews and localIndexSets
-      for_each(testLocalViews, applyBind<decltype(e)>(e));
-      for_each(solutionLocalViews, applyBind<decltype(e)>(e));
+      Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
+      Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
       for_each(zip(testLocalIndexSets, testLocalViews),
                make_fused_procedure(bindLocalIndexSet()));
       for_each(zip(solutionLocalIndexSets, solutionLocalViews),
@@ -626,17 +622,18 @@ namespace Dune {
     using EnrichedTestspaces = typename BilinearForm::TestSpaces;
 
     using SolutionLocalViews
-        = typename result_of::as_vector<typename
-            result_of::transform<SolutionSpaces,getLocalView>::type>::type;
+        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               SolutionSpaces>::Type;
     using TestLocalViews
-        = typename result_of::as_vector<typename
-            result_of::transform<EnrichedTestspaces,getLocalView>::type>::type;
+        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               EnrichedTestspaces>::Type;
 
     SolutionLocalViews solutionLocalViews
-        = as_vector(transform(bilinearForm.getSolutionSpaces(),
-                              getLocalView()));
+        = genericTransformTuple(bilinearForm.getSolutionSpaces(),
+                                getLocalViewFunctor());
     TestLocalViews testLocalViews
-        = as_vector(transform(bilinearForm.getTestSpaces(), getLocalView()));
+        = genericTransformTuple(bilinearForm.getTestSpaces(),
+                                getLocalViewFunctor());
 
     // We get the local index sets of the test spaces
     auto testLocalIndexSets = as_vector(transform(bilinearForm.getTestSpaces(),
@@ -651,8 +648,8 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       // Bind localViews and localIndexSets
-      for_each(testLocalViews, applyBind<decltype(e)>(e));
-      for_each(solutionLocalViews, applyBind<decltype(e)>(e));
+      Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
+      Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
       for_each(zip(testLocalIndexSets, testLocalViews),
                make_fused_procedure(bindLocalIndexSet()));
       for_each(zip(solutionLocalIndexSets, solutionLocalViews),

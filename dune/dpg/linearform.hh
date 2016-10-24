@@ -10,17 +10,8 @@
 #include <type_traits>
 #include <cassert>
 
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
-#include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/sequence/intrinsic/size.hpp>
-#include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
+#include <dune/common/hybridutilities.hh>
+#include <dune/common/tupleutility.hh>
 
 #include "assemble_helper.hh"
 #include "assemble_types.hh"
@@ -41,10 +32,8 @@ namespace Dune {
   public:
     typedef std::decay_t<Sps> Spaces;
     //! tuple type for the local views of the test spaces
-    typedef typename boost::fusion::result_of::as_vector<
-        typename boost::fusion::result_of::
-          transform<Spaces, detail::getLocalView>::type
-        >::type LocalViews;
+    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                                 Spaces>::Type  LocalViews;
 
     LinearForm () = delete;
     /**
@@ -70,10 +59,10 @@ namespace Dune {
     void getLocalVector(VectorType& elementVector) const
     {
       // Set all entries to zero
-      elementVector.resize(localTotalSize);
+      elementVector.resize(localTotalSpaceSize);
       elementVector = 0;
 
-      boost::fusion::for_each(terms,
+      Hybrid::forEach(terms,
               detail::getLocalVectorHelper
                       <VectorType,
                        Spaces>
@@ -99,23 +88,18 @@ namespace Dune {
 
       localViews = std::addressof(lv);
 
-      using namespace boost::fusion;
-      using namespace Dune::detail;
-
-      constexpr size_t size = result_of::size<LocalViews>::value;
+      constexpr size_t size = std::tuple_size<LocalViews>::value;
 
       /* set up local offsets */
       if(isSaddlepoint) {
-        fold(zip(localSpaceOffsets, lv), (size_t)0, offsetHelper());
+        localTotalSpaceSize = detail::computeOffsets(localSpaceOffsets, lv);
       } else { /* DPG formulation */
         for(size_t i=0; i<size; ++i)
         {
           localSpaceOffsets[i] = 0;
         }
+        localTotalSpaceSize = std::get<size-1>(lv).size();
       }
-      localTotalSize =
-          localSpaceOffsets[size-1]
-          + at_c<size-1>(lv).size();
     }
 
     /**
@@ -145,7 +129,7 @@ namespace Dune {
     LinearTerms  terms;
 
     size_t localSpaceOffsets[std::tuple_size<Spaces>::value];
-    size_t localTotalSize;
+    size_t localTotalSpaceSize;
 
     const LocalViews* localViews;
   };

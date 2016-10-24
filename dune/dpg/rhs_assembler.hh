@@ -131,8 +131,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   const size_t globalTotalTestSize =
-      fold(zip(globalTestSpaceOffsets, testSpaces),
-           (size_t)0, globalOffsetHelper());
+      computeOffsets(globalTestSpaceOffsets, testSpaces);
 
   // set rhs to correct length -- the total number of basis vectors in the basis
   rhs.resize(globalTotalTestSize);
@@ -141,14 +140,15 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   rhs = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews     = as_vector(transform(testSpaces, getLocalView()));
+  auto testLocalViews     = genericTransformTuple(testSpaces,
+                                                  getLocalViewFunctor());
 
   auto testLocalIndexSets = as_vector(transform(testSpaces,
                                                 getLocalIndexSet()));
 
   for(const auto& e : elements(gridView)) {
 
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
 
     for_each(zip(testLocalIndexSets, testLocalViews),
              make_fused_procedure(bindLocalIndexSet()));
@@ -191,9 +191,6 @@ applyDirichletBoundary(BlockVector<FieldVector<double,1> >& rhs,
                        const std::vector<bool>& dirichletNodes,
                        const ValueType& value)
 {
-  using namespace boost::fusion;
-  using namespace Dune::detail;
-
   static_assert(std::is_arithmetic<ValueType>::value,
                 "applyDirichletBoundary not implemented for non arithmetic "
                 "boundary data types.");
@@ -201,15 +198,7 @@ applyDirichletBoundary(BlockVector<FieldVector<double,1> >& rhs,
   const size_t spaceSize =
         std::get<spaceIndex>(testSpaces).size();
 
-  size_t globalOffset;
-  {
-    /* set up global offsets */
-    size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-    fold(zip(globalTestSpaceOffsets, testSpaces),
-         (size_t)0, globalOffsetHelper());
-
-    globalOffset = globalTestSpaceOffsets[spaceIndex];
-  }
+  const size_t globalOffset = detail::computeOffset<spaceIndex>(testSpaces);
 
   // Set Dirichlet values
   for (size_t i=0; i<spaceSize; i++)
