@@ -18,19 +18,16 @@ namespace Dune {
 
 namespace detail {
 
-struct getLocalIndexSet
+struct getLocalIndexSetFunctor
 {
   template<class T>
-  struct result;
-
-  template<class T>
-  struct result<getLocalIndexSet(T)>
+  struct TypeEvaluator
   {
-    typedef typename T::LocalIndexSet type;
+    typedef typename T::LocalIndexSet Type;
   };
 
   template<class T>
-  typename result<getLocalIndexSet(T)>::type operator()(const T& t) const
+  typename TypeEvaluator<T>::Type operator()(const T& t) const
   {
     return t.localIndexSet();
   }

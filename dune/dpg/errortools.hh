@@ -388,8 +388,8 @@ namespace Dune {
 
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
-            = as_vector(transform(innerProduct.getTestSpaces(),
-                                  getLocalIndexSet()));
+            = genericTransformTuple(innerProduct.getTestSpaces(),
+                                    getLocalIndexSetFunctor());
 
     // Variable where we compute the residual
     double res = 0.;
@@ -537,12 +537,13 @@ namespace Dune {
                                 getLocalViewFunctor());
 
     // We get the local index sets of the test spaces
-    auto testLocalIndexSets = as_vector(transform(bilinearForm.getTestSpaces(),
-                                                  getLocalIndexSet()));
+    auto testLocalIndexSets
+        = genericTransformTuple(bilinearForm.getTestSpaces(),
+                                getLocalIndexSetFunctor());
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
-            = as_vector(transform(bilinearForm.getSolutionSpaces(),
-                                  getLocalIndexSet()));
+            = genericTransformTuple(bilinearForm.getSolutionSpaces(),
+                                    getLocalIndexSetFunctor());
 
     // Variable where we compute the residual
     double res = 0.;
@@ -636,12 +637,13 @@ namespace Dune {
                                 getLocalViewFunctor());
 
     // We get the local index sets of the test spaces
-    auto testLocalIndexSets = as_vector(transform(bilinearForm.getTestSpaces(),
-                                                  getLocalIndexSet()));
+    auto testLocalIndexSets
+        = genericTransformTuple(bilinearForm.getTestSpaces(),
+                                getLocalIndexSetFunctor());
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
-            = as_vector(transform(bilinearForm.getSolutionSpaces(),
-                                  getLocalIndexSet()));
+            = genericTransformTuple(bilinearForm.getSolutionSpaces(),
+                                    getLocalIndexSetFunctor());
 
     std::vector<std::tuple<EntitySeed, double>> errorEstimates;
     errorEstimates.reserve(gridView.size(0));

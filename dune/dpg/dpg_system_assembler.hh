@@ -350,8 +350,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
   auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
                                                   getLocalViewFunctor());
-  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces_,
-                                                    getLocalIndexSet()));
+  auto solutionLocalIndexSets
+      = genericTransformTuple(solutionSpaces_, getLocalIndexSetFunctor());
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
@@ -514,8 +514,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   // Views on the FE bases on a single element
   auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
                                                   getLocalViewFunctor());
-  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces_,
-                                                    getLocalIndexSet()));
+  auto solutionLocalIndexSets
+      = genericTransformTuple(solutionSpaces_, getLocalIndexSetFunctor());
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
@@ -633,8 +633,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
                                                   getLocalViewFunctor());
 
-  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces_,
-                                                    getLocalIndexSet()));
+  auto solutionLocalIndexSets = genericTranformTuple(solutionSpaces_,
+                                                     getLocalIndexSetFunctor());
 
   for(const auto& e : elements(gridView)) {
 

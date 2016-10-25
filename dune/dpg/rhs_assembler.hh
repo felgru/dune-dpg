@@ -143,8 +143,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   auto testLocalViews     = genericTransformTuple(testSpaces,
                                                   getLocalViewFunctor());
 
-  auto testLocalIndexSets = as_vector(transform(testSpaces,
-                                                getLocalIndexSet()));
+  auto testLocalIndexSets = genericTransformTuple(testSpaces,
+                                                  getLocalIndexSetFunctor());
 
   for(const auto& e : elements(gridView)) {
 

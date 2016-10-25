@@ -412,19 +412,15 @@ public:
   using Node = typename NodeFactory::template Node<TP>;
 
   typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
-  typedef typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<
-                       SolutionSpaces,
-                       detail::getLocalIndexSet>::type
-             >::type SolutionLocalIndexSets;
+  typedef typename ForEachType<detail::getLocalIndexSetFunctor::TypeEvaluator,
+                               SolutionSpaces>::Type  SolutionLocalIndexSets;
 
   OptimalTestBasisNodeIndexSet(const NodeFactory& nodeFactory) :
     nodeFactory_(&nodeFactory),
-    solutionLocalIndexSets_(boost::fusion::as_vector(
-              boost::fusion::transform(
+    solutionLocalIndexSets_(genericTransformTuple(
                       nodeFactory.testspaceCoefficientMatrix_
                           .bilinearForm().getSolutionSpaces(),
-                      detail::getLocalIndexSet())))
+                      detail::getLocalIndexSetFunctor()))
   {}
 
   constexpr OptimalTestBasisNodeIndexSet(const OptimalTestBasisNodeIndexSet&)
