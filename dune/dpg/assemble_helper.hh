@@ -48,24 +48,6 @@ struct getLocalViewFunctor
   }
 };
 
-struct getSize
-{
-  template<class T>
-  struct result;
-
-  template<class T>
-  struct result<getSize(T)>
-  {
-    typedef size_t type;
-  };
-
-  template<class T>
-  size_t operator()(const T& t) const
-  {
-    return t.size();
-  }
-};
-
 template<class E>
 struct applyBind
 {
@@ -462,54 +444,6 @@ inline size_t computeOffset(const SpacesOrLocalViews& s,
 
   return numDofs;
 }
-
-
-struct getMaxNodeSize
-{
-    template<class T>
-    struct result;
-
-    template<class T>
-    struct result<getMaxNodeSize(T)>
-    {
-        typedef std::size_t type;
-    };
-    template<class T>
-    std::size_t operator()(T t) const
-    {
-        return t.nodeFactory().maxNodeSize();
-    }
-};
-
-
-
-struct applyUnbind
-{
-    template<class T>
-    void operator()(T t) const
-    {
-        t.unbind();
-    }
-};
-
-
-struct getLocalFiniteElement
-{
-    template<class T>
-    struct result;
-
-    template<class T>
-    struct result<getLocalFiniteElement(T)>
-    {
-        typedef const typename T::Tree::FiniteElement& type;
-    };
-
-    template<class T>
-    typename result<getLocalFiniteElement(T)>::type operator()(const T& t) const
-    {
-        return t.tree().finiteElement();
-    }
-};
 
 template<class VectorType1, class VectorType2>
 struct getLocalCoefficients

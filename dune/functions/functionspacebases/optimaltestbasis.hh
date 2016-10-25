@@ -15,9 +15,7 @@
 #include <boost/fusion/container/set/convert.hpp>
 #include <boost/fusion/algorithm/auxiliary/copy.hpp>
 #include <boost/fusion/algorithm/transformation/join.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
@@ -217,13 +215,11 @@ public:
 
   size_type size() const
   {
-    using namespace boost::fusion;
-    using namespace Dune::detail;
-
-    return fold(transform(testspaceCoefficientMatrix_.bilinearForm()
-                              .getSolutionSpaces(),
-                          getSize()),
-                0, std::plus<std::size_t>());
+    return Hybrid::accumulate(testspaceCoefficientMatrix_.bilinearForm()
+                              .getSolutionSpaces(), 0,
+                              [&](size_type acc, const auto& s) {
+                                return acc + s.size();
+                              });
   }
 
   //! Return number possible values for next position in multi index
@@ -241,13 +237,11 @@ public:
 
   size_type maxNodeSize() const
   {
-    using namespace boost::fusion;
-    using namespace Dune::detail;
-
-    return fold(transform(testspaceCoefficientMatrix_.bilinearForm()
-                              .getSolutionSpaces(),
-                          getMaxNodeSize()),
-                0, std::plus<std::size_t>());
+    return Hybrid::accumulate(testspaceCoefficientMatrix_.bilinearForm()
+                              .getSolutionSpaces(), 0,
+                              [&](size_type acc, const auto& s) {
+                                return acc + s.nodeFactory().maxNodeSize();
+                              });
   }
 
 //protected:
@@ -449,7 +443,9 @@ public:
   void unbind()
   {
     node_ = nullptr;
-    for_each(solutionLocalIndexSets_, detail::applyUnbind());
+    Hybrid::forEach(solutionLocalIndexSets_, [](auto& lis) {
+          lis.unbind();
+        });
   }
 
   /** \brief Size of subtree rooted in this node (element-local)
