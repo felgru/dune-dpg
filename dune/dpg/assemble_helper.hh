@@ -247,20 +247,18 @@ struct getOccupationPatternHelper
           testSpaceIndex,
           solutionSpaceIndex>& indexTuple)
   {
-    using namespace boost::fusion;
-
     const auto& testLV =
-        at_c<testSpaceIndex::value>(testLocalViews);
+        std::get<testSpaceIndex::value>(testLocalViews);
     const auto& solutionLV =
-        at_c<solutionSpaceIndex::value>(solutionLocalViews);
+        std::get<solutionSpaceIndex::value>(solutionLocalViews);
     const auto& testLIS =
-        at_c<testSpaceIndex::value>(testLocalIndexSets);
+        std::get<testSpaceIndex::value>(testLocalIndexSets);
     const auto& solutionLIS =
-        at_c<solutionSpaceIndex::value>(solutionLocalIndexSets);
+        std::get<solutionSpaceIndex::value>(solutionLocalIndexSets);
     size_t globalTestSpaceOffset =
-        at_c<testSpaceIndex::value>(globalTestSpaceOffsets);
+        globalTestSpaceOffsets[testSpaceIndex::value];
     size_t globalSolutionSpaceOffset =
-        at_c<solutionSpaceIndex::value>(globalSolutionSpaceOffsets);
+        globalSolutionSpaceOffsets[solutionSpaceIndex::value];
 
     for (size_t i=0, i_max=testLV.size(); i<i_max; i++) {
 
