@@ -30,8 +30,8 @@
 #include <boost/fusion/algorithm/transformation/zip.hpp>
 #include <boost/fusion/algorithm/iteration/accumulate.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 #include <boost/fusion/sequence/intrinsic/value_at.hpp>
+#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
 #include <dune/common/tupleutility.hh>
 
@@ -376,8 +376,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   for(const auto& e : elements(gridView))
   {
     Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     auto gOPH = getOccupationPatternHelper<decltype(solutionLocalViews),
                                            decltype(solutionLocalViews),
@@ -407,8 +406,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   for(const auto& e : elements(gridView)) {
 
     Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
     computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
@@ -541,8 +539,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   {
     Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     auto gOPH = getOccupationPatternHelper<decltype(solutionLocalViews),
                                            decltype(solutionLocalViews),
@@ -568,8 +565,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   for(const auto& e : elements(gridView)) {
 
     Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     testspaceCoefficientMatrix_.bind(e);
     const Matrix<FieldMatrix<double,1,1> >& elementMatrix
@@ -639,8 +635,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   for(const auto& e : elements(gridView)) {
 
     Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
     computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);

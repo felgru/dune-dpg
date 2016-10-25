@@ -440,8 +440,8 @@ public:
 
     node_ = &node;
 
-    for_each(zip(solutionLocalIndexSets_, node.localViewsSolution()),
-             make_fused_procedure(detail::bindLocalIndexSet()));
+    detail::bindLocalIndexSets(solutionLocalIndexSets_,
+                               node.localViewsSolution());
   }
 
   /** \brief Unbind the view

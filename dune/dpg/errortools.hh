@@ -12,8 +12,6 @@
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/algorithm/transformation/zip.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/tupleutility.hh>
@@ -398,8 +396,7 @@ namespace Dune {
     {
       // Bind localViews and localIndexSets
       Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
-      for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-               make_fused_procedure(bindLocalIndexSet()));
+      bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
       res += aPosterioriL2ErrorSquareElement(innerProduct,
                                              linearForm,
@@ -511,7 +508,6 @@ namespace Dune {
                                       const VectorType& solution,
                                       const VectorType& rhs)
   {
-    using namespace boost::fusion;
     using namespace Dune::detail;
 
     typedef typename std::tuple_element
@@ -553,10 +549,8 @@ namespace Dune {
       // Bind localViews and localIndexSets
       Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
       Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
-      for_each(zip(testLocalIndexSets, testLocalViews),
-               make_fused_procedure(bindLocalIndexSet()));
-      for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-               make_fused_procedure(bindLocalIndexSet()));
+      bindLocalIndexSets(testLocalIndexSets, testLocalViews);
+      bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
       res += aPosterioriErrorSquareElement(bilinearForm,
                                            innerProduct,
@@ -604,7 +598,6 @@ namespace Dune {
       double splitRatio
                                     )
   {
-    using namespace boost::fusion;
     using namespace Dune::detail;
 
     assert(splitRatio >= 0 && splitRatio <= 1);
@@ -652,10 +645,8 @@ namespace Dune {
       // Bind localViews and localIndexSets
       Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
       Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
-      for_each(zip(testLocalIndexSets, testLocalViews),
-               make_fused_procedure(bindLocalIndexSet()));
-      for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-               make_fused_procedure(bindLocalIndexSet()));
+      bindLocalIndexSets(testLocalIndexSets, testLocalViews);
+      bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
       // Now we compute the error inside the element
       double elementError = 0;

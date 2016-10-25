@@ -23,7 +23,6 @@
 #include <boost/fusion/container/vector/convert.hpp>
 #include <boost/fusion/container/set/convert.hpp>
 #include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/join.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/algorithm/transformation/zip.hpp>
 #include <boost/fusion/algorithm/iteration/accumulate.hpp>
@@ -314,10 +313,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
     Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
-    for_each(zip(testLocalIndexSets, testLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+    bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
     bilinearForm.bind(testLocalViews, solutionLocalViews);
     innerProduct.bind(testLocalViews);
@@ -404,8 +401,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     Hybrid::forEach(localViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(localIndexSets, localViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(localIndexSets, localViews);
 
     // Now get the local contribution to the right-hand side vector
     BlockVector<FieldVector<double,1> > localRhs;

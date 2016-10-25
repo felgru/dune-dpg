@@ -22,7 +22,6 @@
 #include <boost/fusion/algorithm/transformation/zip.hpp>
 #include <boost/fusion/algorithm/iteration/accumulate.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/tupleutility.hh>
@@ -266,10 +265,8 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
     Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
     Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
-    for_each(zip(testLocalIndexSets, testLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+    bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
     auto gOPH = getOccupationPatternHelper<decltype(testLocalViews),
                                            decltype(solutionLocalViews),

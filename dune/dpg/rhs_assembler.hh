@@ -19,14 +19,11 @@
 #include <boost/fusion/adapted/std_tuple.hpp>
 #include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/adapted/mpl.hpp>
-#include <boost/fusion/container/generation/make_vector.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
 #include <boost/fusion/container/set/convert.hpp>
 #include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/join.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 #include <boost/fusion/sequence/intrinsic/value_at.hpp>
@@ -150,8 +147,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(testLocalIndexSets, testLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
     // Now get the local contribution to the right-hand side vector
     BlockVector<FieldVector<double,1> > localRhs;

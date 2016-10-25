@@ -81,17 +81,17 @@ private:
   const E& e;
 };
 
-struct bindLocalIndexSet
+template<class LocalIndexSets, class LocalViews>
+inline void bindLocalIndexSets(LocalIndexSets&   lis,
+                               const LocalViews& lvs)
 {
-  template<class LIS, class LV>
-  void operator()(const LIS& lis, const LV& lv) const
-  {
-    /* TODO: I feel uncomfortable casting away the const, but
-     * I do not know how else to work around the fact that many
-     * boost::fusion functions only take const sequences. */
-    const_cast<LIS&>(lis).bind(lv);
-  }
-};
+  Hybrid::forEach(
+      Std::make_index_sequence<
+          std::tuple_size<LocalIndexSets>::value>{},
+      [&](auto i) {
+        std::get<i>(lis).bind(std::get<i>(lvs));
+      });
+}
 
 template <class MatrixType,
           class TestSpaces,
