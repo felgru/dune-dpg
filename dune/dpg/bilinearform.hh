@@ -12,18 +12,10 @@
 #include <boost/mpl/set.hpp>
 #include <boost/mpl/transform.hpp>
 
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/sequence/intrinsic/size.hpp>
-#include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
+#include <dune/common/hybridutilities.hh>
+#include <dune/common/tupleutility.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -49,15 +41,14 @@ namespace Dune {
     typedef TSpaces TestSpaces;
     //! tuple type of solution spaces
     typedef SolSpaces SolutionSpaces;
+    //! tuple type of bilinear form terms
+    typedef BilinearTerms Terms;
     //! tuple type for the local views of the test spaces
-    typedef typename boost::fusion::result_of::as_vector<
-        typename boost::fusion::result_of::
-        transform<TestSpaces, detail::getLocalView>::type>::type TestLocalViews;
+    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                                 TestSpaces>::Type  TestLocalViews;
     //! tuple type for the local views of the solution spaces
-    typedef typename boost::fusion::result_of::as_vector<
-        typename boost::fusion::result_of::
-        transform<SolutionSpaces, detail::getLocalView>::type
-        >::type SolutionLocalViews;
+    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                                 SolutionSpaces>::Type  SolutionLocalViews;
 
     BilinearForm () = delete;
     /**
@@ -90,7 +81,7 @@ namespace Dune {
                             localTotalSolutionSize);
       elementMatrix = 0;
 
-      boost::fusion::for_each(terms,
+      Hybrid::forEach(terms,
               detail::getLocalMatrixHelper
                       <MatrixType,
                        TestSpaces,
@@ -129,16 +120,14 @@ namespace Dune {
       testLocalViews     = std::addressof(tlv);
       solutionLocalViews = std::addressof(slv);
 
-      using namespace boost::fusion;
       using namespace Dune::detail;
 
       /* set up local offsets */
-      localTotalTestSize =
-        fold(zip(localTestSpaceOffsets, tlv), (size_t)0, offsetHelper());
+      localTotalTestSize = computeOffsets(localTestSpaceOffsets,
+                                          tlv);
 
-      localTotalSolutionSize =
-          fold(zip(localSolutionSpaceOffsets, slv),
-               (size_t)0, offsetHelper());
+      localTotalSolutionSize = computeOffsets(localSolutionSpaceOffsets,
+                                              slv);
     }
 
     /**
@@ -228,27 +217,24 @@ template<bool mirror>
 void BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>::
 getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift) const
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  fold(zip(globalTestSpaceOffsets, testSpaces),
-       testShift, globalOffsetHelper());
-  fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
-       solutionShift, globalOffsetHelper());
+  computeOffsets(globalTestSpaceOffsets, testSpaces, testShift);
+  computeOffsets(globalSolutionSpaceOffsets, solutionSpaces, solutionShift);
 
   // A view on the FE basis on a single element
-  auto solutionLocalViews = as_vector(transform(solutionSpaces,
-                                                getLocalView()));
-  auto testLocalViews     = as_vector(transform(testSpaces,
-                                                getLocalView()));
+  auto solutionLocalViews = genericTransformTuple(solutionSpaces,
+                                                  getLocalViewFunctor());
+  auto testLocalViews     = genericTransformTuple(testSpaces,
+                                                  getLocalViewFunctor());
 
-  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces,
-                                                    getLocalIndexSet()));
-  auto testLocalIndexSets     = as_vector(transform(testSpaces,
-                                                    getLocalIndexSet()));
+  auto solutionLocalIndexSets
+      = genericTransformTuple(solutionSpaces, getLocalIndexSetFunctor());
+  auto testLocalIndexSets
+      = genericTransformTuple(testSpaces, getLocalIndexSetFunctor());
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
@@ -258,29 +244,22 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
       typename boost::mpl::transform<
           /* This as_vector is probably not needed for boost::fusion 1.58
            * or higher. */
-          typename result_of::as_vector<BilinearTerms>::type
+          typename boost::fusion::result_of::as_vector<BilinearTerms>::type
         , mpl::firstTwo<boost::mpl::_1>
         >::type
     , boost::mpl::set0<>
     , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
     >::type IndexPairs;
-  auto indexPairs = IndexPairs{};
 
   for(const auto& e : elements(gridView))
   {
-    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
-    for_each(zip(testLocalIndexSets, testLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+    bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
-    auto gOPH = getOccupationPatternHelper<decltype(testLocalViews),
-                                           decltype(solutionLocalViews),
-                                           decltype(testLocalIndexSets),
-                                           decltype(solutionLocalIndexSets),
-                                           mirror>
+    detail::getOccupationPattern<IndexPairs, mirror>
                         (testLocalViews,
                          solutionLocalViews,
                          testLocalIndexSets,
@@ -288,8 +267,6 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
                          globalTestSpaceOffsets,
                          globalSolutionSpaceOffsets,
                          nb);
-    for_each(indexPairs,
-        std::ref(gOPH));
   }
 }
 

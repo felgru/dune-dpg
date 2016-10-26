@@ -19,19 +19,10 @@
 #include <boost/mpl/transform.hpp>
 
 #include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/adapted/mpl.hpp>
-#include <boost/fusion/container/generation/make_vector.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/join.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
-#include <boost/fusion/sequence/intrinsic/value_at.hpp>
+
+#include <dune/common/tupleutility.hh>
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -88,15 +79,13 @@ public:
 
   //! tuple type for the local views of the test spaces
   using TestLocalViews
-    = typename boost::fusion::result_of::as_vector<
-        typename boost::fusion::result_of::
-          transform<TestSearchSpaces, detail::getLocalView>::type>::type;
+    = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                           TestSearchSpaces>::Type;
   //! tuple type for the local views of the solution spaces
+
   using SolutionLocalViews
-    = typename boost::fusion::result_of::as_vector<
-          typename boost::fusion::result_of::
-            transform<SolutionSpaces, detail::getLocalView>::type
-        >::type;
+    = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                           SolutionSpaces>::Type;
 
   DPGSystemAssembler () = delete;
   /**
@@ -333,7 +322,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                BlockVector<FieldVector<double,1> >& rhs,
                LinearForm& rhsLinearForm)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   auto gridView = std::get<0>(testSearchSpaces_).gridView();
@@ -342,17 +330,16 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
   size_t globalTotalSolutionSize =
-      fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
-           (size_t)0, globalOffsetHelper());
+      computeOffsets(globalSolutionSpaceOffsets, solutionSpaces_);
 
   // Views on the FE bases on a single element
-  auto testLocalViews     = as_vector(transform(testSearchSpaces_,
-                                                getLocalView()));
+  auto testLocalViews = genericTransformTuple(testSearchSpaces_,
+                                              getLocalViewFunctor());
 
-  auto solutionLocalViews = as_vector(transform(solutionSpaces_,
-                                                getLocalView()));
-  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces_,
-                                                    getLocalIndexSet()));
+  auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
+                                                  getLocalViewFunctor());
+  auto solutionLocalIndexSets
+      = genericTransformTuple(solutionSpaces_, getLocalIndexSetFunctor());
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
@@ -360,9 +347,10 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
 
   typedef
-      typename result_of::as_vector<typename boost::mpl::range_c<
-                            size_t,0,result_of::size<SolutionSpaces>
-                         ::type::value>::type
+      typename boost::fusion::result_of::as_vector<
+                typename boost::mpl::range_c<
+                    size_t, 0, std::tuple_size<SolutionSpaces>::value
+                >::type
             >::type IndexRange;
   typedef
       typename boost::mpl::fold<
@@ -376,15 +364,10 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
   for(const auto& e : elements(gridView))
   {
-    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
-    auto gOPH = getOccupationPatternHelper<decltype(solutionLocalViews),
-                                           decltype(solutionLocalViews),
-                                           decltype(solutionLocalIndexSets),
-                                           decltype(solutionLocalIndexSets),
-                                           false>
+    detail::getOccupationPattern<Indices, false>
                         (solutionLocalViews,
                          solutionLocalViews,
                          solutionLocalIndexSets,
@@ -392,8 +375,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                          globalSolutionSpaceOffsets,
                          globalSolutionSpaceOffsets,
                          occupationPattern);
-    for_each(Indices{},
-        std::ref(gOPH));
   }
 
   occupationPattern.exportIdx(matrix);
@@ -407,13 +388,11 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
   for(const auto& e : elements(gridView)) {
 
-    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-    fold(zip(localSolutionSpaceOffsets, solutionLocalViews),
-               (size_t)0, offsetHelper());
+    computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
 
     // compute the coefficient matrix C for the optimal test space
     testspaceCoefficientMatrix_.bind(e);
@@ -422,7 +401,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     // Now get the local contribution to the right-hand side vector
 
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
 
     // compute the local right-hand side vector F for the enriched test space
     BlockVector<FieldVector<double,1> > localEnrichedRhs;
@@ -446,54 +425,41 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     const Matrix<FieldMatrix<double,1,1> >& elementMatrix
         = testspaceCoefficientMatrix_.systemMatrix();
 
-    // Add local right-hand side onto the global right-hand side
-    auto cpRhs = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type> >
-                (localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type>
-                                        (localRhs, rhs));
     // Add element stiffness matrix onto the global stiffness matrix
-    auto cpMatrix = fused_procedure<localToGlobalCopier<decltype(elementMatrix),
-                   typename std::remove_reference<decltype(matrix)>::type> >
-                (localToGlobalCopier<decltype(elementMatrix),
-                   typename std::remove_reference<decltype(matrix)>::type>
-                                        (elementMatrix, matrix));
+    copyLocalToGlobalMatrix<Indices, false>(
+        elementMatrix,
+        matrix,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets);
 
-    auto solutionZip = zip(solutionLocalViews,
-                           solutionLocalIndexSets,
-                           localSolutionSpaceOffsets,
-                           globalSolutionSpaceOffsets);
-
-    using SolutionZip = decltype(solutionZip);
-
-    /* copy every local submatrix indexed by a pair of indices from
-     * Indices exactly once. */
-    for_each(Indices{},
-             localToGlobalCopyHelper<SolutionZip,
-                                     SolutionZip,
-                                     std::decay_t<decltype(cpMatrix)>>
-                                    (solutionZip, solutionZip, cpMatrix));
-
-    /* copy every local subvector indexed by an index from
-     * lfIndices exactly once. */
-       typedef typename boost::mpl::fold<
+    typedef typename boost::mpl::fold<
         typename boost::mpl::transform<
             /* This as_vector is probably not needed for boost::fusion 1.58
              * or higher. */
-            typename result_of::as_vector<typename std::remove_reference<
-                  decltype(bilinearForm_.getTerms())>::type
+            typename boost::fusion::result_of::as_vector<
+                  typename std::remove_reference<
+                      decltype(bilinearForm_.getTerms())>::type
                 >::type
           , mpl::second<boost::mpl::_1>
           >::type
       , boost::mpl::set0<>
       , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
       >::type LFIndices;
-    auto lfIndices = LFIndices{};
 
-    for_each(lfIndices,
-            localToGlobalRHSCopyHelper<decltype(solutionZip),
-                                        decltype(cpRhs)>
-                                        (solutionZip, cpRhs));
+    // Add local right-hand side onto the global right-hand side
+    copyLocalToGlobalVector<LFIndices>(
+        localRhs,
+        rhs,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets);
   }
 }
 
@@ -502,7 +468,6 @@ template<class BilinearForm, class InnerProduct, class BufferPolicy>
 void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
 assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   auto gridView = std::get<0>(testSearchSpaces_).gridView();
@@ -510,15 +475,14 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-  size_t globalTotalSolutionSize =
-      fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
-           (size_t)0, globalOffsetHelper());
+  const size_t globalTotalSolutionSize =
+      computeOffsets(globalSolutionSpaceOffsets, solutionSpaces_);
 
   // Views on the FE bases on a single element
-  auto solutionLocalViews = as_vector(transform(solutionSpaces_,
-                                                getLocalView()));
-  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces_,
-                                                    getLocalIndexSet()));
+  auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
+                                                  getLocalViewFunctor());
+  auto solutionLocalIndexSets
+      = genericTransformTuple(solutionSpaces_, getLocalIndexSetFunctor());
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
@@ -526,9 +490,10 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
 
   typedef
-      typename result_of::as_vector<typename boost::mpl::range_c<
-                            size_t,0,result_of::size<SolutionSpaces>
-                         ::type::value>::type
+      typename boost::fusion::result_of::as_vector<
+                typename boost::mpl::range_c<
+                    size_t, 0, std::tuple_size<SolutionSpaces>::value
+                >::type
             >::type IndexRange;
   typedef
       typename boost::mpl::fold<
@@ -542,16 +507,10 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
   for(const auto& e : elements(gridView))
   {
-    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
-
-    auto gOPH = getOccupationPatternHelper<decltype(solutionLocalViews),
-                                           decltype(solutionLocalViews),
-                                           decltype(solutionLocalIndexSets),
-                                           decltype(solutionLocalIndexSets),
-                                           false>
+    detail::getOccupationPattern<Indices, false>
                         (solutionLocalViews,
                          solutionLocalViews,
                          solutionLocalIndexSets,
@@ -559,8 +518,6 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
                          globalSolutionSpaceOffsets,
                          globalSolutionSpaceOffsets,
                          occupationPattern);
-    for_each(Indices{},
-        std::ref(gOPH));
   }
 
   occupationPattern.exportIdx(matrix);
@@ -570,39 +527,30 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
   for(const auto& e : elements(gridView)) {
 
-    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     testspaceCoefficientMatrix_.bind(e);
     const Matrix<FieldMatrix<double,1,1> >& elementMatrix
         = testspaceCoefficientMatrix_.systemMatrix();
 
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-    fold(zip(localSolutionSpaceOffsets, solutionLocalViews),
-               (size_t)0, offsetHelper());
+    computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
 
     // Add element stiffness matrix onto the global stiffness matrix
-    auto cp = fused_procedure<localToGlobalCopier<decltype(elementMatrix),
-                   typename std::remove_reference<decltype(matrix)>::type> >
-                (localToGlobalCopier<decltype(elementMatrix),
-                   typename std::remove_reference<decltype(matrix)>::type>
-                                        (elementMatrix, matrix));
-
     /* copy every local submatrix indexed by a pair of indices from
      * Indices exactly once. */
-    auto solutionZip = zip(solutionLocalViews,
-                           solutionLocalIndexSets,
-                           localSolutionSpaceOffsets,
-                           globalSolutionSpaceOffsets);
-
-    using SolutionZip = decltype(solutionZip);
-
-    for_each(Indices{},
-             localToGlobalCopyHelper<SolutionZip,
-                                     SolutionZip,
-                                     std::decay_t<decltype(cp)>>
-                                    (solutionZip, solutionZip, cp));
+    copyLocalToGlobalMatrix<Indices, false>(
+        elementMatrix,
+        matrix,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets);
   }
 }
 
@@ -613,7 +561,6 @@ void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
 assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
             LinearForm& rhsLinearForm)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   auto gridView = std::get<0>(testSearchSpaces_).gridView();
@@ -621,9 +568,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-  size_t globalTotalSolutionSize =
-      fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
-           (size_t)0, globalOffsetHelper());
+  const size_t globalTotalSolutionSize =
+      computeOffsets(globalSolutionSpaceOffsets, solutionSpaces_);
 
   // set rhs to correct length -- the total number of basis vectors in the basis
   rhs.resize(globalTotalSolutionSize);
@@ -632,24 +578,22 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   rhs = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews = as_vector(transform(testSearchSpaces_,
-                                            getLocalView()));
+  auto testLocalViews = genericTransformTuple(testSearchSpaces_,
+                                              getLocalViewFunctor());
 
-  auto solutionLocalViews = as_vector(transform(solutionSpaces_,
-                                                getLocalView()));
+  auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
+                                                  getLocalViewFunctor());
 
-  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces_,
-                                                    getLocalIndexSet()));
+  auto solutionLocalIndexSets = genericTranformTuple(solutionSpaces_,
+                                                     getLocalIndexSetFunctor());
 
   for(const auto& e : elements(gridView)) {
 
-    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-    fold(zip(localSolutionSpaceOffsets, solutionLocalViews),
-               (size_t)0, offsetHelper());
+    computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
 
     // compute the coefficient matrix C for the optimal test space
     testspaceCoefficientMatrix_.bind(e);
@@ -658,7 +602,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     // Now get the local contribution to the right-hand side vector
 
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
 
     // compute the local right-hand side vector F for the enriched test space
     BlockVector<FieldVector<double,1> > localEnrichedRhs;
@@ -678,25 +622,15 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
         }
       }
 
-    auto cp = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type> >
-                (localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type>
-                                        (localRhs, rhs));
-
     /* copy every local subvector indexed by an index from
      * lfIndices exactly once. */
-    auto solutionZip = zip(solutionLocalViews,
-                       solutionLocalIndexSets,
-                       localSolutionSpaceOffsets,
-                       globalSolutionSpaceOffsets);
-
     typedef typename boost::mpl::fold<
         typename boost::mpl::transform<
             /* This as_vector is probably not needed for boost::fusion 1.58
              * or higher. */
-            typename result_of::as_vector<typename std::remove_reference<
-                  decltype(bilinearForm_.getTerms())>::type
+            typename boost::fusion::result_of::as_vector<
+                  typename std::remove_reference<
+                      decltype(bilinearForm_.getTerms())>::type
                 >::type
           , mpl::second<boost::mpl::_1>
           >::type
@@ -704,11 +638,14 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
       , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
       >::type LFIndices;
 
-    auto lfIndices = LFIndices{};
-    for_each(lfIndices,
-            localToGlobalRHSCopyHelper<decltype(solutionZip),
-                                        decltype(cp)>
-                                        (solutionZip, cp));
+    // Add local right-hand side onto the global right-hand side
+    copyLocalToGlobalVector<LFIndices>(
+        localRhs,
+        rhs,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets);
 
   }
 }
@@ -738,22 +675,11 @@ applyDirichletBoundaryToMatrix
                        const std::vector<bool>& dirichletNodes,
                        const ValueType& boundaryValue)
 {
-  using namespace boost::fusion;
-  using namespace Dune::detail;
-
   const size_t spaceSize =
         std::get<spaceIndex>(solutionSpaces_).size();
 
-  size_t globalOffset;
-  {
-    /* set up global offsets */
-    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-
-    fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
-         (size_t)0, globalOffsetHelper());
-
-    globalOffset = globalSolutionSpaceOffsets[spaceIndex];
-  }
+  const size_t globalOffset =
+        detail::computeOffset<spaceIndex>(solutionSpaces_);
 
   ////////////////////////////////////////////
   //   Modify Dirichlet rows
@@ -794,22 +720,11 @@ applyDirichletBoundaryToRhs
                        const std::vector<bool>& dirichletNodes,
                        const ValueType& boundaryValue)
 {
-  using namespace boost::fusion;
-  using namespace Dune::detail;
-
   const size_t spaceSize =
         std::get<spaceIndex>(solutionSpaces_).size();
 
-  size_t globalOffset;
-  {
-    /* set up global offsets */
-    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-
-    fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
-         (size_t)0, globalOffsetHelper());
-
-    globalOffset = globalSolutionSpaceOffsets[spaceIndex];
-  }
+  const size_t globalOffset =
+        detail::computeOffset<spaceIndex>(solutionSpaces_);
 
   // Set Dirichlet values
   for (size_t i=0; i<spaceSize; i++)
@@ -833,22 +748,11 @@ applyNonzeroDirichletBoundary(
                               const std::vector<bool>& dirichletNodes,
                               const ValueType& value)
 {
-  using namespace boost::fusion;
-  using namespace Dune::detail;
-
   const size_t spaceSize =
         std::get<spaceIndex>(solutionSpaces_).size();
 
-  size_t globalOffset;
-  {
-    /* set up global offsets */
-    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-
-    fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
-         (size_t)0, globalOffsetHelper());
-
-    globalOffset = globalSolutionSpaceOffsets[spaceIndex];
-  }
+  const size_t globalOffset =
+        detail::computeOffset<spaceIndex>(solutionSpaces_);
 
   ////////////////////////////////////////////
   //    Modify rhs vector
@@ -857,7 +761,8 @@ applyNonzeroDirichletBoundary(
   // compute the coefficients for the Dirichlet nodes
   std::vector<double> dirichletValues;
   dirichletValues.resize(std::get<spaceIndex>(solutionSpaces_).size());
-  interpolate(std::get<spaceIndex>(solutionSpaces_), Dune::TypeTree::hybridTreePath(),
+  interpolate(std::get<spaceIndex>(solutionSpaces_),
+              Dune::TypeTree::hybridTreePath(),
               dirichletValues, value,
               dirichletNodes);
 
@@ -913,15 +818,10 @@ applyWeakBoundaryCondition
                      FieldVector<double, dim> beta,
                      double mu)
 {
-  using namespace boost::fusion;
-  using namespace Dune::detail;
-
   auto gridView = std::get<0>(solutionSpaces_).gridView();
 
-  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
-       (size_t)0, globalOffsetHelper());
-  size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
+  const size_t globalOffset =
+        detail::computeOffset<spaceIndex>(solutionSpaces_);
 
   auto localView     = std::get<spaceIndex>(solutionSpaces_).localView();
   auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
@@ -1012,18 +912,13 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                           const FieldVector<double,dim>& beta,
                           double delta)
 {
-  using namespace boost::fusion;
-  using namespace Dune::detail;
-
   auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
 
-  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
-       (size_t)0, globalOffsetHelper());
-  size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
+  const size_t globalOffset =
+        detail::computeOffset<spaceIndex>(solutionSpaces_);
 
-  auto solutionLocalView = at_c<spaceIndex>(solutionSpaces_).localView();
-  auto localIndexSet = at_c<spaceIndex>(solutionSpaces_).localIndexSet();
+  auto solutionLocalView = std::get<spaceIndex>(solutionSpaces_).localView();
+  auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
 
   for(const auto& e : elements(gridView))
   {
@@ -1131,44 +1026,39 @@ applyMinimization
              double delta,
              double epsilon)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
 
-  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  fold(zip(globalSolutionSpaceOffsets, solutionSpaces_),
-       (size_t)0, globalOffsetHelper());
-  size_t globalOffset = globalSolutionSpaceOffsets[spaceIndex];
+  const size_t globalOffset = computeOffset<spaceIndex>(solutionSpaces_);
 
   size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
   // get local view for solution space
   // (necessary if we want to use inner product) // TODO inefficient (why?)
-  auto solutionLocalView = as_vector(transform(solutionSpaces_,
-                                               getLocalView()));
+  auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
+                                                  getLocalViewFunctor());
 
-  auto localIndexSet = at_c<spaceIndex>(solutionSpaces_).localIndexSet();
+  auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
 
-  bool epsilonSmallerDelta(epsilon<delta);
+  const bool epsilonSmallerDelta(epsilon<delta);
 
   for(const auto& e : elements(gridView))
   {
-    for_each(solutionLocalView, applyBind<decltype(e)>(e));
-    localIndexSet.bind(at_c<spaceIndex>(solutionLocalView));
+    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    localIndexSet.bind(std::get<spaceIndex>(solutionLocalViews));
 
     /* set up local offsets */
-    fold(zip(localSolutionSpaceOffsets, solutionLocalView),
-         (size_t)0, offsetHelper());
+    computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
 
     const auto& localFiniteElement
-        = at_c<spaceIndex>(solutionLocalView).tree().finiteElement();
+        = std::get<spaceIndex>(solutionLocalViews).tree().finiteElement();
 
     size_t n = localFiniteElement.localBasis().size();
 
     Matrix<FieldMatrix<double,1,1> > elementMatrix;
 
-    minInnerProduct.bind(solutionLocalView);
+    minInnerProduct.bind(solutionLocalViews);
     minInnerProduct.getLocalMatrix(elementMatrix);
 
     std::vector<bool> relevantFaces(e.subEntities(1), false);

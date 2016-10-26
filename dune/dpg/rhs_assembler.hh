@@ -17,19 +17,8 @@
 #include <boost/mpl/transform.hpp>
 
 #include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/adapted/mpl.hpp>
-#include <boost/fusion/container/generation/make_vector.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/join.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
-#include <boost/fusion/sequence/intrinsic/value_at.hpp>
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -122,7 +111,6 @@ void RhsAssembler<TestSpaces>::
 assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
             LinearForm& rhsLinearForm)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
@@ -131,8 +119,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   const size_t globalTotalTestSize =
-      fold(zip(globalTestSpaceOffsets, testSpaces),
-           (size_t)0, globalOffsetHelper());
+      computeOffsets(globalTestSpaceOffsets, testSpaces);
 
   // set rhs to correct length -- the total number of basis vectors in the basis
   rhs.resize(globalTotalTestSize);
@@ -141,17 +128,17 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   rhs = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews     = as_vector(transform(testSpaces, getLocalView()));
+  auto testLocalViews     = genericTransformTuple(testSpaces,
+                                                  getLocalViewFunctor());
 
-  auto testLocalIndexSets = as_vector(transform(testSpaces,
-                                                getLocalIndexSet()));
+  auto testLocalIndexSets = genericTransformTuple(testSpaces,
+                                                  getLocalIndexSetFunctor());
 
   for(const auto& e : elements(gridView)) {
 
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(testLocalIndexSets, testLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
     // Now get the local contribution to the right-hand side vector
     BlockVector<FieldVector<double,1> > localRhs;
@@ -159,27 +146,23 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     rhsLinearForm.bind(testLocalViews);
     rhsLinearForm.getLocalVector(localRhs);
 
-    auto cp = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type> >
-                (localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type>
-                                        (localRhs, rhs));
+    // TODO: We might copy zero blocks that could be avoided.
+    typedef
+      typename boost::fusion::result_of::as_vector<
+                typename boost::mpl::range_c<
+                    size_t, 0, std::tuple_size<TestSpaces>::value
+                >::type
+            >::type LFIndices;
 
     /* copy every local subvector indexed by a pair of indices from
-     * lfIndices exactly once. */
-    auto testZip = zip(testLocalViews,
-                       testLocalIndexSets,
-                       rhsLinearForm.getLocalSpaceOffsets(),
-                       globalTestSpaceOffsets);
-    typedef
-        typename boost::fusion::vector<std::integral_constant<size_t, 0> >
-            LFIndices;
-
-    auto lfIndices = LFIndices{};
-    for_each(lfIndices,
-             localToGlobalRHSCopyHelper<decltype(testZip),
-                                        decltype(cp)>
-                                       (testZip, cp));
+     * LFIndices exactly once. */
+    copyLocalToGlobalVector<LFIndices>(
+        localRhs,
+        rhs,
+        testLocalViews,
+        testLocalIndexSets,
+        rhsLinearForm.getLocalSpaceOffsets(),
+        globalTestSpaceOffsets);
   }
 }
 
@@ -191,9 +174,6 @@ applyDirichletBoundary(BlockVector<FieldVector<double,1> >& rhs,
                        const std::vector<bool>& dirichletNodes,
                        const ValueType& value)
 {
-  using namespace boost::fusion;
-  using namespace Dune::detail;
-
   static_assert(std::is_arithmetic<ValueType>::value,
                 "applyDirichletBoundary not implemented for non arithmetic "
                 "boundary data types.");
@@ -201,15 +181,7 @@ applyDirichletBoundary(BlockVector<FieldVector<double,1> >& rhs,
   const size_t spaceSize =
         std::get<spaceIndex>(testSpaces).size();
 
-  size_t globalOffset;
-  {
-    /* set up global offsets */
-    size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-    fold(zip(globalTestSpaceOffsets, testSpaces),
-         (size_t)0, globalOffsetHelper());
-
-    globalOffset = globalTestSpaceOffsets[spaceIndex];
-  }
+  const size_t globalOffset = detail::computeOffset<spaceIndex>(testSpaces);
 
   // Set Dirichlet values
   for (size_t i=0; i<spaceSize; i++)

@@ -17,20 +17,11 @@
 #include <boost/mpl/transform.hpp>
 
 #include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/adapted/mpl.hpp>
-#include <boost/fusion/container/generation/make_vector.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/join.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
-#include <boost/fusion/sequence/intrinsic/value_at.hpp>
 
+#include <dune/common/hybridutilities.hh>
+#include <dune/common/tupleutility.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -58,14 +49,11 @@ public:
   typedef typename BilinForm::TestSpaces TestSpaces;
   typedef typename BilinForm::SolutionSpaces SolutionSpaces;
   //! tuple type for the local views of the test spaces
-  typedef typename boost::fusion::result_of::as_vector<
-      typename boost::fusion::result_of::
-      transform<TestSpaces, detail::getLocalView>::type>::type TestLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               TestSpaces>::Type  TestLocalViews;
   //! tuple type for the local views of the solution spaces
-  typedef typename boost::fusion::result_of::as_vector<
-      typename boost::fusion::result_of::
-      transform<SolutionSpaces, detail::getLocalView>::type
-      >::type SolutionLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               SolutionSpaces>::Type  SolutionLocalViews;
   //! type of the bilinear form describing this DPG system
   typedef BilinForm BilinearForm;
   //! type of the inner product on the test spaces
@@ -211,14 +199,33 @@ public:
 
 private:
 
-  template<class TestZip, class SolutionZip, class CP, class CPM>
-  static inline void copy_local_matrix_to_global
-      (const BilinearForm& bilinearForm,
-       const InnerProduct& innerProduct,
-       const TestZip& testZip,
-       const SolutionZip& solutionZip,
-       CP& cp,
-       CPM& cpm);
+  /* create sets of index pairs to loop over.
+   * This will be used later, when copying the local matrices into
+   * the global one.
+   */
+  typedef typename boost::mpl::fold<
+      typename boost::mpl::transform<
+          /* This as_vector is probably not needed for boost::fusion 1.58
+           * or higher. */
+          typename boost::fusion::result_of::as_vector<
+                typename BilinearForm::Terms
+              >::type
+        , detail::mpl::firstTwo<boost::mpl::_1>
+        >::type
+    , boost::mpl::set0<>
+    , boost::mpl::insert<boost::mpl::_1, boost::mpl::_2>
+    >::type BFIndices;
+
+  typedef typename boost::mpl::fold<
+      typename boost::mpl::transform<
+          typename boost::fusion::result_of::as_vector<
+                typename InnerProduct::Terms
+              >::type
+        , detail::mpl::firstTwo<boost::mpl::_1>
+        >::type
+    , boost::mpl::set0<>
+    , boost::mpl::insert<boost::mpl::_1, boost::mpl::_2>
+    >::type IPIndices;
 
   TestSpaces     testSpaces;
   SolutionSpaces solutionSpaces;
@@ -259,7 +266,6 @@ template<class BilinearForm, class InnerProduct>
 void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   constexpr bool isSaddlepoint = true;
@@ -270,17 +276,12 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  size_t globalTotalTestSize = 0;
+  const size_t globalTotalTestSize = computeOffsets(globalTestSpaceOffsets,
+                                                    testSpaces);
 
-  globalTotalTestSize =
-      fold(zip(globalTestSpaceOffsets, testSpaces),
-           (size_t)0, globalOffsetHelper());
-
-  size_t globalTotalSolutionSize =
-      fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
-           globalTotalTestSize, globalOffsetHelper());
-
-  globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
+  const size_t globalTotalSolutionSize =
+      computeOffsets(globalSolutionSpaceOffsets, solutionSpaces,
+                     globalTotalTestSize) - globalTotalTestSize;
 
   const auto n = globalTotalSolutionSize + globalTotalTestSize;
 
@@ -305,25 +306,23 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   matrix = 0;
 
   // Views on the FE bases on a single element
-  auto solutionLocalViews = as_vector(transform(solutionSpaces,
-                                                getLocalView()));
-  auto testLocalViews     = as_vector(transform(testSpaces,
-                                                getLocalView()));
+  auto solutionLocalViews = genericTransformTuple(solutionSpaces,
+                                                  getLocalViewFunctor());
+  auto testLocalViews     = genericTransformTuple(testSpaces,
+                                                  getLocalViewFunctor());
 
-  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces,
-                                                    getLocalIndexSet()));
-  auto testLocalIndexSets     = as_vector(transform(testSpaces,
-                                                    getLocalIndexSet()));
+  auto solutionLocalIndexSets
+      = genericTransformTuple(solutionSpaces, getLocalIndexSetFunctor());
+  auto testLocalIndexSets
+      = genericTransformTuple(testSpaces, getLocalIndexSetFunctor());
 
   for(const auto& e : elements(gridView)) {
 
-    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
-    for_each(zip(testLocalIndexSets, testLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+    bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
     bilinearForm.bind(testLocalViews, solutionLocalViews);
     innerProduct.bind(testLocalViews);
@@ -336,38 +335,36 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     bilinearForm.getLocalMatrix(bfElementMatrix);
     innerProduct.getLocalMatrix(ipElementMatrix);
 
+    const auto& localTestSpaceOffsets
+        = bilinearForm.getLocalTestSpaceOffsets();
+    const auto& localSolutionSpaceOffsets
+        = bilinearForm.getLocalSolutionSpaceOffsets();
 
     // Add element stiffness matrix onto the global stiffness matrix
-    auto cp = fused_procedure<localToGlobalCopier<decltype(ipElementMatrix),
-                   typename std::remove_reference<decltype(matrix)>::type> >
-                (localToGlobalCopier<decltype(ipElementMatrix),
-                   typename std::remove_reference<decltype(matrix)>::type>
-                                        (ipElementMatrix, matrix));
-    auto cpm = fused_procedure<localToGlobalCopier<decltype(bfElementMatrix),
-                    typename std::remove_reference<decltype(matrix)>::type,
-                    isSaddlepoint> >
-                 (localToGlobalCopier<decltype(bfElementMatrix),
-                    typename std::remove_reference<decltype(matrix)>::type,
-                    isSaddlepoint>
-                                        (bfElementMatrix, matrix));
-
     /* copy every local submatrix indexed by a pair of indices from
      * bfIndices and ipIndices exactly once. */
-    auto testZip = zip(testLocalViews,
-                       testLocalIndexSets,
-                       bilinearForm.getLocalTestSpaceOffsets(),
-                       globalTestSpaceOffsets);
-    auto solutionZip = zip(solutionLocalViews,
-                           solutionLocalIndexSets,
-                           bilinearForm.getLocalSolutionSpaceOffsets(),
-                           globalSolutionSpaceOffsets);
-
-    copy_local_matrix_to_global
-      (bilinearForm,
-       innerProduct,
-       testZip,
-       solutionZip,
-       cp, cpm);
+    copyLocalToGlobalMatrix<IPIndices, false>(
+        ipElementMatrix,
+        matrix,
+        testLocalViews,
+        testLocalIndexSets,
+        localTestSpaceOffsets,
+        globalTestSpaceOffsets,
+        testLocalViews,
+        testLocalIndexSets,
+        localTestSpaceOffsets,
+        globalTestSpaceOffsets);
+    copyLocalToGlobalMatrix<BFIndices, true>(
+        bfElementMatrix,
+        matrix,
+        testLocalViews,
+        testLocalIndexSets,
+        localTestSpaceOffsets,
+        globalTestSpaceOffsets,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets);
   }
 }
 
@@ -377,7 +374,6 @@ void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
             LinearForm& rhsLinearForm)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
@@ -387,8 +383,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   size_t globalSpaceOffsets[std::tuple_size<TestSpaces>::value
                             + std::tuple_size<SolutionSpaces>::value];
   const size_t globalTotalSpaceSize =
-      fold(zip(globalSpaceOffsets, join(testSpaces, solutionSpaces)),
-           (size_t)0, globalOffsetHelper());
+      computeOffsets(globalSpaceOffsets,
+                     std::tuple_cat(testSpaces, solutionSpaces));
 
   // set rhs to correct length -- the total number of basis vectors in the bases
   rhs.resize(globalTotalSpaceSize);
@@ -398,20 +394,19 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
   // Views on the FE bases on a single element
   auto localViews
-        = as_vector(transform(join(testSpaces, solutionSpaces),
-                              getLocalView()));
+        = genericTransformTuple(std::tuple_cat(testSpaces, solutionSpaces),
+                                getLocalViewFunctor());
 
   auto localIndexSets
-        = as_vector(transform(join(testSpaces, solutionSpaces),
-                              getLocalIndexSet()));
+        = genericTransformTuple(std::tuple_cat(testSpaces, solutionSpaces),
+                                getLocalIndexSetFunctor());
 
 
   for(const auto& e : elements(gridView)) {
 
-    for_each(localViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(localViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(localIndexSets, localViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(localIndexSets, localViews);
 
     // Now get the local contribution to the right-hand side vector
     BlockVector<FieldVector<double,1> > localRhs;
@@ -419,18 +414,6 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     rhsLinearForm.bind(localViews);
     rhsLinearForm.getLocalVector(localRhs);
 
-    auto cp = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type> >
-                (localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type>
-                                        (localRhs, rhs));
-
-    /* copy every local subvector indexed by an index from
-     * lfIndices exactly once. */
-    auto testZip = zip(localViews,
-                       localIndexSets,
-                       rhsLinearForm.getLocalSpaceOffsets(),
-                       globalSpaceOffsets);
     /* create set of indices to loop over when copying the local matrices
      * into the global one.
      */
@@ -438,8 +421,9 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
         typename boost::mpl::transform<
             /* This as_vector is probably not needed for boost::fusion 1.58
              * or higher. */
-            typename result_of::as_vector<typename std::remove_reference<
-                  decltype(rhsLinearForm.getTerms())>::type
+            typename boost::fusion::result_of::as_vector<
+                  typename std::remove_reference<
+                      decltype(rhsLinearForm.getTerms())>::type
                 >::type
           , mpl::first<boost::mpl::_1>
           >::type
@@ -447,11 +431,16 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
       , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
       >::type LFIndices;
 
-    auto lfIndices = LFIndices{};
-    for_each(lfIndices,
-             localToGlobalRHSCopyHelper<decltype(testZip),
-                                        decltype(cp)>
-                                       (testZip, cp));
+    // Add local right-hand side onto the global right-hand side
+    /* copy every local subvector indexed by an index from
+     * lfIndices exactly once. */
+    copyLocalToGlobalVector<LFIndices>(
+        localRhs,
+        rhs,
+        localViews,
+        localIndexSets,
+        rhsLinearForm.getLocalSpaceOffsets(),
+        globalSpaceOffsets);
   }
 }
 
@@ -479,28 +468,13 @@ applyDirichletBoundaryToMatrix
                        const std::vector<bool>& dirichletNodes,
                        const ValueType& boundaryValue)
 {
-  using namespace boost::fusion;
-  using namespace Dune::detail;
-
   const size_t spaceSize =
         std::get<spaceIndex>(solutionSpaces).size();
 
-  size_t globalOffset;
-  {
-    /* set up global offsets */
-    size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-    size_t globalTotalTestSize = 0;
-
-    globalTotalTestSize =
-        fold(zip(globalTestSpaceOffsets, testSpaces),
-             (size_t)0, globalOffsetHelper());
-
-    fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
-         globalTotalTestSize, globalOffsetHelper());
-
-    globalOffset = globalSolutionSpaceOffsets[spaceIndex];
-  }
+  const size_t globalOffset
+      = detail::computeOffset<spaceIndex>(solutionSpaces,
+              detail::computeOffset<std::tuple_size<TestSpaces>::value>
+                                   (testSpaces));
 
   ////////////////////////////////////////////
   //   Modify Dirichlet rows
@@ -540,28 +514,13 @@ applyDirichletBoundaryToRhs
                        const std::vector<bool>& dirichletNodes,
                        const ValueType& boundaryValue)
 {
-  using namespace boost::fusion;
-  using namespace Dune::detail;
-
   const size_t spaceSize =
         std::get<spaceIndex>(solutionSpaces).size();
 
-  size_t globalOffset;
-  {
-    /* set up global offsets */
-    size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-    size_t globalTotalTestSize = 0;
-
-    globalTotalTestSize =
-        fold(zip(globalTestSpaceOffsets, testSpaces),
-             (size_t)0, globalOffsetHelper());
-
-    fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
-         globalTotalTestSize, globalOffsetHelper());
-
-    globalOffset = globalSolutionSpaceOffsets[spaceIndex];
-  }
+  const size_t globalOffset
+      = detail::computeOffset<spaceIndex>(solutionSpaces,
+              detail::computeOffset<std::tuple_size<TestSpaces>::value>
+                                   (testSpaces));
 
   // Set Dirichlet values
   for (size_t i=0; i<spaceSize; i++)
@@ -569,7 +528,7 @@ applyDirichletBoundaryToRhs
     if (dirichletNodes[i])
     {
       /* TODO: Needs adaptation when value is a function. */
-      rhs[globalOffset+i] = detail::evaluateFactor(boundaryValue,i);
+      rhs[globalOffset+i] = detail::evaluateFactor(boundaryValue, i);
     }
   }
 
@@ -603,62 +562,6 @@ applyMinimization
   static_assert(std::is_same<BilinearForm, TestSpaces>::value,
                 "applyMinimization not implemented "
                 "for Saddlepointformulation ");
-}
-
-template<class BilinearForm, class InnerProduct>
-template<class TestZip, class SolutionZip, class CP, class CPM>
-inline void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
-copy_local_matrix_to_global
-    (const BilinearForm& bilinearForm,
-     const InnerProduct& innerProduct,
-     const TestZip& testZip,
-     const SolutionZip& solutionZip,
-     CP& cp,
-     CPM& cpm)
-{
-  using namespace boost::fusion;
-  using namespace detail;
-
-  /* create sets of index pairs to loop over.
-   * This will be used later, when copying the local matrices into
-   * the global one.
-   */
-  typedef typename boost::mpl::fold<
-      typename boost::mpl::transform<
-          /* This as_vector is probably not needed for boost::fusion 1.58
-           * or higher. */
-          typename result_of::as_vector<typename std::remove_reference<
-                decltype(bilinearForm.getTerms())>::type
-              >::type
-        , mpl::firstTwo<boost::mpl::_1>
-        >::type
-    , boost::mpl::set0<>
-    , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-    >::type BFIndices;
-  typedef typename boost::mpl::fold<
-      typename boost::mpl::transform<
-          typename result_of::as_vector<typename std::remove_reference<
-                decltype(innerProduct.getTerms())>::type
-              >::type
-        , mpl::firstTwo<boost::mpl::_1>
-        >::type
-    , boost::mpl::set0<>
-    , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-    >::type IPIndices;
-
-  auto bfIndices = BFIndices{};
-  auto ipIndices = IPIndices{};
-
-  for_each(ipIndices,
-           localToGlobalCopyHelper<TestZip,
-                                   TestZip,
-                                   CP>
-                                  (testZip, testZip, cp));
-  for_each(bfIndices,
-           localToGlobalCopyHelper<SolutionZip,
-                                   TestZip,
-                                   CPM>
-                                  (solutionZip, testZip, cpm));
 }
 
 
