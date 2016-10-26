@@ -25,10 +25,7 @@
 #include <boost/fusion/container/vector/convert.hpp>
 #include <boost/fusion/container/set/convert.hpp>
 #include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/join.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/sequence/intrinsic/value_at.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
@@ -333,7 +330,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                BlockVector<FieldVector<double,1> >& rhs,
                LinearForm& rhsLinearForm)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   auto gridView = std::get<0>(testSearchSpaces_).gridView();
@@ -357,6 +353,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   // TODO: Might be too large??
   MatrixIndexSet occupationPattern;
   occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
+
+  using namespace boost::fusion;
 
   typedef
       typename result_of::as_vector<typename boost::mpl::range_c<
@@ -498,7 +496,6 @@ template<class BilinearForm, class InnerProduct, class BufferPolicy>
 void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
 assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   auto gridView = std::get<0>(testSearchSpaces_).gridView();
@@ -519,6 +516,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   // TODO: Might be too large??
   MatrixIndexSet occupationPattern;
   occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
+
+  using namespace boost::fusion;
 
   typedef
       typename result_of::as_vector<typename boost::mpl::range_c<
@@ -605,7 +604,6 @@ void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
 assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
             LinearForm& rhsLinearForm)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   auto gridView = std::get<0>(testSearchSpaces_).gridView();
@@ -666,6 +664,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
           localRhs[i]+=(localEnrichedRhs[k]*coefficientMatrix[k][i]);
         }
       }
+
+    using namespace boost::fusion;
 
     auto cp = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
                    typename std::remove_reference<decltype(rhs)>::type> >

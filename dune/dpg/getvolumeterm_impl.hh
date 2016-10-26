@@ -3,8 +3,6 @@
 #ifndef DUNE_DPG_GETVOLUMETERM_IMPL_HH
 #define DUNE_DPG_GETVOLUMETERM_IMPL_HH
 
-#include <boost/fusion/sequence/intrinsic/at.hpp>
-
 #include <dune/functions/common/functionconcepts.hh>
 #include <dune/istl/bvector.hh>
 

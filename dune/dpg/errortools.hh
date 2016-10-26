@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/algorithm/transformation/zip.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 
@@ -267,7 +266,6 @@ namespace Dune {
       SolutionLocalIndexSets& solutionLocalIndexSets,
       VectorType& solution)
   {
-    using namespace boost::fusion;
     using namespace Dune::detail;
 
     typedef typename InnerProduct::TestSpaces SolutionSpaces;
@@ -285,6 +283,8 @@ namespace Dune {
     // corresponding to local dofs on element
     // for the solution and for the righthand side
     BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
+
+    using namespace boost::fusion;
 
     for_each(zip(solutionLocalViews, solutionLocalIndexSets,
                  localSolutionSpaceOffsets, globalSolutionSpaceOffsets),
@@ -366,7 +366,6 @@ namespace Dune {
                                         const RhsFunction& f,
                                         const VectorType& solution)
   {
-    using namespace boost::fusion;
     using namespace Dune::detail;
 
     typedef typename std::tuple_element<0, typename InnerProduct::TestSpaces>
@@ -433,7 +432,6 @@ namespace Dune {
       VectorType& solution,
       VectorType& rhs)
   {
-    using namespace boost::fusion;
     using namespace Dune::detail;
 
     typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
@@ -461,6 +459,8 @@ namespace Dune {
     // for the solution and for the righthand side
     BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
     BlockVector<FieldVector<double,1> > rhsElement(localTestDofs);
+
+    using namespace boost::fusion;
 
     for_each(zip(solutionLocalViews, solutionLocalIndexSets,
                  localSolutionSpaceOffsets, globalSolutionSpaceOffsets),

@@ -21,12 +21,9 @@
 #include <boost/fusion/adapted/mpl.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
 #include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/algorithm/transformation/zip.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
-#include <boost/fusion/sequence/intrinsic/value_at.hpp>
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -119,7 +116,6 @@ void RhsAssembler<TestSpaces>::
 assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
             LinearForm& rhsLinearForm)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
@@ -155,6 +151,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     rhsLinearForm.bind(testLocalViews);
     rhsLinearForm.getLocalVector(localRhs);
 
+    using namespace boost::fusion;
+
     auto cp = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
                    typename std::remove_reference<decltype(rhs)>::type> >
                 (localToGlobalRHSCopier<decltype(localRhs),
@@ -168,6 +166,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
                        rhsLinearForm.getLocalSpaceOffsets(),
                        globalTestSpaceOffsets);
     typedef
+        // TODO: This will only work when using only one test space.
         typename boost::fusion::vector<std::integral_constant<size_t, 0> >
             LFIndices;
 

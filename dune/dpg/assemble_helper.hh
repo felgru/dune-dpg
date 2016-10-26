@@ -9,10 +9,8 @@
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/std/memory.hh>
 #include <dune/istl/matrixindexset.hh>
-#include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/sequence/intrinsic/size.hpp>
 #include <boost/fusion/algorithm/transformation/join.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
+#include <boost/fusion/sequence/intrinsic/at.hpp>
 
 namespace Dune {
 
@@ -199,9 +197,8 @@ template <class TestLocalViews,
           bool mirror = false>
 struct getOccupationPatternHelper
 {
-  template<class T, class Seq>
-  using array_of_same_size =
-      T[boost::fusion::result_of::size<Seq>::type::value];
+  template<class T, class Tuple>
+  using array_of_same_size = T[std::tuple_size<Tuple>::value];
 
   getOccupationPatternHelper(
                        const TestLocalViews& testLocalViews,

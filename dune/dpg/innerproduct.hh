@@ -16,11 +16,9 @@
 #include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
 #include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/sequence/intrinsic/size.hpp>
 #include <boost/fusion/algorithm/auxiliary/copy.hpp>
 #include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 
 #include <dune/common/hybridutilities.hh>
@@ -164,7 +162,6 @@ template<class TestSpaces, class InnerProductTerms>
 void InnerProduct<TestSpaces, InnerProductTerms>::
 getOccupationPattern(MatrixIndexSet& nb) const
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   /* set up global offsets */
@@ -178,6 +175,8 @@ getOccupationPattern(MatrixIndexSet& nb) const
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
+
+  using namespace boost::fusion;
 
   /* create set of index pairs from innerProductTerms to loop over. */
   typedef typename boost::mpl::fold<

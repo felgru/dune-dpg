@@ -23,9 +23,7 @@
 #include <boost/fusion/container/vector/convert.hpp>
 #include <boost/fusion/container/set/convert.hpp>
 #include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 #include <boost/fusion/sequence/intrinsic/value_at.hpp>
@@ -257,7 +255,6 @@ template<class BilinearForm, class InnerProduct>
 void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   constexpr bool isSaddlepoint = true;
@@ -327,6 +324,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     bilinearForm.getLocalMatrix(bfElementMatrix);
     innerProduct.getLocalMatrix(ipElementMatrix);
 
+    using namespace boost::fusion;
 
     // Add element stiffness matrix onto the global stiffness matrix
     auto cp = fused_procedure<localToGlobalCopier<decltype(ipElementMatrix),
@@ -368,7 +366,6 @@ void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
             LinearForm& rhsLinearForm)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
@@ -408,6 +405,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     rhsLinearForm.bind(localViews);
     rhsLinearForm.getLocalVector(localRhs);
+
+    using namespace boost::fusion;
 
     auto cp = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
                    typename std::remove_reference<decltype(rhs)>::type> >

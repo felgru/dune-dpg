@@ -17,10 +17,7 @@
 #include <boost/fusion/container/vector/convert.hpp>
 #include <boost/fusion/container/set/convert.hpp>
 #include <boost/fusion/sequence/intrinsic/size.hpp>
-#include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
 #include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 
 #include <dune/common/hybridutilities.hh>
@@ -224,7 +221,6 @@ template<bool mirror>
 void BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>::
 getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift) const
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   /* set up global offsets */
@@ -243,6 +239,8 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
       = genericTransformTuple(solutionSpaces, getLocalIndexSetFunctor());
   auto testLocalIndexSets
       = genericTransformTuple(testSpaces, getLocalIndexSetFunctor());
+
+  using namespace boost::fusion;
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
