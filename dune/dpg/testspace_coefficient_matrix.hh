@@ -9,23 +9,8 @@
 #include <type_traits>
 #include <cassert>
 
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
-#include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/join.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
-
-#include <boost/fusion/sequence/intrinsic/size.hpp>
-
-
-#include <array>
 #include <dune/common/exceptions.hh>
+#include <dune/common/tupleutility.hh>
 
 
 #include <dune/dpg/assemble_helper.hh>
@@ -159,19 +144,11 @@ public:
   typedef typename BilinearForm::TestSpaces TestSpaces;
 
 private:
-  typedef typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<
-                         SolutionSpaces,
-                         detail::getLocalView
-                      >::type
-             >::type SolutionLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               SolutionSpaces>::Type  SolutionLocalViews;
 
-  typedef typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<
-                         TestSpaces,
-                         detail::getLocalView
-                      >::type
-             >::type TestLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               TestSpaces>::Type  TestLocalViews;
 
   typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
 
@@ -181,20 +158,18 @@ public:
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
     gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
-    localViewsSolution_(boost::fusion::as_vector(
-                boost::fusion::transform(bilinearForm_.getSolutionSpaces(),
-                                         detail::getLocalView()))),
-    localViewsTest_(boost::fusion::as_vector(
-                boost::fusion::transform(bilinearForm_.getTestSpaces(),
-                                         detail::getLocalView())))
+    localViewsSolution_(genericTransformTuple(bilinearForm_.getSolutionSpaces(),
+                                              detail::getLocalViewFunctor())),
+    localViewsTest_(genericTransformTuple(bilinearForm_.getTestSpaces(),
+                                          detail::getLocalViewFunctor()))
   {}
 
   void bind(const typename GridView::template Codim<0>::Entity& e)
   {
     using namespace Dune::detail;
 
-    for_each(localViewsTest_, applyBind<decltype(e)>(e));
-    for_each(localViewsSolution_, applyBind<decltype(e)>(e));
+    Hybrid::forEach(localViewsTest_, applyBind<decltype(e)>(e));
+    Hybrid::forEach(localViewsSolution_, applyBind<decltype(e)>(e));
 
     MatrixType stiffnessMatrix;
 
@@ -313,19 +288,11 @@ class BufferedTestspaceCoefficientMatrix
   typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
 
   private:
-  typedef typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<
-                         SolutionSpaces,
-                         detail::getLocalView
-                      >::type
-             >::type SolutionLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               SolutionSpaces>::Type  SolutionLocalViews;
 
-  typedef typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<
-                         TestSpaces,
-                         detail::getLocalView
-                      >::type
-             >::type TestLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               TestSpaces>::Type  TestLocalViews;
 
   typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
 
@@ -334,12 +301,10 @@ class BufferedTestspaceCoefficientMatrix
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
     gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
-    localViewsSolution_(boost::fusion::as_vector(
-                boost::fusion::transform(bilinearForm_.getSolutionSpaces(),
-                                         detail::getLocalView()))),
-    localViewsTest_(boost::fusion::as_vector(
-                boost::fusion::transform(bilinearForm_.getTestSpaces(),
-                                         detail::getLocalView()))),
+    localViewsSolution_(genericTransformTuple(bilinearForm_.getSolutionSpaces(),
+                                              detail::getLocalViewFunctor())),
+    localViewsTest_(genericTransformTuple(bilinearForm_.getTestSpaces(),
+                                          detail::getLocalViewFunctor())),
     geometryBuffer_(buffer)
   {}
 
@@ -359,8 +324,8 @@ class BufferedTestspaceCoefficientMatrix
     systemMatrix_ = &pair.first.systemMatrix();
     if (!pair.second)
     {
-      for_each(localViewsTest_, applyBind<decltype(e)>(e));
-      for_each(localViewsSolution_, applyBind<decltype(e)>(e));
+      Hybrid::forEach(localViewsTest_, applyBind<decltype(e)>(e));
+      Hybrid::forEach(localViewsSolution_, applyBind<decltype(e)>(e));
 
       MatrixType stiffnessMatrix;
 

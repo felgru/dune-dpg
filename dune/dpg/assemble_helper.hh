@@ -6,67 +6,46 @@
 #include <functional>
 #include <utility>
 #include <tuple>
+#include <dune/common/hybridutilities.hh>
 #include <dune/common/std/memory.hh>
 #include <dune/istl/matrixindexset.hh>
-#include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/sequence/intrinsic/size.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
+#include <boost/fusion/adapted/std_tuple.hpp>
+#include <boost/fusion/adapted/array.hpp>
+#include <boost/fusion/algorithm/iteration/for_each.hpp>
+#include <boost/fusion/algorithm/transformation/zip.hpp>
+#include <boost/fusion/sequence/intrinsic/at.hpp>
 
 namespace Dune {
 
 namespace detail {
 
-struct getLocalIndexSet
+struct getLocalIndexSetFunctor
 {
   template<class T>
-  struct result;
-
-  template<class T>
-  struct result<getLocalIndexSet(T)>
+  struct TypeEvaluator
   {
-    typedef typename T::LocalIndexSet type;
+    typedef typename T::LocalIndexSet Type;
   };
 
   template<class T>
-  typename result<getLocalIndexSet(T)>::type operator()(const T& t) const
+  typename TypeEvaluator<T>::Type operator()(const T& t) const
   {
     return t.localIndexSet();
   }
 };
 
-struct getLocalView
+struct getLocalViewFunctor
 {
   template<class T>
-  struct result;
-
-  template<class T>
-  struct result<getLocalView(T)>
+  struct TypeEvaluator
   {
-    typedef typename T::LocalView type;
+    typedef typename T::LocalView Type;
   };
 
   template<class T>
-  typename result<getLocalView(T)>::type operator()(const T& t) const
+  typename TypeEvaluator<T>::Type operator()(const T& t) const
   {
     return t.localView();
-  }
-};
-
-struct getSize
-{
-  template<class T>
-  struct result;
-
-  template<class T>
-  struct result<getSize(T)>
-  {
-    typedef size_t type;
-  };
-
-  template<class T>
-  size_t operator()(const T& t) const
-  {
-    return t.size();
   }
 };
 
@@ -85,36 +64,33 @@ private:
   const E& e;
 };
 
-struct bindLocalIndexSet
+template<class LocalIndexSets, class LocalViews>
+inline void bindLocalIndexSets(LocalIndexSets&   lis,
+                               const LocalViews& lvs)
 {
-  template<class LIS, class LV>
-  void operator()(const LIS& lis, const LV& lv) const
-  {
-    /* TODO: I feel uncomfortable casting away the const, but
-     * I do not know how else to work around the fact that many
-     * boost::fusion functions only take const sequences. */
-    const_cast<LIS&>(lis).bind(lv);
-  }
-};
+  Hybrid::forEach(
+      Std::make_index_sequence<
+          std::tuple_size<LocalIndexSets>::value>{},
+      [&](auto i) {
+        std::get<i>(lis).bind(std::get<i>(lvs));
+      });
+}
 
 template <class MatrixType,
           class TestSpaces,
           class SolutionSpaces>
 struct getLocalMatrixHelper
 {
-  template<class T, class Seq>
+  template<class T, class Tuple>
   using array_of_same_size =
-      T[boost::fusion::result_of::size<Seq>::type::value];
+      T[std::tuple_size<Tuple>::value];
 
   //! tuple type for the local views of the test spaces
-  typedef typename boost::fusion::result_of::as_vector<
-      typename boost::fusion::result_of::
-      transform<TestSpaces, detail::getLocalView>::type>::type TestLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               TestSpaces>::Type  TestLocalViews;
   //! tuple type for the local views of the solution spaces
-  typedef typename boost::fusion::result_of::as_vector<
-      typename boost::fusion::result_of::
-      transform<SolutionSpaces, detail::getLocalView>::type
-      >::type SolutionLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               SolutionSpaces>::Type  SolutionLocalViews;
 
   getLocalMatrixHelper(const TestLocalViews& testLocalViews,
                        const SolutionLocalViews& solutionLocalViews,
@@ -142,18 +118,16 @@ struct getLocalMatrixHelper
           solutionSpaceIndex,
           Term>& termTuple) const
   {
-    using namespace boost::fusion;
-
     const auto& term = std::get<2>(termTuple);
 
     const auto& testLV =
-        at_c<testSpaceIndex::value>(testLocalViews);
+        std::get<testSpaceIndex::value>(testLocalViews);
     const auto& solutionLV =
-        at_c<solutionSpaceIndex::value>(solutionLocalViews);
+        std::get<solutionSpaceIndex::value>(solutionLocalViews);
     size_t localTestSpaceOffset =
-        at_c<testSpaceIndex::value>(localTestSpaceOffsets);
+        localTestSpaceOffsets[testSpaceIndex::value];
     size_t localSolutionSpaceOffset =
-        at_c<solutionSpaceIndex::value>(localSolutionSpaceOffsets);
+        localSolutionSpaceOffsets[solutionSpaceIndex::value];
 
     term.getLocalMatrix(testLV,
                         solutionLV,
@@ -176,14 +150,13 @@ template <class VectorType,
           class TestSpaces>
 struct getLocalVectorHelper
 {
-  template<class T, class Seq>
+  template<class T, class Tuple>
   using array_of_same_size =
-      T[boost::fusion::result_of::size<Seq>::type::value];
+      T[std::tuple_size<Tuple>::value];
 
   //! tuple type for the local views of the test spaces
-  typedef typename boost::fusion::result_of::as_vector<
-      typename boost::fusion::result_of::
-      transform<TestSpaces, detail::getLocalView>::type>::type TestLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               TestSpaces>::Type  TestLocalViews;
 
   getLocalVectorHelper(const TestLocalViews& testLocalViews,
                        VectorType& elementVector,
@@ -202,14 +175,11 @@ struct getLocalVectorHelper
   void operator()
          (const std::tuple<testSpaceIndex, Term>& termTuple) const
   {
-    using namespace boost::fusion;
-
     const auto& term = std::get<1>(termTuple);
 
-    const auto& testLV =
-        at_c<testSpaceIndex::value>(testLocalViews);
-    size_t localTestSpaceOffset =
-        at_c<testSpaceIndex::value>(localTestSpaceOffsets);
+    const auto& testLV = std::get<testSpaceIndex::value>(testLocalViews);
+    const size_t localTestSpaceOffset =
+        localTestSpaceOffsets[testSpaceIndex::value];
 
     term.getLocalVector(testLV,
                         elementVector,
@@ -230,9 +200,8 @@ template <class TestLocalViews,
           bool mirror = false>
 struct getOccupationPatternHelper
 {
-  template<class T, class Seq>
-  using array_of_same_size =
-      T[boost::fusion::result_of::size<Seq>::type::value];
+  template<class T, class Tuple>
+  using array_of_same_size = T[std::tuple_size<Tuple>::value];
 
   getOccupationPatternHelper(
                        const TestLocalViews& testLocalViews,
@@ -260,20 +229,18 @@ struct getOccupationPatternHelper
           testSpaceIndex,
           solutionSpaceIndex>& indexTuple)
   {
-    using namespace boost::fusion;
-
     const auto& testLV =
-        at_c<testSpaceIndex::value>(testLocalViews);
+        std::get<testSpaceIndex::value>(testLocalViews);
     const auto& solutionLV =
-        at_c<solutionSpaceIndex::value>(solutionLocalViews);
+        std::get<solutionSpaceIndex::value>(solutionLocalViews);
     const auto& testLIS =
-        at_c<testSpaceIndex::value>(testLocalIndexSets);
+        std::get<testSpaceIndex::value>(testLocalIndexSets);
     const auto& solutionLIS =
-        at_c<solutionSpaceIndex::value>(solutionLocalIndexSets);
+        std::get<solutionSpaceIndex::value>(solutionLocalIndexSets);
     size_t globalTestSpaceOffset =
-        at_c<testSpaceIndex::value>(globalTestSpaceOffsets);
+        globalTestSpaceOffsets[testSpaceIndex::value];
     size_t globalSolutionSpaceOffset =
-        at_c<solutionSpaceIndex::value>(globalSolutionSpaceOffsets);
+        globalSolutionSpaceOffsets[solutionSpaceIndex::value];
 
     for (size_t i=0, i_max=testLV.size(); i<i_max; i++) {
 
@@ -307,25 +274,85 @@ private:
   Dune::MatrixIndexSet& nb;
 };
 
+template<class Indices,
+         bool mirror,
+         class LeftLocalViews, class RightLocalViews,
+         class LeftLocalIndexSets, class RightLocalIndexSets,
+         class LeftOffsets, class RightOffsets>
+inline void getOccupationPattern(
+      const LeftLocalViews& leftLocalViews,
+      const RightLocalViews& rightLocalViews,
+      const LeftLocalIndexSets& leftLocalIndexSets,
+      const RightLocalIndexSets& rightLocalIndexSets,
+      const LeftOffsets& leftGlobalOffsets,
+      const RightOffsets& rightGlobalOffsets,
+      MatrixIndexSet& occupationPattern) {
+  auto gOPH = getOccupationPatternHelper<LeftLocalViews,
+                                         RightLocalViews,
+                                         LeftLocalIndexSets,
+                                         RightLocalIndexSets,
+                                         mirror>
+                      (leftLocalViews,
+                       rightLocalViews,
+                       leftLocalIndexSets,
+                       rightLocalIndexSets,
+                       leftGlobalOffsets,
+                       rightGlobalOffsets,
+                       occupationPattern);
+  boost::fusion::for_each(Indices{},
+      std::ref(gOPH));
+}
+
 template<class LocalMatrix, class GlobalMatrix,
+         class TestLocalViews, class SolutionLocalViews,
+         class TestLocalIndexSets, class SolutionLocalIndexSets,
+         class TestOffsets, class SolutionOffsets,
          bool mirror = false>
 struct localToGlobalCopier
 {
 
-  localToGlobalCopier(const LocalMatrix& lm, GlobalMatrix& gm) :
-      elementMatrix(lm), matrix(gm) {}
+  localToGlobalCopier
+         (const LocalMatrix& lm, GlobalMatrix& gm,
+          TestLocalViews const & testLocalViews,
+          TestLocalIndexSets const & testLocalIndexSets,
+          TestOffsets const & testLocalOffsets,
+          TestOffsets const & testGlobalOffsets,
+          SolutionLocalViews const & solutionLocalViews,
+          SolutionLocalIndexSets const & solutionLocalIndexSets,
+          SolutionOffsets const & solutionLocalOffsets,
+          SolutionOffsets const & solutionGlobalOffsets)
+      : elementMatrix(lm), matrix(gm),
+        testLocalViews(testLocalViews),
+        testLocalIndexSets(testLocalIndexSets),
+        testLocalOffsets(testLocalOffsets),
+        testGlobalOffsets(testGlobalOffsets),
+        solutionLocalViews(solutionLocalViews),
+        solutionLocalIndexSets(solutionLocalIndexSets),
+        solutionLocalOffsets(solutionLocalOffsets),
+        solutionGlobalOffsets(solutionGlobalOffsets) {}
 
-  template<class TestLocalView, class SolutionLocalView,
-           class TestLocalIndexSet, class SolutionLocalIndexSet>
+  template <class testSpaceIndex,
+            class solutionSpaceIndex>
   void operator()
-         (TestLocalView const & testLocalView,
-          TestLocalIndexSet const & testLocalIndexSet,
-          size_t testLocalOffset, size_t testGlobalOffset,
-          SolutionLocalView const & solutionLocalView,
-          SolutionLocalIndexSet const & solutionLocalIndexSet,
-          size_t solutionLocalOffset, size_t solutionGlobalOffset
-         )
+         (const std::tuple<
+          testSpaceIndex,
+          solutionSpaceIndex>& indexTuple) const
   {
+    const auto& testLocalView
+        = std::get<testSpaceIndex::value>(testLocalViews);
+    const auto& testLocalIndexSet
+        = std::get<testSpaceIndex::value>(testLocalIndexSets);
+    size_t testLocalOffset = testLocalOffsets[testSpaceIndex::value];
+    size_t testGlobalOffset = testGlobalOffsets[testSpaceIndex::value];
+    const auto& solutionLocalView
+        = std::get<solutionSpaceIndex::value>(solutionLocalViews);
+    const auto& solutionLocalIndexSet
+        = std::get<solutionSpaceIndex::value>(solutionLocalIndexSets);
+    size_t solutionLocalOffset
+        = solutionLocalOffsets[solutionSpaceIndex::value];
+    size_t solutionGlobalOffset
+        = solutionGlobalOffsets[solutionSpaceIndex::value];
+
     const size_t nTest(testLocalView.size());
     const size_t nSolution(solutionLocalView.size());
 
@@ -350,60 +377,83 @@ struct localToGlobalCopier
 private:
   const LocalMatrix& elementMatrix;
   GlobalMatrix& matrix;
+
+  const TestLocalViews & testLocalViews;
+  const TestLocalIndexSets & testLocalIndexSets;
+  const TestOffsets & testLocalOffsets;
+  const TestOffsets & testGlobalOffsets;
+  const SolutionLocalViews & solutionLocalViews;
+  const SolutionLocalIndexSets & solutionLocalIndexSets;
+  const SolutionOffsets & solutionLocalOffsets;
+  const SolutionOffsets & solutionGlobalOffsets;
 };
 
-template <class SolutionZip,
-          class TestZip,
-          class LocalToGlobalCopier>
-struct localToGlobalCopyHelper
-{
-  localToGlobalCopyHelper(
-                       const SolutionZip& solutionZip,
-                       const TestZip& testZip,
-                       LocalToGlobalCopier& localToGlobalCopier)
-      : solutionZip(solutionZip),
-        testZip(testZip),
-        localToGlobalCopier(localToGlobalCopier)
-  {}
+template<class Indices,
+         bool mirror,
+         class LocalMatrix, class GlobalMatrix,
+         class TestLocalViews, class SolutionLocalViews,
+         class TestLocalIndexSets, class SolutionLocalIndexSets,
+         class TestOffsets, class SolutionOffsets>
+inline void copyLocalToGlobalMatrix(
+    const LocalMatrix&            elementMatrix,
+    GlobalMatrix&                 matrix,
+    const TestLocalViews&         testLocalViews,
+    const TestLocalIndexSets&     testLocalIndexSets,
+    const TestOffsets&            localTestSpaceOffsets,
+    const TestOffsets&            globalTestSpaceOffsets,
+    const SolutionLocalViews&     solutionLocalViews,
+    const SolutionLocalIndexSets& solutionLocalIndexSets,
+    const SolutionOffsets&        localSolutionSpaceOffsets,
+    const SolutionOffsets&        globalSolutionSpaceOffsets) {
 
-  template <class testSpaceIndex,
-            class solutionSpaceIndex>
-  void operator()
-         (const std::tuple<
-          testSpaceIndex,
-          solutionSpaceIndex>& indexTuple) const
-  {
-    using namespace boost::fusion;
+  auto cpMatrix = localToGlobalCopier<LocalMatrix, GlobalMatrix,
+                 TestLocalViews, SolutionLocalViews,
+                 TestLocalIndexSets, SolutionLocalIndexSets,
+                 TestOffsets, SolutionOffsets,
+                 mirror> (elementMatrix, matrix,
+                          testLocalViews,
+                          testLocalIndexSets,
+                          localTestSpaceOffsets,
+                          globalTestSpaceOffsets,
+                          solutionLocalViews,
+                          solutionLocalIndexSets,
+                          localSolutionSpaceOffsets,
+                          globalSolutionSpaceOffsets);
 
-    const auto& solutionData =
-        at_c<solutionSpaceIndex::value>(solutionZip);
-    const auto& testData =
-        at_c<testSpaceIndex::value>(testZip);
+  /* copy every local submatrix indexed by a pair of indices from
+   * Indices exactly once. */
+  boost::fusion::for_each(Indices{}, cpMatrix);
+}
 
-    localToGlobalCopier(join(testData,solutionData));
-  }
-
-private:
-  const SolutionZip& solutionZip;
-  const TestZip& testZip;
-
-  LocalToGlobalCopier& localToGlobalCopier;
-};
-
-template<class LocalVector, class GlobalVector>
+template<class LocalVector, class GlobalVector,
+         class TestLocalViews, class TestLocalIndexSets,
+         class TestOffsets>
 struct localToGlobalRHSCopier
 {
 
-  localToGlobalRHSCopier(const LocalVector& lv, GlobalVector& gv) :
-      localRhs(lv), rhs(gv) {}
+  localToGlobalRHSCopier
+         (const LocalVector& lv, GlobalVector& gv,
+          TestLocalViews const & testLocalViews,
+          TestLocalIndexSets const & testLocalIndexSets,
+          TestOffsets const & testLocalOffsets,
+          TestOffsets const & testGlobalOffsets)
+      : localRhs(lv), rhs(gv),
+        testLocalViews(testLocalViews),
+        testLocalIndexSets(testLocalIndexSets),
+        testLocalOffsets(testLocalOffsets),
+        testGlobalOffsets(testGlobalOffsets) {}
 
-  template<class TestLocalView, class TestLocalIndexSet>
+  template <class TestSpaceIndex>
   void operator()
-         (TestLocalView const & testLocalView,
-          TestLocalIndexSet const & testLocalIndexSet,
-          size_t testLocalOffset, size_t testGlobalOffset
-         )
+         (const TestSpaceIndex& index) const
   {
+    const auto& testLocalView
+        = std::get<TestSpaceIndex::value>(testLocalViews);
+    const auto& testLocalIndexSet
+        = std::get<TestSpaceIndex::value>(testLocalIndexSets);
+    size_t testLocalOffset = testLocalOffsets[TestSpaceIndex::value];
+    size_t testGlobalOffset = testGlobalOffsets[TestSpaceIndex::value];
+
     const size_t nTest(testLocalView.size());
 
     for (size_t i=0; i<nTest; i++) {
@@ -415,161 +465,71 @@ struct localToGlobalRHSCopier
 private:
   const LocalVector& localRhs;
   GlobalVector& rhs;
+
+  const TestLocalViews & testLocalViews;
+  const TestLocalIndexSets & testLocalIndexSets;
+  const TestOffsets & testLocalOffsets;
+  const TestOffsets & testGlobalOffsets;
 };
 
-template <class TestZip,
-          class LocalToGlobalRHSCopier>
-struct localToGlobalRHSCopyHelper
+template<class Indices,
+         class LocalVector, class GlobalVector,
+         class TestLocalViews,
+         class TestLocalIndexSets,
+         class TestOffsets>
+inline void copyLocalToGlobalVector(
+    const LocalVector&            elementVector,
+    GlobalVector&                 vector,
+    const TestLocalViews&         testLocalViews,
+    const TestLocalIndexSets&     testLocalIndexSets,
+    const TestOffsets&            localTestSpaceOffsets,
+    const TestOffsets&            globalTestSpaceOffsets) {
+
+  auto cpRhs = localToGlobalRHSCopier<LocalVector, GlobalVector,
+                    TestLocalViews, TestLocalIndexSets,
+                    TestOffsets>
+                         (elementVector, vector,
+                          testLocalViews,
+                          testLocalIndexSets,
+                          localTestSpaceOffsets,
+                          globalTestSpaceOffsets);
+
+  /* copy every local subvector indexed by an index from
+   * Indices exactly once. */
+  boost::fusion::for_each(Indices{}, cpRhs);
+}
+
+template<class SpacesOrLocalViews, class Offsets>
+inline size_t computeOffsets(Offsets& offsets, const SpacesOrLocalViews& s,
+                             size_t start = 0)
 {
-  localToGlobalRHSCopyHelper(
-                       const TestZip& testZip,
-                       LocalToGlobalRHSCopier& localToGlobalRHSCopier)
-      : testZip(testZip),
-        localToGlobalRHSCopier(localToGlobalRHSCopier)
-  {}
+  size_t numDofs = start;
 
-  template <class TestSpaceIndex>
-  void operator()
-         (const TestSpaceIndex& index) const
-  {
-    using namespace boost::fusion;
+  Hybrid::forEach(
+      Std::make_index_sequence<
+          std::tuple_size<SpacesOrLocalViews>::value>{},
+      [&](auto i) {
+        offsets[i] = numDofs;
+        numDofs += std::get<i>(s).size();
+      });
 
-    const auto& testData =
-        at_c<TestSpaceIndex::value>(testZip);
+  return numDofs;
+}
 
-    localToGlobalRHSCopier(testData);
-  }
-
-private:
-  const TestZip& testZip;
-
-  LocalToGlobalRHSCopier& localToGlobalRHSCopier;
-};
-
-struct offsetHelper
+template<size_t spaceIndex, class SpacesOrLocalViews>
+inline size_t computeOffset(const SpacesOrLocalViews& s,
+                            size_t start = 0)
 {
-  template<class T>
-  struct result;
+  size_t numDofs = start;
 
-  template<class T>
-  struct result<offsetHelper(const size_t&, T)>
-  {
-    typedef size_t type;
-  };
+  Hybrid::forEach(
+      Std::make_index_sequence<spaceIndex>{},
+      [&](auto i) {
+        numDofs += std::get<i>(s).size();
+      });
 
-  template<class T>
-  size_t operator()(const size_t& s, const T& t) const
-  {
-    using namespace boost::fusion;
-
-    // TODO: böser const_cast!
-    //       Can we put offset into a reference_wrappers to fix this?
-    size_t & offset = const_cast<size_t&>(at_c<0>(t));
-    auto const & localView = at_c<1>(t);
-    offset = s;
-    return s + localView.size();
-  }
-};
-
-struct globalOffsetHelper
-{
-  template<class T>
-  struct result;
-
-  template<class T>
-  struct result<globalOffsetHelper(const size_t&, T)>
-  {
-    typedef size_t type;
-  };
-
-  template<class T>
-  size_t operator()(const size_t& s, const T& t) const
-  {
-    using namespace boost::fusion;
-
-    // TODO: böser const_cast!
-    //       Can we put offset into a reference_wrappers to fix this?
-    size_t & offset = const_cast<size_t&>(at_c<0>(t));
-    auto const & space = at_c<1>(t);
-    offset = s;
-    return s + space.size();
-  }
-};
-
-
-struct getMaxNodeSize
-{
-    template<class T>
-    struct result;
-
-    template<class T>
-    struct result<getMaxNodeSize(T)>
-    {
-        typedef std::size_t type;
-    };
-    template<class T>
-    std::size_t operator()(T t) const
-    {
-        return t.nodeFactory().maxNodeSize();
-    }
-};
-
-
-
-struct applyUnbind
-{
-    template<class T>
-    void operator()(T t) const
-    {
-        t.unbind();
-    }
-};
-
-
-struct getLocalFiniteElement
-{
-    template<class T>
-    struct result;
-
-    template<class T>
-    struct result<getLocalFiniteElement(T)>
-    {
-        typedef const typename T::Tree::FiniteElement& type;
-    };
-
-    template<class T>
-    typename result<getLocalFiniteElement(T)>::type operator()(const T& t) const
-    {
-        return t.tree().finiteElement();
-    }
-};
-
-template<class VectorType1, class VectorType2>
-struct getLocalCoefficients
-{
-  getLocalCoefficients(const VectorType1& sol, VectorType2& solEl) :
-    solution(sol),
-    solutionElement(solEl)
-  {}
-
-  template<class T>
-  void operator()(const T& t) const
-  {
-    using namespace boost::fusion;
-
-    auto const & localView = at_c<0>(t);
-    auto const & localIndexSet = at_c<1>(t);
-    size_t dofElement = localView.size();
-    for (size_t i=0; i<dofElement; i++)
-    {
-      solutionElement[i+at_c<2>(t)] = solution[at_c<3>(t)+localIndexSet.index(i)[0] ];
-    }
-  }
-private:
-  const VectorType1& solution;
-  VectorType2& solutionElement;
-};
-
+  return numDofs;
+}
 
 
 namespace mpl {

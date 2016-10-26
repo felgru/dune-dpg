@@ -3,31 +3,15 @@
 #ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_OPTIMALTESTBASIS_HH
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_OPTIMALTESTBASIS_HH
 
+#include <array>
 #include <tuple>
 #include <functional>
 #include <memory>
 #include <type_traits>
 
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
-#include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/join.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/accumulate.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
-
-#include <boost/fusion/sequence/intrinsic/size.hpp>
-
-
-
-
-
-#include <array>
 #include <dune/common/exceptions.hh>
+#include <dune/common/hybridutilities.hh>
+#include <dune/common/tupleutility.hh>
 
 #include <dune/localfunctions/optimaltestfunctions/optimaltest.hh>
 #include <dune/localfunctions/optimaltestfunctions/refinedoptimaltest.hh>
@@ -185,13 +169,9 @@ public:
 
   void initializeIndices()
   {
-    using namespace boost::fusion;
-    using namespace Dune::detail;
-
-    /* set up global offsets */
-    fold(zip(globalOffsets,
-             testspaceCoefficientMatrix_.bilinearForm().getSolutionSpaces()),
-         (size_t)0, globalOffsetHelper());
+    detail::computeOffsets(
+             globalOffsets,
+             testspaceCoefficientMatrix_.bilinearForm().getSolutionSpaces());
   }
 
   /** \brief Obtain the grid view that the basis is defined on
@@ -220,13 +200,11 @@ public:
 
   size_type size() const
   {
-    using namespace boost::fusion;
-    using namespace Dune::detail;
-
-    return fold(transform(testspaceCoefficientMatrix_.bilinearForm()
-                              .getSolutionSpaces(),
-                          getSize()),
-                0, std::plus<std::size_t>());
+    return Hybrid::accumulate(testspaceCoefficientMatrix_.bilinearForm()
+                              .getSolutionSpaces(), 0,
+                              [&](size_type acc, const auto& s) {
+                                return acc + s.size();
+                              });
   }
 
   //! Return number possible values for next position in multi index
@@ -244,13 +222,11 @@ public:
 
   size_type maxNodeSize() const
   {
-    using namespace boost::fusion;
-    using namespace Dune::detail;
-
-    return fold(transform(testspaceCoefficientMatrix_.bilinearForm()
-                              .getSolutionSpaces(),
-                          getMaxNodeSize()),
-                0, std::plus<std::size_t>());
+    return Hybrid::accumulate(testspaceCoefficientMatrix_.bilinearForm()
+                              .getSolutionSpaces(), 0,
+                              [&](size_type acc, const auto& s) {
+                                return acc + s.nodeFactory().maxNodeSize();
+                              });
   }
 
 //protected:
@@ -301,19 +277,11 @@ private:
       = typename TestSearchSpace::LocalView::Tree::FiniteElement;
 
   using SolutionLocalViews
-        = typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<
-                         SolutionSpaces,
-                         detail::getLocalView
-                      >::type
-             >::type;
+        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               SolutionSpaces>::Type;
   using TestLocalViews
-        = typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<
-                         TestSearchSpaces,
-                         detail::getLocalView
-                      >::type
-             >::type;
+        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               TestSearchSpaces>::Type;
 
   static const bool testSearchSpaceIsRefined
     = is_RefinedFiniteElement<TestSearchSpace>::value;
@@ -345,14 +313,12 @@ public:
     testspaceCoefficientMatrix(testCoeffMat),
     finiteElement_(nullptr),
     testSearchSpace_(nullptr),
-    localViewsSolution_(boost::fusion::as_vector(
-                boost::fusion::transform(testCoeffMat.bilinearForm()
+    localViewsSolution_(genericTransformTuple(testCoeffMat.bilinearForm()
                                                 .getSolutionSpaces(),
-                                         detail::getLocalView()))),
-    localViewsTest(boost::fusion::as_vector(
-                boost::fusion::transform(testCoeffMat.bilinearForm()
+                                              detail::getLocalViewFunctor())),
+    localViewsTest(genericTransformTuple(testCoeffMat.bilinearForm()
                                                     .getTestSpaces(),
-                                         detail::getLocalView())))
+                                          detail::getLocalViewFunctor()))
   {}
 
   //! Return current element, throw if unbound
@@ -374,19 +340,16 @@ public:
   void bind(const Element& e)
   {
     using namespace Dune::detail;
-    using namespace boost::fusion;
 
     this->element_ = &e;
-    for_each(localViewsTest, applyBind<decltype(e)>(e));
+    Hybrid::forEach(localViewsTest, applyBind<decltype(e)>(e));
     testSearchSpace_ =
-        &(at_c<testIndex>(localViewsTest).tree().finiteElement());
-    for_each(localViewsSolution_, applyBind<decltype(e)>(e));
+        &(std::get<testIndex>(localViewsTest).tree().finiteElement());
+    Hybrid::forEach(localViewsSolution_, applyBind<decltype(e)>(e));
 
     testspaceCoefficientMatrix.bind(e);
 
-    size_t localTestSpaceOffsets[std::tuple_size<TestSearchSpaces>::value];
-    fold(zip(localTestSpaceOffsets, localViewsTest), (size_t)0, offsetHelper());
-    size_t offset = at_c<testIndex>(localTestSpaceOffsets);
+    const size_t offset = computeOffset<testIndex>(localViewsTest);
 
     finiteElement_ = std::make_unique<FiniteElement>
                         (testspaceCoefficientMatrix.coefficientMatrix(),
@@ -428,19 +391,15 @@ public:
   using Node = typename NodeFactory::template Node<TP>;
 
   typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
-  typedef typename boost::fusion::result_of::as_vector<
-             typename boost::fusion::result_of::transform<
-                       SolutionSpaces,
-                       detail::getLocalIndexSet>::type
-             >::type SolutionLocalIndexSets;
+  typedef typename ForEachType<detail::getLocalIndexSetFunctor::TypeEvaluator,
+                               SolutionSpaces>::Type  SolutionLocalIndexSets;
 
   OptimalTestBasisNodeIndexSet(const NodeFactory& nodeFactory) :
     nodeFactory_(&nodeFactory),
-    solutionLocalIndexSets_(boost::fusion::as_vector(
-              boost::fusion::transform(
+    solutionLocalIndexSets_(genericTransformTuple(
                       nodeFactory.testspaceCoefficientMatrix_
                           .bilinearForm().getSolutionSpaces(),
-                      detail::getLocalIndexSet())))
+                      detail::getLocalIndexSetFunctor()))
   {}
 
   constexpr OptimalTestBasisNodeIndexSet(const OptimalTestBasisNodeIndexSet&)
@@ -456,12 +415,10 @@ public:
    */
   void bind(const Node& node)
   {
-    using namespace boost::fusion;
-
     node_ = &node;
 
-    for_each(zip(solutionLocalIndexSets_, node.localViewsSolution()),
-             make_fused_procedure(detail::bindLocalIndexSet()));
+    detail::bindLocalIndexSets(solutionLocalIndexSets_,
+                               node.localViewsSolution());
   }
 
   /** \brief Unbind the view
@@ -469,7 +426,9 @@ public:
   void unbind()
   {
     node_ = nullptr;
-    for_each(solutionLocalIndexSets_, detail::applyUnbind());
+    Hybrid::forEach(solutionLocalIndexSets_, [](auto& lis) {
+          lis.unbind();
+        });
   }
 
   /** \brief Size of subtree rooted in this node (element-local)
@@ -482,15 +441,12 @@ public:
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
   MultiIndex index(size_type i) const
   {
-    using namespace Dune::detail;
-    using namespace boost::fusion;
-
     size_t space_index=0;
     size_t index_result=i;
     bool index_found=false;
 
-    for_each(solutionLocalIndexSets_,
-             computeIndex(space_index, index_result, index_found));
+    Hybrid::forEach(solutionLocalIndexSets_,
+                    computeIndex(space_index, index_result, index_found));
 
     MultiIndex result;
     result[0]=(nodeFactory_->globalOffsets[space_index]+index_result);

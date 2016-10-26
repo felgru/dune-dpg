@@ -9,12 +9,8 @@
 #include <type_traits>
 #include <vector>
 
-#include <boost/fusion/algorithm/transformation/transform.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
-
+#include <dune/common/hybridutilities.hh>
+#include <dune/common/tupleutility.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -25,6 +21,33 @@
 
 
 namespace Dune {
+
+  namespace detail {
+    template<class GlobalVectorType, class LocalVectorType,
+            class LocalViews, class LocalIndexSets,
+            class Offsets>
+    inline void getLocalCoefficients(
+        const GlobalVectorType& solution,
+        LocalVectorType& solutionElement,
+        const LocalViews& localViews,
+        const LocalIndexSets& localIndexSets,
+        const Offsets& localOffsets,
+        const Offsets& globalOffsets) {
+      Hybrid::forEach(
+          Std::make_index_sequence<
+              std::tuple_size<LocalViews>::value>{},
+          [&](auto i) {
+            auto const & localView = std::get<i>(localViews);
+            auto const & localIndexSet = std::get<i>(localIndexSets);
+            const size_t dofElement = localView.size();
+            for (size_t j=0; j<dofElement; j++)
+            {
+              solutionElement[j + localOffsets[i]]
+                  = solution[globalOffsets[i] + localIndexSet.index(j)[0]];
+            }
+          });
+    }
+  }
 
 
   //*******************************************************************
@@ -267,32 +290,27 @@ namespace Dune {
       SolutionLocalIndexSets& solutionLocalIndexSets,
       VectorType& solution)
   {
-    using namespace boost::fusion;
     using namespace Dune::detail;
 
     typedef typename InnerProduct::TestSpaces SolutionSpaces;
 
     // Create and fill vector with offsets for global dofs
     size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-
-    fold(zip(globalSolutionSpaceOffsets, innerProduct.getTestSpaces()),
-         (size_t)0, globalOffsetHelper());
+    computeOffsets(globalSolutionSpaceOffsets, innerProduct.getTestSpaces());
 
     // Create and fill vector with offsets for local dofs on element
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    const size_t localSolutionDofs
+        = computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
 
-    size_t localSolutionDofs = fold(zip(localSolutionSpaceOffsets,
-                                        solutionLocalViews),
-                                    (size_t)0, globalOffsetHelper());
     // Create and fill vectors with cofficients
     // corresponding to local dofs on element
     // for the solution and for the righthand side
     BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
 
-    for_each(zip(solutionLocalViews, solutionLocalIndexSets,
-                 localSolutionSpaceOffsets, globalSolutionSpaceOffsets),
-         getLocalCoefficients<VectorType, BlockVector<FieldVector<double,1> > >
-           (solution, solutionElement));
+    detail::getLocalCoefficients(solution, solutionElement,
+        solutionLocalViews, solutionLocalIndexSets,
+        localSolutionSpaceOffsets, globalSolutionSpaceOffsets);
 
     double errSquare = 0;
 
@@ -318,7 +336,7 @@ namespace Dune {
     double tmpValue = 0;
     // TODO adjust quadrature for non-constant RHS
     unsigned int quadratureOrder = 5;
-    auto element = at_c<0>(solutionLocalViews).element();
+    auto element = std::get<0>(solutionLocalViews).element();
     auto geometry = element.geometry();
     typedef decltype(element) Element;
     const int dim = Element::dimension;
@@ -369,7 +387,6 @@ namespace Dune {
                                         const RhsFunction& f,
                                         const VectorType& solution)
   {
-    using namespace boost::fusion;
     using namespace Dune::detail;
 
     typedef typename std::tuple_element<0, typename InnerProduct::TestSpaces>
@@ -379,18 +396,18 @@ namespace Dune {
 
     typedef typename InnerProduct::TestSpaces SolutionSpaces;
 
-    typedef typename result_of::as_vector<typename
-                result_of::transform<SolutionSpaces, getLocalView>::type
-            >::type SolutionLocalViews;
+    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                                 SolutionSpaces>::Type  SolutionLocalViews;
 
     SolutionLocalViews solutionLocalViews
-        = as_vector(transform(innerProduct.getTestSpaces(), getLocalView()));
+        = genericTransformTuple(innerProduct.getTestSpaces(),
+                                getLocalViewFunctor());
 
 
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
-            = as_vector(transform(innerProduct.getTestSpaces(),
-                                  getLocalIndexSet()));
+            = genericTransformTuple(innerProduct.getTestSpaces(),
+                                    getLocalIndexSetFunctor());
 
     // Variable where we compute the residual
     double res = 0.;
@@ -398,9 +415,8 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       // Bind localViews and localIndexSets
-      for_each(solutionLocalViews, applyBind<decltype(e)>(e));
-      for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-               make_fused_procedure(bindLocalIndexSet()));
+      Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+      bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
       res += aPosterioriL2ErrorSquareElement(innerProduct,
                                              linearForm,
@@ -437,7 +453,6 @@ namespace Dune {
       VectorType& solution,
       VectorType& rhs)
   {
-    using namespace boost::fusion;
     using namespace Dune::detail;
 
     typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
@@ -447,35 +462,31 @@ namespace Dune {
     size_t globalTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
     size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-    fold(zip(globalTestSpaceOffsets, bilinearForm.getTestSpaces()),
-           (size_t)0, globalOffsetHelper());
-    fold(zip(globalSolutionSpaceOffsets, bilinearForm.getSolutionSpaces()),
-           (size_t)0, globalOffsetHelper());
+    computeOffsets(globalTestSpaceOffsets, bilinearForm.getTestSpaces());
+    computeOffsets(globalSolutionSpaceOffsets,
+                   bilinearForm.getSolutionSpaces());
 
     // Create and fill vector with offsets for local dofs on element
     size_t localTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-    size_t localSolutionDofs = fold(zip(localSolutionSpaceOffsets,
-                                        solutionLocalViews),
-                                    (size_t)0, globalOffsetHelper());
-    size_t localTestDofs = fold(zip(localTestSpaceOffsets,
-                                    testLocalViews),
-                                (size_t)0, globalOffsetHelper());
+    const size_t localSolutionDofs
+        = computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
+    const size_t localTestDofs
+        = computeOffsets(localTestSpaceOffsets, testLocalViews);
+
     // Create and fill vectors with cofficients
     // corresponding to local dofs on element
     // for the solution and for the righthand side
     BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
     BlockVector<FieldVector<double,1> > rhsElement(localTestDofs);
 
-    for_each(zip(solutionLocalViews, solutionLocalIndexSets,
-                 localSolutionSpaceOffsets, globalSolutionSpaceOffsets),
-         getLocalCoefficients<VectorType, BlockVector<FieldVector<double,1> > >
-           (solution, solutionElement));
-    for_each(zip(testLocalViews, testLocalIndexSets,
-                 localTestSpaceOffsets, globalTestSpaceOffsets),
-         getLocalCoefficients<VectorType, BlockVector<FieldVector<double,1> > >
-           (rhs, rhsElement));
+    detail::getLocalCoefficients(solution, solutionElement,
+        solutionLocalViews, solutionLocalIndexSets,
+        localSolutionSpaceOffsets, globalSolutionSpaceOffsets);
+    detail::getLocalCoefficients(rhs, rhsElement,
+        testLocalViews, testLocalIndexSets,
+        localTestSpaceOffsets, globalTestSpaceOffsets);
 
     // We grab the inner product matrix in the innerProductMatrix variable (IP)
     Matrix<FieldMatrix<double,1,1> > innerProductMatrix;
@@ -514,7 +525,6 @@ namespace Dune {
                                       const VectorType& solution,
                                       const VectorType& rhs)
   {
-    using namespace boost::fusion;
     using namespace Dune::detail;
 
     typedef typename std::tuple_element
@@ -527,26 +537,26 @@ namespace Dune {
     typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
     typedef typename BilinearForm::TestSpaces EnrichedTestspaces;
 
-    typedef typename result_of::as_vector<
-          typename result_of::transform<SolutionSpaces, getLocalView>::type
-        >::type SolutionLocalViews;
-    typedef typename result_of::as_vector<
-          typename result_of::transform<EnrichedTestspaces, getLocalView>::type
-        >::type TestLocalViews;
+    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                                 SolutionSpaces>::Type  SolutionLocalViews;
+    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                                 EnrichedTestspaces>::Type  TestLocalViews;
 
     SolutionLocalViews solutionLocalViews
-        = as_vector(transform(bilinearForm.getSolutionSpaces(),
-                              getLocalView()));
+        = genericTransformTuple(bilinearForm.getSolutionSpaces(),
+                                getLocalViewFunctor());
     TestLocalViews testLocalViews
-        = as_vector(transform(bilinearForm.getTestSpaces(), getLocalView()));
+        = genericTransformTuple(bilinearForm.getTestSpaces(),
+                                getLocalViewFunctor());
 
     // We get the local index sets of the test spaces
-    auto testLocalIndexSets = as_vector(transform(bilinearForm.getTestSpaces(),
-                                                  getLocalIndexSet()));
+    auto testLocalIndexSets
+        = genericTransformTuple(bilinearForm.getTestSpaces(),
+                                getLocalIndexSetFunctor());
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
-            = as_vector(transform(bilinearForm.getSolutionSpaces(),
-                                  getLocalIndexSet()));
+            = genericTransformTuple(bilinearForm.getSolutionSpaces(),
+                                    getLocalIndexSetFunctor());
 
     // Variable where we compute the residual
     double res = 0.;
@@ -554,12 +564,10 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       // Bind localViews and localIndexSets
-      for_each(testLocalViews, applyBind<decltype(e)>(e));
-      for_each(solutionLocalViews, applyBind<decltype(e)>(e));
-      for_each(zip(testLocalIndexSets, testLocalViews),
-               make_fused_procedure(bindLocalIndexSet()));
-      for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-               make_fused_procedure(bindLocalIndexSet()));
+      Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
+      Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+      bindLocalIndexSets(testLocalIndexSets, testLocalViews);
+      bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
       res += aPosterioriErrorSquareElement(bilinearForm,
                                            innerProduct,
@@ -607,7 +615,6 @@ namespace Dune {
       double splitRatio
                                     )
   {
-    using namespace boost::fusion;
     using namespace Dune::detail;
 
     assert(splitRatio >= 0 && splitRatio <= 1);
@@ -626,37 +633,37 @@ namespace Dune {
     using EnrichedTestspaces = typename BilinearForm::TestSpaces;
 
     using SolutionLocalViews
-        = typename result_of::as_vector<typename
-            result_of::transform<SolutionSpaces,getLocalView>::type>::type;
+        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               SolutionSpaces>::Type;
     using TestLocalViews
-        = typename result_of::as_vector<typename
-            result_of::transform<EnrichedTestspaces,getLocalView>::type>::type;
+        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               EnrichedTestspaces>::Type;
 
     SolutionLocalViews solutionLocalViews
-        = as_vector(transform(bilinearForm.getSolutionSpaces(),
-                              getLocalView()));
+        = genericTransformTuple(bilinearForm.getSolutionSpaces(),
+                                getLocalViewFunctor());
     TestLocalViews testLocalViews
-        = as_vector(transform(bilinearForm.getTestSpaces(), getLocalView()));
+        = genericTransformTuple(bilinearForm.getTestSpaces(),
+                                getLocalViewFunctor());
 
     // We get the local index sets of the test spaces
-    auto testLocalIndexSets = as_vector(transform(bilinearForm.getTestSpaces(),
-                                                  getLocalIndexSet()));
+    auto testLocalIndexSets
+        = genericTransformTuple(bilinearForm.getTestSpaces(),
+                                getLocalIndexSetFunctor());
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
-            = as_vector(transform(bilinearForm.getSolutionSpaces(),
-                                  getLocalIndexSet()));
+            = genericTransformTuple(bilinearForm.getSolutionSpaces(),
+                                    getLocalIndexSetFunctor());
 
     std::vector<std::tuple<EntitySeed, double>> errorEstimates;
     errorEstimates.reserve(gridView.size(0));
     for(const auto& e : elements(gridView))
     {
       // Bind localViews and localIndexSets
-      for_each(testLocalViews, applyBind<decltype(e)>(e));
-      for_each(solutionLocalViews, applyBind<decltype(e)>(e));
-      for_each(zip(testLocalIndexSets, testLocalViews),
-               make_fused_procedure(bindLocalIndexSet()));
-      for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-               make_fused_procedure(bindLocalIndexSet()));
+      Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
+      Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+      bindLocalIndexSets(testLocalIndexSets, testLocalViews);
+      bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
       // Now we compute the error inside the element
       double elementError = 0;

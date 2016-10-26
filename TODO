@@ -12,7 +12,8 @@ known bugs:
 
 technical debt that needs to be paid off sooner or later:
 
-* Replace boost::fusion with dune/common/tupleutility.hh or use
-  dune-typetree instead of std::tuple.
-* Beginning with version 1.58 boost::fusion has better support for std::tuple,
-  thus we can maybe get rid of those boost::fusion::vectors.
+* Replace boost::fusion with dune/common/hybridutilities.hh,
+  dune/common/tupleutility.hh or use dune-typetree instead of std::tuple.
+  If this does not work, see if Boost.Hana is a viable alternative.
+  As boost::fusion introduces new regressions with every single release
+  we should get rid of it ASAP.

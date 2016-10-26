@@ -15,9 +15,6 @@
 
 #include <dune/istl/bvector.hh>
 
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
-
 
 namespace Dune {
 
