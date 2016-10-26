@@ -9,9 +9,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/tupleutility.hh>
 #include <dune/istl/matrix.hh>
@@ -24,6 +21,33 @@
 
 
 namespace Dune {
+
+  namespace detail {
+    template<class GlobalVectorType, class LocalVectorType,
+            class LocalViews, class LocalIndexSets,
+            class Offsets>
+    inline void getLocalCoefficients(
+        const GlobalVectorType& solution,
+        LocalVectorType& solutionElement,
+        const LocalViews& localViews,
+        const LocalIndexSets& localIndexSets,
+        const Offsets& localOffsets,
+        const Offsets& globalOffsets) {
+      Hybrid::forEach(
+          Std::make_index_sequence<
+              std::tuple_size<LocalViews>::value>{},
+          [&](auto i) {
+            auto const & localView = std::get<i>(localViews);
+            auto const & localIndexSet = std::get<i>(localIndexSets);
+            const size_t dofElement = localView.size();
+            for (size_t j=0; j<dofElement; j++)
+            {
+              solutionElement[j + localOffsets[i]]
+                  = solution[globalOffsets[i] + localIndexSet.index(j)[0]];
+            }
+          });
+    }
+  }
 
 
   //*******************************************************************
@@ -284,12 +308,9 @@ namespace Dune {
     // for the solution and for the righthand side
     BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
 
-    using namespace boost::fusion;
-
-    for_each(zip(solutionLocalViews, solutionLocalIndexSets,
-                 localSolutionSpaceOffsets, globalSolutionSpaceOffsets),
-         getLocalCoefficients<VectorType, BlockVector<FieldVector<double,1> > >
-           (solution, solutionElement));
+    detail::getLocalCoefficients(solution, solutionElement,
+        solutionLocalViews, solutionLocalIndexSets,
+        localSolutionSpaceOffsets, globalSolutionSpaceOffsets);
 
     double errSquare = 0;
 
@@ -315,7 +336,7 @@ namespace Dune {
     double tmpValue = 0;
     // TODO adjust quadrature for non-constant RHS
     unsigned int quadratureOrder = 5;
-    auto element = at_c<0>(solutionLocalViews).element();
+    auto element = std::get<0>(solutionLocalViews).element();
     auto geometry = element.geometry();
     typedef decltype(element) Element;
     const int dim = Element::dimension;
@@ -460,16 +481,12 @@ namespace Dune {
     BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
     BlockVector<FieldVector<double,1> > rhsElement(localTestDofs);
 
-    using namespace boost::fusion;
-
-    for_each(zip(solutionLocalViews, solutionLocalIndexSets,
-                 localSolutionSpaceOffsets, globalSolutionSpaceOffsets),
-         getLocalCoefficients<VectorType, BlockVector<FieldVector<double,1> > >
-           (solution, solutionElement));
-    for_each(zip(testLocalViews, testLocalIndexSets,
-                 localTestSpaceOffsets, globalTestSpaceOffsets),
-         getLocalCoefficients<VectorType, BlockVector<FieldVector<double,1> > >
-           (rhs, rhsElement));
+    detail::getLocalCoefficients(solution, solutionElement,
+        solutionLocalViews, solutionLocalIndexSets,
+        localSolutionSpaceOffsets, globalSolutionSpaceOffsets);
+    detail::getLocalCoefficients(rhs, rhsElement,
+        testLocalViews, testLocalIndexSets,
+        localTestSpaceOffsets, globalTestSpaceOffsets);
 
     // We grab the inner product matrix in the innerProductMatrix variable (IP)
     Matrix<FieldMatrix<double,1,1> > innerProductMatrix;
