@@ -36,24 +36,6 @@ struct getLocalIndexSet
   }
 };
 
-struct getLocalView
-{
-  template<class T>
-  struct result;
-
-  template<class T>
-  struct result<getLocalView(T)>
-  {
-    typedef typename T::LocalView type;
-  };
-
-  template<class T>
-  typename result<getLocalView(T)>::type operator()(const T& t) const
-  {
-    return t.localView();
-  }
-};
-
 struct getLocalViewFunctor
 {
   template<class T>
@@ -119,19 +101,16 @@ template <class MatrixType,
           class SolutionSpaces>
 struct getLocalMatrixHelper
 {
-  template<class T, class Seq>
+  template<class T, class Tuple>
   using array_of_same_size =
-      T[boost::fusion::result_of::size<Seq>::type::value];
+      T[std::tuple_size<Tuple>::value];
 
   //! tuple type for the local views of the test spaces
-  typedef typename boost::fusion::result_of::as_vector<
-      typename boost::fusion::result_of::
-      transform<TestSpaces, detail::getLocalView>::type>::type TestLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               TestSpaces>::Type  TestLocalViews;
   //! tuple type for the local views of the solution spaces
-  typedef typename boost::fusion::result_of::as_vector<
-      typename boost::fusion::result_of::
-      transform<SolutionSpaces, detail::getLocalView>::type
-      >::type SolutionLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               SolutionSpaces>::Type  SolutionLocalViews;
 
   getLocalMatrixHelper(const TestLocalViews& testLocalViews,
                        const SolutionLocalViews& solutionLocalViews,
@@ -159,18 +138,16 @@ struct getLocalMatrixHelper
           solutionSpaceIndex,
           Term>& termTuple) const
   {
-    using namespace boost::fusion;
-
     const auto& term = std::get<2>(termTuple);
 
     const auto& testLV =
-        at_c<testSpaceIndex::value>(testLocalViews);
+        std::get<testSpaceIndex::value>(testLocalViews);
     const auto& solutionLV =
-        at_c<solutionSpaceIndex::value>(solutionLocalViews);
+        std::get<solutionSpaceIndex::value>(solutionLocalViews);
     size_t localTestSpaceOffset =
-        at_c<testSpaceIndex::value>(localTestSpaceOffsets);
+        localTestSpaceOffsets[testSpaceIndex::value];
     size_t localSolutionSpaceOffset =
-        at_c<solutionSpaceIndex::value>(localSolutionSpaceOffsets);
+        localSolutionSpaceOffsets[solutionSpaceIndex::value];
 
     term.getLocalMatrix(testLV,
                         solutionLV,
@@ -193,14 +170,13 @@ template <class VectorType,
           class TestSpaces>
 struct getLocalVectorHelper
 {
-  template<class T, class Seq>
+  template<class T, class Tuple>
   using array_of_same_size =
-      T[boost::fusion::result_of::size<Seq>::type::value];
+      T[std::tuple_size<Tuple>::value];
 
   //! tuple type for the local views of the test spaces
-  typedef typename boost::fusion::result_of::as_vector<
-      typename boost::fusion::result_of::
-      transform<TestSpaces, detail::getLocalView>::type>::type TestLocalViews;
+  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                               TestSpaces>::Type  TestLocalViews;
 
   getLocalVectorHelper(const TestLocalViews& testLocalViews,
                        VectorType& elementVector,
@@ -219,14 +195,11 @@ struct getLocalVectorHelper
   void operator()
          (const std::tuple<testSpaceIndex, Term>& termTuple) const
   {
-    using namespace boost::fusion;
-
     const auto& term = std::get<1>(termTuple);
 
-    const auto& testLV =
-        at_c<testSpaceIndex::value>(testLocalViews);
-    size_t localTestSpaceOffset =
-        at_c<testSpaceIndex::value>(localTestSpaceOffsets);
+    const auto& testLV = std::get<testSpaceIndex::value>(testLocalViews);
+    const size_t localTestSpaceOffset =
+        localTestSpaceOffsets[testSpaceIndex::value];
 
     term.getLocalVector(testLV,
                         elementVector,
