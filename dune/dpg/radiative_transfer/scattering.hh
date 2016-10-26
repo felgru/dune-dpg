@@ -16,9 +16,6 @@
 
 #include <dune/istl/bvector.hh>
 
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
-
 namespace Dune {
 
 /**
@@ -153,7 +150,6 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
                    const std::vector<Direction>& sVector,
                    Function& kernelS)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   constexpr bool isSaddlepoint =
@@ -170,11 +166,8 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  size_t globalTotalTestSize = 0;
-
-  globalTotalTestSize =
-    fold(zip(globalTestSpaceOffsets, testSpaces),
-         (size_t)0, globalOffsetHelper());
+  const size_t globalTotalTestSize
+      = computeOffsets(globalTestSpaceOffsets, testSpaces);
 
   if(!isSaddlepoint)
   {
@@ -185,8 +178,8 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
   }
 
   size_t globalTotalSolutionSize =
-    fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
-         isSaddlepoint?globalTotalTestSize:0, globalOffsetHelper());
+    computeOffsets(globalSolutionSpaceOffsets, solutionSpaces,
+                   isSaddlepoint?globalTotalTestSize:0);
   globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
 
   const size_t globalSolutionSpaceOffset =
@@ -197,25 +190,25 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
   scattering = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews     = as_vector(transform(testSpaces, getLocalView()));
-  auto solutionLocalViews = as_vector(transform(solutionSpaces, getLocalView()));
+  auto testLocalViews     = genericTransformTuple(testSpaces,
+                                                  getLocalViewFunctor());
+  auto solutionLocalViews = genericTransformTuple(solutionSpaces,
+                                                  getLocalViewFunctor());
 
-  auto testLocalIndexSets     = as_vector(transform(testSpaces,
-                                                    getLocalIndexSet()));
-  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces,
-                                                    getLocalIndexSet()));
+  auto testLocalIndexSets
+      = genericTransformTuple(testSpaces, getLocalIndexSetFunctor());
+  auto solutionLocalIndexSets
+      = genericTransformTuple(solutionSpaces, getLocalIndexSetFunctor());
 
   for(const auto& e : elements(gridView)) {
 
     // Bind the local FE basis view to the current element
     /* TODO: only bind the space we use later */
-    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
-    for_each(testLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
 
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
-    for_each(zip(testLocalIndexSets, testLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+    bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
     // Now get the local contribution to the right-hand side vector
 
@@ -226,9 +219,9 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
 
     // Get set of shape functions for this element
     const auto& localFiniteElementTest =
-        at_c<0>(testLocalViews).tree().finiteElement();
+        std::get<0>(testLocalViews).tree().finiteElement();
     const auto& localFiniteElementSolution =
-        at_c<solutionSpaceIndex>(solutionLocalViews).tree().finiteElement();
+        std::get<solutionSpaceIndex>(solutionLocalViews).tree().finiteElement();
 
     BlockVector<FieldVector<double,1> >
         localScattering(localFiniteElementTest.localBasis().size());
@@ -281,7 +274,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
            * scattering angles.
            */
           auto row =
-              at_c<solutionSpaceIndex>(solutionLocalIndexSets).index(j)[0]
+              std::get<solutionSpaceIndex>(solutionLocalIndexSets).index(j)[0]
             + globalSolutionSpaceOffset;
           uValue += x[scatteringAngle][row] * shapeFunctionValues[j];
         }
@@ -295,18 +288,22 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
 
     }
 
+    // TODO: We should probably not hard-code the test space index
+    //       and testLocalOffset.
     auto rhsCopier
         = localToGlobalRHSCopier
             <typename std::remove_reference<decltype(localScattering)>::type,
-             typename std::remove_reference<decltype(scattering)>::type>
-            (localScattering, scattering);
-    // TODO: We should probably not hard-code the test space index
-    //       and testLocalOffset.
-    rhsCopier(at_c<0>(testLocalViews),
-              at_c<0>(testLocalIndexSets),
-              0,
-              globalTestSpaceOffsets[0]
-             );
+             typename std::remove_reference<decltype(scattering)>::type,
+             typename std::remove_reference<decltype(testLocalViews)>::type,
+             typename std::remove_reference<decltype(testLocalIndexSets)>::type,
+             typename std::remove_reference<decltype(globalTestSpaceOffsets)>
+                         ::type>
+            (localScattering, scattering,
+             testLocalViews,
+             testLocalIndexSets,
+             {0},
+             globalTestSpaceOffsets);
+    rhsCopier(std::integral_constant<size_t, 0>{});
 
   }
 }

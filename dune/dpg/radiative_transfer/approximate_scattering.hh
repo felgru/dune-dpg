@@ -15,9 +15,6 @@
 
 #include <dune/istl/bvector.hh>
 
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
-
 #include <boost/math/constants/constants.hpp>
 
 #include <Eigen/Core>
@@ -262,7 +259,6 @@ void ApproximateScatteringAssembler<SolutionSpaces, KernelApproximation>::
 precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
                      const std::vector<BlockVector<FieldVector<double,1> >>& x)
 {
-  using namespace boost::fusion;
   using namespace Dune::detail;
 
   typedef typename std::tuple_element<0,SolutionSpaces>::type::GridView
@@ -272,8 +268,7 @@ precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-  fold(zip(globalSolutionSpaceOffsets, solutionSpaces),
-       (size_t)0, globalOffsetHelper());
+  computeOffsets(globalSolutionSpaceOffsets, solutionSpaces);
 
   const size_t globalSolutionSpaceOffset =
       globalSolutionSpaceOffsets[solutionSpaceIndex];
@@ -284,24 +279,24 @@ precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
   normSquared = 0;
 
   // Views on the FE bases on a single element
-  auto solutionLocalViews = as_vector(transform(solutionSpaces, getLocalView()));
+  auto solutionLocalViews = genericTransformTuple(solutionSpaces,
+                                                  getLocalViewFunctor());
 
-  auto solutionLocalIndexSets = as_vector(transform(solutionSpaces,
-                                                    getLocalIndexSet()));
+  auto solutionLocalIndexSets
+      = genericTransformTuple(solutionSpaces, getLocalIndexSetFunctor());
 
   for(const auto& e : elements(gridView)) {
 
     // Bind the local FE basis view to the current element
     /* TODO: only bind the space we use later */
-    for_each(solutionLocalViews, applyBind<decltype(e)>(e));
-
-    for_each(zip(solutionLocalIndexSets, solutionLocalViews),
-             make_fused_procedure(bindLocalIndexSet()));
+    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     // Now get the local contribution to the scattering functional
 
     BlockVector<FieldVector<double,1>>
-        localScattering(at_c<solutionSpaceIndex>(solutionLocalViews).size());
+        localScattering(std::get<solutionSpaceIndex>(solutionLocalViews)
+                                                                  .size());
     localScattering = 0;
     BlockVector<FieldVector<double,1>> localNormSquared(localScattering.size());
     localNormSquared = 0;
@@ -309,10 +304,10 @@ precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
     detail::GetLocalApproximateScattering
       < std::tuple_element_t<solutionSpaceIndex, SolutionSpaces>
       >::interiorImpl(
-            at_c<solutionSpaceIndex>(solutionLocalViews),
+            std::get<solutionSpaceIndex>(solutionLocalViews),
             localScattering,
             localNormSquared,
-            at_c<solutionSpaceIndex>(solutionLocalIndexSets),
+            std::get<solutionSpaceIndex>(solutionLocalIndexSets),
             globalSolutionSpaceOffset,
             // unsigned int quadratureOrder,
             e,
@@ -320,27 +315,39 @@ precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
             x,
             si);
 
+    typename std::remove_reference<decltype(globalSolutionSpaceOffsets)>
+                         ::type zeroes;
+    for(size_t i = 0; i < std::tuple_size<SolutionSpaces>::value; i++)
+      zeroes[i] = 0;
     auto scatteringCopier
         = localToGlobalRHSCopier
             <typename std::remove_reference<decltype(localScattering)>::type,
-             typename std::remove_reference<decltype(scattering)>::type>
-            (localScattering, scattering);
-    scatteringCopier(at_c<solutionSpaceIndex>(solutionLocalViews),
-                     at_c<solutionSpaceIndex>(solutionLocalIndexSets),
-                     0,
-                     0
-                    );
+             typename std::remove_reference<decltype(scattering)>::type,
+             typename std::remove_reference<decltype(solutionLocalViews)>::type,
+             typename std::remove_reference<decltype(solutionLocalIndexSets)>
+                         ::type,
+             typename std::remove_reference<decltype(zeroes)>::type>
+            (localScattering, scattering,
+             solutionLocalViews,
+             solutionLocalIndexSets,
+             zeroes,
+             zeroes);
+    scatteringCopier(std::integral_constant<size_t, solutionSpaceIndex>{});
 
     auto normCopier
         = localToGlobalRHSCopier
             <typename std::remove_reference<decltype(localNormSquared)>::type,
-             typename std::remove_reference<decltype(normSquared)>::type>
-            (localNormSquared, normSquared);
-    normCopier(at_c<solutionSpaceIndex>(solutionLocalViews),
-               at_c<solutionSpaceIndex>(solutionLocalIndexSets),
-               0,
-               0
-              );
+             typename std::remove_reference<decltype(normSquared)>::type,
+             typename std::remove_reference<decltype(solutionLocalViews)>::type,
+             typename std::remove_reference<decltype(solutionLocalIndexSets)>
+                         ::type,
+             typename std::remove_reference<decltype(zeroes)>::type>
+            (localNormSquared, normSquared,
+             solutionLocalViews,
+             solutionLocalIndexSets,
+             zeroes,
+             zeroes);
+    normCopier(std::integral_constant<size_t, solutionSpaceIndex>{});
   }
 
   for(size_t i=0, iMax=scattering.size(); i<iMax; ++i)
