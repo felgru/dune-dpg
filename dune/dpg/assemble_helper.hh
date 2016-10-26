@@ -289,8 +289,6 @@ inline void getOccupationPattern(
       const LeftOffsets& leftGlobalOffsets,
       const RightOffsets& rightGlobalOffsets,
       MatrixIndexSet& occupationPattern) {
-  using namespace boost::fusion;
-
   auto gOPH = getOccupationPatternHelper<LeftLocalViews,
                                          RightLocalViews,
                                          LeftLocalIndexSets,
@@ -303,29 +301,60 @@ inline void getOccupationPattern(
                        leftGlobalOffsets,
                        rightGlobalOffsets,
                        occupationPattern);
-  for_each(Indices{},
+  boost::fusion::for_each(Indices{},
       std::ref(gOPH));
 }
 
 template<class LocalMatrix, class GlobalMatrix,
+         class TestLocalViews, class SolutionLocalViews,
+         class TestLocalIndexSets, class SolutionLocalIndexSets,
+         class TestOffsets, class SolutionOffsets,
          bool mirror = false>
 struct localToGlobalCopier
 {
 
-  localToGlobalCopier(const LocalMatrix& lm, GlobalMatrix& gm) :
-      elementMatrix(lm), matrix(gm) {}
+  localToGlobalCopier
+         (const LocalMatrix& lm, GlobalMatrix& gm,
+          TestLocalViews const & testLocalViews,
+          TestLocalIndexSets const & testLocalIndexSets,
+          TestOffsets const & testLocalOffsets,
+          TestOffsets const & testGlobalOffsets,
+          SolutionLocalViews const & solutionLocalViews,
+          SolutionLocalIndexSets const & solutionLocalIndexSets,
+          SolutionOffsets const & solutionLocalOffsets,
+          SolutionOffsets const & solutionGlobalOffsets)
+      : elementMatrix(lm), matrix(gm),
+        testLocalViews(testLocalViews),
+        testLocalIndexSets(testLocalIndexSets),
+        testLocalOffsets(testLocalOffsets),
+        testGlobalOffsets(testGlobalOffsets),
+        solutionLocalViews(solutionLocalViews),
+        solutionLocalIndexSets(solutionLocalIndexSets),
+        solutionLocalOffsets(solutionLocalOffsets),
+        solutionGlobalOffsets(solutionGlobalOffsets) {}
 
-  template<class TestLocalView, class SolutionLocalView,
-           class TestLocalIndexSet, class SolutionLocalIndexSet>
+  template <class testSpaceIndex,
+            class solutionSpaceIndex>
   void operator()
-         (TestLocalView const & testLocalView,
-          TestLocalIndexSet const & testLocalIndexSet,
-          size_t testLocalOffset, size_t testGlobalOffset,
-          SolutionLocalView const & solutionLocalView,
-          SolutionLocalIndexSet const & solutionLocalIndexSet,
-          size_t solutionLocalOffset, size_t solutionGlobalOffset
-         )
+         (const std::tuple<
+          testSpaceIndex,
+          solutionSpaceIndex>& indexTuple) const
   {
+    const auto& testLocalView
+        = std::get<testSpaceIndex::value>(testLocalViews);
+    const auto& testLocalIndexSet
+        = std::get<testSpaceIndex::value>(testLocalIndexSets);
+    size_t testLocalOffset = testLocalOffsets[testSpaceIndex::value];
+    size_t testGlobalOffset = testGlobalOffsets[testSpaceIndex::value];
+    const auto& solutionLocalView
+        = std::get<solutionSpaceIndex::value>(solutionLocalViews);
+    const auto& solutionLocalIndexSet
+        = std::get<solutionSpaceIndex::value>(solutionLocalIndexSets);
+    size_t solutionLocalOffset
+        = solutionLocalOffsets[solutionSpaceIndex::value];
+    size_t solutionGlobalOffset
+        = solutionGlobalOffsets[solutionSpaceIndex::value];
+
     const size_t nTest(testLocalView.size());
     const size_t nSolution(solutionLocalView.size());
 
@@ -350,44 +379,15 @@ struct localToGlobalCopier
 private:
   const LocalMatrix& elementMatrix;
   GlobalMatrix& matrix;
-};
 
-template <class SolutionZip,
-          class TestZip,
-          class LocalToGlobalCopier>
-struct localToGlobalCopyHelper
-{
-  localToGlobalCopyHelper(
-                       const SolutionZip& solutionZip,
-                       const TestZip& testZip,
-                       LocalToGlobalCopier& localToGlobalCopier)
-      : solutionZip(solutionZip),
-        testZip(testZip),
-        localToGlobalCopier(localToGlobalCopier)
-  {}
-
-  template <class testSpaceIndex,
-            class solutionSpaceIndex>
-  void operator()
-         (const std::tuple<
-          testSpaceIndex,
-          solutionSpaceIndex>& indexTuple) const
-  {
-    using namespace boost::fusion;
-
-    const auto& solutionData =
-        at_c<solutionSpaceIndex::value>(solutionZip);
-    const auto& testData =
-        at_c<testSpaceIndex::value>(testZip);
-
-    localToGlobalCopier(join(testData, solutionData));
-  }
-
-private:
-  const SolutionZip& solutionZip;
-  const TestZip& testZip;
-
-  LocalToGlobalCopier& localToGlobalCopier;
+  const TestLocalViews & testLocalViews;
+  const TestLocalIndexSets & testLocalIndexSets;
+  const TestOffsets & testLocalOffsets;
+  const TestOffsets & testGlobalOffsets;
+  const SolutionLocalViews & solutionLocalViews;
+  const SolutionLocalIndexSets & solutionLocalIndexSets;
+  const SolutionOffsets & solutionLocalOffsets;
+  const SolutionOffsets & solutionGlobalOffsets;
 };
 
 template<class Indices,
@@ -407,34 +407,24 @@ inline void copyLocalToGlobalMatrix(
     const SolutionLocalIndexSets& solutionLocalIndexSets,
     const SolutionOffsets&        localSolutionSpaceOffsets,
     const SolutionOffsets&        globalSolutionSpaceOffsets) {
-  using namespace boost::fusion;
 
-  auto cpMatrix = fused_procedure<localToGlobalCopier<decltype(elementMatrix),
-                 typename std::remove_reference<decltype(matrix)>::type,
-                 mirror> >
-              (localToGlobalCopier<decltype(elementMatrix),
-                 typename std::remove_reference<decltype(matrix)>::type,
-                 mirror> (elementMatrix, matrix));
-
-  auto testZip     = zip(testLocalViews,
-                         testLocalIndexSets,
-                         localTestSpaceOffsets,
-                         globalTestSpaceOffsets);
-  auto solutionZip = zip(solutionLocalViews,
-                         solutionLocalIndexSets,
-                         localSolutionSpaceOffsets,
-                         globalSolutionSpaceOffsets);
-
-  using TestZip     = decltype(testZip);
-  using SolutionZip = decltype(solutionZip);
+  auto cpMatrix = localToGlobalCopier<LocalMatrix, GlobalMatrix,
+                 TestLocalViews, SolutionLocalViews,
+                 TestLocalIndexSets, SolutionLocalIndexSets,
+                 TestOffsets, SolutionOffsets,
+                 mirror> (elementMatrix, matrix,
+                          testLocalViews,
+                          testLocalIndexSets,
+                          localTestSpaceOffsets,
+                          globalTestSpaceOffsets,
+                          solutionLocalViews,
+                          solutionLocalIndexSets,
+                          localSolutionSpaceOffsets,
+                          globalSolutionSpaceOffsets);
 
   /* copy every local submatrix indexed by a pair of indices from
    * Indices exactly once. */
-  for_each(Indices{},
-           localToGlobalCopyHelper<SolutionZip,
-                                   TestZip,
-                                   std::decay_t<decltype(cpMatrix)>>
-                                  (solutionZip, testZip, cpMatrix));
+  boost::fusion::for_each(Indices{}, cpMatrix);
 }
 
 template<class LocalVector, class GlobalVector>
