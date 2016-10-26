@@ -9,21 +9,6 @@
 #include <memory>
 #include <type_traits>
 
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
-#include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/join.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
-
-#include <boost/fusion/sequence/intrinsic/size.hpp>
-
-
-
-
 #include <dune/common/exceptions.hh>
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/tupleutility.hh>
@@ -430,8 +415,6 @@ public:
    */
   void bind(const Node& node)
   {
-    using namespace boost::fusion;
-
     node_ = &node;
 
     detail::bindLocalIndexSets(solutionLocalIndexSets_,
@@ -458,15 +441,12 @@ public:
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
   MultiIndex index(size_type i) const
   {
-    using namespace Dune::detail;
-    using namespace boost::fusion;
-
     size_t space_index=0;
     size_t index_result=i;
     bool index_found=false;
 
-    for_each(solutionLocalIndexSets_,
-             computeIndex(space_index, index_result, index_found));
+    Hybrid::forEach(solutionLocalIndexSets_,
+                    computeIndex(space_index, index_result, index_found));
 
     MultiIndex result;
     result[0]=(nodeFactory_->globalOffsets[space_index]+index_result);
