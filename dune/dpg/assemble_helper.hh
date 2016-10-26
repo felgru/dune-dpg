@@ -13,6 +13,8 @@
 #include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/algorithm/transformation/join.hpp>
+#include <boost/fusion/algorithm/transformation/zip.hpp>
+#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 #include <boost/fusion/sequence/intrinsic/at.hpp>
 
 namespace Dune {
@@ -378,7 +380,7 @@ struct localToGlobalCopyHelper
     const auto& testData =
         at_c<testSpaceIndex::value>(testZip);
 
-    localToGlobalCopier(join(testData,solutionData));
+    localToGlobalCopier(join(testData, solutionData));
   }
 
 private:
@@ -387,6 +389,53 @@ private:
 
   LocalToGlobalCopier& localToGlobalCopier;
 };
+
+template<class Indices,
+         bool mirror,
+         class LocalMatrix, class GlobalMatrix,
+         class TestLocalViews, class SolutionLocalViews,
+         class TestLocalIndexSets, class SolutionLocalIndexSets,
+         class TestOffsets, class SolutionOffsets>
+inline void copyLocalToGlobalMatrix(
+    const LocalMatrix&            elementMatrix,
+    GlobalMatrix&                 matrix,
+    const TestLocalViews&         testLocalViews,
+    const TestLocalIndexSets&     testLocalIndexSets,
+    const TestOffsets&            localTestSpaceOffsets,
+    const TestOffsets&            globalTestSpaceOffsets,
+    const SolutionLocalViews&     solutionLocalViews,
+    const SolutionLocalIndexSets& solutionLocalIndexSets,
+    const SolutionOffsets&        localSolutionSpaceOffsets,
+    const SolutionOffsets&        globalSolutionSpaceOffsets) {
+  using namespace boost::fusion;
+
+  auto cpMatrix = fused_procedure<localToGlobalCopier<decltype(elementMatrix),
+                 typename std::remove_reference<decltype(matrix)>::type,
+                 mirror> >
+              (localToGlobalCopier<decltype(elementMatrix),
+                 typename std::remove_reference<decltype(matrix)>::type,
+                 mirror> (elementMatrix, matrix));
+
+  auto testZip     = zip(testLocalViews,
+                         testLocalIndexSets,
+                         localTestSpaceOffsets,
+                         globalTestSpaceOffsets);
+  auto solutionZip = zip(solutionLocalViews,
+                         solutionLocalIndexSets,
+                         localSolutionSpaceOffsets,
+                         globalSolutionSpaceOffsets);
+
+  using TestZip     = decltype(testZip);
+  using SolutionZip = decltype(solutionZip);
+
+  /* copy every local submatrix indexed by a pair of indices from
+   * Indices exactly once. */
+  for_each(Indices{},
+           localToGlobalCopyHelper<SolutionZip,
+                                   TestZip,
+                                   std::decay_t<decltype(cpMatrix)>>
+                                  (solutionZip, testZip, cpMatrix));
+}
 
 template<class LocalVector, class GlobalVector>
 struct localToGlobalRHSCopier
@@ -443,6 +492,39 @@ private:
 
   LocalToGlobalRHSCopier& localToGlobalRHSCopier;
 };
+
+template<class Indices,
+         class LocalVector, class GlobalVector,
+         class TestLocalViews,
+         class TestLocalIndexSets,
+         class TestOffsets>
+inline void copyLocalToGlobalVector(
+    const LocalVector&            elementVector,
+    GlobalVector&                 vector,
+    const TestLocalViews&         testLocalViews,
+    const TestLocalIndexSets&     testLocalIndexSets,
+    const TestOffsets&            localTestSpaceOffsets,
+    const TestOffsets&            globalTestSpaceOffsets) {
+  using namespace boost::fusion;
+
+  auto cpRhs = fused_procedure<localToGlobalRHSCopier<decltype(elementVector),
+                 typename std::remove_reference<decltype(vector)>::type> >
+              (localToGlobalRHSCopier<decltype(elementVector),
+                 typename std::remove_reference<decltype(vector)>::type>
+                                      (elementVector, vector));
+
+  auto testZip     = zip(testLocalViews,
+                         testLocalIndexSets,
+                         localTestSpaceOffsets,
+                         globalTestSpaceOffsets);
+
+  /* copy every local subvector indexed by an index from
+   * Indices exactly once. */
+  for_each(Indices{},
+           localToGlobalRHSCopyHelper<decltype(testZip),
+                                      decltype(cpRhs)>
+                                      (testZip, cpRhs));
+}
 
 template<class SpacesOrLocalViews, class Offsets>
 inline size_t computeOffsets(Offsets& offsets, const SpacesOrLocalViews& s,

@@ -17,16 +17,8 @@
 #include <boost/mpl/transform.hpp>
 
 #include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/adapted/mpl.hpp>
-#include <boost/fusion/container/generation/make_vector.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
-#include <boost/fusion/sequence/intrinsic/value_at.hpp>
 
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/tupleutility.hh>
@@ -207,14 +199,33 @@ public:
 
 private:
 
-  template<class TestZip, class SolutionZip, class CP, class CPM>
-  static inline void copy_local_matrix_to_global
-      (const BilinearForm& bilinearForm,
-       const InnerProduct& innerProduct,
-       const TestZip& testZip,
-       const SolutionZip& solutionZip,
-       CP& cp,
-       CPM& cpm);
+  /* create sets of index pairs to loop over.
+   * This will be used later, when copying the local matrices into
+   * the global one.
+   */
+  typedef typename boost::mpl::fold<
+      typename boost::mpl::transform<
+          /* This as_vector is probably not needed for boost::fusion 1.58
+           * or higher. */
+          typename boost::fusion::result_of::as_vector<
+                typename BilinearForm::Terms
+              >::type
+        , detail::mpl::firstTwo<boost::mpl::_1>
+        >::type
+    , boost::mpl::set0<>
+    , boost::mpl::insert<boost::mpl::_1, boost::mpl::_2>
+    >::type BFIndices;
+
+  typedef typename boost::mpl::fold<
+      typename boost::mpl::transform<
+          typename boost::fusion::result_of::as_vector<
+                typename InnerProduct::Terms
+              >::type
+        , detail::mpl::firstTwo<boost::mpl::_1>
+        >::type
+    , boost::mpl::set0<>
+    , boost::mpl::insert<boost::mpl::_1, boost::mpl::_2>
+    >::type IPIndices;
 
   TestSpaces     testSpaces;
   SolutionSpaces solutionSpaces;
@@ -324,39 +335,36 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     bilinearForm.getLocalMatrix(bfElementMatrix);
     innerProduct.getLocalMatrix(ipElementMatrix);
 
-    using namespace boost::fusion;
+    const auto& localTestSpaceOffsets
+        = bilinearForm.getLocalTestSpaceOffsets();
+    const auto& localSolutionSpaceOffsets
+        = bilinearForm.getLocalSolutionSpaceOffsets();
 
     // Add element stiffness matrix onto the global stiffness matrix
-    auto cp = fused_procedure<localToGlobalCopier<decltype(ipElementMatrix),
-                   typename std::remove_reference<decltype(matrix)>::type> >
-                (localToGlobalCopier<decltype(ipElementMatrix),
-                   typename std::remove_reference<decltype(matrix)>::type>
-                                        (ipElementMatrix, matrix));
-    auto cpm = fused_procedure<localToGlobalCopier<decltype(bfElementMatrix),
-                    typename std::remove_reference<decltype(matrix)>::type,
-                    isSaddlepoint> >
-                 (localToGlobalCopier<decltype(bfElementMatrix),
-                    typename std::remove_reference<decltype(matrix)>::type,
-                    isSaddlepoint>
-                                        (bfElementMatrix, matrix));
-
     /* copy every local submatrix indexed by a pair of indices from
      * bfIndices and ipIndices exactly once. */
-    auto testZip = zip(testLocalViews,
-                       testLocalIndexSets,
-                       bilinearForm.getLocalTestSpaceOffsets(),
-                       globalTestSpaceOffsets);
-    auto solutionZip = zip(solutionLocalViews,
-                           solutionLocalIndexSets,
-                           bilinearForm.getLocalSolutionSpaceOffsets(),
-                           globalSolutionSpaceOffsets);
-
-    copy_local_matrix_to_global
-      (bilinearForm,
-       innerProduct,
-       testZip,
-       solutionZip,
-       cp, cpm);
+    copyLocalToGlobalMatrix<IPIndices, false>(
+        ipElementMatrix,
+        matrix,
+        testLocalViews,
+        testLocalIndexSets,
+        localTestSpaceOffsets,
+        globalTestSpaceOffsets,
+        testLocalViews,
+        testLocalIndexSets,
+        localTestSpaceOffsets,
+        globalTestSpaceOffsets);
+    copyLocalToGlobalMatrix<BFIndices, true>(
+        bfElementMatrix,
+        matrix,
+        testLocalViews,
+        testLocalIndexSets,
+        localTestSpaceOffsets,
+        globalTestSpaceOffsets,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets);
   }
 }
 
@@ -406,20 +414,6 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     rhsLinearForm.bind(localViews);
     rhsLinearForm.getLocalVector(localRhs);
 
-    using namespace boost::fusion;
-
-    auto cp = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type> >
-                (localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type>
-                                        (localRhs, rhs));
-
-    /* copy every local subvector indexed by an index from
-     * lfIndices exactly once. */
-    auto testZip = zip(localViews,
-                       localIndexSets,
-                       rhsLinearForm.getLocalSpaceOffsets(),
-                       globalSpaceOffsets);
     /* create set of indices to loop over when copying the local matrices
      * into the global one.
      */
@@ -427,8 +421,9 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
         typename boost::mpl::transform<
             /* This as_vector is probably not needed for boost::fusion 1.58
              * or higher. */
-            typename result_of::as_vector<typename std::remove_reference<
-                  decltype(rhsLinearForm.getTerms())>::type
+            typename boost::fusion::result_of::as_vector<
+                  typename std::remove_reference<
+                      decltype(rhsLinearForm.getTerms())>::type
                 >::type
           , mpl::first<boost::mpl::_1>
           >::type
@@ -436,11 +431,16 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
       , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
       >::type LFIndices;
 
-    auto lfIndices = LFIndices{};
-    for_each(lfIndices,
-             localToGlobalRHSCopyHelper<decltype(testZip),
-                                        decltype(cp)>
-                                       (testZip, cp));
+    // Add local right-hand side onto the global right-hand side
+    /* copy every local subvector indexed by an index from
+     * lfIndices exactly once. */
+    copyLocalToGlobalVector<LFIndices>(
+        localRhs,
+        rhs,
+        localViews,
+        localIndexSets,
+        rhsLinearForm.getLocalSpaceOffsets(),
+        globalSpaceOffsets);
   }
 }
 
@@ -562,62 +562,6 @@ applyMinimization
   static_assert(std::is_same<BilinearForm, TestSpaces>::value,
                 "applyMinimization not implemented "
                 "for Saddlepointformulation ");
-}
-
-template<class BilinearForm, class InnerProduct>
-template<class TestZip, class SolutionZip, class CP, class CPM>
-inline void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
-copy_local_matrix_to_global
-    (const BilinearForm& bilinearForm,
-     const InnerProduct& innerProduct,
-     const TestZip& testZip,
-     const SolutionZip& solutionZip,
-     CP& cp,
-     CPM& cpm)
-{
-  using namespace boost::fusion;
-  using namespace detail;
-
-  /* create sets of index pairs to loop over.
-   * This will be used later, when copying the local matrices into
-   * the global one.
-   */
-  typedef typename boost::mpl::fold<
-      typename boost::mpl::transform<
-          /* This as_vector is probably not needed for boost::fusion 1.58
-           * or higher. */
-          typename result_of::as_vector<typename std::remove_reference<
-                decltype(bilinearForm.getTerms())>::type
-              >::type
-        , mpl::firstTwo<boost::mpl::_1>
-        >::type
-    , boost::mpl::set0<>
-    , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-    >::type BFIndices;
-  typedef typename boost::mpl::fold<
-      typename boost::mpl::transform<
-          typename result_of::as_vector<typename std::remove_reference<
-                decltype(innerProduct.getTerms())>::type
-              >::type
-        , mpl::firstTwo<boost::mpl::_1>
-        >::type
-    , boost::mpl::set0<>
-    , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-    >::type IPIndices;
-
-  auto bfIndices = BFIndices{};
-  auto ipIndices = IPIndices{};
-
-  for_each(ipIndices,
-           localToGlobalCopyHelper<TestZip,
-                                   TestZip,
-                                   CP>
-                                  (testZip, testZip, cp));
-  for_each(bfIndices,
-           localToGlobalCopyHelper<SolutionZip,
-                                   TestZip,
-                                   CPM>
-                                  (solutionZip, testZip, cpm));
 }
 
 

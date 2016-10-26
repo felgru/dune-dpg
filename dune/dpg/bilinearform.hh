@@ -41,6 +41,8 @@ namespace Dune {
     typedef TSpaces TestSpaces;
     //! tuple type of solution spaces
     typedef SolSpaces SolutionSpaces;
+    //! tuple type of bilinear form terms
+    typedef BilinearTerms Terms;
     //! tuple type for the local views of the test spaces
     typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
                                  TestSpaces>::Type  TestLocalViews;

@@ -17,13 +17,8 @@
 #include <boost/mpl/transform.hpp>
 
 #include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/adapted/mpl.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -151,30 +146,23 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     rhsLinearForm.bind(testLocalViews);
     rhsLinearForm.getLocalVector(localRhs);
 
-    using namespace boost::fusion;
-
-    auto cp = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type> >
-                (localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type>
-                                        (localRhs, rhs));
+    // TODO: We might copy zero blocks that could be avoided.
+    typedef
+      typename boost::fusion::result_of::as_vector<
+                typename boost::mpl::range_c<
+                    size_t, 0, std::tuple_size<TestSpaces>::value
+                >::type
+            >::type LFIndices;
 
     /* copy every local subvector indexed by a pair of indices from
-     * lfIndices exactly once. */
-    auto testZip = zip(testLocalViews,
-                       testLocalIndexSets,
-                       rhsLinearForm.getLocalSpaceOffsets(),
-                       globalTestSpaceOffsets);
-    typedef
-        // TODO: This will only work when using only one test space.
-        typename boost::fusion::vector<std::integral_constant<size_t, 0> >
-            LFIndices;
-
-    auto lfIndices = LFIndices{};
-    for_each(lfIndices,
-             localToGlobalRHSCopyHelper<decltype(testZip),
-                                        decltype(cp)>
-                                       (testZip, cp));
+     * LFIndices exactly once. */
+    copyLocalToGlobalVector<LFIndices>(
+        localRhs,
+        rhs,
+        testLocalViews,
+        testLocalIndexSets,
+        rhsLinearForm.getLocalSpaceOffsets(),
+        globalTestSpaceOffsets);
   }
 }
 

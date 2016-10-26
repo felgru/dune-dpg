@@ -38,6 +38,8 @@ namespace Dune {
   public:
     //! tuple type of test spaces
     typedef TSpaces TestSpaces;
+    //! tuple type of inner product terms
+    typedef InnerProductTerms Terms;
     //! tuple type for the local views of the test spaces
     using TestLocalViews
         = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,

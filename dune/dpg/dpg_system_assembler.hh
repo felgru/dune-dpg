@@ -19,16 +19,8 @@
 #include <boost/mpl/transform.hpp>
 
 #include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/adapted/mpl.hpp>
-#include <boost/fusion/container/generation/make_vector.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/sequence/intrinsic/value_at.hpp>
-#include <boost/fusion/functional/generation/make_fused_procedure.hpp>
 
 #include <dune/common/tupleutility.hh>
 
@@ -433,56 +425,41 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     const Matrix<FieldMatrix<double,1,1> >& elementMatrix
         = testspaceCoefficientMatrix_.systemMatrix();
 
-    using namespace boost::fusion;
-
-    // Add local right-hand side onto the global right-hand side
-    auto cpRhs = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type> >
-                (localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type>
-                                        (localRhs, rhs));
     // Add element stiffness matrix onto the global stiffness matrix
-    auto cpMatrix = fused_procedure<localToGlobalCopier<decltype(elementMatrix),
-                   typename std::remove_reference<decltype(matrix)>::type> >
-                (localToGlobalCopier<decltype(elementMatrix),
-                   typename std::remove_reference<decltype(matrix)>::type>
-                                        (elementMatrix, matrix));
+    copyLocalToGlobalMatrix<Indices, false>(
+        elementMatrix,
+        matrix,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets);
 
-    auto solutionZip = zip(solutionLocalViews,
-                           solutionLocalIndexSets,
-                           localSolutionSpaceOffsets,
-                           globalSolutionSpaceOffsets);
-
-    using SolutionZip = decltype(solutionZip);
-
-    /* copy every local submatrix indexed by a pair of indices from
-     * Indices exactly once. */
-    for_each(Indices{},
-             localToGlobalCopyHelper<SolutionZip,
-                                     SolutionZip,
-                                     std::decay_t<decltype(cpMatrix)>>
-                                    (solutionZip, solutionZip, cpMatrix));
-
-    /* copy every local subvector indexed by an index from
-     * lfIndices exactly once. */
-       typedef typename boost::mpl::fold<
+    typedef typename boost::mpl::fold<
         typename boost::mpl::transform<
             /* This as_vector is probably not needed for boost::fusion 1.58
              * or higher. */
-            typename result_of::as_vector<typename std::remove_reference<
-                  decltype(bilinearForm_.getTerms())>::type
+            typename boost::fusion::result_of::as_vector<
+                  typename std::remove_reference<
+                      decltype(bilinearForm_.getTerms())>::type
                 >::type
           , mpl::second<boost::mpl::_1>
           >::type
       , boost::mpl::set0<>
       , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
       >::type LFIndices;
-    auto lfIndices = LFIndices{};
 
-    for_each(lfIndices,
-            localToGlobalRHSCopyHelper<decltype(solutionZip),
-                                        decltype(cpRhs)>
-                                        (solutionZip, cpRhs));
+    // Add local right-hand side onto the global right-hand side
+    copyLocalToGlobalVector<LFIndices>(
+        localRhs,
+        rhs,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets);
   }
 }
 
@@ -560,29 +537,20 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
     computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
 
-    using namespace boost::fusion;
-
     // Add element stiffness matrix onto the global stiffness matrix
-    auto cp = fused_procedure<localToGlobalCopier<decltype(elementMatrix),
-                   typename std::remove_reference<decltype(matrix)>::type> >
-                (localToGlobalCopier<decltype(elementMatrix),
-                   typename std::remove_reference<decltype(matrix)>::type>
-                                        (elementMatrix, matrix));
-
     /* copy every local submatrix indexed by a pair of indices from
      * Indices exactly once. */
-    auto solutionZip = zip(solutionLocalViews,
-                           solutionLocalIndexSets,
-                           localSolutionSpaceOffsets,
-                           globalSolutionSpaceOffsets);
-
-    using SolutionZip = decltype(solutionZip);
-
-    for_each(Indices{},
-             localToGlobalCopyHelper<SolutionZip,
-                                     SolutionZip,
-                                     std::decay_t<decltype(cp)>>
-                                    (solutionZip, solutionZip, cp));
+    copyLocalToGlobalMatrix<Indices, false>(
+        elementMatrix,
+        matrix,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets);
   }
 }
 
@@ -654,27 +622,15 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
         }
       }
 
-    using namespace boost::fusion;
-
-    auto cp = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type> >
-                (localToGlobalRHSCopier<decltype(localRhs),
-                   typename std::remove_reference<decltype(rhs)>::type>
-                                        (localRhs, rhs));
-
     /* copy every local subvector indexed by an index from
      * lfIndices exactly once. */
-    auto solutionZip = zip(solutionLocalViews,
-                       solutionLocalIndexSets,
-                       localSolutionSpaceOffsets,
-                       globalSolutionSpaceOffsets);
-
     typedef typename boost::mpl::fold<
         typename boost::mpl::transform<
             /* This as_vector is probably not needed for boost::fusion 1.58
              * or higher. */
-            typename result_of::as_vector<typename std::remove_reference<
-                  decltype(bilinearForm_.getTerms())>::type
+            typename boost::fusion::result_of::as_vector<
+                  typename std::remove_reference<
+                      decltype(bilinearForm_.getTerms())>::type
                 >::type
           , mpl::second<boost::mpl::_1>
           >::type
@@ -682,11 +638,14 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
       , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
       >::type LFIndices;
 
-    auto lfIndices = LFIndices{};
-    for_each(lfIndices,
-            localToGlobalRHSCopyHelper<decltype(solutionZip),
-                                        decltype(cp)>
-                                        (solutionZip, cp));
+    // Add local right-hand side onto the global right-hand side
+    copyLocalToGlobalVector<LFIndices>(
+        localRhs,
+        rhs,
+        solutionLocalViews,
+        solutionLocalIndexSets,
+        localSolutionSpaceOffsets,
+        globalSolutionSpaceOffsets);
 
   }
 }
