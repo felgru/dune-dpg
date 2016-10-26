@@ -9,6 +9,9 @@
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/std/memory.hh>
 #include <dune/istl/matrixindexset.hh>
+#include <boost/fusion/adapted/std_tuple.hpp>
+#include <boost/fusion/adapted/array.hpp>
+#include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/fusion/algorithm/transformation/join.hpp>
 #include <boost/fusion/sequence/intrinsic/at.hpp>
 
@@ -270,6 +273,37 @@ private:
       globalSolutionSpaceOffsets;
   Dune::MatrixIndexSet& nb;
 };
+
+template<class Indices,
+         bool mirror,
+         class LeftLocalViews, class RightLocalViews,
+         class LeftLocalIndexSets, class RightLocalIndexSets,
+         class LeftOffsets, class RightOffsets>
+inline void getOccupationPattern(
+      const LeftLocalViews& leftLocalViews,
+      const RightLocalViews& rightLocalViews,
+      const LeftLocalIndexSets& leftLocalIndexSets,
+      const RightLocalIndexSets& rightLocalIndexSets,
+      const LeftOffsets& leftGlobalOffsets,
+      const RightOffsets& rightGlobalOffsets,
+      MatrixIndexSet& occupationPattern) {
+  using namespace boost::fusion;
+
+  auto gOPH = getOccupationPatternHelper<LeftLocalViews,
+                                         RightLocalViews,
+                                         LeftLocalIndexSets,
+                                         RightLocalIndexSets,
+                                         mirror>
+                      (leftLocalViews,
+                       rightLocalViews,
+                       leftLocalIndexSets,
+                       rightLocalIndexSets,
+                       leftGlobalOffsets,
+                       rightGlobalOffsets,
+                       occupationPattern);
+  for_each(Indices{},
+      std::ref(gOPH));
+}
 
 template<class LocalMatrix, class GlobalMatrix,
          bool mirror = false>

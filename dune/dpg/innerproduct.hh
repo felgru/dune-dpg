@@ -12,14 +12,7 @@
 #include <boost/mpl/set.hpp>
 #include <boost/mpl/transform.hpp>
 
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/algorithm/auxiliary/copy.hpp>
-#include <boost/fusion/algorithm/transformation/transform.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
 
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/tupleutility.hh>
@@ -176,20 +169,17 @@ getOccupationPattern(MatrixIndexSet& nb) const
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
 
-  using namespace boost::fusion;
-
   /* create set of index pairs from innerProductTerms to loop over. */
   typedef typename boost::mpl::fold<
       typename boost::mpl::transform<
           /* This as_vector is probably not needed for boost::fusion 1.58
            * or higher. */
-          typename result_of::as_vector<InnerProductTerms>::type
+          typename boost::fusion::result_of::as_vector<InnerProductTerms>::type
         , mpl::firstTwo<boost::mpl::_1>
         >::type
     , boost::mpl::set0<>
     , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
     >::type IndexPairs;
-  auto indexPairs = IndexPairs{};
 
   for(const auto& e : elements(gridView))
   {
@@ -197,11 +187,7 @@ getOccupationPattern(MatrixIndexSet& nb) const
 
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
-    auto gOPH = getOccupationPatternHelper<decltype(testLocalViews),
-                                           decltype(testLocalViews),
-                                           decltype(testLocalIndexSets),
-                                           decltype(testLocalIndexSets),
-                                           false>
+    detail::getOccupationPattern<IndexPairs, false>
                         (testLocalViews,
                          testLocalViews,
                          testLocalIndexSets,
@@ -209,8 +195,6 @@ getOccupationPattern(MatrixIndexSet& nb) const
                          globalTestSpaceOffsets,
                          globalTestSpaceOffsets,
                          nb);
-    for_each(indexPairs,
-        std::ref(gOPH));
   }
 }
 

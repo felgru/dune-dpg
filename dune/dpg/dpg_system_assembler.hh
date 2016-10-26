@@ -354,12 +354,11 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   MatrixIndexSet occupationPattern;
   occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
 
-  using namespace boost::fusion;
-
   typedef
-      typename result_of::as_vector<typename boost::mpl::range_c<
-                            size_t,0,result_of::size<SolutionSpaces>
-                         ::type::value>::type
+      typename boost::fusion::result_of::as_vector<
+                typename boost::mpl::range_c<
+                    size_t, 0, std::tuple_size<SolutionSpaces>::value
+                >::type
             >::type IndexRange;
   typedef
       typename boost::mpl::fold<
@@ -376,11 +375,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
-    auto gOPH = getOccupationPatternHelper<decltype(solutionLocalViews),
-                                           decltype(solutionLocalViews),
-                                           decltype(solutionLocalIndexSets),
-                                           decltype(solutionLocalIndexSets),
-                                           false>
+    detail::getOccupationPattern<Indices, false>
                         (solutionLocalViews,
                          solutionLocalViews,
                          solutionLocalIndexSets,
@@ -388,8 +383,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                          globalSolutionSpaceOffsets,
                          globalSolutionSpaceOffsets,
                          occupationPattern);
-    for_each(Indices{},
-        std::ref(gOPH));
   }
 
   occupationPattern.exportIdx(matrix);
@@ -439,6 +432,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     // compute the local stiffness matrix
     const Matrix<FieldMatrix<double,1,1> >& elementMatrix
         = testspaceCoefficientMatrix_.systemMatrix();
+
+    using namespace boost::fusion;
 
     // Add local right-hand side onto the global right-hand side
     auto cpRhs = fused_procedure<localToGlobalRHSCopier<decltype(localRhs),
@@ -517,12 +512,11 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   MatrixIndexSet occupationPattern;
   occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
 
-  using namespace boost::fusion;
-
   typedef
-      typename result_of::as_vector<typename boost::mpl::range_c<
-                            size_t,0,result_of::size<SolutionSpaces>
-                         ::type::value>::type
+      typename boost::fusion::result_of::as_vector<
+                typename boost::mpl::range_c<
+                    size_t, 0, std::tuple_size<SolutionSpaces>::value
+                >::type
             >::type IndexRange;
   typedef
       typename boost::mpl::fold<
@@ -537,14 +531,9 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   for(const auto& e : elements(gridView))
   {
     Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
-
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
-    auto gOPH = getOccupationPatternHelper<decltype(solutionLocalViews),
-                                           decltype(solutionLocalViews),
-                                           decltype(solutionLocalIndexSets),
-                                           decltype(solutionLocalIndexSets),
-                                           false>
+    detail::getOccupationPattern<Indices, false>
                         (solutionLocalViews,
                          solutionLocalViews,
                          solutionLocalIndexSets,
@@ -552,8 +541,6 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
                          globalSolutionSpaceOffsets,
                          globalSolutionSpaceOffsets,
                          occupationPattern);
-    for_each(Indices{},
-        std::ref(gOPH));
   }
 
   occupationPattern.exportIdx(matrix);
@@ -572,6 +559,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
     computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
+
+    using namespace boost::fusion;
 
     // Add element stiffness matrix onto the global stiffness matrix
     auto cp = fused_procedure<localToGlobalCopier<decltype(elementMatrix),

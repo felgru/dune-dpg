@@ -12,13 +12,7 @@
 #include <boost/mpl/set.hpp>
 #include <boost/mpl/transform.hpp>
 
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
-#include <boost/fusion/container/set/convert.hpp>
-#include <boost/fusion/sequence/intrinsic/size.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
 
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/tupleutility.hh>
@@ -240,8 +234,6 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
   auto testLocalIndexSets
       = genericTransformTuple(testSpaces, getLocalIndexSetFunctor());
 
-  using namespace boost::fusion;
-
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
 
@@ -250,13 +242,12 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
       typename boost::mpl::transform<
           /* This as_vector is probably not needed for boost::fusion 1.58
            * or higher. */
-          typename result_of::as_vector<BilinearTerms>::type
+          typename boost::fusion::result_of::as_vector<BilinearTerms>::type
         , mpl::firstTwo<boost::mpl::_1>
         >::type
     , boost::mpl::set0<>
     , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
     >::type IndexPairs;
-  auto indexPairs = IndexPairs{};
 
   for(const auto& e : elements(gridView))
   {
@@ -266,11 +257,7 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
-    auto gOPH = getOccupationPatternHelper<decltype(testLocalViews),
-                                           decltype(solutionLocalViews),
-                                           decltype(testLocalIndexSets),
-                                           decltype(solutionLocalIndexSets),
-                                           mirror>
+    detail::getOccupationPattern<IndexPairs, mirror>
                         (testLocalViews,
                          solutionLocalViews,
                          testLocalIndexSets,
@@ -278,8 +265,6 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
                          globalTestSpaceOffsets,
                          globalSolutionSpaceOffsets,
                          nb);
-    for_each(indexPairs,
-        std::ref(gOPH));
   }
 }
 
