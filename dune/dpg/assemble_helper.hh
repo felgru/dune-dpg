@@ -389,11 +389,11 @@ private:
 };
 
 template<class Indices,
-         bool mirror,
          class LocalMatrix, class GlobalMatrix,
          class TestLocalViews, class SolutionLocalViews,
          class TestLocalIndexSets, class SolutionLocalIndexSets,
-         class TestOffsets, class SolutionOffsets>
+         class TestOffsets, class SolutionOffsets,
+         bool mirror = false>
 inline void copyLocalToGlobalMatrix(
     const LocalMatrix&            elementMatrix,
     GlobalMatrix&                 matrix,
@@ -423,6 +423,39 @@ inline void copyLocalToGlobalMatrix(
   /* copy every local submatrix indexed by a pair of indices from
    * Indices exactly once. */
   boost::fusion::for_each(Indices{}, cpMatrix);
+}
+
+template<class Indices,
+         class LocalMatrix, class GlobalMatrix,
+         class TestLocalViews, class SolutionLocalViews,
+         class TestLocalIndexSets, class SolutionLocalIndexSets,
+         class TestOffsets, class SolutionOffsets>
+inline void copyLocalToGlobalMatrixSymmetric(
+    const LocalMatrix&            elementMatrix,
+    GlobalMatrix&                 matrix,
+    const TestLocalViews&         testLocalViews,
+    const TestLocalIndexSets&     testLocalIndexSets,
+    const TestOffsets&            localTestSpaceOffsets,
+    const TestOffsets&            globalTestSpaceOffsets,
+    const SolutionLocalViews&     solutionLocalViews,
+    const SolutionLocalIndexSets& solutionLocalIndexSets,
+    const SolutionOffsets&        localSolutionSpaceOffsets,
+    const SolutionOffsets&        globalSolutionSpaceOffsets) {
+  copyLocalToGlobalMatrix<Indices, LocalMatrix, GlobalMatrix,
+                          TestLocalViews, SolutionLocalViews,
+                          TestLocalIndexSets, SolutionLocalIndexSets,
+                          TestOffsets, SolutionOffsets,
+                          true>
+                         ( elementMatrix,
+                           matrix,
+                           testLocalViews,
+                           testLocalIndexSets,
+                           localTestSpaceOffsets,
+                           globalTestSpaceOffsets,
+                           solutionLocalViews,
+                           solutionLocalIndexSets,
+                           localSolutionSpaceOffsets,
+                           globalSolutionSpaceOffsets);
 }
 
 template<class LocalVector, class GlobalVector,

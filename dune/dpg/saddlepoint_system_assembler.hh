@@ -343,7 +343,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     // Add element stiffness matrix onto the global stiffness matrix
     /* copy every local submatrix indexed by a pair of indices from
      * bfIndices and ipIndices exactly once. */
-    copyLocalToGlobalMatrix<IPIndices, false>(
+    copyLocalToGlobalMatrix<IPIndices>(
         ipElementMatrix,
         matrix,
         testLocalViews,
@@ -354,7 +354,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
         testLocalIndexSets,
         localTestSpaceOffsets,
         globalTestSpaceOffsets);
-    copyLocalToGlobalMatrix<BFIndices, true>(
+    copyLocalToGlobalMatrixSymmetric<BFIndices>(
         bfElementMatrix,
         matrix,
         testLocalViews,

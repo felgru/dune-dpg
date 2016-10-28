@@ -426,7 +426,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
         = testspaceCoefficientMatrix_.systemMatrix();
 
     // Add element stiffness matrix onto the global stiffness matrix
-    copyLocalToGlobalMatrix<Indices, false>(
+    copyLocalToGlobalMatrix<Indices>(
         elementMatrix,
         matrix,
         solutionLocalViews,
@@ -540,7 +540,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     // Add element stiffness matrix onto the global stiffness matrix
     /* copy every local submatrix indexed by a pair of indices from
      * Indices exactly once. */
-    copyLocalToGlobalMatrix<Indices, false>(
+    copyLocalToGlobalMatrix<Indices>(
         elementMatrix,
         matrix,
         solutionLocalViews,
