@@ -11,7 +11,6 @@
 #include <cassert>
 
 #include <dune/common/hybridutilities.hh>
-#include <dune/common/tupleutility.hh>
 
 #include "assemble_helper.hh"
 #include "assemble_types.hh"
@@ -32,8 +31,7 @@ namespace Dune {
   public:
     typedef std::decay_t<Sps> Spaces;
     //! tuple type for the local views of the test spaces
-    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                                 Spaces>::Type  LocalViews;
+    typedef detail::getLocalViews_t<Spaces>  LocalViews;
 
     LinearForm () = delete;
     /**

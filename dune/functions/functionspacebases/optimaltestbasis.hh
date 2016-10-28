@@ -11,7 +11,6 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/hybridutilities.hh>
-#include <dune/common/tupleutility.hh>
 
 #include <dune/localfunctions/optimaltestfunctions/optimaltest.hh>
 #include <dune/localfunctions/optimaltestfunctions/refinedoptimaltest.hh>
@@ -276,12 +275,8 @@ private:
   using TestSearchFiniteElement
       = typename TestSearchSpace::LocalView::Tree::FiniteElement;
 
-  using SolutionLocalViews
-        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               SolutionSpaces>::Type;
-  using TestLocalViews
-        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               TestSearchSpaces>::Type;
+  using SolutionLocalViews = detail::getLocalViews_t<SolutionSpaces>;
+  using TestLocalViews = detail::getLocalViews_t<TestSearchSpaces>;
 
   static const bool testSearchSpaceIsRefined
     = is_RefinedFiniteElement<TestSearchSpace>::value;
@@ -313,12 +308,10 @@ public:
     testspaceCoefficientMatrix(testCoeffMat),
     finiteElement_(nullptr),
     testSearchSpace_(nullptr),
-    localViewsSolution_(genericTransformTuple(testCoeffMat.bilinearForm()
-                                                .getSolutionSpaces(),
-                                              detail::getLocalViewFunctor())),
-    localViewsTest(genericTransformTuple(testCoeffMat.bilinearForm()
-                                                    .getTestSpaces(),
-                                          detail::getLocalViewFunctor()))
+    localViewsSolution_(detail::getLocalViews(testCoeffMat.bilinearForm()
+                                                .getSolutionSpaces())),
+    localViewsTest(detail::getLocalViews(testCoeffMat.bilinearForm()
+                                                    .getTestSpaces()))
   {}
 
   //! Return current element, throw if unbound
@@ -342,10 +335,10 @@ public:
     using namespace Dune::detail;
 
     this->element_ = &e;
-    Hybrid::forEach(localViewsTest, applyBind<decltype(e)>(e));
+    bindLocalViews(localViewsTest, e);
     testSearchSpace_ =
         &(std::get<testIndex>(localViewsTest).tree().finiteElement());
-    Hybrid::forEach(localViewsSolution_, applyBind<decltype(e)>(e));
+    bindLocalViews(localViewsSolution_, e);
 
     testspaceCoefficientMatrix.bind(e);
 
@@ -391,15 +384,13 @@ public:
   using Node = typename NodeFactory::template Node<TP>;
 
   typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
-  typedef typename ForEachType<detail::getLocalIndexSetFunctor::TypeEvaluator,
-                               SolutionSpaces>::Type  SolutionLocalIndexSets;
+  typedef detail::getLocalIndexSets_t<SolutionSpaces>  SolutionLocalIndexSets;
 
   OptimalTestBasisNodeIndexSet(const NodeFactory& nodeFactory) :
     nodeFactory_(&nodeFactory),
-    solutionLocalIndexSets_(genericTransformTuple(
+    solutionLocalIndexSets_(detail::getLocalIndexSets(
                       nodeFactory.testspaceCoefficientMatrix_
-                          .bilinearForm().getSolutionSpaces(),
-                      detail::getLocalIndexSetFunctor()))
+                          .bilinearForm().getSolutionSpaces()))
   {}
 
   constexpr OptimalTestBasisNodeIndexSet(const OptimalTestBasisNodeIndexSet&)

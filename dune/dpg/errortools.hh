@@ -10,7 +10,6 @@
 #include <vector>
 
 #include <dune/common/hybridutilities.hh>
-#include <dune/common/tupleutility.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -396,18 +395,15 @@ namespace Dune {
 
     typedef typename InnerProduct::TestSpaces SolutionSpaces;
 
-    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                                 SolutionSpaces>::Type  SolutionLocalViews;
+    typedef getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
 
     SolutionLocalViews solutionLocalViews
-        = genericTransformTuple(innerProduct.getTestSpaces(),
-                                getLocalViewFunctor());
+        = getLocalViews(innerProduct.getTestSpaces());
 
 
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
-            = genericTransformTuple(innerProduct.getTestSpaces(),
-                                    getLocalIndexSetFunctor());
+            = getLocalIndexSets(innerProduct.getTestSpaces());
 
     // Variable where we compute the residual
     double res = 0.;
@@ -415,7 +411,7 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       // Bind localViews and localIndexSets
-      Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+      bindLocalViews(solutionLocalViews, e);
       bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
       res += aPosterioriL2ErrorSquareElement(innerProduct,
@@ -537,26 +533,19 @@ namespace Dune {
     typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
     typedef typename BilinearForm::TestSpaces EnrichedTestspaces;
 
-    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                                 SolutionSpaces>::Type  SolutionLocalViews;
-    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                                 EnrichedTestspaces>::Type  TestLocalViews;
+    typedef detail::getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
+    typedef detail::getLocalViews_t<EnrichedTestspaces>  TestLocalViews;
 
     SolutionLocalViews solutionLocalViews
-        = genericTransformTuple(bilinearForm.getSolutionSpaces(),
-                                getLocalViewFunctor());
+        = getLocalViews(bilinearForm.getSolutionSpaces());
     TestLocalViews testLocalViews
-        = genericTransformTuple(bilinearForm.getTestSpaces(),
-                                getLocalViewFunctor());
+        = getLocalViews(bilinearForm.getTestSpaces());
 
     // We get the local index sets of the test spaces
-    auto testLocalIndexSets
-        = genericTransformTuple(bilinearForm.getTestSpaces(),
-                                getLocalIndexSetFunctor());
+    auto testLocalIndexSets = getLocalIndexSets(bilinearForm.getTestSpaces());
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
-            = genericTransformTuple(bilinearForm.getSolutionSpaces(),
-                                    getLocalIndexSetFunctor());
+            = getLocalIndexSets(bilinearForm.getSolutionSpaces());
 
     // Variable where we compute the residual
     double res = 0.;
@@ -564,8 +553,8 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       // Bind localViews and localIndexSets
-      Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
-      Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+      bindLocalViews(testLocalViews, e);
+      bindLocalViews(solutionLocalViews, e);
       bindLocalIndexSets(testLocalIndexSets, testLocalViews);
       bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
@@ -632,36 +621,27 @@ namespace Dune {
     using SolutionSpaces = typename BilinearForm::SolutionSpaces;
     using EnrichedTestspaces = typename BilinearForm::TestSpaces;
 
-    using SolutionLocalViews
-        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               SolutionSpaces>::Type;
-    using TestLocalViews
-        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               EnrichedTestspaces>::Type;
+    using SolutionLocalViews = getLocalViews_t<SolutionSpaces>;
+    using TestLocalViews = getLocalViews_t<EnrichedTestspaces>;
 
     SolutionLocalViews solutionLocalViews
-        = genericTransformTuple(bilinearForm.getSolutionSpaces(),
-                                getLocalViewFunctor());
+        = getLocalViews(bilinearForm.getSolutionSpaces());
     TestLocalViews testLocalViews
-        = genericTransformTuple(bilinearForm.getTestSpaces(),
-                                getLocalViewFunctor());
+        = getLocalViews(bilinearForm.getTestSpaces());
 
     // We get the local index sets of the test spaces
-    auto testLocalIndexSets
-        = genericTransformTuple(bilinearForm.getTestSpaces(),
-                                getLocalIndexSetFunctor());
+    auto testLocalIndexSets = getLocalIndexSets(bilinearForm.getTestSpaces());
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
-            = genericTransformTuple(bilinearForm.getSolutionSpaces(),
-                                    getLocalIndexSetFunctor());
+            = getLocalIndexSets(bilinearForm.getSolutionSpaces());
 
     std::vector<std::tuple<EntitySeed, double>> errorEstimates;
     errorEstimates.reserve(gridView.size(0));
     for(const auto& e : elements(gridView))
     {
       // Bind localViews and localIndexSets
-      Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
-      Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+      bindLocalViews(testLocalViews, e);
+      bindLocalViews(solutionLocalViews, e);
       bindLocalIndexSets(testLocalIndexSets, testLocalViews);
       bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 

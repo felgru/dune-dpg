@@ -22,8 +22,6 @@
 #include <boost/fusion/adapted/mpl.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
 
-#include <dune/common/tupleutility.hh>
-
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -78,14 +76,9 @@ public:
 
 
   //! tuple type for the local views of the test spaces
-  using TestLocalViews
-    = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                           TestSearchSpaces>::Type;
+  using TestLocalViews = detail::getLocalViews_t<TestSearchSpaces>;
   //! tuple type for the local views of the solution spaces
-
-  using SolutionLocalViews
-    = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                           SolutionSpaces>::Type;
+  using SolutionLocalViews = detail::getLocalViews_t<SolutionSpaces>;
 
   DPGSystemAssembler () = delete;
   /**
@@ -333,13 +326,10 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       computeOffsets(globalSolutionSpaceOffsets, solutionSpaces_);
 
   // Views on the FE bases on a single element
-  auto testLocalViews = genericTransformTuple(testSearchSpaces_,
-                                              getLocalViewFunctor());
+  auto testLocalViews = getLocalViews(testSearchSpaces_);
 
-  auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
-                                                  getLocalViewFunctor());
-  auto solutionLocalIndexSets
-      = genericTransformTuple(solutionSpaces_, getLocalIndexSetFunctor());
+  auto solutionLocalViews = getLocalViews(solutionSpaces_);
+  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces_);
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
@@ -364,7 +354,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
   for(const auto& e : elements(gridView))
   {
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     detail::getOccupationPattern<Indices, false>
@@ -388,7 +378,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
   for(const auto& e : elements(gridView)) {
 
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -401,7 +391,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     // Now get the local contribution to the right-hand side vector
 
-    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(testLocalViews, e);
 
     // compute the local right-hand side vector F for the enriched test space
     BlockVector<FieldVector<double,1> > localEnrichedRhs;
@@ -426,7 +416,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
         = testspaceCoefficientMatrix_.systemMatrix();
 
     // Add element stiffness matrix onto the global stiffness matrix
-    copyLocalToGlobalMatrix<Indices, false>(
+    copyLocalToGlobalMatrix<Indices>(
         elementMatrix,
         matrix,
         solutionLocalViews,
@@ -479,10 +469,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
       computeOffsets(globalSolutionSpaceOffsets, solutionSpaces_);
 
   // Views on the FE bases on a single element
-  auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
-                                                  getLocalViewFunctor());
-  auto solutionLocalIndexSets
-      = genericTransformTuple(solutionSpaces_, getLocalIndexSetFunctor());
+  auto solutionLocalViews = getLocalViews(solutionSpaces_);
+  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces_);
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
@@ -507,7 +495,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
   for(const auto& e : elements(gridView))
   {
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     detail::getOccupationPattern<Indices, false>
@@ -527,7 +515,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
   for(const auto& e : elements(gridView)) {
 
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     testspaceCoefficientMatrix_.bind(e);
@@ -540,7 +528,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     // Add element stiffness matrix onto the global stiffness matrix
     /* copy every local submatrix indexed by a pair of indices from
      * Indices exactly once. */
-    copyLocalToGlobalMatrix<Indices, false>(
+    copyLocalToGlobalMatrix<Indices>(
         elementMatrix,
         matrix,
         solutionLocalViews,
@@ -578,18 +566,14 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   rhs = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews = genericTransformTuple(testSearchSpaces_,
-                                              getLocalViewFunctor());
+  auto testLocalViews = getLocalViews(testSearchSpaces_);
 
-  auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
-                                                  getLocalViewFunctor());
-
-  auto solutionLocalIndexSets = genericTranformTuple(solutionSpaces_,
-                                                     getLocalIndexSetFunctor());
+  auto solutionLocalViews = getLocalViews(solutionSpaces_);
+  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces_);
 
   for(const auto& e : elements(gridView)) {
 
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -602,7 +586,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     // Now get the local contribution to the right-hand side vector
 
-    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(testLocalViews, e);
 
     // compute the local right-hand side vector F for the enriched test space
     BlockVector<FieldVector<double,1> > localEnrichedRhs;
@@ -1036,8 +1020,7 @@ applyMinimization
 
   // get local view for solution space
   // (necessary if we want to use inner product) // TODO inefficient (why?)
-  auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
-                                                  getLocalViewFunctor());
+  auto solutionLocalViews = getLocalViews(solutionSpaces_);
 
   auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
 
@@ -1045,7 +1028,7 @@ applyMinimization
 
   for(const auto& e : elements(gridView))
   {
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
     localIndexSet.bind(std::get<spaceIndex>(solutionLocalViews));
 
     /* set up local offsets */
