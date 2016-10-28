@@ -15,7 +15,6 @@
 #include <boost/fusion/container/vector/convert.hpp>
 
 #include <dune/common/hybridutilities.hh>
-#include <dune/common/tupleutility.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -41,9 +40,7 @@ namespace Dune {
     //! tuple type of inner product terms
     typedef InnerProductTerms Terms;
     //! tuple type for the local views of the test spaces
-    using TestLocalViews
-        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               TestSpaces>::Type;
+    using TestLocalViews = detail::getLocalViews_t<TestSpaces>;
 
     InnerProduct () = delete;
     /**
@@ -163,10 +160,8 @@ getOccupationPattern(MatrixIndexSet& nb) const
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   computeOffsets(globalTestSpaceOffsets, testSpaces);
 
-  auto testLocalViews     = genericTransformTuple(testSpaces,
-                                                  getLocalViewFunctor());
-  auto testLocalIndexSets = genericTransformTuple(testSpaces,
-                                                  getLocalIndexSetFunctor());
+  auto testLocalViews     = getLocalViews(testSpaces);
+  auto testLocalIndexSets = getLocalIndexSets(testSpaces);
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
@@ -185,8 +180,7 @@ getOccupationPattern(MatrixIndexSet& nb) const
 
   for(const auto& e : elements(gridView))
   {
-    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
-
+    bindLocalViews(testLocalViews, e);
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
     detail::getOccupationPattern<IndexPairs, false>

@@ -20,8 +20,6 @@
 #include <boost/fusion/adapted/mpl.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
 
-#include <dune/common/hybridutilities.hh>
-#include <dune/common/tupleutility.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -49,11 +47,9 @@ public:
   typedef typename BilinForm::TestSpaces TestSpaces;
   typedef typename BilinForm::SolutionSpaces SolutionSpaces;
   //! tuple type for the local views of the test spaces
-  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               TestSpaces>::Type  TestLocalViews;
+  typedef detail::getLocalViews_t<TestSpaces>  TestLocalViews;
   //! tuple type for the local views of the solution spaces
-  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               SolutionSpaces>::Type  SolutionLocalViews;
+  typedef detail::getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
   //! type of the bilinear form describing this DPG system
   typedef BilinForm BilinearForm;
   //! type of the inner product on the test spaces
@@ -306,20 +302,16 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   matrix = 0;
 
   // Views on the FE bases on a single element
-  auto solutionLocalViews = genericTransformTuple(solutionSpaces,
-                                                  getLocalViewFunctor());
-  auto testLocalViews     = genericTransformTuple(testSpaces,
-                                                  getLocalViewFunctor());
+  auto solutionLocalViews = getLocalViews(solutionSpaces);
+  auto testLocalViews     = getLocalViews(testSpaces);
 
-  auto solutionLocalIndexSets
-      = genericTransformTuple(solutionSpaces, getLocalIndexSetFunctor());
-  auto testLocalIndexSets
-      = genericTransformTuple(testSpaces, getLocalIndexSetFunctor());
+  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces);
+  auto testLocalIndexSets = getLocalIndexSets(testSpaces);
 
   for(const auto& e : elements(gridView)) {
 
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
-    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
+    bindLocalViews(testLocalViews, e);
 
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
@@ -343,7 +335,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     // Add element stiffness matrix onto the global stiffness matrix
     /* copy every local submatrix indexed by a pair of indices from
      * bfIndices and ipIndices exactly once. */
-    copyLocalToGlobalMatrix<IPIndices, false>(
+    copyLocalToGlobalMatrix<IPIndices>(
         ipElementMatrix,
         matrix,
         testLocalViews,
@@ -354,7 +346,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
         testLocalIndexSets,
         localTestSpaceOffsets,
         globalTestSpaceOffsets);
-    copyLocalToGlobalMatrix<BFIndices, true>(
+    copyLocalToGlobalMatrixSymmetric<BFIndices>(
         bfElementMatrix,
         matrix,
         testLocalViews,
@@ -394,18 +386,15 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
   // Views on the FE bases on a single element
   auto localViews
-        = genericTransformTuple(std::tuple_cat(testSpaces, solutionSpaces),
-                                getLocalViewFunctor());
+        = getLocalViews(std::tuple_cat(testSpaces, solutionSpaces));
 
   auto localIndexSets
-        = genericTransformTuple(std::tuple_cat(testSpaces, solutionSpaces),
-                                getLocalIndexSetFunctor());
+        = getLocalIndexSets(std::tuple_cat(testSpaces, solutionSpaces));
 
 
   for(const auto& e : elements(gridView)) {
 
-    Hybrid::forEach(localViews, applyBind<decltype(e)>(e));
-
+    bindLocalViews(localViews, e);
     bindLocalIndexSets(localIndexSets, localViews);
 
     // Now get the local contribution to the right-hand side vector

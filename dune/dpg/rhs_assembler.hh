@@ -128,16 +128,12 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   rhs = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews     = genericTransformTuple(testSpaces,
-                                                  getLocalViewFunctor());
-
-  auto testLocalIndexSets = genericTransformTuple(testSpaces,
-                                                  getLocalIndexSetFunctor());
+  auto testLocalViews     = getLocalViews(testSpaces);
+  auto testLocalIndexSets = getLocalIndexSets(testSpaces);
 
   for(const auto& e : elements(gridView)) {
 
-    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
-
+    bindLocalViews(testLocalViews, e);
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
     // Now get the local contribution to the right-hand side vector

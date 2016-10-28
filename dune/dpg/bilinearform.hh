@@ -15,7 +15,6 @@
 #include <boost/fusion/container/vector/convert.hpp>
 
 #include <dune/common/hybridutilities.hh>
-#include <dune/common/tupleutility.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -44,11 +43,9 @@ namespace Dune {
     //! tuple type of bilinear form terms
     typedef BilinearTerms Terms;
     //! tuple type for the local views of the test spaces
-    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                                 TestSpaces>::Type  TestLocalViews;
+    typedef detail::getLocalViews_t<TestSpaces>  TestLocalViews;
     //! tuple type for the local views of the solution spaces
-    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                                 SolutionSpaces>::Type  SolutionLocalViews;
+    typedef detail::getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
 
     BilinearForm () = delete;
     /**
@@ -226,15 +223,11 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
   computeOffsets(globalSolutionSpaceOffsets, solutionSpaces, solutionShift);
 
   // A view on the FE basis on a single element
-  auto solutionLocalViews = genericTransformTuple(solutionSpaces,
-                                                  getLocalViewFunctor());
-  auto testLocalViews     = genericTransformTuple(testSpaces,
-                                                  getLocalViewFunctor());
+  auto solutionLocalViews = getLocalViews(solutionSpaces);
+  auto testLocalViews     = getLocalViews(testSpaces);
 
-  auto solutionLocalIndexSets
-      = genericTransformTuple(solutionSpaces, getLocalIndexSetFunctor());
-  auto testLocalIndexSets
-      = genericTransformTuple(testSpaces, getLocalIndexSetFunctor());
+  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces);
+  auto testLocalIndexSets = getLocalIndexSets(testSpaces);
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();
@@ -253,8 +246,8 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
 
   for(const auto& e : elements(gridView))
   {
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
-    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
+    bindLocalViews(testLocalViews, e);
 
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
