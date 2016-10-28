@@ -279,17 +279,14 @@ precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
   normSquared = 0;
 
   // Views on the FE bases on a single element
-  auto solutionLocalViews = genericTransformTuple(solutionSpaces,
-                                                  getLocalViewFunctor());
-
-  auto solutionLocalIndexSets
-      = genericTransformTuple(solutionSpaces, getLocalIndexSetFunctor());
+  auto solutionLocalViews = getLocalViews(solutionSpaces);
+  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces);
 
   for(const auto& e : elements(gridView)) {
 
     // Bind the local FE basis view to the current element
     /* TODO: only bind the space we use later */
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     // Now get the local contribution to the scattering functional

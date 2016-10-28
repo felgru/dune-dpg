@@ -190,22 +190,18 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
   scattering = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews     = genericTransformTuple(testSpaces,
-                                                  getLocalViewFunctor());
-  auto solutionLocalViews = genericTransformTuple(solutionSpaces,
-                                                  getLocalViewFunctor());
+  auto testLocalViews     = getLocalViews(testSpaces);
+  auto solutionLocalViews = getLocalViews(solutionSpaces);
 
-  auto testLocalIndexSets
-      = genericTransformTuple(testSpaces, getLocalIndexSetFunctor());
-  auto solutionLocalIndexSets
-      = genericTransformTuple(solutionSpaces, getLocalIndexSetFunctor());
+  auto testLocalIndexSets     = getLocalIndexSets(testSpaces);
+  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces);
 
   for(const auto& e : elements(gridView)) {
 
     // Bind the local FE basis view to the current element
     /* TODO: only bind the space we use later */
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
-    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
+    bindLocalViews(testLocalViews, e);
 
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
