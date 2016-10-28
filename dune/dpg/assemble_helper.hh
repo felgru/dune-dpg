@@ -124,9 +124,9 @@ struct getLocalMatrixHelper
         std::get<testSpaceIndex::value>(testLocalViews);
     const auto& solutionLV =
         std::get<solutionSpaceIndex::value>(solutionLocalViews);
-    size_t localTestSpaceOffset =
+    const size_t localTestSpaceOffset =
         localTestSpaceOffsets[testSpaceIndex::value];
-    size_t localSolutionSpaceOffset =
+    const size_t localSolutionSpaceOffset =
         localSolutionSpaceOffsets[solutionSpaceIndex::value];
 
     term.getLocalMatrix(testLV,
@@ -225,9 +225,7 @@ struct getOccupationPatternHelper
   template <class testSpaceIndex,
             class solutionSpaceIndex>
   void operator()
-         (const std::tuple<
-          testSpaceIndex,
-          solutionSpaceIndex>& indexTuple)
+         (const std::tuple<testSpaceIndex, solutionSpaceIndex>& indexTuple)
   {
     const auto& testLV =
         std::get<testSpaceIndex::value>(testLocalViews);
@@ -237,18 +235,18 @@ struct getOccupationPatternHelper
         std::get<testSpaceIndex::value>(testLocalIndexSets);
     const auto& solutionLIS =
         std::get<solutionSpaceIndex::value>(solutionLocalIndexSets);
-    size_t globalTestSpaceOffset =
+    const size_t globalTestSpaceOffset =
         globalTestSpaceOffsets[testSpaceIndex::value];
-    size_t globalSolutionSpaceOffset =
+    const size_t globalSolutionSpaceOffset =
         globalSolutionSpaceOffsets[solutionSpaceIndex::value];
 
     for (size_t i=0, i_max=testLV.size(); i<i_max; i++) {
 
-      auto iIdx = testLIS.index(i)[0];
+      const auto iIdx = testLIS.index(i)[0];
 
       for (size_t j=0, j_max=solutionLV.size(); j<j_max; j++) {
 
-        auto jIdx = solutionLIS.index(j)[0];
+        const auto jIdx = solutionLIS.index(j)[0];
 
         // Add a nonzero entry to the matrix
         nb.add(iIdx+globalTestSpaceOffset,
@@ -342,15 +340,15 @@ struct localToGlobalCopier
         = std::get<testSpaceIndex::value>(testLocalViews);
     const auto& testLocalIndexSet
         = std::get<testSpaceIndex::value>(testLocalIndexSets);
-    size_t testLocalOffset = testLocalOffsets[testSpaceIndex::value];
-    size_t testGlobalOffset = testGlobalOffsets[testSpaceIndex::value];
+    const size_t testLocalOffset = testLocalOffsets[testSpaceIndex::value];
+    const size_t testGlobalOffset = testGlobalOffsets[testSpaceIndex::value];
     const auto& solutionLocalView
         = std::get<solutionSpaceIndex::value>(solutionLocalViews);
     const auto& solutionLocalIndexSet
         = std::get<solutionSpaceIndex::value>(solutionLocalIndexSets);
-    size_t solutionLocalOffset
+    const size_t solutionLocalOffset
         = solutionLocalOffsets[solutionSpaceIndex::value];
-    size_t solutionGlobalOffset
+    const size_t solutionGlobalOffset
         = solutionGlobalOffsets[solutionSpaceIndex::value];
 
     const size_t nTest(testLocalView.size());
@@ -358,12 +356,12 @@ struct localToGlobalCopier
 
     for (size_t i=0; i<nTest; i++)
     {
-      auto row = testLocalIndexSet.index(i)[0]+testGlobalOffset;
+      const auto row = testLocalIndexSet.index(i)[0] + testGlobalOffset;
 
       for (size_t j=0; j<nSolution; j++)
       {
-        auto col = solutionLocalIndexSet.index(j)[0]
-                    +solutionGlobalOffset;
+        const auto col = solutionLocalIndexSet.index(j)[0]
+                         + solutionGlobalOffset;
         matrix[row][col] += elementMatrix[i+testLocalOffset]
                                          [j+solutionLocalOffset];
         if(mirror) {
@@ -477,20 +475,19 @@ struct localToGlobalRHSCopier
         testGlobalOffsets(testGlobalOffsets) {}
 
   template <class TestSpaceIndex>
-  void operator()
-         (const TestSpaceIndex& index) const
+  void operator() (const TestSpaceIndex& index) const
   {
     const auto& testLocalView
         = std::get<TestSpaceIndex::value>(testLocalViews);
     const auto& testLocalIndexSet
         = std::get<TestSpaceIndex::value>(testLocalIndexSets);
-    size_t testLocalOffset = testLocalOffsets[TestSpaceIndex::value];
-    size_t testGlobalOffset = testGlobalOffsets[TestSpaceIndex::value];
+    const size_t testLocalOffset = testLocalOffsets[TestSpaceIndex::value];
+    const size_t testGlobalOffset = testGlobalOffsets[TestSpaceIndex::value];
 
     const size_t nTest(testLocalView.size());
 
     for (size_t i=0; i<nTest; i++) {
-      auto row = testLocalIndexSet.index(i)[0] + testGlobalOffset;
+      const auto row = testLocalIndexSet.index(i)[0] + testGlobalOffset;
       rhs[row] += localRhs[i+testLocalOffset];
     }
   }
