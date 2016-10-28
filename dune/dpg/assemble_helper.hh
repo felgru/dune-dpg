@@ -34,6 +34,16 @@ struct getLocalIndexSetFunctor
   }
 };
 
+template<class Spaces>
+using getLocalIndexSets_t
+    = typename ForEachType<detail::getLocalIndexSetFunctor::TypeEvaluator,
+                           Spaces>::Type;
+
+template<class Spaces>
+inline getLocalIndexSets_t<Spaces> getLocalIndexSets(const Spaces& spaces) {
+  return genericTransformTuple(spaces, getLocalIndexSetFunctor());
+}
+
 struct getLocalViewFunctor
 {
   template<class T>

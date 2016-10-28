@@ -227,10 +227,8 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
   auto solutionLocalViews = getLocalViews(solutionSpaces);
   auto testLocalViews     = getLocalViews(testSpaces);
 
-  auto solutionLocalIndexSets
-      = genericTransformTuple(solutionSpaces, getLocalIndexSetFunctor());
-  auto testLocalIndexSets
-      = genericTransformTuple(testSpaces, getLocalIndexSetFunctor());
+  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces);
+  auto testLocalIndexSets = getLocalIndexSets(testSpaces);
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   GridView gridView = std::get<0>(testSpaces).gridView();

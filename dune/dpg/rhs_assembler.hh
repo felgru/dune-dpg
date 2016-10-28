@@ -129,8 +129,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
   // Views on the FE bases on a single element
   auto testLocalViews     = getLocalViews(testSpaces);
-  auto testLocalIndexSets = genericTransformTuple(testSpaces,
-                                                  getLocalIndexSetFunctor());
+  auto testLocalIndexSets = getLocalIndexSets(testSpaces);
 
   for(const auto& e : elements(gridView)) {
 

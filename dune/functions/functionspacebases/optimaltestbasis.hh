@@ -385,15 +385,13 @@ public:
   using Node = typename NodeFactory::template Node<TP>;
 
   typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
-  typedef typename ForEachType<detail::getLocalIndexSetFunctor::TypeEvaluator,
-                               SolutionSpaces>::Type  SolutionLocalIndexSets;
+  typedef detail::getLocalIndexSets_t<SolutionSpaces>  SolutionLocalIndexSets;
 
   OptimalTestBasisNodeIndexSet(const NodeFactory& nodeFactory) :
     nodeFactory_(&nodeFactory),
-    solutionLocalIndexSets_(genericTransformTuple(
+    solutionLocalIndexSets_(detail::getLocalIndexSets(
                       nodeFactory.testspaceCoefficientMatrix_
-                          .bilinearForm().getSolutionSpaces(),
-                      detail::getLocalIndexSetFunctor()))
+                          .bilinearForm().getSolutionSpaces()))
   {}
 
   constexpr OptimalTestBasisNodeIndexSet(const OptimalTestBasisNodeIndexSet&)

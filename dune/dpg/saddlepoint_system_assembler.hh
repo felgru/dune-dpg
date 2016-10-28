@@ -307,10 +307,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   auto solutionLocalViews = getLocalViews(solutionSpaces);
   auto testLocalViews     = getLocalViews(testSpaces);
 
-  auto solutionLocalIndexSets
-      = genericTransformTuple(solutionSpaces, getLocalIndexSetFunctor());
-  auto testLocalIndexSets
-      = genericTransformTuple(testSpaces, getLocalIndexSetFunctor());
+  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces);
+  auto testLocalIndexSets = getLocalIndexSets(testSpaces);
 
   for(const auto& e : elements(gridView)) {
 
@@ -393,8 +391,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
         = getLocalViews(std::tuple_cat(testSpaces, solutionSpaces));
 
   auto localIndexSets
-        = genericTransformTuple(std::tuple_cat(testSpaces, solutionSpaces),
-                                getLocalIndexSetFunctor());
+        = getLocalIndexSets(std::tuple_cat(testSpaces, solutionSpaces));
 
 
   for(const auto& e : elements(gridView)) {
