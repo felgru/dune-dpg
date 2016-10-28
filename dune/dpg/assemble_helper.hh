@@ -8,6 +8,7 @@
 #include <tuple>
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/std/memory.hh>
+#include <dune/common/tupleutility.hh>
 #include <dune/istl/matrixindexset.hh>
 #include <boost/fusion/adapted/std_tuple.hpp>
 #include <boost/fusion/adapted/array.hpp>

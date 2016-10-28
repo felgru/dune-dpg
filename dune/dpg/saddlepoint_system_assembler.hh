@@ -20,8 +20,6 @@
 #include <boost/fusion/adapted/mpl.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
 
-#include <dune/common/hybridutilities.hh>
-#include <dune/common/tupleutility.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>

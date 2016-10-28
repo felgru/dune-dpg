@@ -10,8 +10,6 @@
 #include <cassert>
 
 #include <dune/common/exceptions.hh>
-#include <dune/common/tupleutility.hh>
-
 
 #include <dune/dpg/assemble_helper.hh>
 #include <dune/dpg/cholesky.hh>

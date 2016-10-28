@@ -11,7 +11,6 @@
 #include <cassert>
 
 #include <dune/common/hybridutilities.hh>
-#include <dune/common/tupleutility.hh>
 
 #include "assemble_helper.hh"
 #include "assemble_types.hh"
