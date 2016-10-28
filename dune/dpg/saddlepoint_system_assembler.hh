@@ -318,8 +318,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
   for(const auto& e : elements(gridView)) {
 
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
-    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
+    bindLocalViews(testLocalViews, e);
 
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
@@ -404,8 +404,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
   for(const auto& e : elements(gridView)) {
 
-    Hybrid::forEach(localViews, applyBind<decltype(e)>(e));
-
+    bindLocalViews(localViews, e);
     bindLocalIndexSets(localIndexSets, localViews);
 
     // Now get the local contribution to the right-hand side vector

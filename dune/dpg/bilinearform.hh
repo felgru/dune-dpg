@@ -253,8 +253,8 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
 
   for(const auto& e : elements(gridView))
   {
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
-    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
+    bindLocalViews(testLocalViews, e);
 
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);

@@ -185,8 +185,7 @@ getOccupationPattern(MatrixIndexSet& nb) const
 
   for(const auto& e : elements(gridView))
   {
-    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
-
+    bindLocalViews(testLocalViews, e);
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
     detail::getOccupationPattern<IndexPairs, false>

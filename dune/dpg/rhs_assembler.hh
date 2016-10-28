@@ -136,8 +136,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
   for(const auto& e : elements(gridView)) {
 
-    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
-
+    bindLocalViews(testLocalViews, e);
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
     // Now get the local contribution to the right-hand side vector

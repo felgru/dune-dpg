@@ -364,7 +364,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
   for(const auto& e : elements(gridView))
   {
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     detail::getOccupationPattern<Indices, false>
@@ -388,7 +388,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
   for(const auto& e : elements(gridView)) {
 
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -401,7 +401,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     // Now get the local contribution to the right-hand side vector
 
-    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(testLocalViews, e);
 
     // compute the local right-hand side vector F for the enriched test space
     BlockVector<FieldVector<double,1> > localEnrichedRhs;
@@ -507,7 +507,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
   for(const auto& e : elements(gridView))
   {
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     detail::getOccupationPattern<Indices, false>
@@ -527,7 +527,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
   for(const auto& e : elements(gridView)) {
 
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     testspaceCoefficientMatrix_.bind(e);
@@ -589,7 +589,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
   for(const auto& e : elements(gridView)) {
 
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -602,7 +602,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     // Now get the local contribution to the right-hand side vector
 
-    Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(testLocalViews, e);
 
     // compute the local right-hand side vector F for the enriched test space
     BlockVector<FieldVector<double,1> > localEnrichedRhs;
@@ -1045,7 +1045,7 @@ applyMinimization
 
   for(const auto& e : elements(gridView))
   {
-    Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+    bindLocalViews(solutionLocalViews, e);
     localIndexSet.bind(std::get<spaceIndex>(solutionLocalViews));
 
     /* set up local offsets */

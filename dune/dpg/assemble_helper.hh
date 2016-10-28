@@ -49,20 +49,12 @@ struct getLocalViewFunctor
   }
 };
 
-template<class E>
-struct applyBind
+template<class LocalViews, class Element>
+inline void bindLocalViews(LocalViews& localViews,
+                           const Element& e)
 {
-  applyBind(const E& e) : e(e) {}
-
-  template<class T>
-  void operator()(T& t) const
-  {
-    t.bind(e);
-  }
-
-private:
-  const E& e;
-};
+  Hybrid::forEach(localViews, [&](auto& lv) { lv.bind(e); });
+}
 
 template<class LocalIndexSets, class LocalViews>
 inline void bindLocalIndexSets(LocalIndexSets&   lis,

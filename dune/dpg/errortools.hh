@@ -415,7 +415,7 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       // Bind localViews and localIndexSets
-      Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+      bindLocalViews(solutionLocalViews, e);
       bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
       res += aPosterioriL2ErrorSquareElement(innerProduct,
@@ -564,8 +564,8 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       // Bind localViews and localIndexSets
-      Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
-      Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+      bindLocalViews(testLocalViews, e);
+      bindLocalViews(solutionLocalViews, e);
       bindLocalIndexSets(testLocalIndexSets, testLocalViews);
       bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
@@ -660,8 +660,8 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       // Bind localViews and localIndexSets
-      Hybrid::forEach(testLocalViews, applyBind<decltype(e)>(e));
-      Hybrid::forEach(solutionLocalViews, applyBind<decltype(e)>(e));
+      bindLocalViews(testLocalViews, e);
+      bindLocalViews(solutionLocalViews, e);
       bindLocalIndexSets(testLocalIndexSets, testLocalViews);
       bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 

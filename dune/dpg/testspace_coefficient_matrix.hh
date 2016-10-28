@@ -168,8 +168,8 @@ public:
   {
     using namespace Dune::detail;
 
-    Hybrid::forEach(localViewsTest_, applyBind<decltype(e)>(e));
-    Hybrid::forEach(localViewsSolution_, applyBind<decltype(e)>(e));
+    bindLocalViews(localViewsTest_, e);
+    bindLocalViews(localViewsSolution_, e);
 
     MatrixType stiffnessMatrix;
 
@@ -324,8 +324,8 @@ class BufferedTestspaceCoefficientMatrix
     systemMatrix_ = &pair.first.systemMatrix();
     if (!pair.second)
     {
-      Hybrid::forEach(localViewsTest_, applyBind<decltype(e)>(e));
-      Hybrid::forEach(localViewsSolution_, applyBind<decltype(e)>(e));
+      bindLocalViews(localViewsTest_, e);
+      bindLocalViews(localViewsSolution_, e);
 
       MatrixType stiffnessMatrix;
 

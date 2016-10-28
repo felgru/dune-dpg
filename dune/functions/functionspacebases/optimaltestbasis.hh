@@ -342,10 +342,10 @@ public:
     using namespace Dune::detail;
 
     this->element_ = &e;
-    Hybrid::forEach(localViewsTest, applyBind<decltype(e)>(e));
+    bindLocalViews(localViewsTest, e);
     testSearchSpace_ =
         &(std::get<testIndex>(localViewsTest).tree().finiteElement());
-    Hybrid::forEach(localViewsSolution_, applyBind<decltype(e)>(e));
+    bindLocalViews(localViewsSolution_, e);
 
     testspaceCoefficientMatrix.bind(e);
 
