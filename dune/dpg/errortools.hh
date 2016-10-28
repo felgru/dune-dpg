@@ -396,12 +396,10 @@ namespace Dune {
 
     typedef typename InnerProduct::TestSpaces SolutionSpaces;
 
-    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                                 SolutionSpaces>::Type  SolutionLocalViews;
+    typedef getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
 
     SolutionLocalViews solutionLocalViews
-        = genericTransformTuple(innerProduct.getTestSpaces(),
-                                getLocalViewFunctor());
+        = getLocalViews(innerProduct.getTestSpaces());
 
 
     // We get the local index sets of the solution spaces
@@ -537,17 +535,13 @@ namespace Dune {
     typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
     typedef typename BilinearForm::TestSpaces EnrichedTestspaces;
 
-    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                                 SolutionSpaces>::Type  SolutionLocalViews;
-    typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                                 EnrichedTestspaces>::Type  TestLocalViews;
+    typedef detail::getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
+    typedef detail::getLocalViews_t<EnrichedTestspaces>  TestLocalViews;
 
     SolutionLocalViews solutionLocalViews
-        = genericTransformTuple(bilinearForm.getSolutionSpaces(),
-                                getLocalViewFunctor());
+        = getLocalViews(bilinearForm.getSolutionSpaces());
     TestLocalViews testLocalViews
-        = genericTransformTuple(bilinearForm.getTestSpaces(),
-                                getLocalViewFunctor());
+        = getLocalViews(bilinearForm.getTestSpaces());
 
     // We get the local index sets of the test spaces
     auto testLocalIndexSets
@@ -632,19 +626,13 @@ namespace Dune {
     using SolutionSpaces = typename BilinearForm::SolutionSpaces;
     using EnrichedTestspaces = typename BilinearForm::TestSpaces;
 
-    using SolutionLocalViews
-        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               SolutionSpaces>::Type;
-    using TestLocalViews
-        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               EnrichedTestspaces>::Type;
+    using SolutionLocalViews = getLocalViews_t<SolutionSpaces>;
+    using TestLocalViews = getLocalViews_t<EnrichedTestspaces>;
 
     SolutionLocalViews solutionLocalViews
-        = genericTransformTuple(bilinearForm.getSolutionSpaces(),
-                                getLocalViewFunctor());
+        = getLocalViews(bilinearForm.getSolutionSpaces());
     TestLocalViews testLocalViews
-        = genericTransformTuple(bilinearForm.getTestSpaces(),
-                                getLocalViewFunctor());
+        = getLocalViews(bilinearForm.getTestSpaces());
 
     // We get the local index sets of the test spaces
     auto testLocalIndexSets

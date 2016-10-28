@@ -41,9 +41,7 @@ namespace Dune {
     //! tuple type of inner product terms
     typedef InnerProductTerms Terms;
     //! tuple type for the local views of the test spaces
-    using TestLocalViews
-        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               TestSpaces>::Type;
+    using TestLocalViews = detail::getLocalViews_t<TestSpaces>;
 
     InnerProduct () = delete;
     /**
@@ -163,8 +161,7 @@ getOccupationPattern(MatrixIndexSet& nb) const
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   computeOffsets(globalTestSpaceOffsets, testSpaces);
 
-  auto testLocalViews     = genericTransformTuple(testSpaces,
-                                                  getLocalViewFunctor());
+  auto testLocalViews     = getLocalViews(testSpaces);
   auto testLocalIndexSets = genericTransformTuple(testSpaces,
                                                   getLocalIndexSetFunctor());
 

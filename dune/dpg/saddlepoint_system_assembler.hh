@@ -49,11 +49,9 @@ public:
   typedef typename BilinForm::TestSpaces TestSpaces;
   typedef typename BilinForm::SolutionSpaces SolutionSpaces;
   //! tuple type for the local views of the test spaces
-  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               TestSpaces>::Type  TestLocalViews;
+  typedef detail::getLocalViews_t<TestSpaces>  TestLocalViews;
   //! tuple type for the local views of the solution spaces
-  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               SolutionSpaces>::Type  SolutionLocalViews;
+  typedef detail::getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
   //! type of the bilinear form describing this DPG system
   typedef BilinForm BilinearForm;
   //! type of the inner product on the test spaces
@@ -306,10 +304,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   matrix = 0;
 
   // Views on the FE bases on a single element
-  auto solutionLocalViews = genericTransformTuple(solutionSpaces,
-                                                  getLocalViewFunctor());
-  auto testLocalViews     = genericTransformTuple(testSpaces,
-                                                  getLocalViewFunctor());
+  auto solutionLocalViews = getLocalViews(solutionSpaces);
+  auto testLocalViews     = getLocalViews(testSpaces);
 
   auto solutionLocalIndexSets
       = genericTransformTuple(solutionSpaces, getLocalIndexSetFunctor());
@@ -394,8 +390,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
   // Views on the FE bases on a single element
   auto localViews
-        = genericTransformTuple(std::tuple_cat(testSpaces, solutionSpaces),
-                                getLocalViewFunctor());
+        = getLocalViews(std::tuple_cat(testSpaces, solutionSpaces));
 
   auto localIndexSets
         = genericTransformTuple(std::tuple_cat(testSpaces, solutionSpaces),

@@ -276,12 +276,8 @@ private:
   using TestSearchFiniteElement
       = typename TestSearchSpace::LocalView::Tree::FiniteElement;
 
-  using SolutionLocalViews
-        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               SolutionSpaces>::Type;
-  using TestLocalViews
-        = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               TestSearchSpaces>::Type;
+  using SolutionLocalViews = detail::getLocalViews_t<SolutionSpaces>;
+  using TestLocalViews = detail::getLocalViews_t<TestSearchSpaces>;
 
   static const bool testSearchSpaceIsRefined
     = is_RefinedFiniteElement<TestSearchSpace>::value;
@@ -313,12 +309,10 @@ public:
     testspaceCoefficientMatrix(testCoeffMat),
     finiteElement_(nullptr),
     testSearchSpace_(nullptr),
-    localViewsSolution_(genericTransformTuple(testCoeffMat.bilinearForm()
-                                                .getSolutionSpaces(),
-                                              detail::getLocalViewFunctor())),
-    localViewsTest(genericTransformTuple(testCoeffMat.bilinearForm()
-                                                    .getTestSpaces(),
-                                          detail::getLocalViewFunctor()))
+    localViewsSolution_(detail::getLocalViews(testCoeffMat.bilinearForm()
+                                                .getSolutionSpaces())),
+    localViewsTest(detail::getLocalViews(testCoeffMat.bilinearForm()
+                                                    .getTestSpaces()))
   {}
 
   //! Return current element, throw if unbound

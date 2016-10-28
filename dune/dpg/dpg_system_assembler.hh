@@ -78,14 +78,9 @@ public:
 
 
   //! tuple type for the local views of the test spaces
-  using TestLocalViews
-    = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                           TestSearchSpaces>::Type;
+  using TestLocalViews = detail::getLocalViews_t<TestSearchSpaces>;
   //! tuple type for the local views of the solution spaces
-
-  using SolutionLocalViews
-    = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                           SolutionSpaces>::Type;
+  using SolutionLocalViews = detail::getLocalViews_t<SolutionSpaces>;
 
   DPGSystemAssembler () = delete;
   /**
@@ -333,11 +328,9 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       computeOffsets(globalSolutionSpaceOffsets, solutionSpaces_);
 
   // Views on the FE bases on a single element
-  auto testLocalViews = genericTransformTuple(testSearchSpaces_,
-                                              getLocalViewFunctor());
+  auto testLocalViews = getLocalViews(testSearchSpaces_);
 
-  auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
-                                                  getLocalViewFunctor());
+  auto solutionLocalViews = getLocalViews(solutionSpaces_);
   auto solutionLocalIndexSets
       = genericTransformTuple(solutionSpaces_, getLocalIndexSetFunctor());
 
@@ -479,10 +472,9 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
       computeOffsets(globalSolutionSpaceOffsets, solutionSpaces_);
 
   // Views on the FE bases on a single element
-  auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
-                                                  getLocalViewFunctor());
+  auto solutionLocalViews = getLocalViews(solutionSpaces_);
   auto solutionLocalIndexSets
-      = genericTransformTuple(solutionSpaces_, getLocalIndexSetFunctor());
+      = getLocalViews(solutionSpaces_, getLocalIndexSetFunctor());
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
@@ -578,11 +570,9 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   rhs = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews = genericTransformTuple(testSearchSpaces_,
-                                              getLocalViewFunctor());
+  auto testLocalViews = getLocalViews(testSearchSpaces_);
 
-  auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
-                                                  getLocalViewFunctor());
+  auto solutionLocalViews = getLocalViews(solutionSpaces_);
 
   auto solutionLocalIndexSets = genericTranformTuple(solutionSpaces_,
                                                      getLocalIndexSetFunctor());
@@ -1036,8 +1026,7 @@ applyMinimization
 
   // get local view for solution space
   // (necessary if we want to use inner product) // TODO inefficient (why?)
-  auto solutionLocalViews = genericTransformTuple(solutionSpaces_,
-                                                  getLocalViewFunctor());
+  auto solutionLocalViews = getLocalViews(solutionSpaces_);
 
   auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
 

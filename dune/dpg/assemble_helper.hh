@@ -49,6 +49,16 @@ struct getLocalViewFunctor
   }
 };
 
+template<class Spaces>
+using getLocalViews_t
+    = typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
+                           Spaces>::Type;
+
+template<class Spaces>
+inline getLocalViews_t<Spaces> getLocalViews(const Spaces& spaces) {
+  return genericTransformTuple(spaces, getLocalViewFunctor());
+}
+
 template<class LocalViews, class Element>
 inline void bindLocalViews(LocalViews& localViews,
                            const Element& e)
@@ -78,11 +88,9 @@ struct getLocalMatrixHelper
       T[std::tuple_size<Tuple>::value];
 
   //! tuple type for the local views of the test spaces
-  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               TestSpaces>::Type  TestLocalViews;
+  using TestLocalViews = getLocalViews_t<TestSpaces>;
   //! tuple type for the local views of the solution spaces
-  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               SolutionSpaces>::Type  SolutionLocalViews;
+  using SolutionLocalViews = getLocalViews_t<SolutionSpaces>;
 
   getLocalMatrixHelper(const TestLocalViews& testLocalViews,
                        const SolutionLocalViews& solutionLocalViews,
@@ -147,8 +155,7 @@ struct getLocalVectorHelper
       T[std::tuple_size<Tuple>::value];
 
   //! tuple type for the local views of the test spaces
-  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               TestSpaces>::Type  TestLocalViews;
+  using TestLocalViews = getLocalViews_t<TestSpaces>;
 
   getLocalVectorHelper(const TestLocalViews& testLocalViews,
                        VectorType& elementVector,

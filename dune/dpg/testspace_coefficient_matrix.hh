@@ -144,11 +144,9 @@ public:
   typedef typename BilinearForm::TestSpaces TestSpaces;
 
 private:
-  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               SolutionSpaces>::Type  SolutionLocalViews;
+  typedef detail::getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
 
-  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               TestSpaces>::Type  TestLocalViews;
+  typedef detail::getLocalViews_t<TestSpaces>  TestLocalViews;
 
   typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
 
@@ -158,10 +156,9 @@ public:
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
     gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
-    localViewsSolution_(genericTransformTuple(bilinearForm_.getSolutionSpaces(),
-                                              detail::getLocalViewFunctor())),
-    localViewsTest_(genericTransformTuple(bilinearForm_.getTestSpaces(),
-                                          detail::getLocalViewFunctor()))
+    localViewsSolution_(detail::getLocalViews(
+                          bilinearForm_.getSolutionSpaces())),
+    localViewsTest_(detail::getLocalViews(bilinearForm_.getTestSpaces()))
   {}
 
   void bind(const typename GridView::template Codim<0>::Entity& e)
@@ -288,11 +285,9 @@ class BufferedTestspaceCoefficientMatrix
   typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
 
   private:
-  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               SolutionSpaces>::Type  SolutionLocalViews;
+  typedef detail::getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
 
-  typedef typename ForEachType<detail::getLocalViewFunctor::TypeEvaluator,
-                               TestSpaces>::Type  TestLocalViews;
+  typedef detail::getLocalViews_t<TestSpaces>  TestLocalViews;
 
   typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
 
@@ -301,10 +296,9 @@ class BufferedTestspaceCoefficientMatrix
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
     gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
-    localViewsSolution_(genericTransformTuple(bilinearForm_.getSolutionSpaces(),
-                                              detail::getLocalViewFunctor())),
-    localViewsTest_(genericTransformTuple(bilinearForm_.getTestSpaces(),
-                                          detail::getLocalViewFunctor())),
+    localViewsSolution_(detail::getLocalViews(
+                          bilinearForm_.getSolutionSpaces())),
+    localViewsTest_(detail::getLocalViews(bilinearForm_.getTestSpaces())),
     geometryBuffer_(buffer)
   {}
 

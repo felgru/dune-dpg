@@ -128,9 +128,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   rhs = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews     = genericTransformTuple(testSpaces,
-                                                  getLocalViewFunctor());
-
+  auto testLocalViews     = getLocalViews(testSpaces);
   auto testLocalIndexSets = genericTransformTuple(testSpaces,
                                                   getLocalIndexSetFunctor());
 
