@@ -213,9 +213,13 @@ int main(int argc, char** argv)
 
   auto g = [&sVector] (const Domain& x, const Direction& s)
            { return 1.; };
+  // TODO: Estimate ρ from the paper.
+  const double rho = 1.;
+  // TODO: Estimate the constant C_T.
+  const double CT = 1;
   Periter<ScatteringKernelApproximation::SVD>()
       .solve(*grid, g, HenyeyGreensteinScattering<Direction>(0.9),
-             numS, 1e-2, N);
+             numS, rho, CT, 1e-2, N);
 
   return 0;
   }

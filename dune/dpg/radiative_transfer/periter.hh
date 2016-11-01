@@ -45,8 +45,10 @@ class Periter {
              const F& f,
              const Kernel& kernel,
              unsigned int numS,
+             double rho,
+             double CT,
              double targetAccuracy,
-             unsigned int numberOfIterations);
+             unsigned int maxNumberOfIterations);
 };
 
 // Get solution u or theta out of the solution vector x
@@ -74,6 +76,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
            const F& f,
            const Kernel& kernel,
            unsigned int numS,
+           double rho,
+           double CT,
            double targetAccuracy,
            unsigned int maxNumberOfIterations) {
   const unsigned int dim = 2;
@@ -135,16 +139,25 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
   /////////////////////////////////////////////////////////
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
-  // TODO: Estimate ρ from the paper.
-  const double rho = 1.;
-  // The accuracy η_n:
+  // TODO: A priori estimate for the accuracy of our solution:
   double accuracy = 1.;
+  // η_n:
+  double eta = 1;
+  // TODO: estimate norm of rhs f
+  const double fnorm = 1;
+  // ρ̄:
+  const double rhobar = (1./rho > 2*rho)? (1./rho) : (2*rho);
+
+  // CT*kappa1 + (1+CT)*kappa2 + 2*kappa3 = .5 <= 1.
+  const double kappa1 = 1./(6.*CT);
+  const double kappa2 = 1./(6.*(1+CT));
+  const double kappa3 = 1./12.;
+
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
   {
-    accuracy *= rho/2.;
     // TODO: Consider the norm of the transport solver in the accuracy.
-    kernelApproximation.setAccuracy(accuracy/2.);
+    kernelApproximation.setAccuracy(kappa1*eta);
 
     ofs << "\nIteration " << n << std::endl;
     std::cout << "\nIteration " << n << std::endl << std::endl;
@@ -433,12 +446,15 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       std::cout << "Grid level: " << grid.maxLevel() << '\n';
       std::cout << "A posteriori error: " << aposterioriErr << std::endl;
 
-      if(aposterioriErr < accuracy/2.) {
+      if(aposterioriErr < kappa3*eta) {
         break;
       } else {
         grid.globalRefine(1);
       }
     }
+
+    accuracy = std::pow(rho, n) * CT * fnorm + 2*eta;
+    eta /= rhobar;
 
     const bool plotSolutions = false;
     if(plotSolutions) {
