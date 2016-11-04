@@ -33,7 +33,7 @@ UMFPACK installation:
 
 Download release 3.12.1 of UG from
 
-    http://conan.iwr.uni-heidelberg.de/download/ug-3.12.1.tar.gz
+    https://gitlab.dune-project.org/ug/ug/repository/archive.tar.bz2?ref=v3.12.1
 
 and unpack it.
 
