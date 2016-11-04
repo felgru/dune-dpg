@@ -12,7 +12,8 @@ in jessie-backports. They can be installed via
 Using Homebrew on MacOS
 -----------------------
 
-cmake installation (it requires the previous installation of autoconf, automake and libtool):
+CMake installation (it requires the previous installation of autoconf,
+                    automake and libtool):
     brew install autoconf
     brew install automake
     brew install libtool
@@ -21,12 +22,12 @@ cmake installation (it requires the previous installation of autoconf, automake 
 The installation of pkg-config is recommended:
     brew install pkg-config
 
-boost installation:
-    brew install --c++11 boost
+Boost 1.59 installation (since newer versions of Boost::Fusion are broken):
+    brew install homebrew/versions/boost159
 
-umfpack installation:
-    brew tap /hombrew/science/
-    brew install /hombrew/science/suite-sparse
+UMFPACK installation:
+    brew tap hombrew/science
+    brew install hombrew/science/suite-sparse
 
 ### Installation of UG
 
