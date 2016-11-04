@@ -43,9 +43,12 @@ Remark: The latest release 3.13.0 is incompatible with Dune 2.4.1.
 In the UG folder, run
 
     autoreconf -is
-    ./configure --enable-dune --without-x CXX=g++
+    ./configure --enable-dune --without-x CXX=g++-6
     make
     make install
+
+Remark: You have to use the versioned compilername g++-6 as under MacOS
+        g++ is by default a symlink to clang.
 
 Installation and compilation of dune and dune-dpg
 =================================================
@@ -117,12 +120,14 @@ Building and compiling dune and dune-dpg
 the C and C++ compiler in it. In our case, we have used gcc and g++ so
 the file reads
 
-CMAKE_FLAGS="-DCMAKE_C_COMPILER='gcc' -DCMAKE_CXX_COMPILER='g++'"
+CMAKE_FLAGS="-DCMAKE_C_COMPILER='gcc-6' -DCMAKE_CXX_COMPILER='g++-6'"
 CMAKE_FLAGS+=" -DCMAKE_CXX_FLAGS='-pedantic -Wall -Wno-deprecated-declarations'"
 
 Remarks:
  - In MacOS, the C compiler is set to clang by default so the previous
    configuration option cannot be omitted.
+   Additionally g++ is a symlink to clang on MacOS, so one has to use
+   the versioned compiler name g++-6. The same goes for gcc.
  - The use of clang and clang++ is in principle also possible here although
    this compiler has not been tested.
  - The second line adds some compile flags to give more warnings and
