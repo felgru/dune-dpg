@@ -50,13 +50,3 @@ foreach(level RANGE 0 3)
                                     LEVEL_APOSTERIORI=${alevel};
                                     K_APOSTERIORI=${adegree})
 endforeach()
-
-#add_executable("dune_dpg_conv_diff" dune_dpg_conv_diff.cc)
-#add_dune_suitesparse_flags(dune_dpg_conv_diff)
-#add_dune_ug_flags(dune_dpg_conv_diff)
-#target_link_dune_default_libraries("dune_dpg_conv_diff")
-
-#add_executable("dune_dpg_conv_diff_mod" dune_dpg_conv_diff_mod.cc)
-#add_dune_suitesparse_flags(dune_dpg_conv_diff_mod)
-#add_dune_ug_flags(dune_dpg_conv_diff_mod)
-#target_link_dune_default_libraries("dune_dpg_conv_diff_mod")
