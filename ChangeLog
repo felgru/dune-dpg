@@ -1,3 +1,11 @@
+0.3 (unreleased):
+* We now require version 2.5 of the DUNE core modules.
+* Restrict usage of Boost::Fusion.
+  In many places we now use functions from dune/common/hybridutilities.hh
+  or dune/common/tupleutility.hh instead.
+  Unfortunately, we couldn't completely get rid of Boost::Fusion
+  and the incompatibilities with versions >1.59 still remains.
+
 0.2.1:
 * Lower Boost requirements to 1.56 and document that 1.60 and 1.61
   cause compilation errors.
