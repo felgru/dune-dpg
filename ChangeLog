@@ -1,3 +1,12 @@
+0.2.1:
+* Lower Boost requirements to 1.56 and document that 1.60 and 1.61
+  cause compilation errors.
+* Fix compilation with GCC 6.
+* Improve the INSTALL instructions:
+    * Fix instructions for MacOS.
+    * Fix URL for UG 3.12.1.
+    * Describe how to use Boost 1.59 from a non-standard include path.
+
 0.2:
 * Split SystemAssembler into DPGSystemAssembler and
   SaddlepointSystemAssembler.
