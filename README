@@ -25,12 +25,13 @@ libraries installed on your system:
     - a C++11-compatible compiler (e.g. GCC >= 4.9)
     - cmake >= 2.8.12
   - Libraries:
-    - Boost Fusion >= 1.58, < 1.60
-      (Boost Fusion 1.60 and 1.61 are known to cause compilation errors.)
+    - Boost Fusion >= 1.56, < 1.60
+      (Boost Fusion 1.60 and 1.61 are known to cause compilation errors.
+       Versions other than 1.59 have not been thoroughly tested.)
     - Eigen >= 3.2
       (http://eigen.tuxfamily.org)
-    - A grid manager. Our examples use UG 3.12.1
-      (http://www.iwr.uni-heidelberg.de/frame/iwrwikiequipment/software/ug)
+    - A grid manager. Our examples use dune-uggrid
+      (https://dune-project.org/modules/dune-uggrid/)
       but one could also use other managers, e.g., ALBERTA or YASPgrid.
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
     - DUNE core libraries 2.5-git (Git master branch)

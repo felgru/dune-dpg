@@ -12,7 +12,8 @@ in jessie-backports. They can be installed via
 Using Homebrew on MacOS
 -----------------------
 
-cmake installation (it requires the previous installation of autoconf, automake and libtool):
+CMake installation (it requires the previous installation of autoconf,
+                    automake and libtool):
     brew install autoconf
     brew install automake
     brew install libtool
@@ -21,30 +22,33 @@ cmake installation (it requires the previous installation of autoconf, automake 
 The installation of pkg-config is recommended:
     brew install pkg-config
 
-boost installation:
-    brew install --c++11 boost
+Boost 1.59 installation (since newer versions of Boost::Fusion are broken):
+    brew install homebrew/versions/boost159
 
-umfpack installation:
-    brew tap /hombrew/science/
-    brew install /hombrew/science/suite-sparse
+UMFPACK installation:
+    brew tap hombrew/science
+    brew install hombrew/science/suite-sparse
 
-### Installation of UG
+### Deprecated: Installation of UG instead of dune-uggrid
 
-Download release 3.12.1 of UG from
+Remark: UG is not actively maintained anymore and has been superseded
+        by dune-uggrid which is maintained as part of DUNE.
 
-    http://conan.iwr.uni-heidelberg.de/download/ug-3.12.1.tar.gz
+Download release 3.13.0 of UG from
+
+    https://gitlab.dune-project.org/ug/ug/repository/archive.tar.bz2?ref=v3.13.0
 
 and unpack it.
-
-Remark: The latest release 3.13.0 is incompatible with Dune 2.4.1.
-        (see https://gitlab.dune-project.org/core/dune-grid/issues/13)
 
 In the UG folder, run
 
     autoreconf -is
-    ./configure --enable-dune --without-x CXX=g++
+    ./configure --enable-dune --without-x CXX=g++-6
     make
     make install
+
+Remark: You have to use the versioned compilername g++-6 as under MacOS
+        g++ is by default a symlink to clang.
 
 Installation and compilation of dune and dune-dpg
 =================================================
@@ -58,14 +62,14 @@ will nevertheless find his way.
    We will call this directory $DUNEDIR.
 
    Remark: Make sure that there are no whitespaces in the $DUNEDIR path
-           as our build-system might not be able to cope with them.
+           as our build system might not be able to cope with them.
            (Make is known to handle spaces in filenames quite badly and
             other CMake backends might have similar problems.)
 
 Installation of Dune on Debian GNU/Linux
 ----------------------------------------
 
-TODO: add instructions to install Dune 3.0
+TODO: add instructions to install Dune 2.5 as soon as it is released
 
 2) If you are using Debian Stretch, the Dune 2.4.1 core libraries can be
    installed from the Debian repositories with
@@ -91,9 +95,11 @@ Installation of Dune on MacOS
 -----------------------------
 
 2) Download the following dune sources in $DUNEDIR:
- 2.a) - Version >= 3.0 of the following Dune source modules:
+ 2.a) - Version >= 2.5 of the following Dune source modules:
         dune-common, dune-geometry, dune-grid, dune-istl, dune-localfunctions
-      - Link: https://dune-project.org/groups/core/
+        Link: https://dune-project.org/groups/core/
+      - dune-uggrid
+        Link: https://dune-project.org/modules/dune-uggrid/
 
  2.b) Download dune-functions and dune-typetree by cloning the master
       branches of their GitLab repositories
@@ -113,17 +119,19 @@ Building and compiling dune and dune-dpg
 the C and C++ compiler in it. In our case, we have used gcc and g++ so
 the file reads
 
-CMAKE_FLAGS="-DCMAKE_C_COMPILER='gcc' -DCMAKE_CXX_COMPILER='g++'"
+CMAKE_FLAGS="-DCMAKE_C_COMPILER='gcc-6' -DCMAKE_CXX_COMPILER='g++-6'"
 CMAKE_FLAGS+=" -DCMAKE_CXX_FLAGS='-pedantic -Wall'"
 
 Remarks:
  - In MacOS, the C compiler is set to clang by default so the previous
    configuration option cannot be omitted.
+   Additionally g++ is a symlink to clang on MacOS, so one has to use
+   the versioned compiler name g++-6. The same goes for gcc.
  - The use of clang and clang++ is in principle also possible here although
    this compiler has not been tested.
  - The second line adds some compile flags to give more warnings.
- - If you have installed UG into a non-standard prefix $UGPREFIX, you can
-   specify it by adding a line
+ - Deprecated: If you have installed UG into a non-standard prefix $UGPREFIX,
+   you can specify it by adding a line
    CMAKE_FLAGS+=" -DUG_ROOT=$UGPREFIX"
    to your dune.opts file.
  - Currently, dune-dpg does not yet support parallel computing.
