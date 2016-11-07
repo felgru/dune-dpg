@@ -8,4 +8,5 @@ Version: 0.3-git
 Maintainer: gruber@igpm.rwth-aachen.de
 #depending on
 Depends: dune-geometry dune-grid dune-localfunctions dune-istl dune-functions (>= 2.5)
+Suggests: dune-uggrid
 Whitespace-Hook: Yes
