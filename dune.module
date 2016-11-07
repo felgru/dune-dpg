@@ -4,7 +4,7 @@
 
 #Name of the module
 Module: dune-dpg
-Version: 0.2
+Version: 0.2.1
 Maintainer: gruber@igpm.rwth-aachen.de
 #depending on
 Depends: dune-geometry dune-grid (>= 2.4.1) dune-localfunctions dune-istl dune-functions (>= 2.4)
