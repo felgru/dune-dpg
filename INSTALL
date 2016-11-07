@@ -37,8 +37,13 @@ Download release 3.12.1 of UG from
 
 and unpack it.
 
-Remark: The latest release 3.13.0 is incompatible with Dune 2.4.1.
-        (see https://gitlab.dune-project.org/core/dune-grid/issues/13)
+Remarks:
+    - The latest release 3.13.0 is incompatible with Dune 2.4.1.
+      (see https://gitlab.dune-project.org/core/dune-grid/issues/13)
+    - With the comming 2.5 release of DUNE, UG has become a part of
+      DUNE in form of the dune-uggrid module. Unfortunately, this module
+      is not supported by dune-grid 2.4.1. Thus we still have to use the
+      more complicated way of installing UG that we describe here.
 
 In the UG folder, run
 
