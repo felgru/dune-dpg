@@ -8,6 +8,13 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 def readData(datafile):
+    parametersPattern = re.compile(
+        r'^Periter with rho = ([0-9]*\.?[0-9]*)'
+        r', CT = ([0-9]*\.?[0-9]*)'
+        r', kappa1 = ([0-9]*\.?[0-9]*)'
+        r', kappa2 = ([0-9]*\.?[0-9]*)'
+        r', kappa3 = ([0-9]*\.?[0-9]*)'
+        , re.MULTILINE)
     dataPattern = re.compile(
         '^Iteration ([0-9]+)\.([0-9]+): [^0-9]*([0-9\.e\-\+]+)'
         ', grid level: ([0-9]+)'
@@ -19,6 +26,13 @@ def readData(datafile):
     kernelTiming = list()
     with open(datafile,"r") as errors:
         errors = errors.read()
+        parametersMatch = parametersPattern.search(errors)
+        parameters = { 'rho':    parametersMatch.group(1)
+                     , 'CT':     parametersMatch.group(2)
+                     , 'kappa1': parametersMatch.group(3)
+                     , 'kappa2': parametersMatch.group(4)
+                     , 'kappa3': parametersMatch.group(5)
+                     }
         for (n, nRefinement, aPostErr, gridLevel, time, rest) \
                 in dataPattern.findall(errors):
             iterationIndices.append(n+'.'+nRefinement)
@@ -30,7 +44,8 @@ def readData(datafile):
             gridResolutions.append(np.exp2(-gridLevel))
             aposterioriErrors.append(aPostErr)
             kernelTiming.append(time)
-    return { 'datapoints': len(iterationIndices)
+    return { 'parameters': parameters
+           , 'datapoints': len(iterationIndices)
            , 'iterationIndices': iterationIndices
            , 'gridResolutions': gridResolutions
            , 'aposterioriErrors': aposterioriErrors
@@ -71,6 +86,10 @@ def plot(gridResolutions,
     plt.clf()
 
 def print_table(data):
+    print((r'convergence table for $\rho = {p[rho]}$'
+           r', $C_T = {p[CT]}$, $\kappa_1 = {p[kappa1]}$'
+           r', $\kappa_2 = {p[kappa2]}$, $\kappa_3 = {p[kappa3]}$'
+          ).format(p=data['parameters']))
     print(r'\begin{tabular}{l|lll}')
     print('iteration & $h$ & aposteriori error & duration of kernel application / s \\\\\n\hline')
     for i in range(data['datapoints']):

@@ -154,6 +154,12 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
   const double kappa2 = 0.; // as we can compute f exactly
   const double kappa3 = 1./4.;
 
+  ofs << "Periter with rho = " << rho << ", CT = " << CT
+      << ", kappa1 = " << kappa1
+      << ", kappa2 = " << kappa2
+      << ", kappa3 = " << kappa3
+      << std::endl;
+
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
   {
