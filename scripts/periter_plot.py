@@ -17,17 +17,18 @@ def readData(datafile):
         , re.MULTILINE)
     dataPattern = re.compile(
         r'^Iteration ([0-9]+)\.([0-9]+): [^0-9]*([0-9\.e\-\+]+)'
-        r', grid level: ([0-9]+)'
+        r', grid level: ([0-9]+), number of DOFs: ([0-9]+)'
         r', applying the kernel took ([0-9]+)us, (.*)$',
         re.MULTILINE)
     svdPattern = re.compile(
-        r'SVD approximation with rank ([0-9]*)')
+        r'SVD approximation with rank ([0-9]+)')
     waveletSVDPattern = re.compile(
-        r'Wavelet SVD approximation with rank ([0-9]*) and level ([0-9]*)')
+        r'Wavelet SVD approximation with rank ([0-9]+) and level ([0-9]+)')
     waveletCompressionPattern = re.compile(
-        r'MatrixCompression approximation with level ([0-9]*)')
+        r'MatrixCompression approximation with level ([0-9]+)')
     iterationIndices = list()
     gridResolutions = list()
+    dofs = list()
     aposterioriErrors = list()
     kernelTimings = list()
     ranks = list()
@@ -40,15 +41,17 @@ def readData(datafile):
                      , 'kappa2': parametersMatch.group(4)
                      , 'kappa3': parametersMatch.group(5)
                      }
-        for (n, nRefinement, aPostErr, gridLevel, time, rest) \
+        for (n, nRefinement, aPostErr, gridLevel, numDOFs, time, rest) \
                 in dataPattern.findall(errors):
             iterationIndices.append(n+'.'+nRefinement)
             n = int(n)
             nRefinement = int(nRefinement)
             aPostErr = float(aPostErr)
             gridLevel = int(gridLevel)
+            numDOFs = int(numDOFs)
             time = int(time) / 1000000.;
             gridResolutions.append(np.exp2(-gridLevel))
+            dofs.append(numDOFs)
             aposterioriErrors.append(aPostErr)
             kernelTimings.append(time)
             m = svdPattern.match(rest)
@@ -66,6 +69,7 @@ def readData(datafile):
            , 'datapoints': len(iterationIndices)
            , 'iterationIndices': iterationIndices
            , 'gridResolutions': gridResolutions
+           , 'dofs': dofs
            , 'aposterioriErrors': aposterioriErrors
            , 'kernelTimings': kernelTimings
            , 'ranks': ranks
@@ -110,16 +114,19 @@ def print_table(data):
            r', $\kappa_2 = {p[kappa2]}$, $\kappa_3 = {p[kappa3]}$'
            '\n'
           ).format(p=data['parameters']))
-    print(r'\begin{tabular}{l|llll}')
-    print('iteration & $h$ & aposteriori error & duration of kernel application / s & rank of kernel approximation \\\\\n\hline')
+    print(r'\begin{tabular}{l|lllll}')
+    print('iteration & $h$ & \#DOFs & aposteriori error & duration of kernel application / s & rank of kernel approximation \\\\\n\hline')
     for i in range(data['datapoints']):
         d = { 'iterationIndex': data['iterationIndices'][i]
             , 'gridResolution': data['gridResolutions'][i]
+            , 'dofs': data['dofs'][i]
             , 'aposterioriError': data['aposterioriErrors'][i]
             , 'kernelTiming': data['kernelTimings'][i]
             , 'rank': data['ranks'][i]
             }
-        print(r'{d[iterationIndex]} & {d[gridResolution]} & {d[aposterioriError]} & {d[kernelTiming]} & {d[rank]}\\'.format(d=d))
+        print((r'{d[iterationIndex]} & {d[gridResolution]} & {d[dofs]}'
+               r'& {d[aposterioriError]} & {d[kernelTiming]} & {d[rank]}\\'
+              ).format(d=d))
     print(r'\end{tabular}')
 
 

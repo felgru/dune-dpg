@@ -450,6 +450,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       ofs << "Iteration " << n << '.' << nRefinement << ": "
           << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
           << aposterioriErr << ", grid level: " << grid.maxLevel()
+          << ", number of DOFs: " << x[0].size() * x.size()
           << ", applying the kernel took "
           << std::chrono::duration_cast<std::chrono::microseconds>
              (endScatteringApproximation - startScatteringApproximation).count()
