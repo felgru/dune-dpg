@@ -3,6 +3,8 @@
 #ifndef DUNE_DPG_RADIATIVE_TRANSFER_SVD_KERNEL_APPROXIMATION_HH
 #define DUNE_DPG_RADIATIVE_TRANSFER_SVD_KERNEL_APPROXIMATION_HH
 
+#include <string>
+
 #include <dune/common/fvector.hh>
 
 #include <boost/math/constants/constants.hpp>
@@ -63,6 +65,12 @@ namespace ScatteringKernelApproximation {
         rank = i+1;
         // TODO: If accuracy is low enough to allow rank = 0,
         //       this gives rank = 1.
+      }
+
+      std::string info() const {
+        std::string s = "SVD approximation with rank "
+                        + std::to_string(rank);
+        return s;
       }
 
     private:

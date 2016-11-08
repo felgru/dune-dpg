@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/fvector.hh>
@@ -238,6 +239,12 @@ namespace ScatteringKernelApproximation {
           level = maxLevel;
         }
 
+        std::string info() const {
+          std::string s = "MatrixCompression approximation with level "
+                          + std::to_string(level);
+          return s;
+        }
+
       private:
         Eigen::MatrixXd kernelMatrix;
         size_t maxLevel;
@@ -295,6 +302,14 @@ namespace ScatteringKernelApproximation {
 
           // TODO: properly set level dependent on accuracy
           level = maxLevel;
+        }
+
+        std::string info() const {
+          std::string s = "Wavelet SVD approximation with rank "
+                          + std::to_string(rank)
+                          + " and level "
+                          + std::to_string(level);
+          return s;
         }
 
       private:

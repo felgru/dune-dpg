@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
 #define DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
 
+#include <chrono>
 #include <vector>
 
 #include <dune/grid/io/file/vtk.hh>
@@ -172,6 +173,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
     FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
 
 
+    std::chrono::steady_clock::time_point startScatteringApproximation
+        = std::chrono::steady_clock::now();
     std::vector<VectorType> scatteringFunctional(numS);
     {
       FEBasisInterior feBasisInterior(gridView);
@@ -189,6 +192,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
             x);
       }
     }
+    std::chrono::steady_clock::time_point endScatteringApproximation
+        = std::chrono::steady_clock::now();
 
     ////////////////////////////////////////////////////
     // Inner loop
@@ -439,7 +444,12 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       ofs << "Iteration " << n << '.' << nRefinement << ": "
           << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
           << aposterioriErr << ", grid level: " << grid.maxLevel()
+          << ", applying the kernel took "
+          << std::chrono::duration_cast<std::chrono::microseconds>
+             (endScatteringApproximation - startScatteringApproximation).count()
+          << "us, " << kernelApproximation.info()
           << std::endl;
+      // TODO: compute number of DOFs
       std::cout << std::endl;
 
       std::cout << "\nStatistics at end of inner iteration:\n";
