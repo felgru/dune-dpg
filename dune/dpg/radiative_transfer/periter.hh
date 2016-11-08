@@ -148,10 +148,10 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
   // ρ̄:
   const double rhobar = (1./rho > 2*rho)? (1./rho) : (2*rho);
 
-  // CT*kappa1 + (1+CT)*kappa2 + 2*kappa3 = .5 <= 1.
-  const double kappa1 = 1./(6.*CT);
-  const double kappa2 = 1./(6.*(1+CT));
-  const double kappa3 = 1./12.;
+  // CT*kappa1 + (1+CT)*kappa2 + 2*kappa3 = 1.
+  const double kappa1 = 1./(2.*CT);
+  const double kappa2 = 0.; // as we can compute f exactly
+  const double kappa3 = 1./4.;
 
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
