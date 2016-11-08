@@ -3,6 +3,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/dpg/radiative_transfer/kanschat_scattering.hh>
 #include <dune/dpg/radiative_transfer/henyey_greenstein_scattering.hh>
+#include <dune/dpg/radiative_transfer/waveletkernelapproximation.hh>
 
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -46,11 +47,12 @@ Eigen::MatrixXd kernelMatrix(const std::vector<Direction>& sVector, Kernel&& ker
 }
 
 void printHelp(char* name) {
-  std::cerr << "Usage: " << name << " [-e n|-p n|-a] s\n"
+  std::cerr << "Usage: " << name << " [-e n|-p n|-a] [-w] s\n"
                " -e n: exponential decay with n terms\n"
                " -p n: polynomial decay with n terms\n"
                " -g gamma: Henyey-Greenstein kernel with given gamma\n"
                " -a: kernel from Avila et al. 2011\n"
+               " -w: use Haar wavelet representation of kernel matrix\n"
                " s: number of directions\n";
   exit(0);
 }
@@ -67,15 +69,17 @@ int main(int argc, char *argv[]) {
   size_t kernelTerms = 50;
   double gamma = 0.;
   size_t numS = 100;
+  bool wavelet = false;
 
   int opt;
-  while ((opt = getopt(argc,argv,"e:p:g:a")) != EOF)
+  while ((opt = getopt(argc,argv,"e:p:g:aw")) != EOF)
     switch(opt)
     {
       case 'e': kt = kernelType::exponential; kernelTerms = atoi(optarg); break;
       case 'p': kt = kernelType::polynomial; kernelTerms = atoi(optarg); break;
       case 'g': kt = kernelType::henyey_greenstein; gamma = atof(optarg); break;
       case 'a': kt = kernelType::ACP2011; break;
+      case 'w': wavelet = true; break;
       default:
       case '?':
         printHelp(argv[0]);
@@ -98,33 +102,51 @@ int main(int argc, char *argv[]) {
                   sin(2*pi<double>()*i/numS)};
   }
 
+  using namespace Dune::ScatteringKernelApproximation::HaarWavelet;
+
   Eigen::MatrixXd m;
   switch(kt) {
     case kernelType::exponential:
       {
         auto exponentialKernel
           = KanschatScattering<Direction>(exponentialDecay(kernelTerms));
-        m = kernelMatrix(sVector, exponentialKernel);
+        if(wavelet) {
+          m = waveletKernelMatrix(exponentialKernel, std::ilogb(numS));
+        } else {
+          m = kernelMatrix(sVector, exponentialKernel);
+        }
       }
       break;
     case kernelType::polynomial:
       {
         auto polynomialKernel
           = KanschatScattering<Direction>(polynomialDecay(kernelTerms));
-        m = kernelMatrix(sVector, polynomialKernel);
+        if(wavelet) {
+          m = waveletKernelMatrix(polynomialKernel, std::ilogb(numS));
+        } else {
+          m = kernelMatrix(sVector, polynomialKernel);
+        }
       }
       break;
     case kernelType::henyey_greenstein:
       {
         auto henyeyGreensteinKernel
           = HenyeyGreensteinScattering<Direction>(gamma);
-        m = kernelMatrix(sVector, henyeyGreensteinKernel);
+        if(wavelet) {
+          m = waveletKernelMatrix(henyeyGreensteinKernel, std::ilogb(numS));
+        } else {
+          m = kernelMatrix(sVector, henyeyGreensteinKernel);
+        }
       }
       break;
     case kernelType::ACP2011:
       {
         auto acpKernel = ACP2011Scattering<Direction>();
-        m = kernelMatrix(sVector, acpKernel);
+        if(wavelet) {
+          m = waveletKernelMatrix(acpKernel, std::ilogb(numS));
+        } else {
+          m = kernelMatrix(sVector, acpKernel);
+        }
       }
   }
 
