@@ -16,14 +16,21 @@ def readData(datafile):
         r', kappa3 = ([0-9]*\.?[0-9]*)'
         , re.MULTILINE)
     dataPattern = re.compile(
-        '^Iteration ([0-9]+)\.([0-9]+): [^0-9]*([0-9\.e\-\+]+)'
-        ', grid level: ([0-9]+)'
-        ', applying the kernel took ([0-9]+)us, (.*)$',
+        r'^Iteration ([0-9]+)\.([0-9]+): [^0-9]*([0-9\.e\-\+]+)'
+        r', grid level: ([0-9]+)'
+        r', applying the kernel took ([0-9]+)us, (.*)$',
         re.MULTILINE)
+    svdPattern = re.compile(
+        r'SVD approximation with rank ([0-9]*)')
+    waveletSVDPattern = re.compile(
+        r'Wavelet SVD approximation with rank ([0-9]*) and level ([0-9]*)')
+    waveletCompressionPattern = re.compile(
+        r'MatrixCompression approximation with level ([0-9]*)')
     iterationIndices = list()
     gridResolutions = list()
     aposterioriErrors = list()
-    kernelTiming = list()
+    kernelTimings = list()
+    ranks = list()
     with open(datafile,"r") as errors:
         errors = errors.read()
         parametersMatch = parametersPattern.search(errors)
@@ -43,13 +50,25 @@ def readData(datafile):
             time = int(time) / 1000000.;
             gridResolutions.append(np.exp2(-gridLevel))
             aposterioriErrors.append(aPostErr)
-            kernelTiming.append(time)
+            kernelTimings.append(time)
+            m = svdPattern.match(rest)
+            if m:
+                ranks.append(m.group(1))
+            else:
+                m = waveletSVDPattern.match(rest)
+                if m:
+                    ranks.append(m.group(1))
+                else:
+                    m = waveletCompressionPattern.match(rest)
+                    if m:
+                        ranks.append('-')
     return { 'parameters': parameters
            , 'datapoints': len(iterationIndices)
            , 'iterationIndices': iterationIndices
            , 'gridResolutions': gridResolutions
            , 'aposterioriErrors': aposterioriErrors
-           , 'kernelTiming': kernelTiming
+           , 'kernelTimings': kernelTimings
+           , 'ranks': ranks
            }
 
 def plot(gridResolutions,
@@ -89,16 +108,18 @@ def print_table(data):
     print((r'convergence table for $\rho = {p[rho]}$'
            r', $C_T = {p[CT]}$, $\kappa_1 = {p[kappa1]}$'
            r', $\kappa_2 = {p[kappa2]}$, $\kappa_3 = {p[kappa3]}$'
+           '\n'
           ).format(p=data['parameters']))
-    print(r'\begin{tabular}{l|lll}')
-    print('iteration & $h$ & aposteriori error & duration of kernel application / s \\\\\n\hline')
+    print(r'\begin{tabular}{l|llll}')
+    print('iteration & $h$ & aposteriori error & duration of kernel application / s & rank of kernel approximation \\\\\n\hline')
     for i in range(data['datapoints']):
         d = { 'iterationIndex': data['iterationIndices'][i]
             , 'gridResolution': data['gridResolutions'][i]
             , 'aposterioriError': data['aposterioriErrors'][i]
-            , 'kernelTiming': data['kernelTiming'][i]
+            , 'kernelTiming': data['kernelTimings'][i]
+            , 'rank': data['ranks'][i]
             }
-        print(r'{d[iterationIndex]} & {d[gridResolution]} & {d[aposterioriError]} & {d[kernelTiming]} \\'.format(d=d))
+        print(r'{d[iterationIndex]} & {d[gridResolution]} & {d[aposterioriError]} & {d[kernelTiming]} & {d[rank]}\\'.format(d=d))
     print(r'\end{tabular}')
 
 
