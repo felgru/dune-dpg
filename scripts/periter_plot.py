@@ -44,7 +44,7 @@ def readData(datafile):
                      }
         for (n, nRefinement, aPostErr, gridLevel, numDOFs, time, rest) \
                 in dataPattern.findall(errors):
-            iterationIndices.append(n+'.'+nRefinement)
+            iterationIndices.append((n, nRefinement))
             n = int(n)
             nRefinement = int(nRefinement)
             aPostErr = float(aPostErr)
@@ -116,20 +116,41 @@ def print_table(data):
            r' with {p[numS]} directions'
            '\n'
           ).format(p=data['parameters']))
-    print(r'\begin{tabular}{c|lrlrr}')
-    print(r'& & & & \multicolumn{2}{c}{kernel approximation} \\')
-    print('iteration & $h$ & \#DOFs & aposteriori error & duration / s & rank \\\\\n\hline')
+    data2 = list()
     for i in range(data['datapoints']):
-        d = { 'iterationIndex': data['iterationIndices'][i]
+        (it, it_inner) = data['iterationIndices'][i]
+        d = { 'innerIteration': it_inner
             , 'gridResolution': data['gridResolutions'][i]
             , 'dofs': data['dofs'][i]
             , 'aposterioriError': data['aposterioriErrors'][i]
-            , 'kernelTiming': data['kernelTimings'][i]
-            , 'rank': data['ranks'][i]
             }
-        print((r'{d[iterationIndex]} & {d[gridResolution]} & {d[dofs]} '
-               r'& {d[aposterioriError]} & {d[kernelTiming]} & {d[rank]}\\'
-              ).format(d=d))
+        if data2 and (data2[-1]['n'] == it):
+            data2[-1]['inner_data'].append(d)
+        else:
+            data2.append({ 'n': it
+                         , 'kernelTiming': data['kernelTimings'][i]
+                         , 'rank': data['ranks'][i]
+                         , 'inner_data': [d]
+                         })
+    print(r'\begin{tabular}{rr|rrlrl}')
+    print(r'& & \multicolumn{2}{c}{kernel approximation} & & & \\')
+    print('\\multicolumn{2}{c|}{iteration} & duration / s & rank & $h$ & \#DOFs & aposteriori error \\\\\n')
+    for row in data2:
+        print(r'\hline')
+        print(r'\multirow{{{s}}}{{*}}{{{n}}} '
+                .format(n=row['n'], s=len(row['inner_data'])))
+        print(r'& {} '.format(row['inner_data'][0]['innerIteration']))
+        print(r'& \multirow{{{s}}}{{*}}{{{t}}} '
+                .format(t=row['kernelTiming'], s=len(row['inner_data'])))
+        print(r'& \multirow{{{s}}}{{*}}{{{r}}} '
+                .format(r=row['rank'], s=len(row['inner_data'])))
+        print((r'& {d[gridResolution]} '
+               r'& {d[dofs]} & {d[aposterioriError]} \\'
+              ).format(d=row['inner_data'][0]))
+        for d in row['inner_data'][1:]:
+            print((r'& {d[innerIteration]} & & & {d[gridResolution]} '
+                   r'& {d[dofs]} & {d[aposterioriError]} \\'
+                  ).format(d=d))
     print(r'\end{tabular}')
 
 
