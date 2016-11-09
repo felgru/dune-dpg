@@ -114,8 +114,9 @@ def print_table(data):
            r', $\kappa_2 = {p[kappa2]}$, $\kappa_3 = {p[kappa3]}$'
            '\n'
           ).format(p=data['parameters']))
-    print(r'\begin{tabular}{l|lllll}')
-    print('iteration & $h$ & \#DOFs & aposteriori error & duration of kernel application / s & rank of kernel approximation \\\\\n\hline')
+    print(r'\begin{tabular}{c|lrlrr}')
+    print(r'& & & & \multicolumn{2}{c}{kernel approximation} \\')
+    print('iteration & $h$ & \#DOFs & aposteriori error & duration / s & rank \\\\\n\hline')
     for i in range(data['datapoints']):
         d = { 'iterationIndex': data['iterationIndices'][i]
             , 'gridResolution': data['gridResolutions'][i]
@@ -124,7 +125,7 @@ def print_table(data):
             , 'kernelTiming': data['kernelTimings'][i]
             , 'rank': data['ranks'][i]
             }
-        print((r'{d[iterationIndex]} & {d[gridResolution]} & {d[dofs]}'
+        print((r'{d[iterationIndex]} & {d[gridResolution]} & {d[dofs]} '
                r'& {d[aposterioriError]} & {d[kernelTiming]} & {d[rank]}\\'
               ).format(d=d))
     print(r'\end{tabular}')
