@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 def readData(datafile):
     parametersPattern = re.compile(
-        r'^Periter with rho = ([0-9]*\.?[0-9]*)'
+        r'^Periter with ([0-9]+) directions, rho = ([0-9]*\.?[0-9]*)'
         r', CT = ([0-9]*\.?[0-9]*)'
         r', kappa1 = ([0-9]*\.?[0-9]*)'
         r', kappa2 = ([0-9]*\.?[0-9]*)'
@@ -35,11 +35,12 @@ def readData(datafile):
     with open(datafile,"r") as errors:
         errors = errors.read()
         parametersMatch = parametersPattern.search(errors)
-        parameters = { 'rho':    parametersMatch.group(1)
-                     , 'CT':     parametersMatch.group(2)
-                     , 'kappa1': parametersMatch.group(3)
-                     , 'kappa2': parametersMatch.group(4)
-                     , 'kappa3': parametersMatch.group(5)
+        parameters = { 'numS':   parametersMatch.group(1)
+                     , 'rho':    parametersMatch.group(2)
+                     , 'CT':     parametersMatch.group(3)
+                     , 'kappa1': parametersMatch.group(4)
+                     , 'kappa2': parametersMatch.group(5)
+                     , 'kappa3': parametersMatch.group(6)
                      }
         for (n, nRefinement, aPostErr, gridLevel, numDOFs, time, rest) \
                 in dataPattern.findall(errors):
@@ -112,6 +113,7 @@ def print_table(data):
     print((r'convergence table for $\rho = {p[rho]}$'
            r', $C_T = {p[CT]}$, $\kappa_1 = {p[kappa1]}$'
            r', $\kappa_2 = {p[kappa2]}$, $\kappa_3 = {p[kappa3]}$'
+           r' with {p[numS]} directions'
            '\n'
           ).format(p=data['parameters']))
     print(r'\begin{tabular}{c|lrlrr}')
