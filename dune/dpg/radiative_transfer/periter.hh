@@ -164,7 +164,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
   {
-    // TODO: Consider the norm of the transport solver in the accuracy.
     kernelApproximation.setAccuracy(kappa1*eta);
 
     ofs << "\nIteration " << n << std::endl;
