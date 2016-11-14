@@ -224,6 +224,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
 
       typedef FEBasisTest FEBasisTestEnriched;
       auto testSpacesEnriched = std::make_tuple(FEBasisTestEnriched(gridView));
+      using TestSpacesEnriched = decltype(testSpacesEnriched);
       auto rhsAssemblerEnriched = make_RhsAssembler(testSpacesEnriched);
 
       typedef decltype(make_BilinearForm(testSpaces, solutionSpaces,
@@ -237,9 +238,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                                         DomainOfIntegration::face>(1.,
                                            FieldVector<double, dim>{1.,1.}))))
               BilinearForm;
-      typedef std::decay_t<decltype(
-          replaceTestSpaces(std::declval<BilinearForm>(), testSpacesEnriched))>
-        BilinearFormEnriched;
       typedef decltype(make_InnerProduct(testSpaces,
                 make_tuple(
                   make_IntegralTerm<0,0,IntegrationType::gradGrad,
@@ -249,9 +247,11 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                                         DomainOfIntegration::face>(1.,
                                            FieldVector<double, dim>{1.,1.}))))
               InnerProduct;
-      typedef std::decay_t<decltype(
-          replaceTestSpaces(std::declval<InnerProduct>(), testSpacesEnriched))>
-        InnerProductEnriched;
+
+      using BilinearFormEnriched
+          = replaceTestSpaces_t<BilinearForm, TestSpacesEnriched>;
+      using InnerProductEnriched
+          = replaceTestSpaces_t<InnerProduct, TestSpacesEnriched>;
 
       typedef GeometryBuffer<typename GridView::template Codim<0>::Geometry>
           GeometryBuffer_t;
