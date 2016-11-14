@@ -73,7 +73,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
 
       std::vector<FieldVector<double,1> > lhsValues =
           detail::LocalRefinedFunctionEvaluation
-                  <dim, lhsType, DomainOfIntegration::interior,
+                  <dim, lhsType,
                    is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>()
                         (lhsLocalFiniteElement,
                          subElementIndex,
@@ -90,8 +90,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                                ? EvaluationType::value : EvaluationType::grad;
 
       std::vector<FieldVector<double,1> > rhsValues =
-          detail::LocalFunctionEvaluation<dim, rhsType,
-                                          DomainOfIntegration::interior>()
+          detail::LocalFunctionEvaluation<dim, rhsType>()
                         (rhsLocalFiniteElement,
                          subGeometryInReferenceElement.global(quadPos),
                          geometry,
@@ -289,7 +288,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
         //////////////////////////////
         std::vector<FieldVector<double,1> > lhsValues =
           detail::LocalRefinedFunctionEvaluation
-                  <dim, EvaluationType::value, DomainOfIntegration::interior,
+                  <dim, EvaluationType::value,
                    is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>()
                         (lhsLocalFiniteElement,
                          subElementIndex,

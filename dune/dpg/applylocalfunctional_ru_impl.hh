@@ -72,7 +72,7 @@ inline static void interiorImpl(
       // Evaluate all shape function values at this quadrature point
       std::vector<FieldVector<double,1>> testShapeFunctionValues =
           detail::LocalRefinedFunctionEvaluation
-                  <dim, EvaluationType::value, DomainOfIntegration::interior,
+                  <dim, EvaluationType::value,
                    is_ContinuouslyRefinedFiniteElement<TestSpace>::value>()
                         (testLocalFiniteElement,
                          subElementIndex,
