@@ -24,8 +24,6 @@
 #include <dune/dpg/radiative_transfer/periter.hh>
 #include <dune/dpg/radiative_transfer/henyey_greenstein_scattering.hh>
 
-#include <boost/math/constants/constants.hpp>
-
 
 using namespace Dune;
 
@@ -202,23 +200,14 @@ int main(int argc, char** argv)
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
   using Direction = FieldVector<double, dim>;
 
-  // Vector of directions: sVector
-  std::vector<Direction> sVector(numS);
-  for(unsigned int i = 0; i < numS; ++i)
-  {
-    using namespace boost::math::constants;
-    sVector[i] = {cos(2*pi<double>()*i/numS),
-                  sin(2*pi<double>()*i/numS)};
-  }
-
-  auto g = [&sVector] (const Domain& x, const Direction& s)
+  auto f = [](const Domain& x, const Direction& s)
            { return 1.; };
   // TODO: Estimate ρ from the paper.
   const double rho = 1.;
   // TODO: Estimate the constant C_T.
   const double CT = 1;
   Periter<ScatteringKernelApproximation::HaarWavelet::SVD>()
-      .solve(*grid, g, HenyeyGreensteinScattering<Direction>(0.9),
+      .solve(*grid, f, HenyeyGreensteinScattering<Direction>(0.9),
              numS, rho, CT, 1e-2, N);
 
   return 0;
