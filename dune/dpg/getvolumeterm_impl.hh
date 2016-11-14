@@ -153,7 +153,7 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
       = localViewTest.tree().refinedReferenceElement();
     auto referenceGridView = referenceGrid.leafGridView();
 
-    const size_t subElementStride =
+    const unsigned int subElementStride =
         (is_DGRefinedFiniteElement<Space>::value) ?
           localFiniteElementTest.localBasis().size() : 0;
 

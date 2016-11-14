@@ -41,7 +41,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
     = lhsLocalView.tree().refinedReferenceElement();
   auto referenceGridView = referenceGrid.leafGridView();
 
-  const size_t subElementStride =
+  const unsigned int subElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?
         lhsLocalFiniteElement.localBasis().size() : 0;
 
@@ -145,7 +145,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
     = lhsLocalView.tree().refinedReferenceElement();
   auto referenceGridView = referenceGrid.leafGridView();
 
-  const size_t subElementStride =
+  const unsigned int subElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?
         lhsLocalFiniteElement.localBasis().size() : 0;
 
