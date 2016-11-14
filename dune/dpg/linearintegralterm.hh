@@ -17,8 +17,7 @@ namespace Dune {
   /**
    * \brief This class describes an integral term.
    *
-   * This is the essential building block from which BilinearForm and
-   * InnerProduct are built.
+   * This is the essential building block from which each LinearForm is built.
    *
    * \tparam integrationType  the form of the integrand
    * \tparam domainOfIntegration
