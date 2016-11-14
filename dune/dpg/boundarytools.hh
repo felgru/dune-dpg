@@ -105,12 +105,12 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       localView.bind(e);
-      const auto& localFEM = localView.tree().finiteElement();
+      const auto& localFE = localView.tree().finiteElement();
 
       localIndexSet.bind(localView);
 
       // dofs in the current finite element
-      const unsigned int dofsLocal = localFEM.localCoefficients().size();
+      const unsigned int dofsLocal = localFE.localCoefficients().size();
 
       const unsigned int nFace
           = ReferenceElements<double, dim>::general(e.type()).size(dim-1);
@@ -168,7 +168,7 @@ namespace Dune {
         unsigned int dofOnInflowBoundary = 0;
 
         // localkey of dof i
-        const auto& dofLocalKey = localFEM.localCoefficients().localKey(i);
+        const auto& dofLocalKey = localFE.localCoefficients().localKey(i);
 
         // Codimension and subentity index of the current dof
         const unsigned int dofCodim = dofLocalKey.codim();
@@ -220,17 +220,17 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       localView.bind(e);
-      const auto& localFEM = localView.tree().finiteElement();
-      const auto& localInterp = localFEM.localInterpolation();
+      const auto& localFE = localView.tree().finiteElement();
+      const auto& localInterp = localFE.localInterpolation();
 
       localIndexSet.bind(localView);
 
       // dofs in the current finite element
-      const unsigned int dofsLocal = localFEM.localCoefficients().size();
+      const unsigned int dofsLocal = localFE.localCoefficients().size();
 
       localInterp.interpolate(bc,out);
 
-      for(unsigned int i=0;i<dofsLocal;i++)
+      for(unsigned int i=0; i<dofsLocal; i++)
       {
         rhsInflowContrib[ localIndexSet.index(i)[0] ] = out[i];
       }

@@ -17,8 +17,7 @@ namespace detail {
 
 /* We need to make this a class, as partial specializations of
  * function templates are not allowed. */
-template<int dim, EvaluationType type,
-         DomainOfIntegration domain_of_integration>
+template<int dim, EvaluationType type>
 struct LocalFunctionEvaluation {
 
   template <class LocalFiniteElement, class Geometry>
@@ -29,9 +28,8 @@ struct LocalFunctionEvaluation {
               const FieldVector<double, dim>& beta) const;
 };
 
-template<int dim, DomainOfIntegration domain_of_integration>
-struct LocalFunctionEvaluation<dim, EvaluationType::value,
-                               domain_of_integration> {
+template<int dim>
+struct LocalFunctionEvaluation<dim, EvaluationType::value> {
 
   template <class LocalFiniteElement, class Geometry>
   std::vector<FieldVector<double,1> > operator()
@@ -47,9 +45,8 @@ struct LocalFunctionEvaluation<dim, EvaluationType::value,
   }
 };
 
-template<int dim, DomainOfIntegration domain_of_integration>
-struct LocalFunctionEvaluation<dim, EvaluationType::grad,
-                               domain_of_integration> {
+template<int dim>
+struct LocalFunctionEvaluation<dim, EvaluationType::grad> {
 
   template <class LocalFiniteElement, class Geometry>
   std::vector<FieldVector<double,1> > operator()
@@ -81,7 +78,6 @@ struct LocalFunctionEvaluation<dim, EvaluationType::grad,
 /* We need to make this a class, as partial specializations of
  * function templates are not allowed. */
 template<int dim, EvaluationType type,
-         DomainOfIntegration domain_of_integration,
          bool isDGRefined>
 struct LocalRefinedFunctionEvaluation {
 
@@ -95,9 +91,8 @@ struct LocalRefinedFunctionEvaluation {
               const FieldVector<double, dim>& beta) const;
 };
 
-template<int dim, DomainOfIntegration domain_of_integration>
-struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value,
-                               domain_of_integration, false> {
+template<int dim>
+struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value, false> {
 
   template <class LocalFiniteElement, class Geometry, class SubGeometry>
   std::vector<FieldVector<double,1> > operator()
@@ -115,9 +110,8 @@ struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value,
   }
 };
 
-template<int dim, DomainOfIntegration domain_of_integration>
-struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad,
-                               domain_of_integration, false> {
+template<int dim>
+struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad, false> {
 
   template <class LocalFiniteElement, class Geometry, class SubGeometry>
   std::vector<FieldVector<double,1> > operator()
@@ -152,9 +146,8 @@ struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad,
   }
 };
 
-template<int dim, DomainOfIntegration domain_of_integration>
-struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value,
-                               domain_of_integration, true> {
+template<int dim>
+struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value, true> {
 
   template <class LocalFiniteElement, class Geometry, class SubGeometry>
   std::vector<FieldVector<double,1> > operator()
@@ -172,9 +165,8 @@ struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value,
   }
 };
 
-template<int dim, DomainOfIntegration domain_of_integration>
-struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad,
-                               domain_of_integration, true> {
+template<int dim>
+struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad, true> {
 
   template <class LocalFiniteElement, class Geometry, class SubGeometry>
   std::vector<FieldVector<double,1> > operator()

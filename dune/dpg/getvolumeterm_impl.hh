@@ -93,8 +93,7 @@ struct GetVolumeTerm_Impl<integrationType, Space, false>
                                       ? EvaluationType::value : EvaluationType::grad;
 
      std::vector<FieldVector<double,1> > shapeFunctionValues =
-     detail::LocalFunctionEvaluation<dim, evaluationType,
-                                        DomainOfIntegration::interior>()
+     detail::LocalFunctionEvaluation<dim, evaluationType>()
                       (localFiniteElementTest,
                        quadPos,
                        geometry,
@@ -153,7 +152,7 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
       = localViewTest.tree().refinedReferenceElement();
     auto referenceGridView = referenceGrid.leafGridView();
 
-    const size_t subElementStride =
+    const unsigned int subElementStride =
         (is_DGRefinedFiniteElement<Space>::value) ?
           localFiniteElementTest.localBasis().size() : 0;
 
@@ -185,7 +184,7 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
 
         std::vector<FieldVector<double,1> > shapeFunctionValues =
             detail::LocalRefinedFunctionEvaluation
-                    <dim, evaluationType, DomainOfIntegration::interior,
+                    <dim, evaluationType,
                      is_ContinuouslyRefinedFiniteElement<TestSpace>::value>()
                           (localFiniteElementTest,
                            subElementIndex,
