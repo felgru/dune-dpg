@@ -288,6 +288,13 @@ struct changeGridView<InnerProduct<TSpaces, InnerProductTerms>, GridView>
       type;
 };
 
+
+
+template<class T, class NewTestSpaces>
+using replaceTestSpaces_t =
+    std::decay_t<decltype(replaceTestSpaces(std::declval<T>(),
+                          std::declval<NewTestSpaces>()))>;
+
 } // end namespace Dune
 
 #endif // DUNE_DPG_TYPE_TRAITS_HH
