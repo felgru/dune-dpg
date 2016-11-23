@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib> // for std::abort()
+#include <unistd.h>
 
 #include <vector>
 
@@ -157,6 +158,13 @@ double gFunction(const Domain& x,
   return 1.5;
 }
 
+void printHelp(char* name) {
+  std::cerr << "Usage: " << name << " [-p] <# of ordinates>"
+            << " <# of iterations>"
+            << " <size of grid>\n"
+            << " -p: plot solutions" << std::endl;
+  std::exit(0);
+}
 
 int main(int argc, char** argv)
 {
@@ -169,16 +177,25 @@ int main(int argc, char** argv)
   // argv[3]: size of grid
   ///////////////////////////////////
 
-  if(argc != 4) {
-      std::cerr << "Usage: " << argv[0] << " <# of ordinates>"
-                << " <# of iterations>"
-                << " <size of grid>" << std::endl;
-      std::abort();
+  PlotSolutions plotSolutions = PlotSolutions::doNotPlot;
+
+  int opt;
+  while ((opt = getopt(argc,argv,"ph")) != EOF)
+    switch(opt)
+    {
+      case 'p': plotSolutions = PlotSolutions::plotOuterIterations; break;
+      default:
+      case '?':
+      case 'h':
+        printHelp(argv[0]);
+    }
+  if(optind != argc-3) {
+    printHelp(argv[0]);
   }
 
-  unsigned int numS = atoi(argv[1]);
-  int N = atoi(argv[2]);
-  unsigned int sizeGrid = atoi(argv[3]);
+  const unsigned int numS = atoi(argv[optind]);
+  const int N = atoi(argv[optind+1]);
+  const unsigned int sizeGrid = atoi(argv[optind+2]);
 
   ///////////////////////////////////
   //   Generate the grid
@@ -211,10 +228,11 @@ int main(int argc, char** argv)
   const double rho = .5;
   // TODO: Estimate the constant C_T.
   const double CT = 1;
+
   Periter<ScatteringKernelApproximation::HaarWavelet::SVD>()
       .solve(*grid, f, g, gDeriv, sigma,
              HenyeyGreensteinScattering<Direction>(0.5),
-             numS, rho, CT, 1e-2, N);
+             numS, rho, CT, 1e-2, N, plotSolutions);
 
   return 0;
   }
