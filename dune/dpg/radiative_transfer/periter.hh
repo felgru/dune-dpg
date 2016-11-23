@@ -38,6 +38,12 @@
 
 namespace Dune {
 
+enum class PlotSolutions {
+  doNotPlot,
+  plotOuterIterations,
+  plotLastIteration
+};
+
 template<class ScatteringKernelApproximation>
 class Periter {
   public:
@@ -52,7 +58,8 @@ class Periter {
              double rho,
              double CT,
              double targetAccuracy,
-             unsigned int maxNumberOfIterations);
+             unsigned int maxNumberOfIterations,
+             PlotSolutions plotSolutions = PlotSolutions::doNotPlot);
 };
 
 // Get solution u or theta out of the solution vector x
@@ -86,7 +93,13 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
            double rho,
            double CT,
            double targetAccuracy,
-           unsigned int maxNumberOfIterations) {
+           unsigned int maxNumberOfIterations,
+           PlotSolutions plotSolutions) {
+  if(plotSolutions == PlotSolutions::plotLastIteration) {
+    std::cerr
+        << "Plotting of only the last iteration is not implemented yet!\n";
+    std::abort();
+  }
   const unsigned int dim = 2;
 
   typedef typename Grid::LeafGridView GridView;
@@ -499,8 +512,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
     accuracy = std::pow(rho, n) * CT * fnorm + 2*eta;
     eta /= rhobar;
 
-    const bool plotSolutions = false;
-    if(plotSolutions) {
+    if(plotSolutions == PlotSolutions::plotOuterIterations) {
       ////////////////////////////////////////////////////////////////////////
       //  Write result to VTK file
       //  We need to subsample, because VTK cannot natively display
