@@ -169,8 +169,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
     ofs << "\nIteration " << n << std::endl;
     std::cout << "\nIteration " << n << std::endl << std::endl;
 
-    std::vector<VectorType> u, theta;
-
     const auto levelGridView = grid.levelGridView(grid.maxLevel());
     typedef std::decay_t<decltype(levelGridView)> LevelGridView;
 
@@ -217,7 +215,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       FEBasisInterior feBasisInterior(gridView);
       FEBasisTrace feBasisTrace(gridView);
 
-      auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
+      auto solutionSpaces
+        = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
       typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest; // v enriched
       auto testSpaces = std::make_tuple(FEBasisTest(gridView));
@@ -403,14 +402,12 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
 
       for(unsigned int i = 0; i < numS; ++i)
       {
-        int verbosity = 0; // 0: not verbose; >0: verbose
+        const int verbosity = 0; // 0: not verbose; >0: verbose
         UMFPack<MatrixType> umfPack(stiffnessMatrix[i], verbosity);
         InverseOperatorResult statistics;
         umfPack.apply(x[i], rhs[i], statistics);
       }
 
-      u = extractSolution(x, 0, feBasisInterior.size());
-      theta = extractSolution(x, feBasisInterior.size(), feBasisTrace.size());
 
       ////////////////////////////////////
       //  A posteriori error
@@ -456,7 +453,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
              (endScatteringApproximation - startScatteringApproximation).count()
           << "us, " << kernelApproximation.info()
           << std::endl;
-      // TODO: compute number of DOFs
       std::cout << std::endl;
 
       std::cout << "\nStatistics at end of inner iteration:\n";
@@ -484,6 +480,11 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
 
       FEBasisInterior feBasisInterior(gridView);
       FEBasisTrace feBasisTrace(gridView);
+
+      std::vector<VectorType> u =
+          extractSolution(x, 0, feBasisInterior.size());
+      std::vector<VectorType> theta =
+          extractSolution(x, feBasisInterior.size(), feBasisTrace.size());
 
       for(unsigned int i = 0; i < numS; ++i)
       {
