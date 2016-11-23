@@ -202,12 +202,18 @@ int main(int argc, char** argv)
 
   auto f = [](const Domain& x, const Direction& s)
            { return 1.; };
+  auto g = [](const Domain& x, const Direction& s)
+           { return 0.; };
+  auto gDeriv = [](const Domain& x, const Direction& s)
+                { return 0.; };
+  const double sigma = 5.;
   // TODO: Estimate ρ from the paper.
-  const double rho = 1.;
+  const double rho = .5;
   // TODO: Estimate the constant C_T.
   const double CT = 1;
   Periter<ScatteringKernelApproximation::HaarWavelet::SVD>()
-      .solve(*grid, f, HenyeyGreensteinScattering<Direction>(0.9),
+      .solve(*grid, f, g, gDeriv, sigma,
+             HenyeyGreensteinScattering<Direction>(0.5),
              numS, rho, CT, 1e-2, N);
 
   return 0;

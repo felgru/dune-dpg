@@ -41,9 +41,12 @@ namespace Dune {
 template<class ScatteringKernelApproximation>
 class Periter {
   public:
-  template<class Grid, class F, class Kernel>
+  template<class Grid, class F, class G, class GDeriv, class Kernel>
   void solve(Grid& grid,
              const F& f,
+             const G& g,
+             const GDeriv& gDeriv,
+             double sigma,
              const Kernel& kernel,
              unsigned int numS,
              double rho,
@@ -72,9 +75,12 @@ extractSolution(const std::vector<VectorType>& x,
 }
 
 template<class ScatteringKernelApproximation>
-template<class Grid, class F, class Kernel>
+template<class Grid, class F, class G, class GDeriv, class Kernel>
 void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
            const F& f,
+           const G& g,
+           const GDeriv& gDeriv,
+           double sigma,
            const Kernel& kernel,
            unsigned int numS,
            double rho,
@@ -195,6 +201,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
             scatteringFunctional[i],
             x);
       }
+      // TODO: add rhs to scatteringFunctional
     }
     std::chrono::steady_clock::time_point endScatteringApproximation
         = std::chrono::steady_clock::now();
@@ -285,7 +292,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
           make_BilinearForm(testSpaces, solutionSpaces,
               make_tuple(
                   make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                        DomainOfIntegration::interior>(5.),
+                                        DomainOfIntegration::interior>(sigma),
                   make_IntegralTerm<0,0,IntegrationType::gradValue,
                                         DomainOfIntegration::interior>(-1., s),
                   make_IntegralTerm<0,1,IntegrationType::normalVector,
@@ -369,7 +376,9 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                   < 0
                   , LinearIntegrationType::valueFunction
                   , DomainOfIntegration::interior>
-                  ([s,&f] (const Domain& x) { return f(x,s); }),
+                  ([s,&f,&g,&gDeriv,sigma] (const Domain& x)
+                   { return f(x,s)+gDeriv(x,s)-sigma*g(x,s); }),
+                // TODO: put f +s·∇g-σg into scatteringFunctional[i]
                 make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
                   (scatteringFunctional[i], std::get<0>(solutionSpaces))));
         systemAssemblers[i].assembleSystem(
@@ -408,7 +417,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         umfPack.apply(x[i], rhs[i], statistics);
       }
 
-
       ////////////////////////////////////
       //  A posteriori error
       ////////////////////////////////////
@@ -416,7 +424,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       aposterioriErr = 0.;
       for(unsigned int i = 0; i < numS; ++i)
       {
-        Direction s = sVector[i];
+        const Direction s = sVector[i];
 
         std::cout << "Direction " << i << '\n';
 
@@ -432,7 +440,9 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                   < 0
                   , LinearIntegrationType::valueFunction
                   , DomainOfIntegration::interior>
-                  ([s,&f] (const Domain& x) { return f(x,s); }),
+                  ([s,&f,&g,&gDeriv,sigma] (const Domain& x)
+                   { return f(x,s)+gDeriv(x,s)-sigma*g(x,s); }),
+                // TODO: put f +s·∇g-σg into scatteringFunctional[i]
                 make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
                   (scatteringFunctional[i], std::get<0>(solutionSpaces))));
         rhsAssemblerEnriched.assembleRhs(rhs[i],
@@ -444,6 +454,26 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         aposterioriErr += aposterioriErr_i * aposterioriErr_i;
       }
       aposterioriErr = sqrt(aposterioriErr / numS);
+
+      {
+        static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
+            "Functions::interpolate won't work for refined finite elements");
+        for(unsigned int i = 0; i < numS; ++i)
+        {
+          VectorType gInterpolation(feBasisInterior.size());
+          const Direction s = sVector[i];
+          Functions::interpolate(feBasisInterior, gInterpolation,
+              [&g,s](const Direction& x) { return g(x,s); });
+
+          // Add gInterpolation to first feBasisInterior.size() entries of x.
+          for(auto xIt=x[i].begin(), xEnd=x[i].begin()+feBasisInterior.size(),
+                   gIt=gInterpolation.begin(); xIt!=xEnd; ++xIt, ++gIt) {
+            *xIt += *gIt;
+          }
+          // TODO: Add (interpolation of) g to theta part of x?
+        }
+      }
+
       ofs << "Iteration " << n << '.' << nRefinement << ": "
           << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
           << aposterioriErr << ", grid level: " << grid.maxLevel()
@@ -480,6 +510,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
 
       FEBasisInterior feBasisInterior(gridView);
       FEBasisTrace feBasisTrace(gridView);
+
 
       std::vector<VectorType> u =
           extractSolution(x, 0, feBasisInterior.size());
