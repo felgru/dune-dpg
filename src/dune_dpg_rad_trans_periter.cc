@@ -220,9 +220,9 @@ int main(int argc, char** argv)
   auto f = [](const Domain& x, const Direction& s)
            { return 1.; };
   auto g = [](const Domain& x, const Direction& s)
-           { return 0.; };
+           { return x[0] + x[1]; };
   auto gDeriv = [](const Domain& x, const Direction& s)
-                { return 0.; };
+                { return s[0] + s[1]; };
   const double sigma = 5.;
   // TODO: Estimate ρ from the paper.
   const double rho = .5;
