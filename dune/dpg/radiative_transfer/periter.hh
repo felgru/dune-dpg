@@ -102,9 +102,10 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
   }
   const unsigned int dim = 2;
 
-  typedef typename Grid::LeafGridView GridView;
-  typedef typename GridView::template Codim<0>::Geometry Geometry;
-  GridView gridView = grid.leafGridView();
+  typedef typename Grid::LeafGridView  LeafGridView;
+  typedef typename Grid::LevelGridView LevelGridView;
+  typedef typename LeafGridView::template Codim<0>::Geometry Geometry;
+  LeafGridView gridView = grid.leafGridView();
 
   ///////////////////////////////////
   // To print information
@@ -130,8 +131,11 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
   //   Choose finite element spaces for the solution
   /////////////////////////////////////////////////////////
 
-  typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
-  typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
+  typedef Functions::LagrangeDGBasis<LeafGridView, 1> FEBasisInterior; // u
+  typedef Functions::PQkTraceNodalBasis<LeafGridView, 2> FEBasisTrace; // u^
+
+  typedef changeGridView_t<FEBasisInterior, LevelGridView>
+          FEBasisCoarseInterior;
 
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
@@ -188,13 +192,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
     ofs << "\nIteration " << n << std::endl;
     std::cout << "\nIteration " << n << std::endl << std::endl;
 
-    const auto levelGridView = grid.levelGridView(grid.maxLevel());
-    typedef std::decay_t<decltype(levelGridView)> LevelGridView;
-
-    typedef changeGridView_t<FEBasisInterior, LevelGridView>
-            FEBasisCoarseInterior;
-    FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
-
 
     std::chrono::steady_clock::time_point startScatteringApproximation
         = std::chrono::steady_clock::now();
@@ -238,7 +235,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       auto solutionSpaces
         = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
-      typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest; // v enriched
+      // v enriched
+      typedef Functions::LagrangeDGBasis<LeafGridView, 4> FEBasisTest;
       auto testSpaces = std::make_tuple(FEBasisTest(gridView));
 
       typedef FEBasisTest FEBasisTestEnriched;
@@ -272,7 +270,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       using InnerProductEnriched
           = replaceTestSpaces_t<InnerProduct, TestSpacesEnriched>;
 
-      typedef GeometryBuffer<typename GridView::template Codim<0>::Geometry>
+      typedef GeometryBuffer<typename LeafGridView::template Codim<0>::Geometry>
           GeometryBuffer_t;
 
       typedef decltype(make_DPGSystemAssembler(
@@ -361,8 +359,13 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
 
       if(nRefinement != 0)
       {
+        const LevelGridView levelGridView
+            = grid.levelGridView(grid.maxLevel()-1);
+        FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
+
         std::vector<VectorType> scatteringFunctionalCoarse(numS);
         std::swap(scatteringFunctional, scatteringFunctionalCoarse);
+
         for(unsigned int i = 0; i < numS; ++i)
         {
           scatteringFunctional[i] = interpolateToUniformlyRefinedGrid(
@@ -546,7 +549,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                   (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta[i]);
         auto localThetaFunction = localFunction(thetaFunction);
         // - VTK writer
-        SubsamplingVTKWriter<GridView> vtkWriterInterior(gridView,0);
+        SubsamplingVTKWriter<LeafGridView> vtkWriterInterior(gridView,0);
         vtkWriterInterior.addVertexData(localUFunction,
                         VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
         std::string name = std::string("u_rad_trans_n")
@@ -555,7 +558,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                         + std::to_string(i);
         vtkWriterInterior.write(name);
 
-        SubsamplingVTKWriter<GridView> vtkWriterTrace(gridView,2);
+        SubsamplingVTKWriter<LeafGridView> vtkWriterTrace(gridView,2);
         vtkWriterTrace.addVertexData(localThetaFunction,
                     VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
         name = std::string("theta_rad_trans_n")
