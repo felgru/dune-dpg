@@ -11,6 +11,19 @@
 
 namespace Dune {
 
+/**
+ * This function interpolates to a uniform refinement of a grid
+ *
+ * \pre The GridView of \p fineBasis has to differ from \p coarseBasis
+ *      by exactly one level of uniform refinement.
+ *
+ * \param coarseBasis the GlobalBasis of the FE function on the coarser level
+ * \param fineBasis   the GlobalBasis of the FE function on the finer level
+ * \param v_coarse    the coefficient vector of the FE function on the
+ *                    coarser level.
+ * \return  the coefficient vector resulting from interpolating v_coarse
+ *          to fineBasis.
+ */
 template<typename CoarseBasis, typename FineBasis, typename VectorType>
 VectorType interpolateToUniformlyRefinedGrid(
     const CoarseBasis& coarseBasis,
