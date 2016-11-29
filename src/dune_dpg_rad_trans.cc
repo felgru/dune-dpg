@@ -54,7 +54,7 @@ double fInner(const Domain& x,
 {
   double c0 = 1.;
   double c1 = 1.;
-  double value = (std::exp(c0*x[0])-1)*(std::exp(c1*x[1])-1);//v pure transport
+  double value = std::expm1(c0*x[0])*std::expm1(c1*x[1]);//v pure transport
   //double value = 1-(x[0]-0.5)*(x[0]-0.5)-(x[1]-0.5)*(x[1]-0.5); //v RT
   return value;
 }
@@ -65,7 +65,7 @@ double fInnerD0(const Domain& x,
 {
   double c0 = 1.;
   double c1 = 1.;
-  double value = c0*std::exp(c0*x[0])*(std::exp(c1*x[1])-1);//v pure transport
+  double value = c0*std::exp(c0*x[0])*std::expm1(c1*x[1]);//v pure transport
   //double value = -2*(x[0]-0.5); //v RT
   return value;
 }
@@ -76,7 +76,7 @@ double fInnerD1(const Domain& x,
 {
   double c0 = 1.;
   double c1 = 1.;
-  double value = (std::exp(c0*x[0])-1)*std::exp(c1*x[1])*c1;//v pure transport
+  double value = std::expm1(c0*x[0])*std::exp(c1*x[1])*c1;//v pure transport
   //double value = -2*(x[1]-0.5); //v RT
   return value;
 }
