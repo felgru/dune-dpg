@@ -5,6 +5,11 @@
   or dune/common/tupleutility.hh instead.
   Unfortunately, we couldn't completely get rid of Boost::Fusion
   and the incompatibilities with versions >1.59 still remains.
+* README, INSTALL: Mention dune-uggrid instead of ug.
+* Remove the make_DPGLinearForm and make_DPG_LinearForm functions,
+  use make_LinearForm instead.
+* Remove some noise from the API documentation.
+* Remove some unused auxiliary types.
 
 0.2.1:
 * Lower Boost requirements to 1.56 and document that 1.60 and 1.61
