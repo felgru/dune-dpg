@@ -15,6 +15,7 @@
 #include "assemble_helper.hh"
 #include "assemble_types.hh"
 #include "linearintegralterm.hh"
+#include "type_traits.hh"
 
 namespace Dune {
 
@@ -23,9 +24,8 @@ namespace Dune {
    *
    * \tparam Sps             tuple of (test) spaces
    * \tparam LinearTerms     tuple of LinearIntegralTerm
-   * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
    */
-  template<class Sps, class LinearTerms, class FormulationType>
+  template<class Sps, class LinearTerms>
   class LinearForm
   {
   public:
@@ -76,20 +76,18 @@ namespace Dune {
      */
     void bind(const LocalViews& lv)
     {
-      constexpr bool isSaddlepoint =
-                std::is_same<
-                typename std::decay<FormulationType>::type
-              , SaddlepointFormulation
+      constexpr bool usesOptimalTestBasis =
+            is_OptimalTestSpace<
+                typename std::tuple_element<std::tuple_size<Spaces>::value-1,
+                                            Spaces>::type
             >::value;
-      //static_assert(!isSaddlepoint,
-      //              "LinearForm only implemented for DPGFormulation.");
 
       localViews = std::addressof(lv);
 
       constexpr size_t size = std::tuple_size<LocalViews>::value;
 
       /* set up local offsets */
-      if(isSaddlepoint) {
+      if(!usesOptimalTestBasis) {
         localTotalSpaceSize = detail::computeOffsets(localSpaceOffsets, lv);
       } else { /* DPG formulation */
         for(size_t i=0; i<size; ++i)
@@ -147,7 +145,7 @@ auto make_Saddlepoint_LinearForm(TestSpaces      testSpaces,
     -> LinearForm<typename std::remove_reference<decltype(
             std::tuple_cat(std::declval<TestSpaces>(),
                            std::declval<SolutionSpaces>())
-            )>::type, LinearTerms, SaddlepointFormulation>
+            )>::type, LinearTerms>
 {
   // TODO: This does not really make sense because
   //       of the spaceindex in LinearTerms.
@@ -158,40 +156,8 @@ auto make_Saddlepoint_LinearForm(TestSpaces      testSpaces,
             std::tuple_cat(std::declval<TestSpaces>(),
                            std::declval<SolutionSpaces>()
             ))>::type;
-  return LinearForm<Spaces, LinearTerms, SaddlepointFormulation>
+  return LinearForm<Spaces, LinearTerms>
                     (std::tuple_cat(testSpaces, solutionSpaces), terms);
-}
-
-/**
- * \brief Creates a LinearForm for a DPG formulation,
- *        deducing the target type from the types of arguments.
- *
- * \param testSpaces  a tuple of test spaces
- * \param terms       a tuple of LinearIntegralTerm
- */
-template<class TestSpaces, class LinearTerms>
-auto make_DPG_LinearForm(TestSpaces   testSpaces,
-                         LinearTerms  terms)
-    -> LinearForm<TestSpaces, LinearTerms, DPGFormulation>
-{
-  return LinearForm<TestSpaces, LinearTerms, DPGFormulation>
-                    (testSpaces, terms);
-}
-
-/**
- * \brief Creates a LinearForm for a DPG formulation consistent with DPGSystemAssembler,
- *        deducing the target type from the types of arguments.
- *
- * \param testSpaces  a tuple of test spaces
- * \param terms       a tuple of LinearIntegralTerm
- */
-template<class TestSpaces, class LinearTerms>
-auto make_DPGLinearForm(TestSpaces   testSpaces,
-                        LinearTerms  terms)
-    -> LinearForm<TestSpaces, LinearTerms, SaddlepointFormulation>
-{
-  return LinearForm<TestSpaces, LinearTerms, SaddlepointFormulation>
-                    (testSpaces, terms);
 }
 
 /**
@@ -204,19 +170,18 @@ auto make_DPGLinearForm(TestSpaces   testSpaces,
 template<class Spaces, class LinearTerms>
 auto make_LinearForm(Spaces      spaces,
                      LinearTerms     terms)
-    -> LinearForm<Spaces, LinearTerms, SaddlepointFormulation>
+    -> LinearForm<Spaces, LinearTerms>
 {
-  return LinearForm<Spaces, LinearTerms, SaddlepointFormulation>
+  return LinearForm<Spaces, LinearTerms>
                     (spaces, terms);
 }
 
-template<class TestSpaces, class LinearTerms,
-         class FormulationType, class NewTestSpaces>
+template<class TestSpaces, class LinearTerms, class NewTestSpaces>
 auto replaceTestSpaces(
-    const LinearForm<TestSpaces, LinearTerms, FormulationType>& linearForm,
+    const LinearForm<TestSpaces, LinearTerms>& linearForm,
     NewTestSpaces&& newTestSpaces)
-  -> LinearForm<NewTestSpaces, LinearTerms, FormulationType> {
-  return LinearForm<NewTestSpaces, LinearTerms, FormulationType>
+  -> LinearForm<NewTestSpaces, LinearTerms> {
+  return LinearForm<NewTestSpaces, LinearTerms>
                      (std::forward<NewTestSpaces>(newTestSpaces),
                       linearForm.getTerms());
 }

@@ -163,7 +163,7 @@ int main(int argc, char** argv)
   typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
 
   auto rhsFunctions
-    = make_DPGLinearForm(testSearchSpaces,
+    = make_LinearForm(testSearchSpaces,
           std::make_tuple(make_LinearIntegralTerm<0,
                                 LinearIntegrationType::valueFunction,
                                 DomainOfIntegration::interior>(f(beta))));

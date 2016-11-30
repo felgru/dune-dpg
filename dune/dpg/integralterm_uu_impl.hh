@@ -1,3 +1,4 @@
+namespace Dune {
 namespace detail {
 
 template <IntegrationType type,
@@ -252,4 +253,4 @@ faceImpl(const LhsLocalView& lhsLocalView,
 }
 };
 
-} // end namespace detail
+}} // end namespace Dune::detail

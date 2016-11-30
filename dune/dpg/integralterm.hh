@@ -416,10 +416,10 @@ namespace detail {
 }
 
 
+} // end namespace Dune
+
 #include "integralterm_uu_impl.hh"
 #include "integralterm_rr_impl.hh"
 #include "integralterm_ru_impl.hh"
-
-} // end namespace Dune
 
 #endif // DUNE_DPG_INTEGRALTERM_HH

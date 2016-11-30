@@ -103,9 +103,12 @@ namespace detail {
   struct ApplyLocalFunctional;
 }
 
+} // End namespace Dune
+
 #include "applylocalfunctional_uu_impl.hh"
 #include "applylocalfunctional_ru_impl.hh"
 
+namespace Dune {
 
 template <DomainOfIntegration domain_of_integration,
           class SolutionSpace,
