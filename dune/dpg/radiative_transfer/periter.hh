@@ -221,11 +221,11 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
     ////////////////////////////////////////////////////
     const unsigned int maxNumberOfInnerIterations = 10;
     double aposterioriErr;
-    for(unsigned int nRefinement = 0;
+    for(unsigned int nRefinement = 0; ; )
         // At the end of the loop, we will break if
         // aposterioriErr < kapp3*eta
-        // or nRefinement+1 >= maxNumberOfInnerIterations
-        ; ++nRefinement)
+        // or ++nRefinement >= maxNumberOfInnerIterations
+        // thus the inner loop terminates eventually.
     {
       std::cout << "Inner iteration " << nRefinement << std::endl;
 
@@ -485,7 +485,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       std::cout << "Grid level: " << grid.maxLevel() << '\n';
       std::cout << "A posteriori error: " << aposterioriErr << std::endl;
 
-      if(nRefinement+1 >= maxNumberOfInnerIterations
+      if(++nRefinement >= maxNumberOfInnerIterations
           || aposterioriErr < kappa3*eta) {
         break;
       } else {
