@@ -81,6 +81,18 @@ struct is_vector<Dune::FieldVector<T, size>> : std::true_type {};
  ****************************/
 
 template <typename FiniteElement>
+struct is_OptimalTestSpace : std::false_type {};
+
+#ifndef DOXYGEN
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
+struct is_OptimalTestSpace<Functions::DefaultGlobalBasis<
+            Functions::OptimalTestBasisNodeFactory<
+                TestspaceCoefficientMatrix, testIndex,
+                Functions::FlatMultiIndex<std::size_t> > > >
+  : std::true_type {};
+#endif
+
+template <typename FiniteElement>
 struct is_RefinedFiniteElement;
 
 template <typename FiniteElement>

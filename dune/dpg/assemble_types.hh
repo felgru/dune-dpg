@@ -29,11 +29,6 @@ enum class EvaluationType {
     grad,    //!< ∇v
 };
 
-//! The saddlepoint formulation of a DPG system.
-struct SaddlepointFormulation {};
-//! The optimal test function formulation of a DPG system.
-struct DPGFormulation {};
-
 } // end namespace Dune
 
 #endif // DUNE_DPG_ASSEMBLE_TYPES_HH

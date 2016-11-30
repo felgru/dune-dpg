@@ -198,7 +198,7 @@ int main(int argc, char** argv)
     //  Assemble the system
     /////////////////////////////////////////////////////////
     auto rightHandSide
-      = make_DPGLinearForm(testSpaces,
+      = make_LinearForm(testSpaces,
                         std::make_tuple(make_LinearIntegralTerm<0,
                                             LinearIntegrationType::valueFunction,
                                             DomainOfIntegration::interior>(

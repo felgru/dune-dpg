@@ -17,7 +17,3 @@ technical debt that needs to be paid off sooner or later:
   If this does not work, see if Boost.Hana is a viable alternative.
   As boost::fusion introduces new regressions with every single release
   we should get rid of it ASAP.
-* Get rid of the SaddlepointFormulation and DPGFormulation types that are
-  only used in LinearForm. The naming is misleading as SaddlepointFormulation
-  is also used with DPG formulations.
-  DPGFormulation is only used with the deprecated OptimalTestBasis.
