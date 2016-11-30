@@ -482,7 +482,7 @@ int main(int argc, char** argv)
     {
       Direction s = sVector[i];
 
-      auto g = make_DPG_LinearForm(
+      auto g = make_LinearForm(
           systemAssemblers[i].getTestSearchSpaces(),
           std::make_tuple(
             make_LinearIntegralTerm
@@ -586,7 +586,7 @@ int main(int argc, char** argv)
       // We compute the a posteriori error
           // - We compute the rhs with the enriched test space ("rhs[i]=f(v_i)")
           // -- Contribution of the source term f that has an analytic expression
-      auto g = make_DPG_LinearForm(
+      auto g = make_LinearForm(
           rhsAssembler.getTestSpaces(),
           std::make_tuple(
             make_LinearIntegralTerm

@@ -356,7 +356,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       {
         Direction s = sVector[i];
 
-        auto rhsFunction = make_DPG_LinearForm(
+        auto rhsFunction = make_LinearForm(
               systemAssemblers[i].getTestSearchSpaces(),
               std::make_tuple(
                 make_LinearIntegralTerm
@@ -430,7 +430,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         // - We compute the rhs with the enriched test space ("rhs[i]=f(v_i)")
         // -- Contribution of the source term f that has an analytic expression
         // -- Contribution of the scattering term
-        auto rhsFunction = make_DPG_LinearForm(
+        auto rhsFunction = make_LinearForm(
               rhsAssemblerEnriched.getTestSpaces(),
               std::make_tuple(
                 make_LinearIntegralTerm
