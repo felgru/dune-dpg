@@ -1,3 +1,4 @@
+namespace Dune {
 namespace detail {
 
 template <class TestSpace,
@@ -103,4 +104,4 @@ inline static void interiorImpl(
 
 };
 
-} // end namespace detail
+}} // end namespace Dune::detail
