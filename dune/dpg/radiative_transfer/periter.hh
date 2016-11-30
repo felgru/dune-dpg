@@ -223,7 +223,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
     double aposterioriErr;
     for(unsigned int nRefinement = 0;
         // At the end of the loop, we will break if
-        // aposterioriErr < accuracy/2.
+        // aposterioriErr < kapp3*eta
         nRefinement < maxNumberOfInnerIterations;
         ++nRefinement)
     {
@@ -284,7 +284,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       std::vector<GeometryBuffer_t> geometryBuffers(numS);
 
       /* All the following objects have to be created outside of the
-       * following for loop, as the optimalTestSpace holds references
+       * following for loop, as the DPGSystemAssembler holds references
        * to them which will otherwise go out of scope. */
       std::vector<BilinearForm> bilinearForms;
       bilinearForms.reserve(numS);
@@ -326,9 +326,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                                     geometryBuffers[i]));
       }
 
-      std::vector<VectorType> rhs(numS);
-      std::vector<MatrixType> stiffnessMatrix(numS);
-
       // Determine Dirichlet dofs for u^ (inflow boundary)
       std::vector<std::vector<bool>> dirichletNodesInflow(numS);
       // Contribution of inflow boundary for the rhs
@@ -345,16 +342,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         boundaryTools.getInflowBoundaryValue(std::get<1>(solutionSpaces),
                                               rhsInflowContrib[i],
                                               gSfixed);
-      }
-
-      /////////////////////////////////////////////////
-      //   Initialize solution vector
-      /////////////////////////////////////////////////
-      for(unsigned int i = 0; i < numS; ++i)
-      {
-        x[i].resize(feBasisTrace.size()
-                   +feBasisInterior.size());
-        x[i] = 0;
       }
 
       if(nRefinement != 0)
@@ -374,11 +361,12 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         }
       }
 
+      std::vector<VectorType> rhs(numS);
+      std::vector<MatrixType> stiffnessMatrix(numS);
+
       /////////////////////////////////////////////////////////
       //  Assemble the systems
       /////////////////////////////////////////////////////////
-      // using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
-      //auto f = [] (const Domain& x, const Direction& s) { return 1.;};
 
       // loop of the discrete ordinates
       for(unsigned int i = 0; i < numS; ++i)
@@ -414,6 +402,16 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
 
       // std::ofstream of("stiffnessNew.dat");
       // printmatrix(of, stiffnessMatrix[0], "stiffnessNew", "--");
+
+      ////////////////////////////////////
+      //   Initialize solution vector
+      ////////////////////////////////////
+      for(unsigned int i = 0; i < numS; ++i)
+      {
+        x[i].resize(feBasisTrace.size()
+                   +feBasisInterior.size());
+        x[i] = 0;
+      }
 
       ////////////////////////////
       //   Compute solution
@@ -466,10 +464,9 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         // - Computation of the a posteriori error
         double aposterioriErr_i = errorTools.aPosterioriError(
             bilinearFormsEnriched[i], innerProductsEnriched[i], x[i], rhs[i]);
-            //change with contribution of scattering rhs[i]
         aposterioriErr += aposterioriErr_i * aposterioriErr_i;
       }
-      aposterioriErr = sqrt(aposterioriErr / numS);
+      aposterioriErr = std::sqrt(aposterioriErr / numS);
 
       {
         static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
