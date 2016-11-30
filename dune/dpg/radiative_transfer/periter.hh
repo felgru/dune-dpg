@@ -195,7 +195,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
 
     std::chrono::steady_clock::time_point startScatteringApproximation
         = std::chrono::steady_clock::now();
-    std::vector<VectorType> scatteringFunctional(numS);
+    std::vector<VectorType> rhsFunctional(numS);
     {
       FEBasisInterior feBasisInterior(gridView);
       FEBasisTrace feBasisTrace(gridView);
@@ -208,13 +208,34 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
                                                 kernelApproximation,
                                                 i);
         scatteringAssembler_i.template precomputeScattering<0>(
-            scatteringFunctional[i],
+            rhsFunctional[i],
             x);
       }
-      // TODO: add rhs to scatteringFunctional
     }
     std::chrono::steady_clock::time_point endScatteringApproximation
         = std::chrono::steady_clock::now();
+
+    {
+      static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
+          "Functions::interpolate won't work for refined finite elements");
+      FEBasisInterior feBasisInterior(gridView);
+      for(unsigned int i = 0; i < numS; ++i)
+      {
+        VectorType gInterpolation(feBasisInterior.size());
+        const Direction s = sVector[i];
+        Functions::interpolate(feBasisInterior, gInterpolation,
+            [s,&f,&g,&gDeriv,sigma](const Direction& x)
+            { return f(x,s) + gDeriv(x,s) - sigma*g(x,s); });
+
+        // Add gInterpolate to first feBasisInterior.size() entries of
+        // rhsFunctional[i].
+        for(auto rIt=rhsFunctional[i].begin(),
+                 rEnd=rhsFunctional[i].begin()+feBasisInterior.size(),
+                 gIt=gInterpolation.begin(); rIt!=rEnd; ++rIt, ++gIt) {
+          *rIt += *gIt;
+        }
+      }
+    }
 
     ////////////////////////////////////////////////////
     // Inner loop
@@ -359,15 +380,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         auto rhsFunction = make_LinearForm(
               systemAssemblers[i].getTestSearchSpaces(),
               std::make_tuple(
-                make_LinearIntegralTerm
-                  < 0
-                  , LinearIntegrationType::valueFunction
-                  , DomainOfIntegration::interior>
-                  ([s,&f,&g,&gDeriv,sigma] (const Domain& x)
-                   { return f(x,s)+gDeriv(x,s)-sigma*g(x,s); }),
-                // TODO: put f +s·∇g-σg into scatteringFunctional[i]
                 make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
-                  (scatteringFunctional[i], std::get<0>(solutionSpaces))));
+                  (rhsFunctional[i], std::get<0>(solutionSpaces))));
         systemAssemblers[i].assembleSystem(
             stiffnessMatrix[i], rhs[i],
             rhsFunction);
@@ -433,15 +447,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         auto rhsFunction = make_LinearForm(
               rhsAssemblerEnriched.getTestSpaces(),
               std::make_tuple(
-                make_LinearIntegralTerm
-                  < 0
-                  , LinearIntegrationType::valueFunction
-                  , DomainOfIntegration::interior>
-                  ([s,&f,&g,&gDeriv,sigma] (const Domain& x)
-                   { return f(x,s)+gDeriv(x,s)-sigma*g(x,s); }),
-                // TODO: put f +s·∇g-σg into scatteringFunctional[i]
                 make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
-                  (scatteringFunctional[i], std::get<0>(solutionSpaces))));
+                  (rhsFunctional[i], std::get<0>(solutionSpaces))));
         rhsAssemblerEnriched.assembleRhs(rhs[i],
             rhsFunction);
         // - Computation of the a posteriori error
@@ -496,14 +503,14 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
         FEBasisInterior       feBasisInterior(gridView);
 
-        std::vector<VectorType> scatteringFunctionalCoarse(numS);
-        std::swap(scatteringFunctional, scatteringFunctionalCoarse);
+        std::vector<VectorType> rhsFunctionalCoarse(numS);
+        std::swap(rhsFunctional, rhsFunctionalCoarse);
 
         for(unsigned int i = 0; i < numS; ++i)
         {
-          scatteringFunctional[i] = interpolateToUniformlyRefinedGrid(
+          rhsFunctional[i] = interpolateToUniformlyRefinedGrid(
               coarseInteriorBasis, feBasisInterior,
-              scatteringFunctionalCoarse[i]);
+              rhsFunctionalCoarse[i]);
         }
       }
     }
