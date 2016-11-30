@@ -59,7 +59,7 @@ namespace Dune {
      * \pre The localViews have to be bound to the same element.
      *
      * \param[in]     lhsLocalView    local view of the left space
-     * \param[in]     lhsLocalView    local view of the right space
+     * \param[in]     rhsLocalView    local view of the right space
      * \param[in,out] elementMatrix   the local system matrix
      * \param         lhsSpaceOffset  row offset for the left space
      * \param         rhsSpaceOffset  column offset for the right space
