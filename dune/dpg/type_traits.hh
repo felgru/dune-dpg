@@ -6,13 +6,16 @@
 #include <type_traits>
 #include <dune/common/tupleutility.hh>
 
+#ifndef DOXYGEN
 namespace std {
   template<class T, class Alloc> class vector;
   template< std::size_t I, class T > class tuple_element;
 }
+#endif
 
 namespace Dune {
 
+#ifndef DOXYGEN
 namespace Functions {
   template<class size_type>
   class FlatMultiIndex;
@@ -53,8 +56,16 @@ template<class TSpaces, class InnerProductTerms>
 class InnerProduct;
 
 template<class T, int size> class FieldVector;
+#endif
 
 
+#ifdef DOXYGEN
+//! check if T is a std or Dune vector type
+//!
+//! is_vector<T>::value is true if T is a vector type and false otherwise.
+template<class T>
+struct is_vector {};
+#else
 template<class T>
 struct is_vector : std::false_type {};
 
@@ -63,6 +74,7 @@ struct is_vector<std::vector<T, Alloc>> : std::true_type {};
 
 template<class T, int size>
 struct is_vector<Dune::FieldVector<T, size>> : std::true_type {};
+#endif
 
 /****************************
  * Traits for finite elements
@@ -74,15 +86,18 @@ struct is_RefinedFiniteElement;
 template <typename FiniteElement>
 struct is_DGRefinedFiniteElement : std::false_type {};
 
+#ifndef DOXYGEN
 template<typename GV, int level, int k>
 struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
                Functions::PQkDGRefinedDGNodeFactory
                    <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
+#endif
 
 template <typename FiniteElement>
 struct is_ContinuouslyRefinedFiniteElement : std::false_type {};
 
+#ifndef DOXYGEN
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct is_ContinuouslyRefinedFiniteElement<Functions::DefaultGlobalBasis<
             Functions::OptimalTestBasisNodeFactory<
@@ -91,6 +106,7 @@ struct is_ContinuouslyRefinedFiniteElement<Functions::DefaultGlobalBasis<
   : is_RefinedFiniteElement<typename std::tuple_element<testIndex,
                               typename TestspaceCoefficientMatrix::TestSpaces
                             >::type> {};
+#endif
 
 template <typename FiniteElement>
 struct is_RefinedFiniteElement
@@ -101,6 +117,7 @@ struct is_RefinedFiniteElement
 template <typename FiniteElement>
 struct levelOfFE : std::integral_constant<int, 0> {};
 
+#ifndef DOXYGEN
 template<class GV, int level, int k>
 struct levelOfFE<Functions::DefaultGlobalBasis<
              Functions::PQkDGRefinedDGNodeFactory
@@ -115,10 +132,12 @@ struct levelOfFE<Functions::DefaultGlobalBasis<
   : levelOfFE<typename std::tuple_element<testIndex,
                 typename TestspaceCoefficientMatrix::TestSpaces
               >::type> {};
+#endif
 
 template <typename FiniteElement>
 struct is_SubsampledFiniteElement : std::false_type {};
 
+#ifndef DOXYGEN
 template<class GV, int s, int k>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
              Functions::PQkDGSubsampledDGNodeFactory
@@ -139,10 +158,12 @@ struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
   : is_SubsampledFiniteElement<typename std::tuple_element<testIndex,
                                  typename TestspaceCoefficientMatrix::TestSpaces
                                >::type> {};
+#endif
 
 template <typename FiniteElement>
 struct numberOfSamples : std::integral_constant<int, 1> {};
 
+#ifndef DOXYGEN
 template<class GV, int s, int k>
 struct numberOfSamples<Functions::DefaultGlobalBasis<
              Functions::PQkDGSubsampledDGNodeFactory
@@ -163,10 +184,12 @@ struct numberOfSamples<Functions::DefaultGlobalBasis<
   : numberOfSamples<typename std::tuple_element<testIndex,
                       typename TestspaceCoefficientMatrix::TestSpaces
                     >::type> {};
+#endif
 
 template<typename FiniteElement>
 struct is_TransportFiniteElement : std::false_type {};
 
+#ifndef DOXYGEN
 template<typename GV, int k>
 struct is_TransportFiniteElement<Functions::DefaultGlobalBasis<
              Functions::PQkTransportFactory
@@ -181,14 +204,20 @@ struct is_TransportFiniteElement<Functions::DefaultGlobalBasis<
   : is_TransportFiniteElement<typename std::tuple_element<testIndex,
                                 typename TestspaceCoefficientMatrix::TestSpaces
                               >::type> {};
+#endif
 
 /*****************************************
  * Change the GridView of a nodal basis
  *****************************************/
 
+//! change the GridView of a GlobalBasis, BilinearForm, etc.
+//!
+//! changeGridView<T, GV>::type changes the GridView template parameter
+//! of T to GV.
 template<class T, class GridView>
 struct changeGridView {};
 
+#ifndef DOXYGEN
 template<class T, class GridView>
 using changeGridView_t = typename changeGridView<T, GridView>::type;
 
@@ -287,6 +316,7 @@ struct changeGridView<InnerProduct<TSpaces, InnerProductTerms>, GridView>
   typedef InnerProduct<changeGridView_t<TSpaces, GridView>, InnerProductTerms>
       type;
 };
+#endif
 
 } // end namespace Dune
 
