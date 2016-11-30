@@ -224,8 +224,8 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
     for(unsigned int nRefinement = 0;
         // At the end of the loop, we will break if
         // aposterioriErr < kapp3*eta
-        nRefinement < maxNumberOfInnerIterations;
-        ++nRefinement)
+        // or nRefinement+1 >= maxNumberOfInnerIterations
+        ; ++nRefinement)
     {
       std::cout << "Inner iteration " << nRefinement << std::endl;
 
@@ -342,23 +342,6 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         boundaryTools.getInflowBoundaryValue(std::get<1>(solutionSpaces),
                                               rhsInflowContrib[i],
                                               gSfixed);
-      }
-
-      if(nRefinement != 0)
-      {
-        const LevelGridView levelGridView
-            = grid.levelGridView(grid.maxLevel()-1);
-        FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
-
-        std::vector<VectorType> scatteringFunctionalCoarse(numS);
-        std::swap(scatteringFunctional, scatteringFunctionalCoarse);
-
-        for(unsigned int i = 0; i < numS; ++i)
-        {
-          scatteringFunctional[i] = interpolateToUniformlyRefinedGrid(
-              coarseInteriorBasis, feBasisInterior,
-              scatteringFunctionalCoarse[i]);
-        }
       }
 
       std::vector<VectorType> rhs(numS);
@@ -502,10 +485,26 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       std::cout << "Grid level: " << grid.maxLevel() << '\n';
       std::cout << "A posteriori error: " << aposterioriErr << std::endl;
 
-      if(aposterioriErr < kappa3*eta) {
+      if(nRefinement+1 >= maxNumberOfInnerIterations
+          || aposterioriErr < kappa3*eta) {
         break;
       } else {
         grid.globalRefine(1);
+
+        const LevelGridView levelGridView
+            = grid.levelGridView(grid.maxLevel()-1);
+        FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
+        FEBasisInterior       feBasisInterior(gridView);
+
+        std::vector<VectorType> scatteringFunctionalCoarse(numS);
+        std::swap(scatteringFunctional, scatteringFunctionalCoarse);
+
+        for(unsigned int i = 0; i < numS; ++i)
+        {
+          scatteringFunctional[i] = interpolateToUniformlyRefinedGrid(
+              coarseInteriorBasis, feBasisInterior,
+              scatteringFunctionalCoarse[i]);
+        }
       }
     }
 
