@@ -52,7 +52,6 @@ VectorType interpolateToUniformlyRefinedGrid(
       local_v_coarse[i] = v_coarse[row];
     }
 
-    // TODO: Seems, I have to reed the Dune documentation some more
     auto& coarseLocalBasis = coarseLocalView.tree().finiteElement().localBasis();
     using CoarseFiniteElement = std::decay_t<decltype(coarseLocalView.tree().finiteElement())>;
     using CoarseLocalBasis = typename CoarseFiniteElement::Traits::LocalBasisType;
