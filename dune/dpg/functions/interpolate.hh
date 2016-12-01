@@ -63,7 +63,7 @@ VectorType interpolateToUniformlyRefinedGrid(
     auto globalGeometry = e.geometry();
     assert(globalGeometry.affine());
 
-    for (const auto& subE : descendantElements(e, 1))
+    for (const auto& subE : descendantElements(e, e.level()+1))
     {
       fineLocalView.bind(subE);
       fineLocalIndexSet.bind(fineLocalView);
