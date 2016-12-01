@@ -318,15 +318,13 @@ int main(int argc, char** argv)
 
   // Scattering assemblers with optimal test spaces
   std::vector<ScatteringAssembler<std::tuple<FEBasisOptimalTest>,
-                                  SolutionSpaces,
-                                  DPGFormulation>
+                                  SolutionSpaces>
              > scatteringAssemblers;
   scatteringAssemblers.reserve(numS);
 
   // Scattering assembler with enriched test space
   ScatteringAssembler<std::tuple<FEBasisTest>,
-                                  SolutionSpaces,
-                                  DPGFormulation
+                                  SolutionSpaces
                       > scatteringAssemblerEnriched
                           = make_DPG_ScatteringAssembler(
                                 testSpaces,

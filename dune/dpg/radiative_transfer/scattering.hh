@@ -23,11 +23,9 @@ namespace Dune {
  *
  * \tparam TestSpaces      tuple of test spaces
  * \tparam SolutionSpaces  tuple of solution spaces
- * \tparam FormulationType either SaddlepointFormulation or DPGFormulation
  */
 template<class TestSpaces,
-         class SolutionSpaces,
-         class FormulationType>
+         class SolutionSpaces>
 class ScatteringAssembler
 {
 public:
@@ -85,10 +83,9 @@ template<class TestSpaces,
          class SolutionSpaces>
 auto make_DPG_ScatteringAssembler(const TestSpaces& testSpaces,
                                   const SolutionSpaces& solutionSpaces)
-     -> ScatteringAssembler<TestSpaces, SolutionSpaces, DPGFormulation>
+     -> ScatteringAssembler<TestSpaces, SolutionSpaces>
 {
-  return ScatteringAssembler<TestSpaces, SolutionSpaces,
-                             DPGFormulation>
+  return ScatteringAssembler<TestSpaces, SolutionSpaces>
                             (testSpaces, solutionSpaces);
 }
 
@@ -103,18 +100,16 @@ template<class TestSpaces,
          class SolutionSpaces>
 auto make_Saddlepoint_ScatteringAssembler(const TestSpaces& testSpaces,
                                           const SolutionSpaces& solutionSpaces)
-     -> ScatteringAssembler<TestSpaces, SolutionSpaces, SaddlepointFormulation>
+     -> ScatteringAssembler<TestSpaces, SolutionSpaces>
 {
-  return ScatteringAssembler<TestSpaces, SolutionSpaces,
-                             SaddlepointFormulation>
+  return ScatteringAssembler<TestSpaces, SolutionSpaces>
                             (testSpaces, solutionSpaces);
 }
 
 template<class TestSpaces,
-         class SolutionSpaces,
-         class FormulationType>
+         class SolutionSpaces>
 template<class Function, class Geometry, class QuadratureRule, class Direction>
-void ScatteringAssembler<TestSpaces, SolutionSpaces, FormulationType>::
+void ScatteringAssembler<TestSpaces, SolutionSpaces>::
      evaluateKernelElement(
                           std::vector<std::vector<double>>& k,
                           Function& kernelS,
@@ -141,10 +136,9 @@ void ScatteringAssembler<TestSpaces, SolutionSpaces, FormulationType>::
 
 
 template<class TestSpaces,
-         class SolutionSpaces,
-         class FormulationType>
+         class SolutionSpaces>
 template<size_t solutionSpaceIndex, class Direction, class Function>
-void ScatteringAssembler<TestSpaces, SolutionSpaces, FormulationType>::
+void ScatteringAssembler<TestSpaces, SolutionSpaces>::
 assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
                    const std::vector<BlockVector<FieldVector<double,1> >>& x,
                    const std::vector<Direction>& sVector,
@@ -152,10 +146,10 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
 {
   using namespace Dune::detail;
 
-  constexpr bool isSaddlepoint =
-        std::is_same<
-             typename std::decay<FormulationType>::type
-           , SaddlepointFormulation
+  constexpr bool usesOptimalTestBasis =
+        is_OptimalTestSpace<
+            typename std::tuple_element<std::tuple_size<TestSpaces>::value-1,
+                                        TestSpaces>::type
         >::value;
 
   const unsigned int numS = x.size();
@@ -169,7 +163,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
   const size_t globalTotalTestSize
       = computeOffsets(globalTestSpaceOffsets, testSpaces);
 
-  if(!isSaddlepoint)
+  if(usesOptimalTestBasis)
   {
     for(size_t i=0; i<std::tuple_size<TestSpaces>::value; ++i)
     {
@@ -179,14 +173,14 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
 
   size_t globalTotalSolutionSize =
     computeOffsets(globalSolutionSpaceOffsets, solutionSpaces,
-                   isSaddlepoint?globalTotalTestSize:0);
+                   (!usesOptimalTestBasis)?globalTotalTestSize:0);
   globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
 
   const size_t globalSolutionSpaceOffset =
       globalSolutionSpaceOffsets[solutionSpaceIndex];
 
   scattering.resize(globalTotalTestSize
-                    + (isSaddlepoint?globalTotalSolutionSize:0));
+                    + ((!usesOptimalTestBasis)?globalTotalSolutionSize:0));
   scattering = 0;
 
   // Views on the FE bases on a single element
