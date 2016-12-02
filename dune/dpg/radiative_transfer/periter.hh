@@ -24,6 +24,7 @@
 #include <dune/functions/functionspacebases/pqksubsampleddgbasis.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
+#include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/errortools.hh>
@@ -227,7 +228,47 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         }
 
         double rhsError = 0.;
-        // TODO: compute approximation error of RHS and boundary data
+        for(unsigned int i = 0; i < numS; ++i)
+        {
+          const Direction s = sVector[i];
+          auto gExact = Functions::makeGridViewFunction(
+                [s,&f,&g,&gDeriv,sigma](const Direction& x)
+                { return f(x,s) + gDeriv(x,s) - sigma*g(x,s); },
+                gridView);
+          auto gApprox = Functions::makeDiscreteGlobalBasisFunction<double>(
+                feBasisInterior, boundaryValues[i]);
+
+          auto localGExact = localFunction(gExact);
+          auto localGApprox = localFunction(gApprox);
+          auto localView = feBasisInterior.localView();
+          auto localIndexSet = feBasisInterior.localIndexSet();
+
+          double rhsError_i = 0.;
+          for(const auto& e : elements(gridView)) {
+            localView.bind(e);
+            localIndexSet.bind(localView);
+            localGExact.bind(e);
+            localGApprox.bind(e);
+
+            size_t quadratureOrder = 2*localView.tree().finiteElement()
+                                                .localBasis().order()  + 4;
+            const Dune::QuadratureRule<double, dim>& quad =
+                  Dune::QuadratureRules<double, dim>::rule(e.type(),
+                                                           quadratureOrder);
+            auto geometry = e.geometry();
+            double local_error = 0.;
+            for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
+              const FieldVector<double,dim>& quadPos = quad[pt].position();
+              const double diff = localGExact(quadPos) - localGApprox(quadPos);
+              local_error += diff*diff
+                           * geometry.integrationElement(quadPos)
+                           * quad[pt].weight();
+            }
+            rhsError_i += local_error;
+          }
+          rhsError += std::sqrt(rhsError_i);
+        }
+        rhsError /= numS;
         if(rhsError <= kappa2*eta || refinement == maxNumberOfRefinements) {
           break;
         } else {
