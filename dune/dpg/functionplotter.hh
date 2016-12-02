@@ -54,16 +54,9 @@ public:
             unsigned int       subsampling,
             size_t             spaceOffset) const
   {
-    //////////////////////////////////////////////////////////////////////////
-    //  Make a discrete function from the FE basis and the coefficient vector
-    //////////////////////////////////////////////////////////////////////////
-
     VectorType u(feBasis.size());
-    // u=0;
-    for (unsigned int i=0; i<feBasis.size(); i++)
-    {
-      u[i] = x[i+spaceOffset];
-    }
+    std::copy(x.begin()+spaceOffset, x.begin()+spaceOffset+feBasis.size(),
+              u.begin());
 
     plot(functionname, u, feBasis, subsampling);
   }
