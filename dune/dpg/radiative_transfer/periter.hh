@@ -293,9 +293,10 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         FEBasisInterior feBasisInterior(gridView);
         // Add boundaryValues[i] to first feBasisInterior.size() entries of
         // rhsFunctional[i].
-        for(auto rIt=rhsFunctional[i].begin(),
-                 rEnd=rhsFunctional[i].begin()+feBasisInterior.size(),
-                 gIt=boundaryValues[i].begin();
+        using Iterator = std::decay_t<decltype(rhsFunctional[i].begin())>;
+        for(Iterator rIt=rhsFunctional[i].begin(),
+                     rEnd=rhsFunctional[i].begin()+feBasisInterior.size(),
+                     gIt=boundaryValues[i].begin();
             rIt!=rEnd; ++rIt, ++gIt) {
           *rIt += *gIt;
         }
@@ -314,9 +315,10 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
 
         // Add gInterpolate to first feBasisInterior.size() entries of
         // rhsFunctional[i].
-        for(auto rIt=rhsFunctional[i].begin(),
-                 rEnd=rhsFunctional[i].begin()+feBasisInterior.size(),
-                 gIt=gInterpolation.begin(); rIt!=rEnd; ++rIt, ++gIt) {
+        using Iterator = std::decay_t<decltype(rhsFunctional[i].begin())>;
+        for(Iterator rIt=rhsFunctional[i].begin(),
+                     rEnd=rhsFunctional[i].begin()+feBasisInterior.size(),
+                     gIt=gInterpolation.begin(); rIt!=rEnd; ++rIt, ++gIt) {
           *rIt += *gIt;
         }
       }
@@ -554,8 +556,10 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
               [&g,s](const Direction& x) { return g(x,s); });
 
           // Add gInterpolation to first feBasisInterior.size() entries of x.
-          for(auto xIt=x[i].begin(), xEnd=x[i].begin()+feBasisInterior.size(),
-                   gIt=gInterpolation.begin(); xIt!=xEnd; ++xIt, ++gIt) {
+          using Iterator = std::decay_t<decltype(x[i].begin())>;
+          for(Iterator xIt=x[i].begin(),
+                       xEnd=x[i].begin()+feBasisInterior.size(),
+                       gIt=gInterpolation.begin(); xIt!=xEnd; ++xIt, ++gIt) {
             *xIt += *gIt;
           }
           // TODO: Add (interpolation of) g to theta part of x?
