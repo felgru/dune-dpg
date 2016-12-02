@@ -12,7 +12,6 @@
 #include <dune/common/exceptions.hh> // We use exceptions
 
 #include <dune/grid/io/file/gmshreader.hh>
-#include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
@@ -32,6 +31,7 @@
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errortools.hh>
+#include <dune/dpg/functionplotter.hh>
 #include <dune/dpg/rhs_assembler.hh>
 
 
@@ -257,17 +257,7 @@ int main()
     }
 
     auto innerSpace = std::get<0>(solutionSpaces);
-    auto uFunction
-        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-              (innerSpace, Dune::TypeTree::hybridTreePath(), u);
-    auto localUFunction = localFunction(uFunction);
-
     auto feBasisTrace = std::get<1>(solutionSpaces);
-    auto thetaFunction
-        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-              (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta);
-    auto localThetaFunction = localFunction(thetaFunction);
-
 
     ////////////////////////////////////////////////////////////////////////////
     //  Error evaluation
@@ -305,17 +295,13 @@ int main()
     std::cout << "A posteriori L2 error: || (u,trace u) - (u_fem,theta) || = "
               << aposterioriL2Err << std::endl;
 
-    //////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////
     //  Write result to VTK file
-    //  We need to subsample, because VTK cannot natively display real second-order functions
-    //////////////////////////////////////////////////////////////////////////////////////////////
-    SubsamplingVTKWriter<GridView> vtkWriter(gridView,0);
-    vtkWriter.addVertexData(localUFunction, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter.write(std::string{"solution_transport_"}+std::to_string(i));
-
-    SubsamplingVTKWriter<GridView> vtkWriter1(gridView,2);
-    vtkWriter1.addVertexData(localThetaFunction, VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter1.write(std::string{"solution_trace_"}+std::to_string(i));
+    ///////////////////////////////////
+    FunctionPlotter uPlotter("solution_transport"+std::to_string(i));
+    uPlotter.plot("u", u, innerSpace, 0);
+    FunctionPlotter thetaPlotter("solution_trace"+std::to_string(i));
+    thetaPlotter.plot("theta", theta, feBasisTrace, 2);
 
     ////////////////
     // Refine
