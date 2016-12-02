@@ -15,8 +15,6 @@
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
-
-
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -24,7 +22,6 @@
 #include <dune/istl/solvers.hh>
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
-
 
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
@@ -34,9 +31,10 @@
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
+#include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errortools.hh>
-#include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/functionplotter.hh>
 #include <dune/dpg/rhs_assembler.hh>
 
 #include <dune/dpg/radiative_transfer/scattering.hh>
@@ -539,38 +537,23 @@ int main(int argc, char** argv)
 
       std::cout << "Direction " << i << std::endl;
 
-      // ////////////////////////////////////////////////////////////////////////
-      // //  Write result to VTK file
-      // //  We need to subsample, because VTK cannot natively display
-      // //  real second-order functions
-      // ////////////////////////////////////////////////////////////////////////
-       // - Make a discrete function from the FE basis and the coefficient vector
-      auto uFunction
-          = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-                (feBasisInterior, Dune::TypeTree::hybridTreePath(), u[i]);
-      auto localUFunction = localFunction(uFunction);
-
-      auto thetaFunction
-          = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-                (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta[i]);
-      auto localThetaFunction = localFunction(thetaFunction);
-      // - VTK writer
-      SubsamplingVTKWriter<GridView> vtkWriterInterior(gridView,0);
-      vtkWriterInterior.addVertexData(localUFunction,
-                      VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
+      ////////////////////////////////////////////////////////////////////////
+      //  Write result to VTK file
+      //  We need to subsample, because VTK cannot natively display
+      //  real second-order functions
+      ////////////////////////////////////////////////////////////////////////
       std::string name = std::string("u_rad_trans_n")
                        + std::to_string(n)
                        + std::string("_s")
                        + std::to_string(i);
-      vtkWriterInterior.write(name);
-
-      SubsamplingVTKWriter<GridView> vtkWriterTrace(gridView,2);
-      vtkWriterTrace.addVertexData(localThetaFunction, VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
+      FunctionPlotter uPlotter(name);
+      uPlotter.plot("u", u[i], feBasisInterior, 0);
       name = std::string("theta_rad_trans_n")
                        + std::to_string(n)
                        + std::string("_s")
                        + std::to_string(i);
-      vtkWriterTrace.write(name);
+      FunctionPlotter thetaPlotter(name);
+      thetaPlotter.plot("theta", theta[i], feBasisTrace, 2);
 
       ////////////////////////////////////
       //  Error wrt exact solution

@@ -27,6 +27,7 @@
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/errortools.hh>
+#include <dune/dpg/functionplotter.hh>
 #include <dune/dpg/functions/interpolate.hh>
 #include <dune/dpg/linearfunctionalterm.hh>
 #include <dune/dpg/radiative_transfer/approximate_scattering.hh>
@@ -61,25 +62,6 @@ class Periter {
              unsigned int maxNumberOfIterations,
              PlotSolutions plotSolutions = PlotSolutions::doNotPlot);
 };
-
-// Get solution u or theta out of the solution vector x
-template<class VectorType>
-std::vector<VectorType>
-extractSolution(const std::vector<VectorType>& x,
-                unsigned int offset,
-                unsigned int size
-               )
-{
-  unsigned int numS = x.size();
-  std::vector<VectorType> u(numS);
-  for(unsigned int iDir=0; iDir<numS; iDir++) {
-    u[iDir].resize(size);
-    std::copy(x[iDir].begin()+offset,
-              x[iDir].begin()+offset+size,
-              u[iDir].begin());
-  }
-  return u;
-}
 
 template<class ScatteringKernelApproximation>
 template<class Grid, class F, class G, class GDeriv, class Kernel>
@@ -530,45 +512,25 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       FEBasisTrace feBasisTrace(gridView);
 
 
-      std::vector<VectorType> u =
-          extractSolution(x, 0, feBasisInterior.size());
-      std::vector<VectorType> theta =
-          extractSolution(x, feBasisInterior.size(), feBasisTrace.size());
-
       for(unsigned int i = 0; i < numS; ++i)
       {
         Direction s = sVector[i];
 
         std::cout << "Direction " << i << '\n';
 
-        // - Make a discrete function from the FE basis and the coefficient vector
-        auto uFunction
-            = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-                  (feBasisInterior, Dune::TypeTree::hybridTreePath(), u[i]);
-        auto localUFunction = localFunction(uFunction);
-
-        auto thetaFunction
-            = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-                  (feBasisTrace, Dune::TypeTree::hybridTreePath(), theta[i]);
-        auto localThetaFunction = localFunction(thetaFunction);
-        // - VTK writer
-        SubsamplingVTKWriter<LeafGridView> vtkWriterInterior(gridView,0);
-        vtkWriterInterior.addVertexData(localUFunction,
-                        VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
         std::string name = std::string("u_rad_trans_n")
                         + std::to_string(n)
                         + std::string("_s")
                         + std::to_string(i);
-        vtkWriterInterior.write(name);
-
-        SubsamplingVTKWriter<LeafGridView> vtkWriterTrace(gridView,2);
-        vtkWriterTrace.addVertexData(localThetaFunction,
-                    VTK::FieldInfo("theta",VTK::FieldInfo::Type::scalar, 1));
+        FunctionPlotter uPlotter(name);
+        uPlotter.plot("u", x[i], feBasisInterior, 0, 0);
         name = std::string("theta_rad_trans_n")
                         + std::to_string(n)
                         + std::string("_s")
                         + std::to_string(i);
-        vtkWriterTrace.write(name);
+        FunctionPlotter thetaPlotter(name);
+        thetaPlotter.plot("theta", x[i], feBasisTrace, 2,
+                          feBasisInterior.size());
       }
     }
   }
