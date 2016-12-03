@@ -211,7 +211,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
     // approximation of rhs and boundary values.
     if(!rhsIsFeFunction) {
       std::vector<VectorType> boundaryValues(numS);
-      const unsigned int maxNumberOfRefinements = 10;
+      const unsigned int maxNumberOfRefinements = 3;
       for(unsigned int refinement = 1; ; refinement++) {
         static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
             "Functions::interpolate won't work for refined finite elements");
@@ -327,7 +327,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
     ////////////////////////////////////////////////////
     // Inner loop
     ////////////////////////////////////////////////////
-    const unsigned int maxNumberOfInnerIterations = 10;
+    const unsigned int maxNumberOfInnerIterations = 3;
     double aposterioriErr;
     for(unsigned int nRefinement = 0; ; )
         // At the end of the loop, we will break if
