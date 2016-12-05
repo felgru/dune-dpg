@@ -240,6 +240,10 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         << "Plotting of only the last iteration is not implemented yet!\n";
     std::abort();
   }
+  static_assert(std::is_same<RHSApproximation, FeRHSandBoundary>::value
+      || std::is_same<RHSApproximation, ApproximateRHSandBoundary>::value,
+      "Unknown type provided for RHSApproximation!\n"
+      "Should be either FeRHSandBoundary or ApproximateRHSandBoundary.");
   const unsigned int dim = 2;
   constexpr bool rhsIsFeFunction
       = std::is_same<RHSApproximation, FeRHSandBoundary>::value;
