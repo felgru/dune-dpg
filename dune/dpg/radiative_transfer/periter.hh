@@ -24,6 +24,7 @@
 #include <dune/functions/functionspacebases/pqksubsampleddgbasis.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
+#include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/errortools.hh>
@@ -48,11 +49,13 @@ enum class PlotSolutions {
 template<class ScatteringKernelApproximation>
 class Periter {
   public:
-  template<class Grid, class F, class G, class GDeriv, class Kernel>
+  template<class Grid, class F, class G, class GDeriv,
+           class RHSApproximation, class Kernel>
   void solve(Grid& grid,
              const F& f,
              const G& g,
              const GDeriv& gDeriv,
+             RHSApproximation rhsApproximation,
              double sigma,
              const Kernel& kernel,
              unsigned int numS,
@@ -63,12 +66,167 @@ class Periter {
              PlotSolutions plotSolutions = PlotSolutions::doNotPlot);
 };
 
+struct FeRHSandBoundary {};
+struct ApproximateRHSandBoundary {};
+
+#ifndef DOXYGEN
+namespace detail {
+  constexpr size_t dim = 2;
+  using VectorType = BlockVector<FieldVector<double,1>>;
+  using Direction = FieldVector<double, dim>;
+
+  template<class FEBasisInterior, class Grid,
+           class F, class G, class GDeriv>
+  inline void approximate_rhs_and_bv (
+      std::vector<VectorType>& rhsFunctional,
+      Grid& grid,
+      double,
+      const std::vector<Direction>& sVector,
+      F& f, G& g, GDeriv& gDeriv, double sigma,
+      FEBasisInterior& feBasisInterior,
+      FeRHSandBoundary) {
+    static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
+        "Functions::interpolate won't work for refined finite elements");
+    size_t numS = sVector.size();
+    for(unsigned int i = 0; i < numS; ++i)
+    {
+      VectorType gInterpolation(feBasisInterior.size());
+      const Direction s = sVector[i];
+      Functions::interpolate(feBasisInterior, gInterpolation,
+          [s,&f,&g,&gDeriv,sigma](const Direction& x)
+          { return f(x,s) + gDeriv(x,s) - sigma*g(x,s); });
+
+      // Add gInterpolate to first feBasisInterior.size() entries of
+      // rhsFunctional[i].
+      using Iterator = std::decay_t<decltype(rhsFunctional[i].begin())>;
+      for(Iterator rIt=rhsFunctional[i].begin(),
+                   rEnd=rhsFunctional[i].begin()+feBasisInterior.size(),
+                   gIt=gInterpolation.begin(); rIt!=rEnd; ++rIt, ++gIt) {
+        *rIt += *gIt;
+      }
+    }
+  }
+
+
+  // Refine grid until accuracy kappa2*eta is reached for
+  // approximation of rhs and boundary values.
+  template<class FEBasisInterior, class Grid,
+           class F, class G, class GDeriv>
+  inline void approximate_rhs_and_bv (
+      std::vector<VectorType>& rhsFunctional,
+      Grid& grid,
+      double accuracy,
+      const std::vector<Direction>& sVector,
+      F& f, G& g, GDeriv& gDeriv, double sigma,
+      FEBasisInterior& feBasisInterior,
+      ApproximateRHSandBoundary) {
+    using LevelGridView = typename Grid::LevelGridView;
+    using FEBasisCoarseInterior =
+      changeGridView_t<FEBasisInterior, LevelGridView>;
+    size_t numS = sVector.size();
+    auto gridView = grid.leafGridView();
+    std::vector<VectorType> boundaryValues(numS);
+    const unsigned int maxNumberOfRefinements = 3;
+    for(unsigned int refinement = 1; ; refinement++) {
+      static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
+          "Functions::interpolate won't work for refined finite elements");
+      for(unsigned int i = 0; i < numS; ++i)
+      {
+        VectorType gInterpolation(feBasisInterior.size());
+        const Direction s = sVector[i];
+        Functions::interpolate(feBasisInterior, gInterpolation,
+            [s,&f,&g,&gDeriv,sigma](const Direction& x)
+            { return f(x,s) + gDeriv(x,s) - sigma*g(x,s); });
+
+        std::swap(boundaryValues[i], gInterpolation);
+      }
+
+      double rhsError = 0.;
+      for(unsigned int i = 0; i < numS; ++i)
+      {
+        const Direction s = sVector[i];
+        auto gExact = Functions::makeGridViewFunction(
+              [s,&f,&g,&gDeriv,sigma](const Direction& x)
+              { return f(x,s) + gDeriv(x,s) - sigma*g(x,s); },
+              gridView);
+        auto gApprox = Functions::makeDiscreteGlobalBasisFunction<double>(
+              feBasisInterior, boundaryValues[i]);
+
+        auto localGExact = localFunction(gExact);
+        auto localGApprox = localFunction(gApprox);
+        auto localView = feBasisInterior.localView();
+        auto localIndexSet = feBasisInterior.localIndexSet();
+
+        double rhsError_i = 0.;
+        for(const auto& e : elements(gridView)) {
+          localView.bind(e);
+          localIndexSet.bind(localView);
+          localGExact.bind(e);
+          localGApprox.bind(e);
+
+          size_t quadratureOrder = 2*localView.tree().finiteElement()
+                                              .localBasis().order()  + 4;
+          const Dune::QuadratureRule<double, dim>& quad =
+                Dune::QuadratureRules<double, dim>::rule(e.type(),
+                                                         quadratureOrder);
+          auto geometry = e.geometry();
+          double local_error = 0.;
+          for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
+            const FieldVector<double,dim>& quadPos = quad[pt].position();
+            const double diff = localGExact(quadPos) - localGApprox(quadPos);
+            local_error += diff*diff
+                         * geometry.integrationElement(quadPos)
+                         * quad[pt].weight();
+          }
+          rhsError_i += local_error;
+        }
+        rhsError += std::sqrt(rhsError_i);
+      }
+      rhsError /= numS;
+      if(rhsError <= accuracy || refinement == maxNumberOfRefinements) {
+        break;
+      } else {
+        const auto levelGridView = grid.levelGridView(grid.maxLevel());
+        FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
+
+        grid.globalRefine(1);
+        feBasisInterior.update(gridView);
+
+        std::vector<VectorType> rhsFunctionalCoarse(numS);
+        std::swap(rhsFunctional, rhsFunctionalCoarse);
+        for(unsigned int i = 0; i < numS; ++i)
+        {
+          rhsFunctional[i] = interpolateToUniformlyRefinedGrid(
+              coarseInteriorBasis, feBasisInterior,
+              rhsFunctionalCoarse[i]);
+        }
+      }
+    }
+    for(unsigned int i = 0; i < numS; ++i)
+    {
+      FEBasisInterior feBasisInterior(gridView);
+      // Add boundaryValues[i] to first feBasisInterior.size() entries of
+      // rhsFunctional[i].
+      using Iterator = std::decay_t<decltype(rhsFunctional[i].begin())>;
+      for(Iterator rIt=rhsFunctional[i].begin(),
+                   rEnd=rhsFunctional[i].begin()+feBasisInterior.size(),
+                   gIt=boundaryValues[i].begin();
+          rIt!=rEnd; ++rIt, ++gIt) {
+        *rIt += *gIt;
+      }
+    }
+  }
+} // end namespace detail
+#endif
+
 template<class ScatteringKernelApproximation>
-template<class Grid, class F, class G, class GDeriv, class Kernel>
+template<class Grid, class F, class G, class GDeriv,
+         class RHSApproximation, class Kernel>
 void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
            const F& f,
            const G& g,
            const GDeriv& gDeriv,
+           RHSApproximation rhsApproximation,
            double sigma,
            const Kernel& kernel,
            unsigned int numS,
@@ -82,7 +240,13 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         << "Plotting of only the last iteration is not implemented yet!\n";
     std::abort();
   }
+  static_assert(std::is_same<RHSApproximation, FeRHSandBoundary>::value
+      || std::is_same<RHSApproximation, ApproximateRHSandBoundary>::value,
+      "Unknown type provided for RHSApproximation!\n"
+      "Should be either FeRHSandBoundary or ApproximateRHSandBoundary.");
   const unsigned int dim = 2;
+  constexpr bool rhsIsFeFunction
+      = std::is_same<RHSApproximation, FeRHSandBoundary>::value;
 
   typedef typename Grid::LeafGridView  LeafGridView;
   typedef typename Grid::LevelGridView LevelGridView;
@@ -155,9 +319,9 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
   const double rhobar = (1./rho > 2*rho)? (1./rho) : (2*rho);
 
   // CT*kappa1 + (1+CT)*kappa2 + 2*kappa3 = 1.
-  const double kappa1 = 1./(2.*CT);
-  const double kappa2 = 0.; // as we can compute f exactly
-  const double kappa3 = 1./4.;
+  const double kappa1 = rhsIsFeFunction? 1./(2.*CT) : 1./(3.*CT);
+  const double kappa2 = rhsIsFeFunction? 0.         : 1./(3.*(1+CT));
+  const double kappa3 = rhsIsFeFunction? 1./4.      : 1./6.;
 
   ofs << "Periter with " << numS
       << " directions, rho = " << rho << ", CT = " << CT
@@ -198,31 +362,21 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
         = std::chrono::steady_clock::now();
 
     {
-      static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
-          "Functions::interpolate won't work for refined finite elements");
       FEBasisInterior feBasisInterior(gridView);
-      for(unsigned int i = 0; i < numS; ++i)
-      {
-        VectorType gInterpolation(feBasisInterior.size());
-        const Direction s = sVector[i];
-        Functions::interpolate(feBasisInterior, gInterpolation,
-            [s,&f,&g,&gDeriv,sigma](const Direction& x)
-            { return f(x,s) + gDeriv(x,s) - sigma*g(x,s); });
 
-        // Add gInterpolate to first feBasisInterior.size() entries of
-        // rhsFunctional[i].
-        for(auto rIt=rhsFunctional[i].begin(),
-                 rEnd=rhsFunctional[i].begin()+feBasisInterior.size(),
-                 gIt=gInterpolation.begin(); rIt!=rEnd; ++rIt, ++gIt) {
-          *rIt += *gIt;
-        }
-      }
+      detail::approximate_rhs_and_bv (
+          rhsFunctional,
+          grid,
+          kappa2*eta,
+          sVector,
+          f, g, gDeriv, sigma,
+          feBasisInterior, rhsApproximation);
     }
 
     ////////////////////////////////////////////////////
     // Inner loop
     ////////////////////////////////////////////////////
-    const unsigned int maxNumberOfInnerIterations = 10;
+    const unsigned int maxNumberOfInnerIterations = 3;
     double aposterioriErr;
     for(unsigned int nRefinement = 0; ; )
         // At the end of the loop, we will break if
@@ -451,8 +605,10 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
               [&g,s](const Direction& x) { return g(x,s); });
 
           // Add gInterpolation to first feBasisInterior.size() entries of x.
-          for(auto xIt=x[i].begin(), xEnd=x[i].begin()+feBasisInterior.size(),
-                   gIt=gInterpolation.begin(); xIt!=xEnd; ++xIt, ++gIt) {
+          using Iterator = std::decay_t<decltype(x[i].begin())>;
+          for(Iterator xIt=x[i].begin(),
+                       xEnd=x[i].begin()+feBasisInterior.size(),
+                       gIt=gInterpolation.begin(); xIt!=xEnd; ++xIt, ++gIt) {
             *xIt += *gIt;
           }
           // TODO: Add (interpolation of) g to theta part of x?
@@ -475,7 +631,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
       std::cout << "A posteriori error: " << aposterioriErr << std::endl;
 
       if(++nRefinement >= maxNumberOfInnerIterations
-          || aposterioriErr < kappa3*eta) {
+          || aposterioriErr <= kappa3*eta) {
         break;
       } else {
         grid.globalRefine(1);

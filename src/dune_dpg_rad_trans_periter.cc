@@ -230,7 +230,7 @@ int main(int argc, char** argv)
   const double CT = 1;
 
   Periter<ScatteringKernelApproximation::HaarWavelet::SVD>()
-      .solve(*grid, f, g, gDeriv, sigma,
+      .solve(*grid, f, g, gDeriv, FeRHSandBoundary{}, sigma,
              HenyeyGreensteinScattering<Direction>(0.5),
              numS, rho, CT, 1e-2, N, plotSolutions);
 
