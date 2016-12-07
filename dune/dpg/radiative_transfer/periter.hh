@@ -46,16 +46,14 @@ enum class PlotSolutions {
   plotLastIteration
 };
 
-template<class ScatteringKernelApproximation>
+template<class ScatteringKernelApproximation, class RHSApproximation>
 class Periter {
   public:
-  template<class Grid, class F, class G, class GDeriv,
-           class RHSApproximation, class Kernel>
+  template<class Grid, class F, class G, class GDeriv, class Kernel>
   void solve(Grid& grid,
              const F& f,
              const G& g,
              const GDeriv& gDeriv,
-             RHSApproximation rhsApproximation,
              double sigma,
              const Kernel& kernel,
              unsigned int numS,
@@ -219,14 +217,13 @@ namespace detail {
 } // end namespace detail
 #endif
 
-template<class ScatteringKernelApproximation>
-template<class Grid, class F, class G, class GDeriv,
-         class RHSApproximation, class Kernel>
-void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
+template<class ScatteringKernelApproximation, class RHSApproximation>
+template<class Grid, class F, class G, class GDeriv, class Kernel>
+void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
+           Grid& grid,
            const F& f,
            const G& g,
            const GDeriv& gDeriv,
-           RHSApproximation rhsApproximation,
            double sigma,
            const Kernel& kernel,
            unsigned int numS,
@@ -370,7 +367,7 @@ void Periter<ScatteringKernelApproximation>::solve(Grid& grid,
           kappa2*eta,
           sVector,
           f, g, gDeriv, sigma,
-          feBasisInterior, rhsApproximation);
+          feBasisInterior, RHSApproximation{});
     }
 
     ////////////////////////////////////////////////////
