@@ -45,19 +45,21 @@ public:
    * \brief Assemble the vector corresponding to the scattering integral
    * for a given set of discrete ordinate solutions.
    *
-   * \todo: For now, the scattering kernel is assumed to be constant
-   *        and normed to integral 1.
+   * \todo For now, the scattering kernel is assumed to be constant
+   *       and normed to integral 1.
    *
    * \param[out] scattering  the scattering vector
    * \param[in]  x           the vectors of the solutions of the
    *                           previous iteration
+   * \param[in] sVector
+   * \param[in] kernelS
    */
   template<size_t solutionSpaceIndex, class Direction, class Function>
   void assembleScattering
          (BlockVector<FieldVector<double,1> >& scattering,
           const std::vector<BlockVector<FieldVector<double,1> >>& x,
           const std::vector<Direction>& sVector,
-                   Function& kernelS);
+          Function& kernelS);
 
 private:
   template<class Function, class Geometry, class QuadratureRule, class Direction>

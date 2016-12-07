@@ -46,9 +46,38 @@ enum class PlotSolutions {
   plotLastIteration
 };
 
+/**
+ * This class describes the Periter algorithm for radiative transfer problems
+ *
+ * \tparam ScatteringKernelApproximation
+ *         specifies the method used to approximate the scattering kernel
+ * \tparam RHSApproximation  if right hand side and lifting of boundary
+ *                           values are finite element functions, set this
+ *                           to FeRHSandBoundary, otherwise set this to
+ *                           ApproximateRHSandBoundary
+ */
 template<class ScatteringKernelApproximation, class RHSApproximation>
 class Periter {
   public:
+
+  /**
+   * Solve a radiative transfer problem using the Periter algorithm
+   *
+   * \param grid
+   * \param f  right hand side function
+   * \param g  lifting of the boundary values
+   * \param gDeriv  derivative of g in direction s
+   * \param sigma
+   * \param kernel  the scattering kernel, e.g. a Henyey–Greenstein kernel
+   * \param numS  number of directions used in the discretization
+   * \param rho  the contraction parameter ρ
+   * \param CT  the constant C_T from the paper
+   * \param targetAccuracy  periter solves up to this accuracy
+   * \param maxNumberOfIterations  ... or up to the given number of iterations
+   *                               (whatever comes first)
+   * \param plotSolutions  specifies when to create .vtu files for plotting
+   *                       the solution
+   */
   template<class Grid, class F, class G, class GDeriv, class Kernel>
   void solve(Grid& grid,
              const F& f,

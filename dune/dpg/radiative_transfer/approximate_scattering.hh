@@ -37,6 +37,8 @@ public:
   /**
    * \brief constructor for ApproximateScatteringAssembler
    *
+   * \param solutionSpaces   a tuple of solution spaces
+   * \param kernel           an approximation of the scattering kernel
    * \param si  index of the scattering direction
    *
    * \note For your convenience, use make_ApproximateScatteringAssembler()
@@ -55,8 +57,8 @@ public:
    *        in the solution space basis for a given set of
    *        discrete ordinate solutions.
    *
-   * \todo: For now, the scattering kernel is assumed to be constant
-   *        and normed to integral 1.
+   * \todo For now, the scattering kernel is assumed to be constant
+   *       in space and normed to integral 1.
    *
    * \param[out] scattering  the scattering vector
    * \param[in]  x           the vectors of the solutions of the
