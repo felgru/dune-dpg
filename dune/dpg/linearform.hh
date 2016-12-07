@@ -164,7 +164,7 @@ auto make_Saddlepoint_LinearForm(TestSpaces      testSpaces,
  * \brief Creates a LinearForm (i.e. for a saddlepoint formulation),
  *        deducing the target type from the types of arguments.
  *
- * \param Spaces          a tuple of spaces
+ * \param spaces          a tuple of spaces
  * \param terms           a tuple of LinearIntegralTerm
  */
 template<class Spaces, class LinearTerms>
