@@ -214,7 +214,8 @@ namespace Dune {
  * \param feBasis       the finite element basis
  * \param u             the vector containing the computed solution
  * \param uRef          the expression for the exact solution.
- * \param quadOrder     polynomial degree up to which (x2) the quadrature
+ * \param quadratureOrder
+ *                      polynomial degree up to which (x2) the quadrature
  *                      shall be exact.
  *                      If quadOrder < polynomial degree of the local finite
  *                      element, the polynomial degree of the local finite
@@ -432,6 +433,10 @@ namespace Dune {
  *
  * \param bilinearForm        the bilinear form
  * \param innerProduct        the inner product
+ * \param testLocalViews
+ * \param solutionLocalViews
+ * \param testLocalIndexSets
+ * \param solutionLocalIndexSets
  * \param solution            the computed solution
  * \param rhs                 the right-hand side
  */
@@ -575,16 +580,23 @@ namespace Dune {
 /**
  * \brief Mark elements for refinement according to Dörfler's strategy
  *
- * This mean, given a ratio $\theta \in (0,1]$, the set
- * $\mathcal M \subset \Omega_h$ of marked elements satisfies
- * $$\operatorname{err}(u_h, \mathcal M)
-     \geq \operatorname{err}(u_h, \Omega_h).$$
+ * This mean, given a ratio \f$\theta \in (0,1]\f$, the set
+ * \f$\mathcal M \subset \Omega_h\f$ of marked elements satisfies
+ * \f[\mathrm{err}(u_h, \mathcal M)
+     \geq \mathrm{err}(u_h, \Omega_h).\f]
  *
- * \param ratio  the marking ratio $\theta \in (0,1]$
+ * \todo document \p aPosterioriInnerProduct, \p linearForm and \p splitRatio
+ *
+ * \param grid
+ * \param ratio  the marking ratio \f$\theta \in (0,1]\f$
  * \param bilinearForm
  * \param innerProduct
+ * \param aPosterioriInnerProduct
+ * \param linearForm
+ * \param f
  * \param solution  FE solution
  * \param rhs  Rhs of the problem in enriched test space
+ * \param splitRatio
  *
  * \return estimate for global a posteriori error
  */

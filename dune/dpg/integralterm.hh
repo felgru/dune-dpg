@@ -208,8 +208,8 @@ auto make_IntegralTerm(FactorType c, DirectionType beta)
  *        of both spaces involved.
  *
  * \param c        the factor with which we multiply the integrand
- * \param lhsbeta  the transport direction for the left space
- * \param rhsbeta  the transport direction for the right space
+ * \param lhsBeta  the transport direction for the left space
+ * \param rhsBeta  the transport direction for the right space
  * \tparam lhsSpaceIndex the index of the left space
  * \tparam rhsSpaceIndex the index of the right space
  * \tparam integrationType  the form of the integrand

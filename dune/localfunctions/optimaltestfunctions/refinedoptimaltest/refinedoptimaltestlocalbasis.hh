@@ -92,7 +92,10 @@ namespace Dune
       }
     }
 
-    /** \brief Evaluate Jacobian of all shape functions
+    /** Evaluate Jacobian of all shape functions
+     *
+     * \param subElement index of the subelement on which we take the
+     *                   shape functions
      * \param in position where to evaluate
      * \param out The return value
      */
@@ -124,7 +127,10 @@ namespace Dune
       }
     }
 
-    /** \brief Evaluate partial derivatives of any order of all shape functions
+    /** Evaluate partial derivatives of any order of all shape functions
+     *
+     * \param subElement index of the subelement on which we take the
+     *                   shape functions
      * \param order Order of the partial derivatives, in the classic multi-index notation
      * \param in Position where to evaluate the derivatives
      * \param[out] out Return value: the desired partial derivatives
