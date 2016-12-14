@@ -14,30 +14,33 @@ Using Homebrew on MacOS
 
 CMake installation (it requires the previous installation of autoconf,
                     automake and libtool):
+
     brew install autoconf
     brew install automake
     brew install libtool
     brew install cmake
 
 The installation of pkg-config is recommended:
+
     brew install pkg-config
 
 Boost 1.59 installation (since newer versions of Boost::Fusion are broken):
+
     brew install homebrew/versions/boost159
 
 UMFPACK installation:
+
     brew tap hombrew/science
     brew install hombrew/science/suite-sparse
 
 ### Deprecated: Installation of UG instead of dune-uggrid
 
 Remark: UG is not actively maintained anymore and has been superseded
-        by dune-uggrid which is maintained as part of DUNE.
+        by [dune-uggrid](https://dune-project.org/modules/dune-uggrid/)
+        which is maintained as part of DUNE.
 
 Download release 3.13.0 of UG from
-
-    https://gitlab.dune-project.org/ug/ug/repository/archive.tar.bz2?ref=v3.13.0
-
+ https://gitlab.dune-project.org/ug/ug/repository/archive.tar.bz2?ref=v3.13.0
 and unpack it.
 
 In the UG folder, run
@@ -59,9 +62,9 @@ for possible future inconsistencies in the links and hope that the user
 will nevertheless find his way.
 
 1) Create a directory to harbor the source code of the Dune modules.
-   We will call this directory $DUNEDIR.
+   We will call this directory `$DUNEDIR`.
 
-   Remark: Make sure that there are no whitespaces in the $DUNEDIR path
+   Remark: Make sure that there are no whitespaces in the `$DUNEDIR` path
            as our build system might not be able to cope with them.
            (Make is known to handle spaces in filenames quite badly and
             other CMake backends might have similar problems.)
@@ -79,22 +82,23 @@ TODO: add instructions to install Dune 2.5 as soon as it is released
                 libdune-functions-dev libdune-typetree-dev
 
    Alternatively, you can download the sources of the Dune core modules
-   into $DUNEDIR like it is explained below in the MacOS instructions.
+   into `$DUNEDIR` like it is explained below in the MacOS instructions.
    This is necessary if you are using an older Debian release like Jessie.
 
    Since Debian Stretch now has Boost 1.61 which causes problems with
    dune-dpg, you can download Boost 1.59 from the Boost website and
    add the following line to your dune.opts file
 
-   CMAKE_FLAGS+=" -DBOOST_INCLUDEDIR=$DUNEDIR/boost_1_59_0/"
+    CMAKE_FLAGS+=" -DBOOST_INCLUDEDIR=$DUNEDIR/boost_1_59_0/"
 
-   assuming that you extracted Boost to $DUNEDIR, otherwise you have to
+   assuming that you extracted Boost to `$DUNEDIR`, otherwise you have to
    adjust the path accordingly.
 
 Installation of Dune on MacOS
 -----------------------------
 
-2) Download the following dune sources in $DUNEDIR:
+2) Download the following dune sources in `$DUNEDIR`:
+
  2.a) - Version >= 2.5 of the following Dune source modules:
         dune-common, dune-geometry, dune-grid, dune-istl, dune-localfunctions
         Link: https://dune-project.org/groups/core/
@@ -110,17 +114,18 @@ Installation of Dune on MacOS
 Preparing dune-dpg
 ------------------
 
-3) If the dune-dpg directory is not in $DUNEDIR move it there now.
+3) If the dune-dpg directory is not in `$DUNEDIR` move it there now.
 
 Building and compiling dune and dune-dpg
 ----------------------------------------
 
-4) Create a file dune.opts in $DUNEDIR and specify
+4) Create a file dune.opts in `$DUNEDIR` and specify
 the C and C++ compiler in it. In our case, we have used gcc and g++ so
 the file reads
-
+```
 CMAKE_FLAGS="-DCMAKE_C_COMPILER='gcc-6' -DCMAKE_CXX_COMPILER='g++-6'"
 CMAKE_FLAGS+=" -DCMAKE_CXX_FLAGS='-pedantic -Wall'"
+```
 
 Remarks:
  - In MacOS, the C compiler is set to clang by default so the previous
@@ -130,39 +135,37 @@ Remarks:
  - The use of clang and clang++ is in principle also possible here although
    this compiler has not been tested.
  - The second line adds some compile flags to give more warnings.
- - Deprecated: If you have installed UG into a non-standard prefix $UGPREFIX,
+ - Deprecated: If you have installed UG into a non-standard prefix `$UGPREFIX`,
    you can specify it by adding a line
-   CMAKE_FLAGS+=" -DUG_ROOT=$UGPREFIX"
+   `CMAKE_FLAGS+=" -DUG_ROOT=$UGPREFIX"`
    to your dune.opts file.
  - Currently, dune-dpg does not yet support parallel computing.
    So, if you have installed MPI, you can disable it to avoid errors by adding
-   -DCMAKE_DISABLE_FIND_PACKAGE_MPI=TRUE
-   in the CMAKE_FLAGS of your dune.opts file
+   `-DCMAKE_DISABLE_FIND_PACKAGE_MPI=TRUE`
+   in the `CMAKE_FLAGS` of your dune.opts file
 
-5) In $DUNEDIR, run
+5) In `$DUNEDIR`, run
 
      $DUNEDIR/dune-common/bin/dunecontrol --opts=$DUNEDIR/dune.opts all
 
 The command dunecontrol creates makefiles and compiles the sources. It
 creates a directory build_cmake inside each Dune module where the
 executables are built. As a consequence, the user should cd into
-$DUNEDIR/dune-dpg/build_cmake to run the examples of the paper.
+`$DUNEDIR/dune-dpg/build_cmake` to run the examples of the paper.
 
 Remark: If there were any problems with the build system it might be
         helpful to remove all build_cmake directories by running
-
-            rm -rf */build-cmake
-
-        in $DUNEDIR. This removes all build products and old CMake
+        `rm -rf */build-cmake`
+        in `$DUNEDIR`. This removes all build products and old CMake
         configuration files that might cause conflicts.
 
-For more information and options on dunecontrol, run
+For more information and options on `dunecontrol`, run
 
     $DUNEDIR/dune-common/bin/dunecontrol --help
 
 More information on the build system of Dune can be found under
-https://dune-project.org/doc/installation/
-https://dune-project.org/buildsystem/
+  - https://dune-project.org/doc/installation/
+  - https://dune-project.org/buildsystem/
 
 Generating API documentation with Doxygen
 -----------------------------------------
@@ -173,7 +176,7 @@ that can be generated from special comments in our source code with the
 
     make doc
 
-in $DUNEDIR/dune-dpg/build-cmake. The generated html files of the
+in `$DUNEDIR/dune-dpg/build-cmake`. The generated html files of the
 API documentation can then be read by opening
 
     $DUNEDIR/dune-dpg/build-cmake/doc/doxygen/html/index.html
@@ -203,18 +206,19 @@ In that case, adding the lines
 target_link_libraries("plot_solution" "gfortran")
 target_link_libraries(${convergence_test} "gfortran")
 ```
-to $DUNEDIR/dune-dpg/src/CMakeLists.txt should help to correctly
+to `$DUNEDIR/dune-dpg/src/CMakeLists.txt` should help to correctly
 link the example programs.
 
 
 On Linux:
 If MPI is installed, this might lead to the following error when running
-your dpg-program (i.e. plot_solution):
-
+your dpg-program (i.e. `plot_solution`):
+```
 "Dune reported error: ParallelError
 [CollectiveCommunication:$DUNEDIR/dune-common/dune/common/parallel/mpicollectivecommunication.hh:156]:
 You must call MPIHelper::instance(argc,argv) in your main() function
 before using the MPI CollectiveCommunication!"
-
-This can be fixed by disabeling MPI by adding -DCMAKE_DISABLE_FIND_PACKAGE_MPI=TRUE
-in the CMAKE_FLAGS of your dune.opts file
+```
+This can be fixed by disabeling MPI by adding
+`-DCMAKE_DISABLE_FIND_PACKAGE_MPI=TRUE` in the `CMAKE_FLAGS` of your
+dune.opts file.

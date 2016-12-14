@@ -8,12 +8,13 @@ scientific interest of the code can be found in the paper "The dune-dpg
 library for solving PDEs with Discontinuous Petrov-Galerkin finite elements"
 by F. Gruber, A. Klewinghaus and O. Mula.
 
-For build instruction see the accompanying INSTALL file.
-See section "Running dune-dpg" in this README document for explainations
-on how to run basic examples which are described in the paper.
+For build instruction see the accompanying [INSTALL.md](INSTALL.md) file.
+See section [Running dune-dpg](#running-dune-dpg) in this README document for
+explainations on how to run basic examples which are described in the paper.
 If you are interested in an API documentation of dune-dpg, see the
-instructions in section "Generating API documentation with Doxygen" in
-the INSTALL file.
+instructions in section [Generating API documentation with Doxygen]
+(INSTALL.md#generating-api-documentation-with-doxygen) in
+the [INSTALL.md](INSTALL.md) file.
 
 Required Software and Libraries
 ===============================
@@ -39,22 +40,22 @@ libraries installed on your system:
     - dune-functions 2.5-dev (Git master branch)
       (https://gitlab.dune-project.org/staging/dune-functions.git)
 
-Instructions on how to build dune-dpg can be found in INSTALL.
+Instructions on how to build dune-dpg can be found in [INSTALL.md](INSTALL.md).
 
 Running dune-dpg
 ================
 
 In the following, we assume that we are in the directory
-$DUNEDIR/dune-dpg/build-cmake .
+`$DUNEDIR/dune-dpg/build-cmake`.
 
 Dune-dpg comes with three example programs:
 
-src/plot_solution.cc
-src/convergence_test.cc
-src/profile_testspacecoefficientmatrix.cc
+  - src/plot_solution.cc
+  - src/convergence_test.cc
+  - src/profile_testspacecoefficientmatrix.cc
 
-After compilation (see INSTALL for instructions), the example programs
-are found in $DUNEDIR/dune-dpg/build-cmake/src/ .
+After compilation (see [INSTALL.md](INSTALL.md) for instructions), the
+example programs are found in `$DUNEDIR/dune-dpg/build-cmake/src/`.
 
 Description of src/plot_solution.cc
 -----------------------------------
@@ -68,29 +69,29 @@ $$
 We refer to the paper for notations and also
 for indications on how to solve other Partial Differential Equations.
 
-To visualize the solution, run in $DUNEDIR/dune-dpg/build-cmake/src/
+To visualize the solution, run in `$DUNEDIR/dune-dpg/build-cmake/src/`
 
     ./plot_solution <n> <c> <betaX> <betaY>
 
 where
-  <n> has to be replaced by the desired grid resolution,
-  <c> is the linear term in the transport problem
-  <betaX> <betaY> are the X and Y components of the transport direction
-                  beta=(betaX, betaY).
+  `<n>` has to be replaced by the desired grid resolution,
+  `<c>` is the linear term in the transport problem
+  `<betaX> <betaY>` are the X and Y components of the transport direction
+                    beta=(betaX, betaY).
   (When unspecified, c=0 and beta=(cos(π/8), sin(π/8)).)
 
 The program will write two .vtu files to the current working directory,
 
-  transport_solution.vtu
-  transport_solution_trace.vtu
+  - transport_solution.vtu
+  - transport_solution_trace.vtu
 
 They contain the numerical solution of the interior variable $\phi$ and
 the lifting $w$ of the trace variable (cf. paper).
 The files allow to visualize $\phi$ and $w$ in ParaView. If you have the
 pvpython interpreter shipped with ParaView, you can also run
-scripts/plot_solution.py to regenerate the solution plot given in the paper.
+`scripts/plot_solution.py` to regenerate the solution plot given in the paper.
 (This script was run with ParaView 4.2.0. As the Python interface of ParaView
-seems to be highly unstable, we cannot guarantee, that the script will run
+seems to be highly unstable we cannot guarantee that the script will run
 unmodified on another version of ParaView.)
 
 Description of src/convergence_test.cc
@@ -104,12 +105,12 @@ executables of the form
 
     src/convergence_test_ls$LS_ks$KS_la$LA_ka$KA
 
-where $LS is the refinement level of the test search space,
-      $KS is the polynomial degree of the test search space,
-      $LA is the refinement level of the a posteriori search space,
-      $KA is the polynomial degree of the a posteriori search space.
+where `$LS` is the refinement level of the test search space,
+      `$KS` is the polynomial degree of the test search space,
+      `$LA` is the refinement level of the a posteriori search space,
+      `$KA` is the polynomial degree of the a posteriori search space.
 
-They can be run in $DUNEDIR/dune-dpg/build-cmake/src/ by e.g.
+They can be run in `$DUNEDIR/dune-dpg/build-cmake/src/` by e.g.
 
     ./convergence_test_ls0_ks3_la0_ka5 <n>
 
@@ -123,10 +124,10 @@ this example is the computation of the exact L2 error and its a posteriori
 estimation.
 
 Remarks:
-    - The a posteriori error indicator includes both the error on the
-      interior variable and also the trace variable.
-    - It is possible to compute the a posteriori error estimator for
-      other PDEs. The current program is just an example.
+  - The a posteriori error indicator includes both the error on the
+    interior variable and also the trace variable.
+  - It is possible to compute the a posteriori error estimator for
+    other PDEs. The current program is just an example.
 
 The paper takes this problem as the support for numerical tests and
 analyses the impact of
@@ -139,7 +140,7 @@ To reproduce the convergence results from the paper, call the script
     ../scripts/run_convergence_test.sh 10 20 40 60 80 100 120 140 \
                                        160 200 250 300
 
-which will call the convergence_test_* programs with the given grid
+which will call the `convergence_test_*` programs with the given grid
 resolutions n=1/H.
 The computation takes several hours. (You can leave out some of the larger
 grid resolutions n, if you don't want to wait for this long. Especially
@@ -164,17 +165,17 @@ Description of src/profile_testspacecoefficientmatrix.cc
 --------------------------------------------------------
 
 profile_testspacecoefficientmatrix.cc uses the preprocessor variables
-LEVEL_SEARCH and K_SEARCH to set the refinement level and polynomial
+`LEVEL_SEARCH` and `K_SEARCH` to set the refinement level and polynomial
 degree of the test search space.
 These variables get instantiated with different values by CMake to create
 executables of the form
 
     src/profile_testspacecoefficientmatrix_ls$LS_ks$KS
 
-where $LS is the refinement level of the test search space,
-      $KS is the polynomial degree of the test search space.
+where `$LS` is the refinement level of the test search space,
+      `$KS` is the polynomial degree of the test search space.
 
-They can be run in $DUNEDIR/dune-dpg/build-cmake/src/ by e.g.
+They can be run in `$DUNEDIR/dune-dpg/build-cmake/src/` by e.g.
 
     ./profile_testspacecoefficientmatrix_ls0_ks3 <n>
 
@@ -190,7 +191,7 @@ To reproduce the results from the paper, call the script
     ../scripts/run_profile.sh 10 20 40 60 80 100 120 140 160 200 250 300 \
                               > profile
 
-which will call profile_testspacecoefficientmatrix_* for the given
+which will call `profile_testspacecoefficientmatrix_*` for the given
 grid resolutions n=1/H.  The computation takes several minutes.
 
 Finally, the profile plots can be generated with
@@ -211,4 +212,4 @@ License
 =======
 
 Licensing information for dune-dpg can be found in the accompanying file
-COPYING.
+[COPYING](COPYING).
