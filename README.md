@@ -34,7 +34,7 @@ libraries installed on your system:
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
     - DUNE core libraries 2.5-git (Git master branch)
       (https://dune-project.org/groups/core/)
-    - dune-typetree 3.0-dev (Git master branch)
+    - dune-typetree 2.5-dev (Git master branch)
       (https://gitlab.dune-project.org/pdelab/dune-typetree.git)
     - dune-functions 2.5-dev (Git master branch)
       (https://gitlab.dune-project.org/staging/dune-functions.git)
