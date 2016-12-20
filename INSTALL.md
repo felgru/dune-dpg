@@ -7,7 +7,7 @@ On Debian GNU/Linux
 All necessary libraries are included in Debian Stretch and most are included
 in jessie-backports. They can be installed via
 
-    apt install git cmake libboost-dev libug-dev libsuitesparse-dev
+    apt install git cmake libboost-dev libsuitesparse-dev
 
 Using Homebrew on MacOS
 -----------------------
@@ -33,33 +33,13 @@ UMFPACK installation:
     brew tap hombrew/science
     brew install hombrew/science/suite-sparse
 
-### Deprecated: Installation of UG instead of dune-uggrid
-
-Remark: UG is not actively maintained anymore and has been superseded
-        by [dune-uggrid](https://dune-project.org/modules/dune-uggrid/)
-        which is maintained as part of DUNE.
-
-Download release 3.13.0 of UG from
- https://gitlab.dune-project.org/ug/ug/repository/archive.tar.bz2?ref=v3.13.0
-and unpack it.
-
-In the UG folder, run
-
-    autoreconf -is
-    ./configure --enable-dune --without-x CXX=g++-6
-    make
-    make install
-
-Remark: You have to use the versioned compilername g++-6 as under MacOS
-        g++ is by default a symlink to clang.
-
 Installation and compilation of dune and dune-dpg
 =================================================
 
 We give detailed installation guidelines using GCC and the UG grid manager.
-The URLs that are given below were still active on July 2016. We apologize
+The URLs that are given below were still active on December 2016. We apologize
 for possible future inconsistencies in the links and hope that the user
-will nevertheless find his way.
+will nevertheless find their way.
 
 1) Create a directory to harbor the source code of the Dune modules.
    We will call this directory `$DUNEDIR`.
@@ -72,14 +52,13 @@ will nevertheless find his way.
 Installation of Dune on Debian GNU/Linux
 ----------------------------------------
 
-TODO: add instructions to install Dune 2.5 as soon as it is released
-
-2) If you are using Debian Stretch, the Dune 2.4.1 core libraries can be
+2) If you are using Debian Stretch, the Dune 2.5 core libraries can be
    installed from the Debian repositories with
 
     apt install libdune-common-dev libdune-geometry-dev libdune-grid-dev \
                 libdune-istl-dev libdune-localfunctions-dev \
-                libdune-functions-dev libdune-typetree-dev
+                libdune-functions-dev libdune-typetree-dev \
+                libdune-uggrid-dev
 
    Alternatively, you can download the sources of the Dune core modules
    into `$DUNEDIR` like it is explained below in the MacOS instructions.
@@ -99,17 +78,10 @@ Installation of Dune on MacOS
 
 2) Download the following dune sources in `$DUNEDIR`:
 
- 2.a) - Version >= 2.5 of the following Dune source modules:
-        dune-common, dune-geometry, dune-grid, dune-istl, dune-localfunctions
-        Link: https://dune-project.org/groups/core/
-      - dune-uggrid
-        Link: https://dune-project.org/modules/dune-uggrid/
-
- 2.b) Download dune-functions and dune-typetree by cloning the master
-      branches of their GitLab repositories
-
-        git clone https://gitlab.dune-project.org/staging/dune-functions
-        git clone https://gitlab.dune-project.org/pdelab/dune-typetree
+  - Version >= 2.5 of the following Dune source modules:
+    dune-common, dune-geometry, dune-grid, dune-istl,
+    dune-localfunctions, dune-uggrid, dune-typetree, dune-functions
+    Link: https://dune-project.org/releases/2.5.0/
 
 Preparing dune-dpg
 ------------------
@@ -135,10 +107,6 @@ Remarks:
  - The use of clang and clang++ is in principle also possible here although
    this compiler has not been tested.
  - The second line adds some compile flags to give more warnings.
- - Deprecated: If you have installed UG into a non-standard prefix `$UGPREFIX`,
-   you can specify it by adding a line
-   `CMAKE_FLAGS+=" -DUG_ROOT=$UGPREFIX"`
-   to your dune.opts file.
  - Currently, dune-dpg does not yet support parallel computing.
    So, if you have installed MPI, you can disable it to avoid errors by adding
    `-DCMAKE_DISABLE_FIND_PACKAGE_MPI=TRUE`

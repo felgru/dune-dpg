@@ -29,16 +29,16 @@ libraries installed on your system:
     - Boost Fusion >= 1.56, < 1.60
       (Boost Fusion 1.60 and 1.61 are known to cause compilation errors.
        Versions other than 1.59 have not been thoroughly tested.)
-    - A grid manager. Our examples use dune-uggrid
-      (https://dune-project.org/modules/dune-uggrid/)
-      but one could also use other managers, e.g., ALBERTA or YASPgrid.
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
-    - DUNE core libraries 2.5-git (Git master branch)
-      (https://dune-project.org/groups/core/)
-    - dune-typetree 2.5-dev (Git master branch)
-      (https://gitlab.dune-project.org/pdelab/dune-typetree.git)
-    - dune-functions 2.5-dev (Git master branch)
+    - DUNE core libraries 2.5
+      including the new modules dune-typetree and dune-functions
       (https://gitlab.dune-project.org/staging/dune-functions.git)
+      (https://dune-project.org/releases/2.5.0/)
+    - A grid manager. Our examples use dune-uggrid
+      which can be downloaded as part of DUNE 2.5
+      (https://dune-project.org/releases/2.5.0/)
+      but one could also use other managers, e.g., ALBERTA or YASPgrid.
+      (https://dune-project.org/groups/grid/)
 
 Instructions on how to build dune-dpg can be found in [INSTALL.md](INSTALL.md).
 
