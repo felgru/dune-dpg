@@ -31,11 +31,10 @@ libraries installed on your system:
        Versions other than 1.59 have not been thoroughly tested.)
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
     - DUNE core libraries 2.5
-      including the new modules dune-typetree and dune-functions
-      (https://gitlab.dune-project.org/staging/dune-functions.git)
+      including the staging modules dune-typetree and dune-functions
       (https://dune-project.org/releases/2.5.0/)
     - A grid manager. Our examples use dune-uggrid
-      which can be downloaded as part of DUNE 2.5
+      which has been added as a staging module in DUNE 2.5
       (https://dune-project.org/releases/2.5.0/)
       but one could also use other managers, e.g., ALBERTA or YASPgrid.
       (https://dune-project.org/groups/grid/)
