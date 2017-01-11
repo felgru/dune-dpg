@@ -63,7 +63,7 @@ class Periter {
   /**
    * Solve a radiative transfer problem using the Periter algorithm
    *
-   * \param grid
+   * \param createGrids
    * \param f  right hand side function
    * \param g  lifting of the boundary values
    * \param gDeriv  derivative of g in direction s
@@ -78,8 +78,9 @@ class Periter {
    * \param plotSolutions  specifies when to create .vtu files for plotting
    *                       the solution
    */
-  template<class Grid, class F, class G, class GDeriv, class Kernel>
-  void solve(Grid& grid,
+  template<class GridsConstructor, class F, class G, class GDeriv,
+           class Kernel>
+  void solve(const GridsConstructor& createGrids,
              const F& f,
              const G& g,
              const GDeriv& gDeriv,
@@ -105,14 +106,14 @@ class Periter {
    * \tparam FEBasisTrace     type of the space for trace DOFs
    * \param kernelApproximation an approximation to the scattering kernel
    * \param x  solution to which we want to apply the scattering kernel
-   * \param gridView
+   * \param gridViews
    * \param accuracy
    */
   template<class FEBasisInterior, class FEBasisTrace, class GridView>
   static std::vector<VectorType> apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
-      const GridView& gridView,
+      const std::vector<GridView>& gridViews,
       double accuracy);
 };
 
@@ -125,21 +126,21 @@ namespace detail {
   using VectorType = BlockVector<FieldVector<double,1>>;
   using Direction = FieldVector<double, dim>;
 
-  template<class FEBasisInterior, class Grid,
+  template<class FEBasisInterior, class Grids,
            class F, class G, class GDeriv>
   inline void approximate_rhs_and_bv (
       std::vector<VectorType>& rhsFunctional,
-      Grid& grid,
+      Grids& grids,
       double,
       const std::vector<Direction>& sVector,
       F& f, G& g, GDeriv& gDeriv, double sigma,
-      FEBasisInterior& feBasisInterior,
       FeRHSandBoundary) {
     static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
         "Functions::interpolate won't work for refined finite elements");
     size_t numS = sVector.size();
     for(unsigned int i = 0; i < numS; ++i)
     {
+      FEBasisInterior feBasisInterior(grids[i]->leafGridView());
       VectorType gInterpolation(feBasisInterior.size());
       const Direction s = sVector[i];
       Functions::interpolate(feBasisInterior, gInterpolation,
@@ -160,21 +161,26 @@ namespace detail {
 
   // Refine grid until accuracy kappa2*eta is reached for
   // approximation of rhs and boundary values.
-  template<class FEBasisInterior, class Grid,
+  template<class FEBasisInterior, class Grids,
            class F, class G, class GDeriv>
   inline void approximate_rhs_and_bv (
       std::vector<VectorType>& rhsFunctional,
-      Grid& grid,
+      Grids& grids,
       double accuracy,
       const std::vector<Direction>& sVector,
       F& f, G& g, GDeriv& gDeriv, double sigma,
-      FEBasisInterior& feBasisInterior,
       ApproximateRHSandBoundary) {
+    using Grid = typename Grids::value_type::element_type;
     using LevelGridView = typename Grid::LevelGridView;
     using FEBasisCoarseInterior =
       changeGridView_t<FEBasisInterior, LevelGridView>;
     size_t numS = sVector.size();
-    auto gridView = grid.leafGridView();
+
+    std::vector<FEBasisInterior> feBasesInterior;
+    feBasesInterior.reserve(numS);
+    for(unsigned int i = 0; i < numS; ++i)
+      feBasesInterior.emplace_back(grids[i]->leafGridView());
+
     std::vector<VectorType> boundaryValues(numS);
     const unsigned int maxNumberOfRefinements = 3;
     for(unsigned int refinement = 1; ; refinement++) {
@@ -182,9 +188,9 @@ namespace detail {
           "Functions::interpolate won't work for refined finite elements");
       for(unsigned int i = 0; i < numS; ++i)
       {
-        VectorType gInterpolation(feBasisInterior.size());
+        VectorType gInterpolation(feBasesInterior[i].size());
         const Direction s = sVector[i];
-        Functions::interpolate(feBasisInterior, gInterpolation,
+        Functions::interpolate(feBasesInterior[i], gInterpolation,
             [s,&f,&g,&gDeriv,sigma](const Direction& x)
             { return f(x,s) + gDeriv(x,s) - sigma*g(x,s); });
 
@@ -198,17 +204,17 @@ namespace detail {
         auto gExact = Functions::makeGridViewFunction(
               [s,&f,&g,&gDeriv,sigma](const Direction& x)
               { return f(x,s) + gDeriv(x,s) - sigma*g(x,s); },
-              gridView);
+              grids[i]->leafGridView());
         auto gApprox = Functions::makeDiscreteGlobalBasisFunction<double>(
-              feBasisInterior, boundaryValues[i]);
+              feBasesInterior[i], boundaryValues[i]);
 
         auto localGExact = localFunction(gExact);
         auto localGApprox = localFunction(gApprox);
-        auto localView = feBasisInterior.localView();
-        auto localIndexSet = feBasisInterior.localIndexSet();
+        auto localView = feBasesInterior[i].localView();
+        auto localIndexSet = feBasesInterior[i].localIndexSet();
 
         double rhsError_i = 0.;
-        for(const auto& e : elements(gridView)) {
+        for(const auto& e : elements(grids[i]->leafGridView())) {
           localView.bind(e);
           localIndexSet.bind(localView);
           localGExact.bind(e);
@@ -236,25 +242,26 @@ namespace detail {
       if(rhsError <= accuracy || refinement == maxNumberOfRefinements) {
         break;
       } else {
-        const auto levelGridView = grid.levelGridView(grid.maxLevel());
-        FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
-
-        grid.globalRefine(1);
-        feBasisInterior.update(gridView);
-
         std::vector<VectorType> rhsFunctionalCoarse(numS);
         std::swap(rhsFunctional, rhsFunctionalCoarse);
         for(unsigned int i = 0; i < numS; ++i)
         {
+          const auto levelGridView =
+              grids[i]->levelGridView(grids[i]->maxLevel());
+          FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
+
+          grids[i]->globalRefine(1);
+          feBasesInterior[i].update(grids[i]->leafGridView());
+
           rhsFunctional[i] = interpolateToUniformlyRefinedGrid(
-              coarseInteriorBasis, feBasisInterior,
+              coarseInteriorBasis, feBasesInterior[i],
               rhsFunctionalCoarse[i]);
         }
       }
     }
     for(unsigned int i = 0; i < numS; ++i)
     {
-      FEBasisInterior feBasisInterior(gridView);
+      FEBasisInterior feBasisInterior(grids[i]->leafGridView());
       // Add boundaryValues[i] to first feBasisInterior.size() entries of
       // rhsFunctional[i].
       using Iterator = std::decay_t<decltype(rhsFunctional[i].begin())>;
@@ -270,9 +277,10 @@ namespace detail {
 #endif
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class Grid, class F, class G, class GDeriv, class Kernel>
+template<class GridsConstructor, class F, class G, class GDeriv,
+         class Kernel>
 void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
-           Grid& grid,
+           const GridsConstructor& createGrids,
            const F& f,
            const G& g,
            const GDeriv& gDeriv,
@@ -296,12 +304,15 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   constexpr bool rhsIsFeFunction
       = std::is_same<RHSApproximation, FeRHSandBoundary>::value;
 
-  typedef typename Grid::LeafGridView  LeafGridView;
-  typedef typename Grid::LevelGridView LevelGridView;
-  typedef typename LeafGridView::template Codim<0>::Geometry Geometry;
-  LeafGridView gridView = grid.leafGridView();
-
-  const unsigned int dim = LeafGridView::dimension;
+  const unsigned int dim = 2;
+  using Direction = FieldVector<double, dim>;
+  using Grid = typename
+    decltype(createGrids(std::declval<std::vector<Direction>>()))::
+      value_type::element_type;
+  using LeafGridView  = typename Grid::LeafGridView;
+  using LevelGridView = typename Grid::LevelGridView;
+  using Geometry = typename LeafGridView::template Codim<0>::Geometry;
+  using Domain = typename Geometry::GlobalCoordinate;
 
   ///////////////////////////////////
   // To print information
@@ -311,9 +322,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
   ////////////////////////////////////////////
-  using Domain
-    = typename Geometry::GlobalCoordinate;
-  using Direction = FieldVector<double, dim>;
   // Vector of directions: sVector
   std::vector< Direction > sVector(numS);
   for(unsigned int i = 0; i < numS; ++i)
@@ -322,6 +330,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     sVector[i] = {cos(2*pi<double>()*i/numS),
                   sin(2*pi<double>()*i/numS)};
   }
+
+  auto grids = createGrids(sVector);
+  std::vector<LeafGridView> gridViews;
+  gridViews.reserve(grids.size());
+  std::for_each(grids.begin(), grids.end(),
+      [&gridViews](const std::shared_ptr<Grid>& grid) {
+        gridViews.push_back(grid->leafGridView());
+      });
 
   /////////////////////////////////////////////////////////
   //   Choose finite element spaces for the solution
@@ -346,8 +362,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   for(unsigned int i = 0; i < numS; ++i)
   {
-    FEBasisInterior feBasisInterior(gridView);
-    FEBasisTrace feBasisTrace(gridView);
+    FEBasisInterior feBasisInterior(gridViews[i]);
+    FEBasisTrace feBasisTrace(gridViews[i]);
 
     x[i].resize(feBasisTrace.size()
                +feBasisInterior.size());
@@ -391,22 +407,18 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
     std::vector<VectorType> rhsFunctional =
         apply_scattering<FEBasisInterior, FEBasisTrace> (
-          kernelApproximation, x, gridView, kappa1*eta);
+          kernelApproximation, x, gridViews, kappa1*eta);
 
     std::chrono::steady_clock::time_point endScatteringApproximation
         = std::chrono::steady_clock::now();
 
-    {
-      FEBasisInterior feBasisInterior(gridView);
+    detail::approximate_rhs_and_bv<FEBasisInterior> (
+        rhsFunctional,
+        grids,
+        kappa2*eta,
+        sVector,
+        f, g, gDeriv, sigma, RHSApproximation{});
 
-      detail::approximate_rhs_and_bv (
-          rhsFunctional,
-          grid,
-          kappa2*eta,
-          sVector,
-          f, g, gDeriv, sigma,
-          feBasisInterior, RHSApproximation{});
-    }
 
     ////////////////////////////////////////////////////
     // Inner loop
@@ -421,23 +433,18 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     {
       std::cout << "Inner iteration " << nRefinement << std::endl;
 
-      FEBasisInterior feBasisInterior(gridView);
-      FEBasisTrace feBasisTrace(gridView);
+      using SolutionSpacesPtr
+          = std::shared_ptr<std::tuple<FEBasisInterior, FEBasisTrace>>;
 
-      auto solutionSpaces
-        = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
+      using FEBasisTest = Functions::LagrangeDGBasis<LeafGridView, 4>;
+      using FEBasisTestEnriched = FEBasisTest;
 
-      // v enriched
-      typedef Functions::LagrangeDGBasis<LeafGridView, 4> FEBasisTest;
-      auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
+      using TestSpacesPtr         = std::shared_ptr<std::tuple<FEBasisTest>>;
+      using TestSpacesEnriched    = std::tuple<FEBasisTestEnriched>;
+      using TestSpacesEnrichedPtr = std::shared_ptr<TestSpacesEnriched>;
 
-      typedef FEBasisTest FEBasisTestEnriched;
-      auto testSpacesEnriched
-        = make_space_tuple<FEBasisTestEnriched>(gridView);
-      using TestSpacesEnriched = decltype(testSpacesEnriched);
-      auto rhsAssemblerEnriched = make_RhsAssembler(testSpacesEnriched);
-
-      typedef decltype(make_BilinearForm(testSpaces, solutionSpaces,
+      typedef decltype(make_BilinearForm(
+                std::declval<TestSpacesPtr>(), std::declval<SolutionSpacesPtr>(),
                 make_tuple(
                   make_IntegralTerm<0,0,IntegrationType::valueValue,
                                         DomainOfIntegration::interior>(0.),
@@ -448,7 +455,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                         DomainOfIntegration::face>(1.,
                                            FieldVector<double, dim>{1.,1.}))))
               BilinearForm;
-      typedef decltype(make_InnerProduct(testSpaces,
+      typedef decltype(make_InnerProduct(
+                std::declval<TestSpacesPtr>(),
                 make_tuple(
                   make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                         DomainOfIntegration::interior>(1.,
@@ -459,9 +467,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               InnerProduct;
 
       using BilinearFormEnriched
-          = replaceTestSpaces_t<BilinearForm, TestSpacesEnriched>;
+          = replaceTestSpaces_t<BilinearForm, TestSpacesEnrichedPtr>;
       using InnerProductEnriched
-          = replaceTestSpaces_t<InnerProduct, TestSpacesEnriched>;
+          = replaceTestSpaces_t<InnerProduct, TestSpacesEnrichedPtr>;
 
       typedef GeometryBuffer<typename LeafGridView::template Codim<0>::Geometry>
           GeometryBuffer_t;
@@ -491,6 +499,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       for(unsigned int i = 0; i < numS; ++i)
       {
         Direction s = sVector[i];
+
+        auto gridView = grids[i]->leafGridView();
+        auto solutionSpaces
+          = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
+        // v enriched
+        auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
+        auto testSpacesEnriched
+          = make_space_tuple<FEBasisTestEnriched>(gridView);
 
         bilinearForms.emplace_back(
           make_BilinearForm(testSpaces, solutionSpaces,
@@ -526,6 +542,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       for(unsigned int i = 0; i < numS; ++i)
       {
         Direction s = sVector[i];
+        auto solutionSpaces = bilinearForms[i].getSolutionSpaces();
         BoundaryTools::getInflowBoundaryMask(std::get<1>(*solutionSpaces),
                                               dirichletNodesInflow[i],
                                               s);
@@ -547,6 +564,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       for(unsigned int i = 0; i < numS; ++i)
       {
         Direction s = sVector[i];
+        auto solutionSpaces = systemAssemblers[i].getSolutionSpaces();
 
         auto rhsFunction = make_LinearForm(
               systemAssemblers[i].getTestSearchSpaces(),
@@ -576,8 +594,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       ////////////////////////////////////
       for(unsigned int i = 0; i < numS; ++i)
       {
-        x[i].resize(feBasisTrace.size()
-                   +feBasisInterior.size());
+        auto solutionSpaces = systemAssemblers[i].getSolutionSpaces();
+        x[i].resize(std::get<0>(*solutionSpaces).size()
+                    + std::get<1>(*solutionSpaces).size());
         x[i] = 0;
       }
 
@@ -614,11 +633,15 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         // - We compute the rhs with the enriched test space ("rhs[i]=f(v_i)")
         // -- Contribution of the source term f that has an analytic expression
         // -- Contribution of the scattering term
+        auto testSpacesEnriched
+          = make_space_tuple<FEBasisTestEnriched>(grids[i]->leafGridView());
+        auto rhsAssemblerEnriched = make_RhsAssembler(testSpacesEnriched);
         auto rhsFunction = make_LinearForm(
               rhsAssemblerEnriched.getTestSpaces(),
               std::make_tuple(
                 make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
-                  (rhsFunctional[i], std::get<0>(*solutionSpaces))));
+                  (rhsFunctional[i],
+                   std::get<0>(*systemAssemblers[i].getSolutionSpaces()))));
         rhsAssemblerEnriched.assembleRhs(rhs[i],
             rhsFunction);
         // - Computation of the a posteriori error
@@ -633,6 +656,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             "Functions::interpolate won't work for refined finite elements");
         for(unsigned int i = 0; i < numS; ++i)
         {
+          auto feBasisInterior = std::get<0>(
+              *systemAssemblers[i].getSolutionSpaces());
           VectorType gInterpolation(feBasisInterior.size());
           const Direction s = sVector[i];
           Functions::interpolate(feBasisInterior, gInterpolation,
@@ -651,7 +676,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
       ofs << "Iteration " << n << '.' << nRefinement << ": "
           << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
-          << aposterioriErr << ", grid level: " << grid.maxLevel()
+          << aposterioriErr << ", grid level: " << grids[0]->maxLevel()
           << ", number of DOFs: " << x[0].size() * x.size()
           << ", applying the kernel took "
           << std::chrono::duration_cast<std::chrono::microseconds>
@@ -661,25 +686,25 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       std::cout << std::endl;
 
       std::cout << "\nStatistics at end of inner iteration:\n";
-      std::cout << "Grid level: " << grid.maxLevel() << '\n';
+      std::cout << "Grid level: " << grids[0]->maxLevel() << '\n';
       std::cout << "A posteriori error: " << aposterioriErr << std::endl;
 
       if(++nRefinement >= maxNumberOfInnerIterations
           || aposterioriErr <= kappa3*eta) {
         break;
       } else {
-        grid.globalRefine(1);
-
-        const LevelGridView levelGridView
-            = grid.levelGridView(grid.maxLevel()-1);
-        FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
-        FEBasisInterior       feBasisInterior(gridView);
-
         std::vector<VectorType> rhsFunctionalCoarse(numS);
         std::swap(rhsFunctional, rhsFunctionalCoarse);
 
         for(unsigned int i = 0; i < numS; ++i)
         {
+          grids[i]->globalRefine(1);
+
+          const LevelGridView levelGridView
+              = grids[i]->levelGridView(grids[i]->maxLevel()-1);
+          FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
+          FEBasisInterior       feBasisInterior(grids[i]->leafGridView());
+
           rhsFunctional[i] = interpolateToUniformlyRefinedGrid(
               coarseInteriorBasis, feBasisInterior,
               rhsFunctionalCoarse[i]);
@@ -698,13 +723,13 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       ////////////////////////////////////////////////////////////////////////
       std::cout << "Print solutions:\n";
 
-      FEBasisInterior feBasisInterior(gridView);
-      FEBasisTrace feBasisTrace(gridView);
-
-
       for(unsigned int i = 0; i < numS; ++i)
       {
         Direction s = sVector[i];
+
+        auto gridView = grids[i]->leafGridView();
+        FEBasisInterior feBasisInterior(gridView);
+        FEBasisTrace feBasisTrace(gridView);
 
         std::cout << "Direction " << i << '\n';
 
@@ -732,16 +757,16 @@ std::vector<Dune::BlockVector<Dune::FieldVector<double, 1> >>
 Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
-      const GridView& gridView,
+      const std::vector<GridView>& gridViews,
       double accuracy) {
   kernelApproximation.setAccuracy(accuracy);
 
   const size_t numS = x.size();
   std::vector<VectorType> rhsFunctional(numS);
-  auto solutionSpaces =
-      make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
   for(unsigned int i = 0; i < numS; ++i) {
+    auto solutionSpaces =
+        make_space_tuple<FEBasisInterior, FEBasisTrace>(gridViews[i]);
     auto scatteringAssembler_i =
         make_ApproximateScatteringAssembler(solutionSpaces,
                                             kernelApproximation,

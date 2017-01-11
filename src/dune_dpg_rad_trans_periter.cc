@@ -196,18 +196,30 @@ int main(int argc, char** argv)
   const int dim = 2;
   typedef UGGrid<dim> GridType;
 
-  FieldVector<double,dim> lower = {0,0};
-  FieldVector<double,dim> upper = {1,1};
-  array<unsigned int,dim> elements = {sizeGrid,sizeGrid};
-
-  //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
-
-  shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
-
-  //shared_ptr<GridType> grid = shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh"));
-
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
   using Direction = FieldVector<double, dim>;
+
+  auto createGrids = [sizeGrid](const std::vector<Direction>& s)
+      {
+        std::vector<shared_ptr<GridType>> grids;
+        grids.reserve(s.size());
+
+        FieldVector<double,dim> lower = {0,0};
+        FieldVector<double,dim> upper = {1,1};
+        array<unsigned int,dim> elements = {sizeGrid,sizeGrid};
+
+        for(size_t i = 0, size = s.size(); i < size; i++) {
+          // grids.push_back(StructuredGridFactory<GridType>
+          //     ::createCubeGrid(lower, upper, elements));
+
+          grids.push_back(StructuredGridFactory<GridType>
+              ::createSimplexGrid(lower, upper, elements));
+
+          // grids.push_back(shared_ptr<GridType>(
+          //     GmshReader<GridType>::read("irregular-square.msh")));
+        }
+        return grids;
+      };
 
   auto f = [](const Domain& x, const Direction& s)
            { return 1.; };
@@ -222,7 +234,7 @@ int main(int argc, char** argv)
   const double CT = 1;
 
   Periter<ScatteringKernelApproximation::HaarWavelet::SVD, FeRHSandBoundary>()
-      .solve(*grid, f, g, gDeriv, sigma,
+      .solve(createGrids, f, g, gDeriv, sigma,
              HenyeyGreensteinScattering<Direction>(0.5),
              numS, rho, CT, 1e-2, N, plotSolutions);
 
