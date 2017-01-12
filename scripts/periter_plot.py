@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 from __future__ import (absolute_import, print_function)
+import argparse
 import sys
 import re
 import numpy as np
@@ -153,20 +154,50 @@ def print_table(data):
                   ).format(d=d))
     print(r'\end{tabular}')
 
+def print_preamble():
+    print(r'\documentclass[11pt,a4paper]{article}' '\n'
+          '%\n'
+          '% For narrow margins\n'
+          r'\usepackage{fullpage}' '\n'
+          '\n'
+          r'\usepackage[utf8]{inputenc}' '\n'
+          '\n'
+          '% packages from the American Mathematical Society (AMS)\n'
+          r'\usepackage{amsmath, amsthm, amssymb}' '\n'
+          '% More fancy functionality for theorems\n'
+          r'\usepackage{thmtools, thm-restate}' '\n'
+          '\n'
+          r'% For \MoveEqLeft, \coloneqq, etc.' '\n'
+          r'\usepackage{mathtools}' '\n'
+          '\n'
+          r'\usepackage{multirow}' '\n'
+          '\n'
+          r'\begin{document}')
 
 
-if len(sys.argv) != 3:
-    print('Usage: sys.argv[0] infile outfile')
-    sys.exit(1)
+aparser = argparse.ArgumentParser(
+        description='Generate convergence plot and table for Periter')
+aparser.add_argument('--preamble', dest='print_preamble',
+                     action='store_true', default=False,
+                     help='print Latex preamble for the convergence table')
+aparser.add_argument('infile', action='store')
+aparser.add_argument('outfile', action='store',
+                     help='name of the convergence plot file')
+args = aparser.parse_args()
 
-data = readData(sys.argv[1])
+data = readData(args.infile)
 
-print_table(data)
+if args.print_preamble:
+    print_preamble()
+    print_table(data)
+    print(r'\end{document}')
+else:
+    print_table(data)
 
 mpl.rc('text', usetex=True)
 
 plot(data['gridResolutions'],
      data['aposterioriErrors'],
-     outputfile=sys.argv[2],
+     outputfile=args.outfile,
      # title='a posteriori errors of Periter',
     )
