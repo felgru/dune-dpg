@@ -91,6 +91,29 @@ class Periter {
              double targetAccuracy,
              unsigned int maxNumberOfIterations,
              PlotSolutions plotSolutions = PlotSolutions::doNotPlot);
+
+  private:
+  using VectorType = BlockVector<FieldVector<double,1>>;
+
+  /**
+   * Apply the scattering integral to a solution x
+   *
+   * This corresponds to [K, u_n, κ_1 * η] in the Periter algorithm
+   * (see Dahmen, Gruber, Mula).
+   *
+   * \tparam FEBasisInterior  type of the space for inner DOFs
+   * \tparam FEBasisTrace     type of the space for trace DOFs
+   * \param kernelApproximation an approximation to the scattering kernel
+   * \param x  solution to which we want to apply the scattering kernel
+   * \param gridView
+   * \param accuracy
+   */
+  template<class FEBasisInterior, class FEBasisTrace, class GridView>
+  static std::vector<VectorType> apply_scattering(
+      ScatteringKernelApproximation& kernelApproximation,
+      const std::vector<VectorType>& x,
+      const GridView& gridView,
+      double accuracy);
 };
 
 struct FeRHSandBoundary {};
@@ -359,31 +382,16 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
   {
-    kernelApproximation.setAccuracy(kappa1*eta);
-
     ofs << "\nIteration " << n << std::endl;
     std::cout << "\nIteration " << n << std::endl << std::endl;
 
-
     std::chrono::steady_clock::time_point startScatteringApproximation
         = std::chrono::steady_clock::now();
-    std::vector<VectorType> rhsFunctional(numS);
-    {
-      FEBasisInterior feBasisInterior(gridView);
-      FEBasisTrace feBasisTrace(gridView);
-      auto solutionSpaces =
-          std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
 
-      for(unsigned int i = 0; i < numS; ++i) {
-        auto scatteringAssembler_i =
-            make_ApproximateScatteringAssembler(solutionSpaces,
-                                                kernelApproximation,
-                                                i);
-        scatteringAssembler_i.template precomputeScattering<0>(
-            rhsFunctional[i],
-            x);
-      }
-    }
+    std::vector<VectorType> rhsFunctional =
+        apply_scattering<FEBasisInterior, FEBasisTrace> (
+          kernelApproximation, x, gridView, kappa1*eta);
+
     std::chrono::steady_clock::time_point endScatteringApproximation
         = std::chrono::steady_clock::now();
 
@@ -716,6 +724,34 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       }
     }
   }
+}
+
+template<class ScatteringKernelApproximation, class RHSApproximation>
+template<class FEBasisInterior, class FEBasisTrace, class GridView>
+std::vector<Dune::BlockVector<Dune::FieldVector<double, 1> >>
+Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
+      ScatteringKernelApproximation& kernelApproximation,
+      const std::vector<VectorType>& x,
+      const GridView& gridView,
+      double accuracy) {
+  kernelApproximation.setAccuracy(accuracy);
+
+  const size_t numS = x.size();
+  std::vector<VectorType> rhsFunctional(numS);
+  auto solutionSpaces =
+      std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
+
+  for(unsigned int i = 0; i < numS; ++i) {
+    auto scatteringAssembler_i =
+        make_ApproximateScatteringAssembler(solutionSpaces,
+                                            kernelApproximation,
+                                            i);
+    scatteringAssembler_i.template precomputeScattering<0>(
+        rhsFunctional[i],
+        x);
+  }
+
+  return rhsFunctional;
 }
 
 } // end namespace Dune
