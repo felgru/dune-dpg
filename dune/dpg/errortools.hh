@@ -55,6 +55,11 @@ namespace Dune {
   public:
     ErrorTools() {};
 
+    template <class FEBasis>
+    static double l2norm(
+        const FEBasis& ,
+        const BlockVector<FieldVector<double,1> >& );
+
     template <unsigned int subsamples, class FEBasis, class VolumeTerms>
     double computeL2error(const FEBasis& ,
                           const BlockVector<FieldVector<double,1> >& ,
@@ -89,6 +94,11 @@ namespace Dune {
                            double );
 
   private:
+    template <class LocalView>
+    static double l2normSquaredElement(
+        const LocalView& ,
+        const BlockVector<FieldVector<double,1> >& );
+
     template <unsigned int subsamples, class LocalView, class VolumeTerms>
     double computeL2errorSquareElement(
         const LocalView& ,
@@ -121,6 +131,99 @@ namespace Dune {
   };
 
 //*******************************************************************
+
+/**
+ * \brief computes the square of the L2 of a given local FEfunction u
+ *        over a given element.
+ *
+ * \param localView     the local view of the element
+ * \param u             the vector containing the local FE coefficients
+ */
+  template <class LocalView>
+  double ErrorTools::l2normSquaredElement(
+      const LocalView& localView,
+      const BlockVector<FieldVector<double,1> >& u)
+  {
+    typedef typename LocalView::Element Element;
+    const Element& element = localView.element();
+
+    const int dim = Element::dimension;
+    const auto geometry = element.geometry();
+
+    const auto& localBasis = localView.tree().finiteElement().localBasis();
+
+    // take 2*order since we integrate u^2
+    const unsigned int quadratureOrder
+        = 2*localBasis.order();
+
+    const QuadratureRule<double, dim>& quad =
+        QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
+
+    double l2NormSquared = 0;
+
+    for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
+
+      // Position of the current quadrature point in the reference element
+      const FieldVector<double,dim>& quadPos = quad[pt].position();
+
+      // The multiplicative factor in the integral transformation formula
+      const double integrationElement = geometry.integrationElement(quadPos);
+
+      std::vector<FieldVector<double,1> > shapeFunctionValues;
+      localBasis.evaluateFunction(quadPos, shapeFunctionValues);
+
+      double uQuad = 0;
+      for(unsigned int i=0, imax=shapeFunctionValues.size(); i<imax; i++)
+      {
+        uQuad += shapeFunctionValues[i]*u[i];
+      }
+
+      l2NormSquared += uQuad * uQuad * quad[pt].weight() * integrationElement;
+    }
+
+    return l2NormSquared;
+  }
+
+/**
+ * \brief Compute the L2 error of a FE function
+ *
+ * \param feBasis       the finite element basis
+ * \param u             the vector containing the FE coefficients
+ */
+  template <class FEBasis>
+  double ErrorTools::l2norm(const FEBasis& feBasis,
+                            const BlockVector<FieldVector<double,1> >& u)
+  {
+    static_assert(!is_RefinedFiniteElement<FEBasis>::value,
+        "l2norm only implemented for unrefined FE spaces!");
+
+    auto gridView = feBasis.gridView();
+
+    double l2NormSquared = 0.;
+
+    auto localView = feBasis.localView();
+    auto localIndexSet = feBasis.localIndexSet();
+
+    for(const auto& e : elements(gridView))
+    {
+      localView.bind(e);
+      localIndexSet.bind(localView);
+
+      const size_t dofFEelement = localView.size();
+
+      // We take the coefficients of u that correspond to the current
+      // element e and store them in uElement.
+      BlockVector<FieldVector<double,1> > uElement(dofFEelement);
+      for (size_t i=0; i<dofFEelement; i++)
+      {
+          uElement[i] = u[ localIndexSet.index(i)[0] ];
+      }
+
+      l2NormSquared += l2normSquaredElement(localView, uElement);
+    }
+
+    return std::sqrt(l2NormSquared);
+  }
 
 /**
  * \brief Returns the computation in a given element of the L2 error
