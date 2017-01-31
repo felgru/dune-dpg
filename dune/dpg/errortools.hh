@@ -54,27 +54,17 @@ namespace Dune {
   {
   public:
     ErrorTools() {};
-    template <unsigned int subsamples, class LocalView, class VolumeTerms>
-    double computeL2errorSquareElement(const LocalView& ,
-                                       BlockVector<FieldVector<double,1> >& ,
-                                       VolumeTerms&&,
-                                       unsigned int = 5);
+
+    template <class FEBasis>
+    static double l2norm(
+        const FEBasis& ,
+        const BlockVector<FieldVector<double,1> >& );
 
     template <unsigned int subsamples, class FEBasis, class VolumeTerms>
     double computeL2error(const FEBasis& ,
-                          BlockVector<FieldVector<double,1> >& ,
+                          const BlockVector<FieldVector<double,1> >& ,
                           VolumeTerms&&,
                           unsigned int = 5);
-
-    template <class InnerProduct, class LinearForm,
-              class RhsFunction, class SolutionLocalViews,
-              class SolutionLocalIndexSets, class VectorType>
-    double aPosterioriL2ErrorSquareElement(InnerProduct& ,
-                                           LinearForm& ,
-                                           const RhsFunction& ,
-                                           SolutionLocalViews& ,
-                                           SolutionLocalIndexSets& ,
-                                           VectorType&);
 
     template <class InnerProduct, class LinearForm,
               class RhsFunction, class VectorType>
@@ -82,19 +72,6 @@ namespace Dune {
                               LinearForm& ,
                               const RhsFunction& ,
                               const VectorType&);
-
-    template <class BilinearForm,class InnerProduct,
-              class TestLocalViews, class SolutionLocalViews,
-              class TestLocalIndexSets, class SolutionLocalIndexSets,
-              class VectorType>
-    double aPosterioriErrorSquareElement(BilinearForm& ,
-                                         InnerProduct& ,
-                                         TestLocalViews& ,
-                                         SolutionLocalViews& ,
-                                         TestLocalIndexSets& ,
-                                         SolutionLocalIndexSets& ,
-                                         VectorType& ,
-                                         VectorType& );
 
     template <class BilinearForm, class InnerProduct, class VectorType>
     double aPosterioriError(BilinearForm& ,
@@ -115,9 +92,138 @@ namespace Dune {
                            const VectorType& ,
                            const VectorType& ,
                            double );
+
+  private:
+    template <class LocalView>
+    static double l2normSquaredElement(
+        const LocalView& ,
+        const BlockVector<FieldVector<double,1> >& );
+
+    template <unsigned int subsamples, class LocalView, class VolumeTerms>
+    double computeL2errorSquareElement(
+        const LocalView& ,
+        const BlockVector<FieldVector<double,1> >& ,
+        VolumeTerms&&,
+        unsigned int = 5);
+
+    template <class InnerProduct, class LinearForm,
+              class RhsFunction, class SolutionLocalViews,
+              class SolutionLocalIndexSets, class VectorType>
+    double aPosterioriL2ErrorSquareElement(InnerProduct& ,
+                                           LinearForm& ,
+                                           const RhsFunction& ,
+                                           SolutionLocalViews& ,
+                                           SolutionLocalIndexSets& ,
+                                           VectorType&);
+
+    template <class BilinearForm,class InnerProduct,
+              class TestLocalViews, class SolutionLocalViews,
+              class TestLocalIndexSets, class SolutionLocalIndexSets,
+              class VectorType>
+    double aPosterioriErrorSquareElement(BilinearForm& ,
+                                         InnerProduct& ,
+                                         TestLocalViews& ,
+                                         SolutionLocalViews& ,
+                                         TestLocalIndexSets& ,
+                                         SolutionLocalIndexSets& ,
+                                         VectorType& ,
+                                         VectorType& );
   };
 
 //*******************************************************************
+
+/**
+ * \brief computes the square of the L2 of a given local FEfunction u
+ *        over a given element.
+ *
+ * \param localView     the local view of the element
+ * \param u             the vector containing the local FE coefficients
+ */
+  template <class LocalView>
+  double ErrorTools::l2normSquaredElement(
+      const LocalView& localView,
+      const BlockVector<FieldVector<double,1> >& u)
+  {
+    typedef typename LocalView::Element Element;
+    const Element& element = localView.element();
+
+    const int dim = Element::dimension;
+    const auto geometry = element.geometry();
+
+    const auto& localBasis = localView.tree().finiteElement().localBasis();
+
+    // take 2*order since we integrate u^2
+    const unsigned int quadratureOrder
+        = 2*localBasis.order();
+
+    const QuadratureRule<double, dim>& quad =
+        QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
+
+    double l2NormSquared = 0;
+
+    for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
+
+      // Position of the current quadrature point in the reference element
+      const FieldVector<double,dim>& quadPos = quad[pt].position();
+
+      // The multiplicative factor in the integral transformation formula
+      const double integrationElement = geometry.integrationElement(quadPos);
+
+      std::vector<FieldVector<double,1> > shapeFunctionValues;
+      localBasis.evaluateFunction(quadPos, shapeFunctionValues);
+
+      double uQuad = 0;
+      for(unsigned int i=0, imax=shapeFunctionValues.size(); i<imax; i++)
+      {
+        uQuad += shapeFunctionValues[i]*u[i];
+      }
+
+      l2NormSquared += uQuad * uQuad * quad[pt].weight() * integrationElement;
+    }
+
+    return l2NormSquared;
+  }
+
+/**
+ * \brief Compute the L2 error of a FE function
+ *
+ * \param feBasis       the finite element basis
+ * \param u             the vector containing the FE coefficients
+ */
+  template <class FEBasis>
+  double ErrorTools::l2norm(const FEBasis& feBasis,
+                            const BlockVector<FieldVector<double,1> >& u)
+  {
+    static_assert(!is_RefinedFiniteElement<FEBasis>::value,
+        "l2norm only implemented for unrefined FE spaces!");
+
+    auto gridView = feBasis.gridView();
+
+    double l2NormSquared = 0.;
+
+    auto localView = feBasis.localView();
+    auto localIndexSet = feBasis.localIndexSet();
+
+    for(const auto& e : elements(gridView))
+    {
+      localView.bind(e);
+      localIndexSet.bind(localView);
+
+      const size_t dofFEelement = localView.size();
+
+      // We take the coefficients of u that correspond to the current
+      // element e and store them in uElement.
+      BlockVector<FieldVector<double,1> > uElement(dofFEelement);
+      for (size_t i=0; i<dofFEelement; i++)
+      {
+          uElement[i] = u[ localIndexSet.index(i)[0] ];
+      }
+
+      l2NormSquared += l2normSquaredElement(localView, uElement);
+    }
+
+    return std::sqrt(l2NormSquared);
+  }
 
 /**
  * \brief Returns the computation in a given element of the L2 error
@@ -134,13 +240,12 @@ namespace Dune {
  *                      element, the polynomial degree of the local finite
  *                      element (x2) will be used instead.
  */
-  template <unsigned int subsamples, class LocalView,class VolumeTerms>
+  template <unsigned int subsamples, class LocalView, class VolumeTerms>
   double ErrorTools::computeL2errorSquareElement(
       const LocalView& localView,
-      BlockVector<FieldVector<double,1> >& u,
+      const BlockVector<FieldVector<double,1> >& u,
       VolumeTerms&& uRef,
-      unsigned int quadOrder
-    )
+      unsigned int quadOrder)
   {
 
     // Get the grid element from the local FE basis view
@@ -148,15 +253,14 @@ namespace Dune {
     const Element& element = localView.element();
 
     const int dim = Element::dimension;
-    auto geometry = element.geometry();
+    const auto geometry = element.geometry();
 
     // Get set of shape functions for this element
-    const auto& localFiniteElement = localView.tree().finiteElement();
+    const auto& localBasis = localView.tree().finiteElement().localBasis();
 
-    // Remark: the quadrature order has to be an even number
-    // TODO: Why?
+    // taking twice the quadrature order as we integrate over a square
     const unsigned int quadratureOrder
-        = std::max(2*quadOrder, 2*localFiniteElement.localBasis().order());
+        = std::max(2*quadOrder, 2*localBasis.order());
 
     const QuadratureRule<double, dim>& quadSection =
         QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
@@ -177,14 +281,12 @@ namespace Dune {
       const FieldVector<double,dim>& mapQuadPos = geometry.global(quadPos);
 
       // The multiplicative factor in the integral transformation formula
-      const double integrationElement
-          = element.geometry().integrationElement(quadPos);
+      const double integrationElement = geometry.integrationElement(quadPos);
 
       // Evaluate all shape function values at quadPos (which is a
       // quadrature point in the reference element)
       std::vector<FieldVector<double,1> > shapeFunctionValues;
-      localFiniteElement.localBasis()
-                        .evaluateFunction(quadPos, shapeFunctionValues);
+      localBasis.evaluateFunction(quadPos, shapeFunctionValues);
 
       // Evaluation of u at the point mapQuadPos, which is quadPos
       // mapped to the physical domain
@@ -221,12 +323,12 @@ namespace Dune {
  *                      element, the polynomial degree of the local finite
  *                      element (x2) will be used instead.
  */
-  template <unsigned int subsamples, class FEBasis,class VolumeTerms>
-  double ErrorTools::computeL2error(const FEBasis& feBasis,
-                                    BlockVector<FieldVector<double,1> >& u,
-                                    VolumeTerms&& uRef,
-                                    unsigned int quadratureOrder
-                                   )
+  template <unsigned int subsamples, class FEBasis, class VolumeTerms>
+  double ErrorTools::computeL2error(
+      const FEBasis& feBasis,
+      const BlockVector<FieldVector<double,1> >& u,
+      VolumeTerms&& uRef,
+      unsigned int quadratureOrder)
   {
     // Get the grid view from the finite element basis
     typedef typename FEBasis::GridView GridView;
@@ -337,7 +439,7 @@ namespace Dune {
     // TODO adjust quadrature for non-constant RHS
     unsigned int quadratureOrder = 5;
     auto element = std::get<0>(solutionLocalViews).element();
-    auto geometry = element.geometry();
+    const auto geometry = element.geometry();
     typedef decltype(element) Element;
     const int dim = Element::dimension;
     const Dune::QuadratureRule<double, dim>& quad =

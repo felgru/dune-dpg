@@ -1,6 +1,8 @@
 add_subdirectory(functions)
 add_subdirectory(radiative_transfer)
 
+add_subdirectory(test)
+
 install(FILES applylocalfunctional_ru_impl.hh
               applylocalfunctional_uu_impl.hh
               assemble_helper.hh

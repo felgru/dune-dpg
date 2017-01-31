@@ -31,16 +31,15 @@ libraries installed on your system:
        Versions other than 1.59 have not been thoroughly tested.)
     - Eigen >= 3.2
       (http://eigen.tuxfamily.org)
-    - A grid manager. Our examples use dune-uggrid
-      (https://dune-project.org/modules/dune-uggrid/)
-      but one could also use other managers, e.g., ALBERTA or YASPgrid.
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
-    - DUNE core libraries 2.5-git (Git master branch)
-      (https://dune-project.org/groups/core/)
-    - dune-typetree 2.5-dev (Git master branch)
-      (https://gitlab.dune-project.org/pdelab/dune-typetree.git)
-    - dune-functions 2.5-dev (Git master branch)
-      (https://gitlab.dune-project.org/staging/dune-functions.git)
+    - DUNE core libraries 2.5
+      including the staging modules dune-typetree and dune-functions
+      (https://dune-project.org/releases/2.5.0/)
+    - A grid manager. Our examples use dune-uggrid
+      which has been added as a staging module in DUNE 2.5
+      (https://dune-project.org/releases/2.5.0/)
+      but one could also use other managers, e.g., ALBERTA or YASPgrid.
+      (https://dune-project.org/groups/grid/)
 
 Instructions on how to build dune-dpg can be found in [INSTALL.md](INSTALL.md).
 
