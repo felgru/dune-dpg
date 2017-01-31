@@ -55,14 +55,15 @@ namespace Dune {
   public:
     ErrorTools() {};
     template <unsigned int subsamples, class LocalView, class VolumeTerms>
-    double computeL2errorSquareElement(const LocalView& ,
-                                       BlockVector<FieldVector<double,1> >& ,
-                                       VolumeTerms&&,
-                                       unsigned int = 5);
+    double computeL2errorSquareElement(
+        const LocalView& ,
+        const BlockVector<FieldVector<double,1> >& ,
+        VolumeTerms&&,
+        unsigned int = 5);
 
     template <unsigned int subsamples, class FEBasis, class VolumeTerms>
     double computeL2error(const FEBasis& ,
-                          BlockVector<FieldVector<double,1> >& ,
+                          const BlockVector<FieldVector<double,1> >& ,
                           VolumeTerms&&,
                           unsigned int = 5);
 
@@ -134,13 +135,12 @@ namespace Dune {
  *                      element, the polynomial degree of the local finite
  *                      element (x2) will be used instead.
  */
-  template <unsigned int subsamples, class LocalView,class VolumeTerms>
+  template <unsigned int subsamples, class LocalView, class VolumeTerms>
   double ErrorTools::computeL2errorSquareElement(
       const LocalView& localView,
-      BlockVector<FieldVector<double,1> >& u,
+      const BlockVector<FieldVector<double,1> >& u,
       VolumeTerms&& uRef,
-      unsigned int quadOrder
-    )
+      unsigned int quadOrder)
   {
 
     // Get the grid element from the local FE basis view
@@ -221,12 +221,12 @@ namespace Dune {
  *                      element, the polynomial degree of the local finite
  *                      element (x2) will be used instead.
  */
-  template <unsigned int subsamples, class FEBasis,class VolumeTerms>
-  double ErrorTools::computeL2error(const FEBasis& feBasis,
-                                    BlockVector<FieldVector<double,1> >& u,
-                                    VolumeTerms&& uRef,
-                                    unsigned int quadratureOrder
-                                   )
+  template <unsigned int subsamples, class FEBasis, class VolumeTerms>
+  double ErrorTools::computeL2error(
+      const FEBasis& feBasis,
+      const BlockVector<FieldVector<double,1> >& u,
+      VolumeTerms&& uRef,
+      unsigned int quadratureOrder)
   {
     // Get the grid view from the finite element basis
     typedef typename FEBasis::GridView GridView;
