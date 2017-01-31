@@ -405,9 +405,19 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     std::chrono::steady_clock::time_point startScatteringApproximation
         = std::chrono::steady_clock::now();
 
+    double kappaNorm = 1.;
+    double uNorm = 0.;
+    for(size_t i=0; i<numS; ++i) {
+      const double uiNorm =
+        ErrorTools::l2norm(FEBasisInterior(gridViews[i]), x[i]);
+      uNorm += uiNorm * uiNorm;
+    }
+    uNorm = std::sqrt(uNorm / numS);
+
     std::vector<VectorType> rhsFunctional =
         apply_scattering<FEBasisInterior, FEBasisTrace> (
-          kernelApproximation, x, gridViews, kappa1*eta);
+          kernelApproximation, x, gridViews,
+          kappa1 * eta / (kappaNorm * uNorm));
 
     std::chrono::steady_clock::time_point endScatteringApproximation
         = std::chrono::steady_clock::now();
