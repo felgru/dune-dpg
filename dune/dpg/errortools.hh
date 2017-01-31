@@ -54,12 +54,6 @@ namespace Dune {
   {
   public:
     ErrorTools() {};
-    template <unsigned int subsamples, class LocalView, class VolumeTerms>
-    double computeL2errorSquareElement(
-        const LocalView& ,
-        const BlockVector<FieldVector<double,1> >& ,
-        VolumeTerms&&,
-        unsigned int = 5);
 
     template <unsigned int subsamples, class FEBasis, class VolumeTerms>
     double computeL2error(const FEBasis& ,
@@ -68,34 +62,11 @@ namespace Dune {
                           unsigned int = 5);
 
     template <class InnerProduct, class LinearForm,
-              class RhsFunction, class SolutionLocalViews,
-              class SolutionLocalIndexSets, class VectorType>
-    double aPosterioriL2ErrorSquareElement(InnerProduct& ,
-                                           LinearForm& ,
-                                           const RhsFunction& ,
-                                           SolutionLocalViews& ,
-                                           SolutionLocalIndexSets& ,
-                                           VectorType&);
-
-    template <class InnerProduct, class LinearForm,
               class RhsFunction, class VectorType>
     double aPosterioriL2Error(InnerProduct& ,
                               LinearForm& ,
                               const RhsFunction& ,
                               const VectorType&);
-
-    template <class BilinearForm,class InnerProduct,
-              class TestLocalViews, class SolutionLocalViews,
-              class TestLocalIndexSets, class SolutionLocalIndexSets,
-              class VectorType>
-    double aPosterioriErrorSquareElement(BilinearForm& ,
-                                         InnerProduct& ,
-                                         TestLocalViews& ,
-                                         SolutionLocalViews& ,
-                                         TestLocalIndexSets& ,
-                                         SolutionLocalIndexSets& ,
-                                         VectorType& ,
-                                         VectorType& );
 
     template <class BilinearForm, class InnerProduct, class VectorType>
     double aPosterioriError(BilinearForm& ,
@@ -116,6 +87,37 @@ namespace Dune {
                            const VectorType& ,
                            const VectorType& ,
                            double );
+
+  private:
+    template <unsigned int subsamples, class LocalView, class VolumeTerms>
+    double computeL2errorSquareElement(
+        const LocalView& ,
+        const BlockVector<FieldVector<double,1> >& ,
+        VolumeTerms&&,
+        unsigned int = 5);
+
+    template <class InnerProduct, class LinearForm,
+              class RhsFunction, class SolutionLocalViews,
+              class SolutionLocalIndexSets, class VectorType>
+    double aPosterioriL2ErrorSquareElement(InnerProduct& ,
+                                           LinearForm& ,
+                                           const RhsFunction& ,
+                                           SolutionLocalViews& ,
+                                           SolutionLocalIndexSets& ,
+                                           VectorType&);
+
+    template <class BilinearForm,class InnerProduct,
+              class TestLocalViews, class SolutionLocalViews,
+              class TestLocalIndexSets, class SolutionLocalIndexSets,
+              class VectorType>
+    double aPosterioriErrorSquareElement(BilinearForm& ,
+                                         InnerProduct& ,
+                                         TestLocalViews& ,
+                                         SolutionLocalViews& ,
+                                         TestLocalIndexSets& ,
+                                         SolutionLocalIndexSets& ,
+                                         VectorType& ,
+                                         VectorType& );
   };
 
 //*******************************************************************
