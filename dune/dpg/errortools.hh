@@ -151,12 +151,11 @@ namespace Dune {
     auto geometry = element.geometry();
 
     // Get set of shape functions for this element
-    const auto& localFiniteElement = localView.tree().finiteElement();
+    const auto& localBasis = localView.tree().finiteElement().localBasis();
 
-    // Remark: the quadrature order has to be an even number
-    // TODO: Why?
+    // taking twice the quadrature order as we integrate over a square
     const unsigned int quadratureOrder
-        = std::max(2*quadOrder, 2*localFiniteElement.localBasis().order());
+        = std::max(2*quadOrder, 2*localBasis.order());
 
     const QuadratureRule<double, dim>& quadSection =
         QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
@@ -183,8 +182,7 @@ namespace Dune {
       // Evaluate all shape function values at quadPos (which is a
       // quadrature point in the reference element)
       std::vector<FieldVector<double,1> > shapeFunctionValues;
-      localFiniteElement.localBasis()
-                        .evaluateFunction(quadPos, shapeFunctionValues);
+      localBasis.evaluateFunction(quadPos, shapeFunctionValues);
 
       // Evaluation of u at the point mapQuadPos, which is quadPos
       // mapped to the physical domain
