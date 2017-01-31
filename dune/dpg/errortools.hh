@@ -148,7 +148,7 @@ namespace Dune {
     const Element& element = localView.element();
 
     const int dim = Element::dimension;
-    auto geometry = element.geometry();
+    const auto geometry = element.geometry();
 
     // Get set of shape functions for this element
     const auto& localBasis = localView.tree().finiteElement().localBasis();
@@ -176,8 +176,7 @@ namespace Dune {
       const FieldVector<double,dim>& mapQuadPos = geometry.global(quadPos);
 
       // The multiplicative factor in the integral transformation formula
-      const double integrationElement
-          = element.geometry().integrationElement(quadPos);
+      const double integrationElement = geometry.integrationElement(quadPos);
 
       // Evaluate all shape function values at quadPos (which is a
       // quadrature point in the reference element)
@@ -335,7 +334,7 @@ namespace Dune {
     // TODO adjust quadrature for non-constant RHS
     unsigned int quadratureOrder = 5;
     auto element = std::get<0>(solutionLocalViews).element();
-    auto geometry = element.geometry();
+    const auto geometry = element.geometry();
     typedef decltype(element) Element;
     const int dim = Element::dimension;
     const Dune::QuadratureRule<double, dim>& quad =
