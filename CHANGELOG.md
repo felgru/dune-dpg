@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
 ## 0.3 (Unreleased)
+### Added
+* New `ErrorTools::l2norm` function to compute the L_2 norm of a
+  finite element function.
+
 ### Changed
 * We now require version 2.5 of the DUNE core modules.
 * Restrict usage of Boost::Fusion.
@@ -12,6 +16,7 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   or dune/common/tupleutility.hh instead.
   Unfortunately, we couldn't completely get rid of Boost::Fusion
   and the incompatibilities with versions >1.59 still remains.
+* ErrorTools: the element-wise operations are now marked as private.
 * README, INSTALL: Mention dune-uggrid instead of ug.
 * Remove some noise from the API documentation.
 
