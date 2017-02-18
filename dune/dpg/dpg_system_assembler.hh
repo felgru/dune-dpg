@@ -874,17 +874,16 @@ applyWeakBoundaryCondition
         }
       }
     }
-    for (size_t i=0; i<n; i++)
-    {
-      auto row = localIndexSet.index(i)[0];
-      for (size_t j=0; j<n; j++)
-      {
-        auto col = localIndexSet.index(j)[0];
-        matrix[row+globalOffset][col+globalOffset]
-                        += elementMatrix[i][j];
-
-      }
-    }
+    addToGlobalMatrix(
+        localIndexSet,
+        localIndexSet,
+        [&elementMatrix](size_t i, size_t j) -> auto {
+          return elementMatrix[i][j];
+        },
+        [&](auto gi, auto gj) -> auto& {
+          return matrix[gi[0]+globalOffset][gj[0]+globalOffset];
+        }
+    );
   }
 }
 

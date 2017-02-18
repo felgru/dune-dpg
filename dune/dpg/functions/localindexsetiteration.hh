@@ -81,6 +81,54 @@ void iterateOverLocalIndexSet(
       std::forward<ConstrainedEvaluation>(constrainedEvaluation));
 }
 
+template<class TestLocalIndexSet,
+         class SolutionLocalIndexSet,
+         class GetLocalMatrixEntry,
+         class GetGlobalMatrixEntry>
+void addToGlobalMatrix(
+    TestLocalIndexSet&& testLocalIndexSet,
+    SolutionLocalIndexSet&& solutionLocalIndexSet,
+    GetLocalMatrixEntry&& getLocalMatrixEntry,
+    GetGlobalMatrixEntry&& getGlobalMatrixEntry) {
+  using TestMultiIndex = typename std::decay_t<TestLocalIndexSet>::MultiIndex;
+  using SolutionMultiIndex
+      = typename std::decay_t<SolutionLocalIndexSet>::MultiIndex;
+  iterateOverLocalIndexSet(
+    std::forward<TestLocalIndexSet>(testLocalIndexSet),
+    [&](size_t i, TestMultiIndex gi)
+    {
+      iterateOverLocalIndexSet(
+        solutionLocalIndexSet,
+        [&](size_t j, SolutionMultiIndex gj)
+        {
+          getGlobalMatrixEntry(gi, gj) += getLocalMatrixEntry(i, j);
+        },
+        [](size_t j){},
+        [&](size_t j, TestMultiIndex gj, double wj)
+        {
+          getGlobalMatrixEntry(gi, gj) += wj * getLocalMatrixEntry(i, j);
+        }
+      );
+    },
+    [](size_t i){},
+    [&](size_t i, TestMultiIndex gi, double wi)
+    {
+      iterateOverLocalIndexSet(
+        solutionLocalIndexSet,
+        [&](size_t j, SolutionMultiIndex gj)
+        {
+          getGlobalMatrixEntry(gi, gj) += wi * getLocalMatrixEntry(i, j);
+        },
+        [](size_t j){},
+        [&](size_t j, TestMultiIndex gj, double wj)
+        {
+          getGlobalMatrixEntry(gi, gj) += wi * wj * getLocalMatrixEntry(i, j);
+        }
+      );
+    }
+  );
+}
+
 } // namespace Dune::Functions
 } // namespace Dune
 

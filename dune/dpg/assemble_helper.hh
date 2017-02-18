@@ -359,7 +359,6 @@ struct localToGlobalCopier
         solutionLocalOffsets(solutionLocalOffsets),
         solutionGlobalOffsets(solutionGlobalOffsets) {}
 
-  // TODO: Implement operator() for constrained global bases.
   template <class testSpaceIndex,
             class solutionSpaceIndex>
   void operator()
@@ -382,36 +381,40 @@ struct localToGlobalCopier
     const size_t solutionGlobalOffset
         = solutionGlobalOffsets[solutionSpaceIndex::value];
 
-    const size_t nTest(testLocalView.size());
+    using TestMultiIndex
+        = typename std::decay_t<decltype(testLocalIndexSet)>::MultiIndex;
+    using SolutionMultiIndex
+        = typename std::decay_t<decltype(solutionLocalIndexSet)>::MultiIndex;
 
-    for (size_t i=0; i<nTest; i++)
-    {
-      const auto row = testLocalIndexSet.index(i)[0] + testGlobalOffset;
-
-      using SolutionMultiIndex
-          = typename std::decay_t<decltype(solutionLocalIndexSet)>::MultiIndex;
-      iterateOverLocalIndexSet(
+    addToGlobalMatrix(
+        testLocalIndexSet,
+        solutionLocalIndexSet,
+        [&](size_t i, size_t j) -> double
+        {
+          return elementMatrix[i+testLocalOffset][j+solutionLocalOffset];
+        },
+        [&](TestMultiIndex gi, SolutionMultiIndex gj)
+        -> FieldMatrix<double, 1, 1>&
+        {
+          const auto row = gi[0] + testGlobalOffset;
+          const auto col = gj[0] + solutionGlobalOffset;
+          return matrix[row][col];
+        }
+    );
+    if(mirror) {
+      addToGlobalMatrix(
+          testLocalIndexSet,
           solutionLocalIndexSet,
-          [&](size_t j, SolutionMultiIndex gj)
+          [&](size_t i, size_t j) -> double
           {
-            const auto col = gj[0] + solutionGlobalOffset;
-            matrix[row][col] += elementMatrix[i+testLocalOffset]
-                                             [j+solutionLocalOffset];
-            if(mirror) {
-              matrix[col][row] += elementMatrix[i+testLocalOffset]
-                                               [j+solutionLocalOffset];
-            }
+            return elementMatrix[i+testLocalOffset][j+solutionLocalOffset];
           },
-          []() { },
-          [&](size_t j, SolutionMultiIndex gj, double wj)
+          [&](TestMultiIndex gi, SolutionMultiIndex gj)
+          -> FieldMatrix<double, 1, 1>&
           {
+            const auto row = gi[0] + testGlobalOffset;
             const auto col = gj[0] + solutionGlobalOffset;
-            matrix[row][col] += wj * elementMatrix[i+testLocalOffset]
-                                                  [j+solutionLocalOffset];
-            if(mirror) {
-              matrix[col][row] += wj * elementMatrix[i+testLocalOffset]
-                                                    [j+solutionLocalOffset];
-            }
+            return matrix[col][row];
           }
       );
     }
