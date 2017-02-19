@@ -30,11 +30,17 @@ inline static void interiorImpl(
 
   BlockVector<FieldVector<double,1>>
       localFunctionalVector(solutionLocalView.size());
-  for (size_t j=0, jMax=localFunctionalVector.size(); j<jMax; j++)
-  {
-    auto row = solutionLocalIndexSet.index(j)[0];
-    localFunctionalVector[j] = functionalVector[row];
-  }
+
+  iterateOverLocalIndexSet(
+    solutionLocalIndexSet,
+    [&](size_t j, auto gj) {
+      localFunctionalVector[j] = functionalVector[gj[0]];
+    },
+    [&](size_t j) { localFunctionalVector[j] = 0; },
+    [&](size_t j, auto gj, double wj) {
+      localFunctionalVector[j] += wj * functionalVector[gj[0]];
+    }
+  );
 
   const unsigned int quadratureOrder
       = solutionLocalFiniteElement.localBasis().order()

@@ -14,6 +14,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
 
+#include <dune/dpg/functions/localindexsetiteration.hh>
 #include "assemble_helper.hh"
 #include "cholesky.hh"
 #include "quadrature.hh"
@@ -38,12 +39,20 @@ namespace Dune {
           [&](auto i) {
             auto const & localView = std::get<i>(localViews);
             auto const & localIndexSet = std::get<i>(localIndexSets);
-            const size_t dofElement = localView.size();
-            for (size_t j=0; j<dofElement; j++)
-            {
-              solutionElement[j + localOffsets[i]]
-                  = solution[globalOffsets[i] + localIndexSet.index(j)[0]];
-            }
+            iterateOverLocalIndexSet(
+              localIndexSet,
+              [&](size_t j, auto gj) {
+                solutionElement[j + localOffsets[i]]
+                    = solution[globalOffsets[i] + gj[0]];
+              },
+              [&](size_t j){
+                solutionElement[j + localOffsets[i]] = 0;
+              },
+              [&](size_t j, auto gj, double wj) {
+                solutionElement[j + localOffsets[i]]
+                    += wj * solution[globalOffsets[i] + gj[0]];
+              }
+            );
           });
     }
   }

@@ -28,6 +28,7 @@
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 
+#include <dune/dpg/functions/localindexsetiteration.hh>
 #include "assemble_helper.hh"
 #include "assemble_types.hh"
 #include "bilinearform.hh"
@@ -1023,6 +1024,7 @@ applyMinimization
   auto solutionLocalViews = getLocalViews(solutionSpaces_);
 
   auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
+  using LocalIndexSet = decltype(localIndexSet);
 
   const bool epsilonSmallerDelta(epsilon<delta);
 
@@ -1074,20 +1076,63 @@ applyMinimization
       // never be both (almost) characteristic.
     }
 
-    for (size_t i=0; i<n; i++)
-    {
-      if (relevantDOFs[i])
+    using MultiIndex = typename LocalIndexSet::MultiIndex;
+    iterateOverLocalIndexSet(
+      localIndexSet,
+      [&](size_t i, MultiIndex gi)
       {
-        auto row = localIndexSet.index(i)[0];
-        for (size_t j=0; j<n; j++)
+        if (relevantDOFs[i])
         {
-          auto col = localIndexSet.index(j)[0];
-          matrix[row+globalOffset][col+globalOffset]
-              += elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
-                              [localSolutionSpaceOffsets[spaceIndex]+j];
+          auto row = gi[0];
+          iterateOverLocalIndexSet(
+            localIndexSet,
+            [&](size_t j, MultiIndex gj)
+            {
+              auto col = gj[0];
+              matrix[row+globalOffset][col+globalOffset]
+                  += elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                  [localSolutionSpaceOffsets[spaceIndex]+j];
+            },
+            [](size_t j) {},
+            [&](size_t j, MultiIndex gj, double wj)
+            {
+              auto col = gj[0];
+              matrix[row+globalOffset][col+globalOffset]
+                += wj * elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                     [localSolutionSpaceOffsets[spaceIndex]+j];
+            }
+          );
+        }
+      },
+      [](size_t i) {},
+      [&](size_t i, MultiIndex gi, double wi)
+      {
+        if (relevantDOFs[i])
+        {
+          auto row = gi[0];
+          iterateOverLocalIndexSet(
+            localIndexSet,
+            [&](size_t j, MultiIndex gj)
+            {
+              auto col = gj[0];
+              matrix[row+globalOffset][col+globalOffset]
+                  += wi
+                     * elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                    [localSolutionSpaceOffsets[spaceIndex]+j];
+            },
+            [](size_t j) {},
+            [&](size_t j, MultiIndex gj, double wj)
+            {
+              auto col = gj[0];
+              matrix[row+globalOffset][col+globalOffset]
+                += wi * wj
+                   * elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                  [localSolutionSpaceOffsets[spaceIndex]+j];
+            }
+          );
         }
       }
-    }
+    );
   }
 }
 

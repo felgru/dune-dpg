@@ -9,6 +9,8 @@
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/std/memory.hh>
 #include <dune/common/tupleutility.hh>
+#include <dune/dpg/functions/concepts.hh>
+#include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/istl/matrixindexset.hh>
 #include <boost/fusion/adapted/std_tuple.hpp>
 #include <boost/fusion/adapted/array.hpp>
@@ -249,25 +251,43 @@ struct getOccupationPatternHelper
         globalTestSpaceOffsets[testSpaceIndex::value];
     const size_t globalSolutionSpaceOffset =
         globalSolutionSpaceOffsets[solutionSpaceIndex::value];
+    using TestMultiIndex
+        = typename std::decay_t<decltype(testLIS)>::MultiIndex;
+    using SolutionMultiIndex
+        = typename std::decay_t<decltype(solutionLIS)>::MultiIndex;
 
-    for (size_t i=0, i_max=testLV.size(); i<i_max; i++) {
-
-      const auto iIdx = testLIS.index(i)[0];
-
-      for (size_t j=0, j_max=solutionLV.size(); j<j_max; j++) {
-
-        const auto jIdx = solutionLIS.index(j)[0];
-
-        // Add a nonzero entry to the matrix
-        nb.add(iIdx+globalTestSpaceOffset,
-               jIdx+globalSolutionSpaceOffset);
-        if(mirror) {
-            nb.add(jIdx+globalSolutionSpaceOffset,
-                   iIdx+globalTestSpaceOffset);
+    auto fillOccupationPattern = [&](size_t /* i */, TestMultiIndex gi)
+        {
+          auto fillOccupationPatternInner
+            = [&](size_t /* j */, SolutionMultiIndex gj)
+              {
+                // Add a nonzero entry to the matrix
+                nb.add(gi[0]+globalTestSpaceOffset,
+                       gj[0]+globalSolutionSpaceOffset);
+                if(mirror) {
+                    nb.add(gj[0]+globalSolutionSpaceOffset,
+                           gi[0]+globalTestSpaceOffset);
+                }
+              };
+          iterateOverLocalIndexSet(
+              solutionLIS,
+              fillOccupationPatternInner,
+              [](size_t j){},
+              [&](size_t j, SolutionMultiIndex gj, double /* wj */)
+              {
+                fillOccupationPatternInner(j, gj);
+              }
+          );
+        };
+    iterateOverLocalIndexSet(
+        testLIS,
+        fillOccupationPattern,
+        [](size_t i){},
+        [&](size_t i, TestMultiIndex gi, double /* wi */)
+        {
+          fillOccupationPattern(i, gi);
         }
-
-      }
-    }
+    );
   }
 
 private:
@@ -339,6 +359,7 @@ struct localToGlobalCopier
         solutionLocalOffsets(solutionLocalOffsets),
         solutionGlobalOffsets(solutionGlobalOffsets) {}
 
+  // TODO: Implement operator() for constrained global bases.
   template <class testSpaceIndex,
             class solutionSpaceIndex>
   void operator()
@@ -362,23 +383,37 @@ struct localToGlobalCopier
         = solutionGlobalOffsets[solutionSpaceIndex::value];
 
     const size_t nTest(testLocalView.size());
-    const size_t nSolution(solutionLocalView.size());
 
     for (size_t i=0; i<nTest; i++)
     {
       const auto row = testLocalIndexSet.index(i)[0] + testGlobalOffset;
 
-      for (size_t j=0; j<nSolution; j++)
-      {
-        const auto col = solutionLocalIndexSet.index(j)[0]
-                         + solutionGlobalOffset;
-        matrix[row][col] += elementMatrix[i+testLocalOffset]
-                                         [j+solutionLocalOffset];
-        if(mirror) {
-          matrix[col][row] += elementMatrix[i+testLocalOffset]
-                                           [j+solutionLocalOffset];
-        }
-      }
+      using SolutionMultiIndex
+          = typename std::decay_t<decltype(solutionLocalIndexSet)>::MultiIndex;
+      iterateOverLocalIndexSet(
+          solutionLocalIndexSet,
+          [&](size_t j, SolutionMultiIndex gj)
+          {
+            const auto col = gj[0] + solutionGlobalOffset;
+            matrix[row][col] += elementMatrix[i+testLocalOffset]
+                                             [j+solutionLocalOffset];
+            if(mirror) {
+              matrix[col][row] += elementMatrix[i+testLocalOffset]
+                                               [j+solutionLocalOffset];
+            }
+          },
+          []() { },
+          [&](size_t j, SolutionMultiIndex gj, double wj)
+          {
+            const auto col = gj[0] + solutionGlobalOffset;
+            matrix[row][col] += wj * elementMatrix[i+testLocalOffset]
+                                                  [j+solutionLocalOffset];
+            if(mirror) {
+              matrix[col][row] += wj * elementMatrix[i+testLocalOffset]
+                                                    [j+solutionLocalOffset];
+            }
+          }
+      );
     }
   }
 
@@ -494,12 +529,23 @@ struct localToGlobalRHSCopier
     const size_t testLocalOffset = testLocalOffsets[TestSpaceIndex::value];
     const size_t testGlobalOffset = testGlobalOffsets[TestSpaceIndex::value];
 
-    const size_t nTest(testLocalView.size());
+    using MultiIndex
+        = typename std::decay_t<decltype(testLocalIndexSet)>::MultiIndex;
 
-    for (size_t i=0; i<nTest; i++) {
-      const auto row = testLocalIndexSet.index(i)[0] + testGlobalOffset;
-      rhs[row] += localRhs[i+testLocalOffset];
-    }
+    iterateOverLocalIndexSet(
+        testLocalIndexSet,
+        [&](size_t i, MultiIndex gi)
+        {
+          rhs[gi[0] + testGlobalOffset]
+              += localRhs[i+testLocalOffset];
+        },
+        [](size_t i){},
+        [&](size_t i, MultiIndex gi, double wi)
+        {
+          rhs[gi[0] + testGlobalOffset]
+              += wi * localRhs[i+testLocalOffset];
+        }
+    );
   }
 
 private:
