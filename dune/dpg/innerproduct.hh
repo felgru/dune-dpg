@@ -184,9 +184,7 @@ getOccupationPattern(MatrixIndexSet& nb) const
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
     detail::getOccupationPattern<IndexPairs, false>
-                        (testLocalViews,
-                         testLocalViews,
-                         testLocalIndexSets,
+                        (testLocalIndexSets,
                          testLocalIndexSets,
                          globalTestSpaceOffsets,
                          globalTestSpaceOffsets,

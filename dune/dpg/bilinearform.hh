@@ -253,9 +253,7 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
 
     detail::getOccupationPattern<IndexPairs, mirror>
-                        (testLocalViews,
-                         solutionLocalViews,
-                         testLocalIndexSets,
+                        (testLocalIndexSets,
                          solutionLocalIndexSets,
                          globalTestSpaceOffsets,
                          globalSolutionSpaceOffsets,

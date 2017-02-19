@@ -205,9 +205,7 @@ private:
       localTestSpaceOffsets;
 };
 
-template <class TestLocalViews,
-          class SolutionLocalViews,
-          class TestLocalIndexSets,
+template <class TestLocalIndexSets,
           class SolutionLocalIndexSets,
           bool mirror = false>
 struct getOccupationPatternHelper
@@ -216,18 +214,14 @@ struct getOccupationPatternHelper
   using array_of_same_size = T[std::tuple_size<Tuple>::value];
 
   getOccupationPatternHelper(
-                       const TestLocalViews& testLocalViews,
-                       const SolutionLocalViews& solutionLocalViews,
-                       const TestLocalIndexSets& testLocalIndexSets,
-                       const SolutionLocalIndexSets& solutionLocalIndexSets,
-                       const array_of_same_size<size_t, TestLocalViews>&
-                           globalTestSpaceOffsets,
-                       const array_of_same_size<size_t, SolutionLocalViews>&
-                           globalSolutionSpaceOffsets,
-                       Dune::MatrixIndexSet& nb)
-      : testLocalViews(testLocalViews),
-        solutionLocalViews(solutionLocalViews),
-        testLocalIndexSets(testLocalIndexSets),
+      const TestLocalIndexSets& testLocalIndexSets,
+      const SolutionLocalIndexSets& solutionLocalIndexSets,
+      const array_of_same_size<size_t, TestLocalIndexSets>&
+          globalTestSpaceOffsets,
+      const array_of_same_size<size_t, SolutionLocalIndexSets>&
+          globalSolutionSpaceOffsets,
+      Dune::MatrixIndexSet& nb)
+      : testLocalIndexSets(testLocalIndexSets),
         solutionLocalIndexSets(solutionLocalIndexSets),
         globalTestSpaceOffsets(globalTestSpaceOffsets),
         globalSolutionSpaceOffsets(globalSolutionSpaceOffsets),
@@ -239,10 +233,6 @@ struct getOccupationPatternHelper
   void operator()
          (const std::tuple<testSpaceIndex, solutionSpaceIndex>& indexTuple)
   {
-    const auto& testLV =
-        std::get<testSpaceIndex::value>(testLocalViews);
-    const auto& solutionLV =
-        std::get<solutionSpaceIndex::value>(solutionLocalViews);
     const auto& testLIS =
         std::get<testSpaceIndex::value>(testLocalIndexSets);
     const auto& solutionLIS =
@@ -291,38 +281,29 @@ struct getOccupationPatternHelper
   }
 
 private:
-  const TestLocalViews& testLocalViews;
-  const SolutionLocalViews& solutionLocalViews;
   const TestLocalIndexSets& testLocalIndexSets;
   const SolutionLocalIndexSets& solutionLocalIndexSets;
-  const array_of_same_size<size_t, TestLocalViews>&
+  const array_of_same_size<size_t, TestLocalIndexSets>&
       globalTestSpaceOffsets;
-  const array_of_same_size<size_t, SolutionLocalViews>&
+  const array_of_same_size<size_t, SolutionLocalIndexSets>&
       globalSolutionSpaceOffsets;
   Dune::MatrixIndexSet& nb;
 };
 
 template<class Indices,
          bool mirror,
-         class LeftLocalViews, class RightLocalViews,
          class LeftLocalIndexSets, class RightLocalIndexSets,
          class LeftOffsets, class RightOffsets>
 inline void getOccupationPattern(
-      const LeftLocalViews& leftLocalViews,
-      const RightLocalViews& rightLocalViews,
       const LeftLocalIndexSets& leftLocalIndexSets,
       const RightLocalIndexSets& rightLocalIndexSets,
       const LeftOffsets& leftGlobalOffsets,
       const RightOffsets& rightGlobalOffsets,
       MatrixIndexSet& occupationPattern) {
-  auto gOPH = getOccupationPatternHelper<LeftLocalViews,
-                                         RightLocalViews,
-                                         LeftLocalIndexSets,
+  auto gOPH = getOccupationPatternHelper<LeftLocalIndexSets,
                                          RightLocalIndexSets,
                                          mirror>
-                      (leftLocalViews,
-                       rightLocalViews,
-                       leftLocalIndexSets,
+                      (leftLocalIndexSets,
                        rightLocalIndexSets,
                        leftGlobalOffsets,
                        rightGlobalOffsets,
@@ -332,7 +313,6 @@ inline void getOccupationPattern(
 }
 
 template<class LocalMatrix, class GlobalMatrix,
-         class TestLocalViews, class SolutionLocalViews,
          class TestLocalIndexSets, class SolutionLocalIndexSets,
          class TestOffsets, class SolutionOffsets,
          bool mirror = false>
@@ -341,20 +321,16 @@ struct localToGlobalCopier
 
   localToGlobalCopier
          (const LocalMatrix& lm, GlobalMatrix& gm,
-          TestLocalViews const & testLocalViews,
           TestLocalIndexSets const & testLocalIndexSets,
           TestOffsets const & testLocalOffsets,
           TestOffsets const & testGlobalOffsets,
-          SolutionLocalViews const & solutionLocalViews,
           SolutionLocalIndexSets const & solutionLocalIndexSets,
           SolutionOffsets const & solutionLocalOffsets,
           SolutionOffsets const & solutionGlobalOffsets)
       : elementMatrix(lm), matrix(gm),
-        testLocalViews(testLocalViews),
         testLocalIndexSets(testLocalIndexSets),
         testLocalOffsets(testLocalOffsets),
         testGlobalOffsets(testGlobalOffsets),
-        solutionLocalViews(solutionLocalViews),
         solutionLocalIndexSets(solutionLocalIndexSets),
         solutionLocalOffsets(solutionLocalOffsets),
         solutionGlobalOffsets(solutionGlobalOffsets) {}
@@ -366,14 +342,10 @@ struct localToGlobalCopier
           testSpaceIndex,
           solutionSpaceIndex>& indexTuple) const
   {
-    const auto& testLocalView
-        = std::get<testSpaceIndex::value>(testLocalViews);
     const auto& testLocalIndexSet
         = std::get<testSpaceIndex::value>(testLocalIndexSets);
     const size_t testLocalOffset = testLocalOffsets[testSpaceIndex::value];
     const size_t testGlobalOffset = testGlobalOffsets[testSpaceIndex::value];
-    const auto& solutionLocalView
-        = std::get<solutionSpaceIndex::value>(solutionLocalViews);
     const auto& solutionLocalIndexSet
         = std::get<solutionSpaceIndex::value>(solutionLocalIndexSets);
     const size_t solutionLocalOffset
@@ -424,11 +396,9 @@ private:
   const LocalMatrix& elementMatrix;
   GlobalMatrix& matrix;
 
-  const TestLocalViews & testLocalViews;
   const TestLocalIndexSets & testLocalIndexSets;
   const TestOffsets & testLocalOffsets;
   const TestOffsets & testGlobalOffsets;
-  const SolutionLocalViews & solutionLocalViews;
   const SolutionLocalIndexSets & solutionLocalIndexSets;
   const SolutionOffsets & solutionLocalOffsets;
   const SolutionOffsets & solutionGlobalOffsets;
@@ -436,32 +406,26 @@ private:
 
 template<class Indices,
          class LocalMatrix, class GlobalMatrix,
-         class TestLocalViews, class SolutionLocalViews,
          class TestLocalIndexSets, class SolutionLocalIndexSets,
          class TestOffsets, class SolutionOffsets,
          bool mirror = false>
 inline void copyLocalToGlobalMatrix(
     const LocalMatrix&            elementMatrix,
     GlobalMatrix&                 matrix,
-    const TestLocalViews&         testLocalViews,
     const TestLocalIndexSets&     testLocalIndexSets,
     const TestOffsets&            localTestSpaceOffsets,
     const TestOffsets&            globalTestSpaceOffsets,
-    const SolutionLocalViews&     solutionLocalViews,
     const SolutionLocalIndexSets& solutionLocalIndexSets,
     const SolutionOffsets&        localSolutionSpaceOffsets,
     const SolutionOffsets&        globalSolutionSpaceOffsets) {
 
   auto cpMatrix = localToGlobalCopier<LocalMatrix, GlobalMatrix,
-                 TestLocalViews, SolutionLocalViews,
                  TestLocalIndexSets, SolutionLocalIndexSets,
                  TestOffsets, SolutionOffsets,
                  mirror> (elementMatrix, matrix,
-                          testLocalViews,
                           testLocalIndexSets,
                           localTestSpaceOffsets,
                           globalTestSpaceOffsets,
-                          solutionLocalViews,
                           solutionLocalIndexSets,
                           localSolutionSpaceOffsets,
                           globalSolutionSpaceOffsets);
@@ -473,51 +437,42 @@ inline void copyLocalToGlobalMatrix(
 
 template<class Indices,
          class LocalMatrix, class GlobalMatrix,
-         class TestLocalViews, class SolutionLocalViews,
          class TestLocalIndexSets, class SolutionLocalIndexSets,
          class TestOffsets, class SolutionOffsets>
 inline void copyLocalToGlobalMatrixSymmetric(
     const LocalMatrix&            elementMatrix,
     GlobalMatrix&                 matrix,
-    const TestLocalViews&         testLocalViews,
     const TestLocalIndexSets&     testLocalIndexSets,
     const TestOffsets&            localTestSpaceOffsets,
     const TestOffsets&            globalTestSpaceOffsets,
-    const SolutionLocalViews&     solutionLocalViews,
     const SolutionLocalIndexSets& solutionLocalIndexSets,
     const SolutionOffsets&        localSolutionSpaceOffsets,
     const SolutionOffsets&        globalSolutionSpaceOffsets) {
   copyLocalToGlobalMatrix<Indices, LocalMatrix, GlobalMatrix,
-                          TestLocalViews, SolutionLocalViews,
                           TestLocalIndexSets, SolutionLocalIndexSets,
                           TestOffsets, SolutionOffsets,
                           true>
                          ( elementMatrix,
                            matrix,
-                           testLocalViews,
                            testLocalIndexSets,
                            localTestSpaceOffsets,
                            globalTestSpaceOffsets,
-                           solutionLocalViews,
                            solutionLocalIndexSets,
                            localSolutionSpaceOffsets,
                            globalSolutionSpaceOffsets);
 }
 
 template<class LocalVector, class GlobalVector,
-         class TestLocalViews, class TestLocalIndexSets,
-         class TestOffsets>
+         class TestLocalIndexSets, class TestOffsets>
 struct localToGlobalRHSCopier
 {
 
   localToGlobalRHSCopier
          (const LocalVector& lv, GlobalVector& gv,
-          TestLocalViews const & testLocalViews,
           TestLocalIndexSets const & testLocalIndexSets,
           TestOffsets const & testLocalOffsets,
           TestOffsets const & testGlobalOffsets)
       : localRhs(lv), rhs(gv),
-        testLocalViews(testLocalViews),
         testLocalIndexSets(testLocalIndexSets),
         testLocalOffsets(testLocalOffsets),
         testGlobalOffsets(testGlobalOffsets) {}
@@ -525,8 +480,6 @@ struct localToGlobalRHSCopier
   template <class TestSpaceIndex>
   void operator() (const TestSpaceIndex& index) const
   {
-    const auto& testLocalView
-        = std::get<TestSpaceIndex::value>(testLocalViews);
     const auto& testLocalIndexSet
         = std::get<TestSpaceIndex::value>(testLocalIndexSets);
     const size_t testLocalOffset = testLocalOffsets[TestSpaceIndex::value];
@@ -555,7 +508,6 @@ private:
   const LocalVector& localRhs;
   GlobalVector& rhs;
 
-  const TestLocalViews & testLocalViews;
   const TestLocalIndexSets & testLocalIndexSets;
   const TestOffsets & testLocalOffsets;
   const TestOffsets & testGlobalOffsets;
@@ -563,22 +515,18 @@ private:
 
 template<class Indices,
          class LocalVector, class GlobalVector,
-         class TestLocalViews,
          class TestLocalIndexSets,
          class TestOffsets>
 inline void copyLocalToGlobalVector(
     const LocalVector&            elementVector,
     GlobalVector&                 vector,
-    const TestLocalViews&         testLocalViews,
     const TestLocalIndexSets&     testLocalIndexSets,
     const TestOffsets&            localTestSpaceOffsets,
     const TestOffsets&            globalTestSpaceOffsets) {
 
   auto cpRhs = localToGlobalRHSCopier<LocalVector, GlobalVector,
-                    TestLocalViews, TestLocalIndexSets,
-                    TestOffsets>
+                    TestLocalIndexSets, TestOffsets>
                          (elementVector, vector,
-                          testLocalViews,
                           testLocalIndexSets,
                           localTestSpaceOffsets,
                           globalTestSpaceOffsets);

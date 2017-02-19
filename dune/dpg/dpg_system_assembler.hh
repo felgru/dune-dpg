@@ -359,9 +359,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     detail::getOccupationPattern<Indices, false>
-                        (solutionLocalViews,
-                         solutionLocalViews,
-                         solutionLocalIndexSets,
+                        (solutionLocalIndexSets,
                          solutionLocalIndexSets,
                          globalSolutionSpaceOffsets,
                          globalSolutionSpaceOffsets,
@@ -420,11 +418,9 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     copyLocalToGlobalMatrix<Indices>(
         elementMatrix,
         matrix,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
@@ -447,7 +443,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     copyLocalToGlobalVector<LFIndices>(
         localRhs,
         rhs,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
@@ -500,9 +495,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     detail::getOccupationPattern<Indices, false>
-                        (solutionLocalViews,
-                         solutionLocalViews,
-                         solutionLocalIndexSets,
+                        (solutionLocalIndexSets,
                          solutionLocalIndexSets,
                          globalSolutionSpaceOffsets,
                          globalSolutionSpaceOffsets,
@@ -532,11 +525,9 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     copyLocalToGlobalMatrix<Indices>(
         elementMatrix,
         matrix,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
@@ -627,7 +618,6 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     copyLocalToGlobalVector<LFIndices>(
         localRhs,
         rhs,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
@@ -1014,7 +1004,8 @@ applyMinimization
 
   auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
 
-  const size_t globalOffset = computeOffset<spaceIndex>(solutionSpaces_);
+  //const size_t globalOffset = computeOffset<spaceIndex>(solutionSpaces_);
+  const size_t globalOffset = 0;
 
   size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
@@ -1075,7 +1066,7 @@ applyMinimization
       // never be both (almost) characteristic.
     }
 
-    using MultiIndex = typename LocalIndexSet::MultiIndex;
+    using MultiIndex = typename std::decay_t<LocalIndexSet>::MultiIndex;
     iterateOverLocalIndexSet(
       localIndexSet,
       [&](size_t i, MultiIndex gi)

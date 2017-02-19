@@ -24,20 +24,18 @@ namespace Dune {
 
   namespace detail {
     template<class GlobalVectorType, class LocalVectorType,
-            class LocalViews, class LocalIndexSets,
+            class LocalIndexSets,
             class Offsets>
     inline void getLocalCoefficients(
         const GlobalVectorType& solution,
         LocalVectorType& solutionElement,
-        const LocalViews& localViews,
         const LocalIndexSets& localIndexSets,
         const Offsets& localOffsets,
         const Offsets& globalOffsets) {
       Hybrid::forEach(
           Std::make_index_sequence<
-              std::tuple_size<LocalViews>::value>{},
+              std::tuple_size<LocalIndexSets>::value>{},
           [&](auto i) {
-            auto const & localView = std::get<i>(localViews);
             auto const & localIndexSet = std::get<i>(localIndexSets);
             iterateOverLocalIndexSet(
               localIndexSet,
@@ -420,7 +418,7 @@ namespace Dune {
     BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
 
     detail::getLocalCoefficients(solution, solutionElement,
-        solutionLocalViews, solutionLocalIndexSets,
+        solutionLocalIndexSets,
         localSolutionSpaceOffsets, globalSolutionSpaceOffsets);
 
     double errSquare = 0;
@@ -594,10 +592,10 @@ namespace Dune {
     BlockVector<FieldVector<double,1> > rhsElement(localTestDofs);
 
     detail::getLocalCoefficients(solution, solutionElement,
-        solutionLocalViews, solutionLocalIndexSets,
+        solutionLocalIndexSets,
         localSolutionSpaceOffsets, globalSolutionSpaceOffsets);
     detail::getLocalCoefficients(rhs, rhsElement,
-        testLocalViews, testLocalIndexSets,
+        testLocalIndexSets,
         localTestSpaceOffsets, globalTestSpaceOffsets);
 
     // We grab the inner product matrix in the innerProductMatrix variable (IP)
