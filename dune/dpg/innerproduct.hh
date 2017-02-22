@@ -9,10 +9,7 @@
 #include <memory>
 #include <type_traits>
 
-#include <boost/mpl/set.hpp>
-#include <boost/mpl/transform.hpp>
-
-#include <boost/fusion/container/vector/convert.hpp>
+#include <boost/hana.hpp>
 
 #include <dune/common/hybridutilities.hh>
 #include <dune/istl/matrix.hh>
@@ -167,16 +164,17 @@ getOccupationPattern(MatrixIndexSet& nb) const
   GridView gridView = std::get<0>(testSpaces).gridView();
 
   /* create set of index pairs from innerProductTerms to loop over. */
-  typedef typename boost::mpl::fold<
-      typename boost::mpl::transform<
-          /* This as_vector is probably not needed for boost::fusion 1.58
-           * or higher. */
-          typename boost::fusion::result_of::as_vector<InnerProductTerms>::type
-        , mpl::firstTwo<boost::mpl::_1>
-        >::type
-    , boost::mpl::set0<>
-    , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-    >::type IndexPairs;
+  namespace hana = boost::hana;
+  auto indexPairs = hana::to<hana::set_tag>(
+      hana::transform(hana::to<hana::tuple_tag>(
+          hana::make_range(hana::int_c<0>,
+            hana::int_c<std::tuple_size<InnerProductTerms>::value>)),
+        [](auto i) {
+          using Term = std::tuple_element_t<i.value, InnerProductTerms>;
+          return hana::tuple<std::tuple_element_t<0, Term>,
+                             std::tuple_element_t<1, Term>>{};
+        }));
+  using IndexPairs = decltype(hana::to<hana::tuple_tag>(indexPairs));
 
   for(const auto& e : elements(gridView))
   {

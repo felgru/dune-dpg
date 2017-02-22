@@ -12,16 +12,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <boost/mpl/empty_sequence.hpp>
-#include <boost/mpl/identity.hpp>
-#include <boost/mpl/joint_view.hpp>
-#include <boost/mpl/range_c.hpp>
-#include <boost/mpl/set.hpp>
-#include <boost/mpl/transform.hpp>
-
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/mpl.hpp>
-#include <boost/fusion/container/vector/convert.hpp>
+#include <boost/hana.hpp>
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -363,21 +354,12 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   MatrixIndexSet occupationPattern;
   occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
 
-  typedef
-      typename boost::fusion::result_of::as_vector<
-                typename boost::mpl::range_c<
-                    size_t, 0, std::tuple_size<SolutionSpaces>::value
-                >::type
-            >::type IndexRange;
-  typedef
-      typename boost::mpl::fold<
-            typename boost::mpl::transform<
-                IndexRange
-              , mpl::prefixSequenceWith<IndexRange, boost::mpl::_1>
-              >::type
-          , boost::mpl::empty_sequence
-          , boost::mpl::joint_view<boost::mpl::_1, boost::mpl::_2>
-          >::type Indices;
+  namespace hana = boost::hana;
+  auto indexRange = hana::make_range(hana::int_c<0>,
+            hana::int_c<std::tuple_size<SolutionSpaces>::value>);
+  auto indices = hana::cartesian_product(hana::make_tuple(indexRange,
+                                                          indexRange));
+  using Indices = decltype(indices);
 
   for(const auto& e : elements(gridView))
   {
@@ -451,19 +433,18 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
 
-    typedef typename boost::mpl::fold<
-        typename boost::mpl::transform<
-            /* This as_vector is probably not needed for boost::fusion 1.58
-             * or higher. */
-            typename boost::fusion::result_of::as_vector<
-                  typename std::remove_reference<
-                      decltype(bilinearForm_.getTerms())>::type
-                >::type
-          , mpl::second<boost::mpl::_1>
-          >::type
-      , boost::mpl::set0<>
-      , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-      >::type LFIndices;
+    // TODO: shouldn't LFIndices be taken from rhsLinearFrom.getTerms()?
+    namespace hana = boost::hana;
+    using BilinearTerms = std::decay_t<decltype(bilinearForm_.getTerms())>;
+    auto lfIndices = hana::to<hana::set_tag>(
+        hana::transform(hana::to<hana::tuple_tag>(
+            hana::make_range(hana::int_c<0>,
+                hana::int_c<std::tuple_size<BilinearTerms>::value>)),
+          [](auto i) -> auto {
+            using Term = std::tuple_element_t<i.value, BilinearTerms>;
+            return hana::type_c<std::tuple_element_t<1, Term>>;
+          }));
+    using LFIndices = decltype(hana::to<hana::tuple_tag>(lfIndices));
 
     // Add local right-hand side onto the global right-hand side
     copyLocalToGlobalVector<LFIndices>(
@@ -499,21 +480,12 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   MatrixIndexSet occupationPattern;
   occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
 
-  typedef
-      typename boost::fusion::result_of::as_vector<
-                typename boost::mpl::range_c<
-                    size_t, 0, std::tuple_size<SolutionSpaces>::value
-                >::type
-            >::type IndexRange;
-  typedef
-      typename boost::mpl::fold<
-            typename boost::mpl::transform<
-                IndexRange
-              , mpl::prefixSequenceWith<IndexRange, boost::mpl::_1>
-              >::type
-          , boost::mpl::empty_sequence
-          , boost::mpl::joint_view<boost::mpl::_1, boost::mpl::_2>
-          >::type Indices;
+  namespace hana = boost::hana;
+  auto indexRange = hana::make_range(hana::int_c<0>,
+            hana::int_c<std::tuple_size<SolutionSpaces>::value>);
+  auto indices = hana::cartesian_product(hana::make_tuple(indexRange,
+                                                          indexRange));
+  using Indices = decltype(indices);
 
   for(const auto& e : elements(gridView))
   {
@@ -626,19 +598,16 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     /* copy every local subvector indexed by an index from
      * lfIndices exactly once. */
-    typedef typename boost::mpl::fold<
-        typename boost::mpl::transform<
-            /* This as_vector is probably not needed for boost::fusion 1.58
-             * or higher. */
-            typename boost::fusion::result_of::as_vector<
-                  typename std::remove_reference<
-                      decltype(bilinearForm_.getTerms())>::type
-                >::type
-          , mpl::second<boost::mpl::_1>
-          >::type
-      , boost::mpl::set0<>
-      , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-      >::type LFIndices;
+    namespace hana = boost::hana;
+    using BilinearTerms = std::decay_t<decltype(bilinearForm_.getTerms())>;
+    auto lfIndices = hana::to<hana::set_tag>(
+        hana::transform(hana::make_range(hana::int_c<0>,
+              hana::int_c<std::tuple_size<BilinearTerms>::value>),
+          [](auto i) {
+            using Term = std::tuple_element_t<i.value, BilinearTerms>;
+            return hana::type_c<std::tuple_element_t<1, Term>>;
+          }));
+    using LFIndices = decltype(lfIndices);
 
     // Add local right-hand side onto the global right-hand side
     copyLocalToGlobalVector<LFIndices>(

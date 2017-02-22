@@ -11,15 +11,6 @@
 #include <type_traits>
 #include <utility>
 
-#include <boost/mpl/identity.hpp>
-#include <boost/mpl/range_c.hpp>
-#include <boost/mpl/set.hpp>
-#include <boost/mpl/transform.hpp>
-
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/mpl.hpp>
-#include <boost/fusion/container/vector/convert.hpp>
-
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -199,29 +190,40 @@ private:
    * This will be used later, when copying the local matrices into
    * the global one.
    */
-  typedef typename boost::mpl::fold<
-      typename boost::mpl::transform<
-          /* This as_vector is probably not needed for boost::fusion 1.58
-           * or higher. */
-          typename boost::fusion::result_of::as_vector<
-                typename BilinearForm::Terms
-              >::type
-        , detail::mpl::firstTwo<boost::mpl::_1>
-        >::type
-    , boost::mpl::set0<>
-    , boost::mpl::insert<boost::mpl::_1, boost::mpl::_2>
-    >::type BFIndices;
+  static constexpr auto bfIndices() {
+    namespace hana = boost::hana;
+    using BilinearTerms = typename BilinearForm::Terms;
+    auto bfIndices = hana::to<hana::set_tag>(
+        hana::transform(hana::to<hana::tuple_tag>(
+            hana::make_range(hana::int_c<0>,
+                hana::int_c<std::tuple_size<BilinearTerms>::value>)),
+          [](auto i) -> auto {
+            using Term = std::tuple_element_t<i.value, BilinearTerms>;
+            return hana::tuple<std::tuple_element_t<0, Term>,
+                               std::tuple_element_t<1, Term>>{};
+          }));
+    return hana::to<hana::tuple_tag>(bfIndices);
+  }
 
-  typedef typename boost::mpl::fold<
-      typename boost::mpl::transform<
-          typename boost::fusion::result_of::as_vector<
-                typename InnerProduct::Terms
-              >::type
-        , detail::mpl::firstTwo<boost::mpl::_1>
-        >::type
-    , boost::mpl::set0<>
-    , boost::mpl::insert<boost::mpl::_1, boost::mpl::_2>
-    >::type IPIndices;
+  using BFIndices = decltype(bfIndices());
+
+  static constexpr auto ipIndices() {
+    namespace hana = boost::hana;
+    using InnerProductTerms = typename InnerProduct::Terms;
+    auto ipIndices = hana::to<hana::set_tag>(
+        hana::transform(hana::to<hana::tuple_tag>(
+            hana::make_range(hana::int_c<0>,
+                hana::int_c<std::tuple_size<InnerProductTerms>::value>)),
+          [](auto i) -> auto {
+            using Term = std::tuple_element_t<i.value, InnerProductTerms>;
+            return hana::tuple<std::tuple_element_t<0, Term>,
+                               std::tuple_element_t<1, Term>>{};
+          }));
+    return hana::to<hana::tuple_tag>(ipIndices);
+  }
+
+  // TODO: IPIndices seems to have some type_c too much.
+  using IPIndices = decltype(ipIndices());
 
   TestSpaces     testSpaces;
   SolutionSpaces solutionSpaces;
@@ -402,19 +404,17 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     /* create set of indices to loop over when copying the local matrices
      * into the global one.
      */
-    typedef typename boost::mpl::fold<
-        typename boost::mpl::transform<
-            /* This as_vector is probably not needed for boost::fusion 1.58
-             * or higher. */
-            typename boost::fusion::result_of::as_vector<
-                  typename std::remove_reference<
-                      decltype(rhsLinearForm.getTerms())>::type
-                >::type
-          , mpl::first<boost::mpl::_1>
-          >::type
-      , boost::mpl::set0<>
-      , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-      >::type LFIndices;
+    namespace hana = boost::hana;
+    using LinearTerms = std::decay_t<decltype(rhsLinearForm.getTerms())>;
+    auto lfIndices = hana::to<hana::set_tag>(
+        hana::transform(hana::to<hana::tuple_tag>(
+            hana::make_range(hana::int_c<0>,
+                hana::int_c<std::tuple_size<LinearTerms>::value>)),
+          [](auto i) -> auto {
+            using Term = std::tuple_element_t<i.value, LinearTerms>;
+            return hana::type_c<std::tuple_element_t<0, Term>>;
+          }));
+    using LFIndices = decltype(hana::to<hana::tuple_tag>(lfIndices));
 
     // Add local right-hand side onto the global right-hand side
     /* copy every local subvector indexed by an index from

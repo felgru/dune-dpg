@@ -26,11 +26,12 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 ### Changed
 * We now require version 2.5 of the DUNE core modules and a fully C++14
   compatible compiler, e.g. GCC-6.
-* Restrict usage of Boost::Fusion.
+* Replace all usage of Boost::Fusion and MPI with C++14 metaprogramming.
   In many places we now use functions from dune/common/hybridutilities.hh
-  or dune/common/tupleutility.hh instead.
-  Unfortunately, we couldn't completely get rid of Boost::Fusion
-  and the incompatibilities with versions >1.59 still remains.
+  or dune/common/tupleutility.hh instead. In the remaining places, where
+  we needed to do some more complicated type computations, we now use
+  Boost Hana. Thus our Boost dependency has been increased to Boost 1.63
+  or newer.
 * ErrorTools: the element-wise operations are now marked as private.
 * README, INSTALL: Mention dune-uggrid instead of ug.
 * Remove some noise from the API documentation.
