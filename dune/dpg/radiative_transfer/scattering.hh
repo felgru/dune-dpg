@@ -286,12 +286,10 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
         = localToGlobalRHSCopier
             <typename std::remove_reference<decltype(localScattering)>::type,
              typename std::remove_reference<decltype(scattering)>::type,
-             typename std::remove_reference<decltype(testLocalViews)>::type,
              typename std::remove_reference<decltype(testLocalIndexSets)>::type,
              typename std::remove_reference<decltype(globalTestSpaceOffsets)>
                          ::type>
             (localScattering, scattering,
-             testLocalViews,
              testLocalIndexSets,
              {0},
              globalTestSpaceOffsets);

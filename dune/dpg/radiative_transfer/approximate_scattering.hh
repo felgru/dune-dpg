@@ -261,12 +261,10 @@ precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
         = localToGlobalRHSCopier
             <typename std::remove_reference<decltype(localScattering)>::type,
              typename std::remove_reference<decltype(scattering)>::type,
-             typename std::remove_reference<decltype(solutionLocalViews)>::type,
              typename std::remove_reference<decltype(solutionLocalIndexSets)>
                          ::type,
              typename std::remove_reference<decltype(zeroes)>::type>
             (localScattering, scattering,
-             solutionLocalViews,
              solutionLocalIndexSets,
              zeroes,
              zeroes);
@@ -276,12 +274,10 @@ precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
         = localToGlobalRHSCopier
             <typename std::remove_reference<decltype(localNormSquared)>::type,
              typename std::remove_reference<decltype(normSquared)>::type,
-             typename std::remove_reference<decltype(solutionLocalViews)>::type,
              typename std::remove_reference<decltype(solutionLocalIndexSets)>
                          ::type,
              typename std::remove_reference<decltype(zeroes)>::type>
             (localNormSquared, normSquared,
-             solutionLocalViews,
              solutionLocalIndexSets,
              zeroes,
              zeroes);
