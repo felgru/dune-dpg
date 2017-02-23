@@ -276,7 +276,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
         // position of the quadrature point within the subelement
         const FieldVector<double,dim> elementQuadPosSubCell =
-                intersection.geometryInInside().global(quadFacePos);
+                geometryInInside(intersection).global(quadFacePos);
 
         if(type == IntegrationType::travelDistanceWeighted) {
           integrationWeight *= detail::travelDistance(

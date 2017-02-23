@@ -338,22 +338,18 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     copyLocalToGlobalMatrix<IPIndices>(
         ipElementMatrix,
         matrix,
-        testLocalViews,
         testLocalIndexSets,
         localTestSpaceOffsets,
         globalTestSpaceOffsets,
-        testLocalViews,
         testLocalIndexSets,
         localTestSpaceOffsets,
         globalTestSpaceOffsets);
     copyLocalToGlobalMatrixSymmetric<BFIndices>(
         bfElementMatrix,
         matrix,
-        testLocalViews,
         testLocalIndexSets,
         localTestSpaceOffsets,
         globalTestSpaceOffsets,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
@@ -426,7 +422,6 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     copyLocalToGlobalVector<LFIndices>(
         localRhs,
         rhs,
-        localViews,
         localIndexSets,
         rhsLinearForm.getLocalSpaceOffsets(),
         globalSpaceOffsets);

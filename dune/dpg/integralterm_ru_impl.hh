@@ -272,7 +272,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
         // position of the quadrature point within the subelement
         const FieldVector<double,dim> elementQuadPosSubCell =
-                intersection.geometryInInside().global(quadFacePos);
+                geometryInInside(intersection).global(quadFacePos);
 
         // position of the quadrature point within the reference element
         const FieldVector<double,dim> elementQuadPos =

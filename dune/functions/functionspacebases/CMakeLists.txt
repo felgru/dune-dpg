@@ -1,6 +1,9 @@
 add_subdirectory(test)
 
 install(FILES
+        constrainedglobalbasis.hh
+        constrainedlocalindexset.hh
+        hangingnodep2nodalbasis.hh
         optimaltestbasis.hh
         pqkfacenodalbasis.hh
         pqksubsampleddgbasis.hh

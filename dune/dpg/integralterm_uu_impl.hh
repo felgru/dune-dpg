@@ -1,3 +1,5 @@
+#include "subgrid_workarounds.hh"
+
 namespace Dune {
 namespace detail {
 
@@ -124,7 +126,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
   unsigned int nOutflowIntersections = 0;
   for (auto&& intersection : intersections(gridView, element))
   {
-    double prod = lhsBeta * intersection.centerUnitOuterNormal();
+    double prod = lhsBeta * centerUnitOuterNormal(intersection);
     if(prod > 0)
       ++nOutflowIntersections;
     else if (prod < 0)
@@ -140,7 +142,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
   for (auto&& intersection : intersections(gridView, element))
   {
     if(type == IntegrationType::travelDistanceWeighted &&
-       lhsBeta * intersection.centerUnitOuterNormal() >= 0) {
+       lhsBeta * centerUnitOuterNormal(intersection) >= 0) {
       /* Only integrate over inflow boundaries. */
       continue;
     }
@@ -189,7 +191,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
             intersection.geometry().integrationElement(quadFacePos);
 
         const FieldVector<double,dim>& centerOuterNormal =
-            intersection.centerUnitOuterNormal();
+               centerUnitOuterNormal(intersection);
 
         int sign = 1;
         bool signfound = false;
@@ -216,7 +218,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
       // position of the quadrature point within the element
       const FieldVector<double,dim> elementQuadPos =
-              intersection.geometryInInside().global(quadFacePos);
+              geometryInInside(intersection).global(quadFacePos);
 
       if(type == IntegrationType::travelDistanceWeighted) {
         // factor r_K(s)/|beta|

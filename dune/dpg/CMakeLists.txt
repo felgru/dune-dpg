@@ -26,6 +26,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               quadrature.hh
               rhs_assembler.hh
               saddlepoint_system_assembler.hh
+              subgrid_workarounds.hh
               testspace_coefficient_matrix.hh
               type_traits.hh
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/dpg)

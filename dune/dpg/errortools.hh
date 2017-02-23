@@ -14,6 +14,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
 
+#include <dune/dpg/functions/localindexsetiteration.hh>
 #include "assemble_helper.hh"
 #include "cholesky.hh"
 #include "quadrature.hh"
@@ -23,27 +24,33 @@ namespace Dune {
 
   namespace detail {
     template<class GlobalVectorType, class LocalVectorType,
-            class LocalViews, class LocalIndexSets,
+            class LocalIndexSets,
             class Offsets>
     inline void getLocalCoefficients(
         const GlobalVectorType& solution,
         LocalVectorType& solutionElement,
-        const LocalViews& localViews,
         const LocalIndexSets& localIndexSets,
         const Offsets& localOffsets,
         const Offsets& globalOffsets) {
       Hybrid::forEach(
           Std::make_index_sequence<
-              std::tuple_size<LocalViews>::value>{},
+              std::tuple_size<LocalIndexSets>::value>{},
           [&](auto i) {
-            auto const & localView = std::get<i>(localViews);
             auto const & localIndexSet = std::get<i>(localIndexSets);
-            const size_t dofElement = localView.size();
-            for (size_t j=0; j<dofElement; j++)
-            {
-              solutionElement[j + localOffsets[i]]
-                  = solution[globalOffsets[i] + localIndexSet.index(j)[0]];
-            }
+            iterateOverLocalIndexSet(
+              localIndexSet,
+              [&](size_t j, auto gj) {
+                solutionElement[j + localOffsets[i]]
+                    = solution[globalOffsets[i] + gj[0]];
+              },
+              [&](size_t j){
+                solutionElement[j + localOffsets[i]] = 0;
+              },
+              [&](size_t j, auto gj, double wj) {
+                solutionElement[j + localOffsets[i]]
+                    += wj * solution[globalOffsets[i] + gj[0]];
+              }
+            );
           });
     }
   }
@@ -411,7 +418,7 @@ namespace Dune {
     BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
 
     detail::getLocalCoefficients(solution, solutionElement,
-        solutionLocalViews, solutionLocalIndexSets,
+        solutionLocalIndexSets,
         localSolutionSpaceOffsets, globalSolutionSpaceOffsets);
 
     double errSquare = 0;
@@ -585,10 +592,10 @@ namespace Dune {
     BlockVector<FieldVector<double,1> > rhsElement(localTestDofs);
 
     detail::getLocalCoefficients(solution, solutionElement,
-        solutionLocalViews, solutionLocalIndexSets,
+        solutionLocalIndexSets,
         localSolutionSpaceOffsets, globalSolutionSpaceOffsets);
     detail::getLocalCoefficients(rhs, rhsElement,
-        testLocalViews, testLocalIndexSets,
+        testLocalIndexSets,
         localTestSpaceOffsets, globalTestSpaceOffsets);
 
     // We grab the inner product matrix in the innerProductMatrix variable (IP)

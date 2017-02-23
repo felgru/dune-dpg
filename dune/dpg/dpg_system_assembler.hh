@@ -28,6 +28,7 @@
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 
+#include <dune/dpg/functions/localindexsetiteration.hh>
 #include "assemble_helper.hh"
 #include "assemble_types.hh"
 #include "bilinearform.hh"
@@ -35,6 +36,7 @@
 #include "quadrature.hh"
 #include "linearform.hh"
 #include "localevaluation.hh"
+#include "subgrid_workarounds.hh"
 #include "testspace_coefficient_matrix.hh"
 
 
@@ -358,9 +360,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     detail::getOccupationPattern<Indices, false>
-                        (solutionLocalViews,
-                         solutionLocalViews,
-                         solutionLocalIndexSets,
+                        (solutionLocalIndexSets,
                          solutionLocalIndexSets,
                          globalSolutionSpaceOffsets,
                          globalSolutionSpaceOffsets,
@@ -419,11 +419,9 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     copyLocalToGlobalMatrix<Indices>(
         elementMatrix,
         matrix,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
@@ -446,7 +444,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     copyLocalToGlobalVector<LFIndices>(
         localRhs,
         rhs,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
@@ -499,9 +496,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     detail::getOccupationPattern<Indices, false>
-                        (solutionLocalViews,
-                         solutionLocalViews,
-                         solutionLocalIndexSets,
+                        (solutionLocalIndexSets,
                          solutionLocalIndexSets,
                          globalSolutionSpaceOffsets,
                          globalSolutionSpaceOffsets,
@@ -531,11 +526,9 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     copyLocalToGlobalMatrix<Indices>(
         elementMatrix,
         matrix,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
@@ -626,7 +619,6 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     copyLocalToGlobalVector<LFIndices>(
         localRhs,
         rhs,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
@@ -832,7 +824,7 @@ applyWeakBoundaryCondition
       if (intersection.boundary())
       { // the intersection is at the (physical) boundary of the domain
         const FieldVector<double,dim>& centerOuterNormal =
-                intersection.centerUnitOuterNormal();
+               centerUnitOuterNormal(intersection);
 
         if ((beta*centerOuterNormal) > -1e-10)
         { // everywhere except inflow boundary
@@ -853,7 +845,7 @@ applyWeakBoundaryCondition
 
             // position of the quadrature point within the element
             const FieldVector<double,dim> elementQuadPos
-                = intersection.geometryInInside().global(quadFacePos);
+                = geometryInInside(intersection).global(quadFacePos);
 
             // values of the shape functions
             std::vector<FieldVector<double,1> > solutionValues;
@@ -873,17 +865,16 @@ applyWeakBoundaryCondition
         }
       }
     }
-    for (size_t i=0; i<n; i++)
-    {
-      auto row = localIndexSet.index(i)[0];
-      for (size_t j=0; j<n; j++)
-      {
-        auto col = localIndexSet.index(j)[0];
-        matrix[row+globalOffset][col+globalOffset]
-                        += elementMatrix[i][j];
-
-      }
-    }
+    addToGlobalMatrix(
+        localIndexSet,
+        localIndexSet,
+        [&elementMatrix](size_t i, size_t j) -> auto {
+          return elementMatrix[i][j];
+        },
+        [&](auto gi, auto gj) -> auto& {
+          return matrix[gi[0]+globalOffset][gj[0]+globalOffset];
+        }
+    );
   }
 }
 
@@ -919,7 +910,7 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     for (auto&& intersection : intersections(gridView, e))
     {
       const bool characteristic =
-          fabs(beta * intersection.centerUnitOuterNormal()) < delta;
+          fabs(beta * centerUnitOuterNormal(intersection)) < delta;
       characteristicFaces[intersection.indexInInside()] = characteristic;
       characteristicFound = characteristicFound || characteristic;
     }
@@ -1014,7 +1005,8 @@ applyMinimization
 
   auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
 
-  const size_t globalOffset = computeOffset<spaceIndex>(solutionSpaces_);
+  //const size_t globalOffset = computeOffset<spaceIndex>(solutionSpaces_);
+  const size_t globalOffset = 0;
 
   size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
@@ -1023,6 +1015,7 @@ applyMinimization
   auto solutionLocalViews = getLocalViews(solutionSpaces_);
 
   auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
+  using LocalIndexSet = decltype(localIndexSet);
 
   const bool epsilonSmallerDelta(epsilon<delta);
 
@@ -1049,7 +1042,7 @@ applyMinimization
     for (auto&& intersection : intersections(gridView, e))
     {
       const FieldVector<double,dim>& centerOuterNormal =
-              intersection.centerUnitOuterNormal();
+             centerUnitOuterNormal(intersection);
       //set relevant faces for almost characteristic faces
       relevantFaces[intersection.indexInInside()]
           = (std::abs(beta*centerOuterNormal) < delta);
@@ -1074,20 +1067,63 @@ applyMinimization
       // never be both (almost) characteristic.
     }
 
-    for (size_t i=0; i<n; i++)
-    {
-      if (relevantDOFs[i])
+    using MultiIndex = typename std::decay_t<LocalIndexSet>::MultiIndex;
+    iterateOverLocalIndexSet(
+      localIndexSet,
+      [&](size_t i, MultiIndex gi)
       {
-        auto row = localIndexSet.index(i)[0];
-        for (size_t j=0; j<n; j++)
+        if (relevantDOFs[i])
         {
-          auto col = localIndexSet.index(j)[0];
-          matrix[row+globalOffset][col+globalOffset]
-              += elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
-                              [localSolutionSpaceOffsets[spaceIndex]+j];
+          auto row = gi[0];
+          iterateOverLocalIndexSet(
+            localIndexSet,
+            [&](size_t j, MultiIndex gj)
+            {
+              auto col = gj[0];
+              matrix[row+globalOffset][col+globalOffset]
+                  += elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                  [localSolutionSpaceOffsets[spaceIndex]+j];
+            },
+            [](size_t j) {},
+            [&](size_t j, MultiIndex gj, double wj)
+            {
+              auto col = gj[0];
+              matrix[row+globalOffset][col+globalOffset]
+                += wj * elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                     [localSolutionSpaceOffsets[spaceIndex]+j];
+            }
+          );
+        }
+      },
+      [](size_t i) {},
+      [&](size_t i, MultiIndex gi, double wi)
+      {
+        if (relevantDOFs[i])
+        {
+          auto row = gi[0];
+          iterateOverLocalIndexSet(
+            localIndexSet,
+            [&](size_t j, MultiIndex gj)
+            {
+              auto col = gj[0];
+              matrix[row+globalOffset][col+globalOffset]
+                  += wi
+                     * elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                    [localSolutionSpaceOffsets[spaceIndex]+j];
+            },
+            [](size_t j) {},
+            [&](size_t j, MultiIndex gj, double wj)
+            {
+              auto col = gj[0];
+              matrix[row+globalOffset][col+globalOffset]
+                += wi * wj
+                   * elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                  [localSolutionSpaceOffsets[spaceIndex]+j];
+            }
+          );
         }
       }
-    }
+    );
   }
 }
 

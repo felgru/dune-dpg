@@ -9,7 +9,12 @@
 #include <tuple>
 #include <vector>
 
+#include <dune/common/deprecated.hh>
+DUNE_NO_DEPRECATED_BEGIN
+// Older Boost versions spill a lot of deprecation warnings as they
+// still use std::auto_ptr.
 #include <boost/math/constants/constants.hpp>
+DUNE_NO_DEPRECATED_END
 
 #include <dune/common/exceptions.hh> // We use exceptions
 

@@ -5,7 +5,11 @@
 
 #include <vector>
 
+#include <dune/common/exceptions.hh>
 #include <dune/common/fvector.hh>
+
+#include <dune/dpg/functions/localindexsetiteration.hh>
+#include <dune/dpg/subgrid_workarounds.hh>
 
 #include <dune/geometry/referenceelements.hh>
 #include <dune/geometry/type.hh>
@@ -100,6 +104,7 @@ namespace Dune {
 
     auto localView = feBasis.localView();
     auto localIndexSet = feBasis.localIndexSet();
+    using LocalIndexSet = decltype(localIndexSet);
 
 
     for(const auto& e : elements(gridView))
@@ -108,9 +113,6 @@ namespace Dune {
       const auto& localFE = localView.tree().finiteElement();
 
       localIndexSet.bind(localView);
-
-      // dofs in the current finite element
-      const unsigned int dofsLocal = localFE.localCoefficients().size();
 
       const unsigned int nFace
           = ReferenceElements<double, dim>::general(e.type()).size(dim-1);
@@ -135,7 +137,7 @@ namespace Dune {
 
         // outer normal vector in the center of the face
         const FieldVector<double,dim>& centerOuterNormal =
-               intersection.centerUnitOuterNormal();
+               centerUnitOuterNormal(intersection);
 
         // n.beta
         const double scalarProd = centerOuterNormal * beta;
@@ -163,29 +165,57 @@ namespace Dune {
       }
 
       // For each dof, we check whether it belongs to the inflow boundary
-      for(unsigned int i=0; i<dofsLocal; i++)
-      {
-        unsigned int dofOnInflowBoundary = 0;
-
-        // localkey of dof i
-        const auto& dofLocalKey = localFE.localCoefficients().localKey(i);
-
-        // Codimension and subentity index of the current dof
-        const unsigned int dofCodim = dofLocalKey.codim();
-        const unsigned int dofIndex = dofLocalKey.subEntity();
-
-        if(dofCodim == 1) //the dof belongs to a face
+      using size_type = typename LocalIndexSet::size_type;
+      using MultiIndex = typename LocalIndexSet::MultiIndex;
+      iterateOverLocalIndexSet(std::move(localIndexSet),
+        [&](size_type i, MultiIndex g)
         {
-           dofOnInflowBoundary += faceOnInflowBoundary[dofIndex];
-        }
-        if(dofCodim == 2) //the dof belongs to a vertex
-        {
-          dofOnInflowBoundary += vertexOnInflowBoundary[dofIndex];
-        }
+          unsigned int dofOnInflowBoundary = 0;
 
-        dirichletNodesInt[ localIndexSet.index(i)[0] ] += dofOnInflowBoundary;
+          // localkey of dof i
+          const auto& dofLocalKey = localFE.localCoefficients().localKey(i);
 
-      } // end dof
+          // Codimension and subentity index of the current dof
+          const unsigned int dofCodim = dofLocalKey.codim();
+          const unsigned int dofIndex = dofLocalKey.subEntity();
+
+          if(dofCodim == 1) //the dof belongs to a face
+          {
+            dofOnInflowBoundary += faceOnInflowBoundary[dofIndex];
+          }
+          if(dofCodim == 2) //the dof belongs to a vertex
+          {
+            dofOnInflowBoundary += vertexOnInflowBoundary[dofIndex];
+          }
+
+          dirichletNodesInt[ g[0] ] += dofOnInflowBoundary;
+
+        },
+        [&](size_type i) {
+          unsigned int dofOnInflowBoundary = 0;
+
+          // localkey of dof i
+          const auto& dofLocalKey = localFE.localCoefficients().localKey(i);
+
+          // Codimension and subentity index of the current dof
+          const unsigned int dofCodim = dofLocalKey.codim();
+          const unsigned int dofIndex = dofLocalKey.subEntity();
+
+          if(dofCodim == 1) //the dof belongs to a face
+          {
+            dofOnInflowBoundary += faceOnInflowBoundary[dofIndex];
+          }
+          if(dofCodim == 2) //the dof belongs to a vertex
+          {
+            dofOnInflowBoundary += vertexOnInflowBoundary[dofIndex];
+          }
+
+          if(dofOnInflowBoundary) {
+            DUNE_THROW(InvalidStateException,
+                "The boundary should not contain constrained DoFs!");
+          }
+        },
+        [](size_type, MultiIndex, double) {});
 
 
     } // end element e
@@ -213,6 +243,7 @@ namespace Dune {
 
     auto localView = feBasis.localView();
     auto localIndexSet = feBasis.localIndexSet();
+    using LocalIndexSet = decltype(localIndexSet);
 
     BoundaryCondition<Function> bc = BoundaryCondition<Function>(g);
     std::vector<double> out;
@@ -228,12 +259,19 @@ namespace Dune {
       // dofs in the current finite element
       const unsigned int dofsLocal = localFE.localCoefficients().size();
 
-      localInterp.interpolate(bc,out);
+      localInterp.interpolate(bc, out);
 
-      for(unsigned int i=0; i<dofsLocal; i++)
-      {
-        rhsInflowContrib[ localIndexSet.index(i)[0] ] = out[i];
-      }
+      using size_type = typename LocalIndexSet::size_type;
+      using MultiIndex = typename LocalIndexSet::MultiIndex;
+      iterateOverLocalIndexSet(std::move(localIndexSet),
+        [&](size_type i, MultiIndex g) {
+          rhsInflowContrib[ g[0] ] = out[i];
+        },
+        [](size_type) {
+          DUNE_THROW(InvalidStateException,
+              "The boundary should not contain constrained DoFs!");
+        },
+        [](size_type, MultiIndex, double) {});
     }
 }
 
