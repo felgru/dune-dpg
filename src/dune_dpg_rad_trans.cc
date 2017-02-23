@@ -39,7 +39,12 @@
 
 #include <dune/dpg/radiative_transfer/scattering.hh>
 
+#include <dune/common/deprecated.hh>
+DUNE_NO_DEPRECATED_BEGIN
+// Older Boost versions spill a lot of deprecation warnings as they
+// still use std::auto_ptr.
 #include <boost/math/constants/constants.hpp>
+DUNE_NO_DEPRECATED_END
 
 
 using namespace Dune;
