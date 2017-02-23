@@ -168,7 +168,7 @@ public:
 
   void initializeIndices()
   {
-    detail::computeOffsets(
+    Dune::detail::computeOffsets(
              globalOffsets,
              testspaceCoefficientMatrix_.bilinearForm().getSolutionSpaces());
   }
@@ -275,8 +275,8 @@ private:
   using TestSearchFiniteElement
       = typename TestSearchSpace::LocalView::Tree::FiniteElement;
 
-  using SolutionLocalViews = detail::getLocalViews_t<SolutionSpaces>;
-  using TestLocalViews = detail::getLocalViews_t<TestSearchSpaces>;
+  using SolutionLocalViews = Dune::detail::getLocalViews_t<SolutionSpaces>;
+  using TestLocalViews = Dune::detail::getLocalViews_t<TestSearchSpaces>;
 
   static const bool testSearchSpaceIsRefined
     = is_RefinedFiniteElement<TestSearchSpace>::value;
@@ -308,9 +308,9 @@ public:
     testspaceCoefficientMatrix(testCoeffMat),
     finiteElement_(nullptr),
     testSearchSpace_(nullptr),
-    localViewsSolution_(detail::getLocalViews(testCoeffMat.bilinearForm()
+    localViewsSolution_(Dune::detail::getLocalViews(testCoeffMat.bilinearForm()
                                                 .getSolutionSpaces())),
-    localViewsTest(detail::getLocalViews(testCoeffMat.bilinearForm()
+    localViewsTest(Dune::detail::getLocalViews(testCoeffMat.bilinearForm()
                                                     .getTestSpaces()))
   {}
 
@@ -384,11 +384,12 @@ public:
   using Node = typename NodeFactory::template Node<TP>;
 
   typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
-  typedef detail::getLocalIndexSets_t<SolutionSpaces>  SolutionLocalIndexSets;
+  typedef Dune::detail::getLocalIndexSets_t<SolutionSpaces>
+      SolutionLocalIndexSets;
 
   OptimalTestBasisNodeIndexSet(const NodeFactory& nodeFactory) :
     nodeFactory_(&nodeFactory),
-    solutionLocalIndexSets_(detail::getLocalIndexSets(
+    solutionLocalIndexSets_(Dune::detail::getLocalIndexSets(
                       nodeFactory.testspaceCoefficientMatrix_
                           .bilinearForm().getSolutionSpaces()))
   {}
@@ -408,8 +409,8 @@ public:
   {
     node_ = &node;
 
-    detail::bindLocalIndexSets(solutionLocalIndexSets_,
-                               node.localViewsSolution());
+    Dune::detail::bindLocalIndexSets(solutionLocalIndexSets_,
+                                     node.localViewsSolution());
   }
 
   /** \brief Unbind the view
