@@ -23,7 +23,7 @@ Additional to the Dune libraries, you'll need the following programs and
 libraries installed on your system:
 
   - Programs:
-    - a C++11-compatible compiler (e.g. GCC >= 4.9)
+    - a C++14-compatible compiler (e.g. GCC >= 6)
     - cmake >= 2.8.12
   - Libraries:
     - Boost Fusion >= 1.56, < 1.60
