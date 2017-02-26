@@ -68,6 +68,7 @@ namespace Dune {
         const BlockVector<FieldVector<double,1> >& );
 
     template <unsigned int subsamples, class FEBasis, class VolumeTerms>
+    static
     double computeL2error(const FEBasis& ,
                           const BlockVector<FieldVector<double,1> >& ,
                           VolumeTerms&&,
@@ -75,12 +76,14 @@ namespace Dune {
 
     template <class InnerProduct, class LinearForm,
               class RhsFunction, class VectorType>
+    static
     double aPosterioriL2Error(InnerProduct& ,
                               LinearForm& ,
                               const RhsFunction& ,
                               const VectorType&);
 
     template <class BilinearForm, class InnerProduct, class VectorType>
+    static
     double aPosterioriError(BilinearForm& ,
                             InnerProduct& ,
                             const VectorType& ,
@@ -89,6 +92,7 @@ namespace Dune {
     template <class Grid, class BilinearForm, class InnerProduct,
               class APosterioriInnerProduct, class LinearForm,
               class RhsFunction, class VectorType>
+    static
     double DoerflerMarking(Grid& ,
                            double ,
                            BilinearForm& ,
@@ -107,7 +111,7 @@ namespace Dune {
         const BlockVector<FieldVector<double,1> >& );
 
     template <unsigned int subsamples, class LocalView, class VolumeTerms>
-    double computeL2errorSquareElement(
+    static double computeL2errorSquareElement(
         const LocalView& ,
         const BlockVector<FieldVector<double,1> >& ,
         VolumeTerms&&,
@@ -116,6 +120,7 @@ namespace Dune {
     template <class InnerProduct, class LinearForm,
               class RhsFunction, class SolutionLocalViews,
               class SolutionLocalIndexSets, class VectorType>
+    static
     double aPosterioriL2ErrorSquareElement(InnerProduct& ,
                                            LinearForm& ,
                                            const RhsFunction& ,
@@ -127,6 +132,7 @@ namespace Dune {
               class TestLocalViews, class SolutionLocalViews,
               class TestLocalIndexSets, class SolutionLocalIndexSets,
               class VectorType>
+    static
     double aPosterioriErrorSquareElement(BilinearForm& ,
                                          InnerProduct& ,
                                          TestLocalViews& ,
@@ -689,7 +695,7 @@ namespace Dune {
 /**
  * \brief Mark elements for refinement according to Dörfler's strategy
  *
- * This mean, given a ratio \f$\theta \in (0,1]\f$, the set
+ * This means, given a ratio \f$\theta \in (0,1]\f$, the set
  * \f$\mathcal M \subset \Omega_h\f$ of marked elements satisfies
  * \f[\mathrm{err}(u_h, \mathcal M)
      \geq \mathrm{err}(u_h, \Omega_h).\f]
@@ -722,8 +728,7 @@ namespace Dune {
       const RhsFunction& f,
       const VectorType& solution,
       const VectorType& rhs,
-      double splitRatio
-                                    )
+      double splitRatio)
   {
     using namespace Dune::detail;
 

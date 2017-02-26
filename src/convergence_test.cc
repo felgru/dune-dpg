@@ -234,8 +234,7 @@ int main(int argc, char** argv)
     theta[i] = x[i+feBasisInterior.size()];
   }
 
-  ErrorTools errorTools = ErrorTools();
-  double err = errorTools.computeL2error<1>(std::get<0>(solutionSpaces),
+  double err = ErrorTools::computeL2error<1>(std::get<0>(solutionSpaces),
                                          u, std::make_tuple(uAnalytic(beta)));
 
   // We compute the a posteriori error
@@ -247,7 +246,7 @@ int main(int argc, char** argv)
   rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
 
   double aposterioriErr
-    = errorTools.aPosterioriError(bilinearForm_aposteriori,
+    = ErrorTools::aPosterioriError(bilinearForm_aposteriori,
                                   innerProduct_aposteriori,
                                   x, rhs);
 

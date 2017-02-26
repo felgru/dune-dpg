@@ -263,10 +263,8 @@ int main()
 
     // We build an object of type ErrorTools to study errors, residuals
     // and do hp-adaptivity
-    ErrorTools errorTools = ErrorTools();
-
     // We compute the L2 error between the exact and the fem solutions
-    err = errorTools.computeL2error<1>(innerSpace, u, uExact);
+    err = ErrorTools::computeL2error<1>(innerSpace, u, uExact);
     std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl;
 
     // A posteriori error
@@ -277,12 +275,12 @@ int main()
     rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
 
     double aposterioriErr
-        = errorTools.aPosterioriError(bilinearForm_aposteriori,
+        = ErrorTools::aPosterioriError(bilinearForm_aposteriori,
                                       innerProduct_aposteriori, x, rhs);
     std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = "
               << aposterioriErr << std::endl;
     double aposterioriL2Err
-        = errorTools.aPosterioriL2Error(aPosterioriInnerProduct,
+        = ErrorTools::aPosterioriL2Error(aPosterioriInnerProduct,
                                         aPosterioriLinearForm, fieldRHS, x);
     std::cout << "A posteriori L2 error: || (u,trace u) - (u_fem,theta) || = "
               << aposterioriL2Err << std::endl;
@@ -299,7 +297,7 @@ int main()
     // Refine
     ////////////////
     const double ratio = .2;
-    errorTools.DoerflerMarking(*grid, ratio,
+    ErrorTools::DoerflerMarking(*grid, ratio,
                                bilinearForm_aposteriori,
                                innerProduct_aposteriori,
                                aPosterioriInnerProduct,
