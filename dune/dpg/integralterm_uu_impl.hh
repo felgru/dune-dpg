@@ -120,8 +120,6 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
   const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-  const auto& gridView = lhsLocalView.globalBasis().gridView();
-
   unsigned int nInflowFaces = 0;
   unsigned int nOutflowFaces = 0;
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
