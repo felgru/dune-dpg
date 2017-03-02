@@ -76,6 +76,13 @@ template<class T, int size>
 struct is_vector<Dune::FieldVector<T, size>> : std::true_type {};
 #endif
 
+template<class T>
+struct tuple_size {};
+
+template<class T, int size>
+struct tuple_size<Dune::FieldVector<T, size>>
+: std::integral_constant<size_t, size> {};
+
 /****************************
  * Traits for finite elements
  ****************************/

@@ -251,13 +251,10 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       localView.bind(e);
-      const auto& localFE = localView.tree().finiteElement();
-      const auto& localInterp = localFE.localInterpolation();
+      const auto& localInterp
+          = localView.tree().finiteElement().localInterpolation();
 
       localIndexSet.bind(localView);
-
-      // dofs in the current finite element
-      const unsigned int dofsLocal = localFE.localCoefficients().size();
 
       localInterp.interpolate(bc, out);
 

@@ -15,6 +15,8 @@
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
 #include <dune/functions/functionspacebases/nodes.hh>
 
+#include <dune/dpg/subgrid_workarounds.hh>
+
 
 namespace Dune {
 namespace Functions {

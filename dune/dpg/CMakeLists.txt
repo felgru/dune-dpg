@@ -12,6 +12,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               cholesky.hh
               dpg_system_assembler.hh
               errortools.hh
+              faces.hh
               functionplotter.hh
               getvolumeterm_impl.hh
               innerproduct.hh
@@ -24,6 +25,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               linearintegralterm.hh
               localevaluation.hh
               quadrature.hh
+              refinedfaces.hh
               rhs_assembler.hh
               saddlepoint_system_assembler.hh
               subgrid_workarounds.hh
