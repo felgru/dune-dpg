@@ -609,7 +609,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
         std::cout << "Direction " << i << '\n';
 
-        ErrorTools errorTools = ErrorTools();
         // We compute the a posteriori error
         // - We compute the rhs with the enriched test space ("rhs[i]=f(v_i)")
         // -- Contribution of the source term f that has an analytic expression
@@ -622,7 +621,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         rhsAssemblerEnriched.assembleRhs(rhs[i],
             rhsFunction);
         // - Computation of the a posteriori error
-        double aposterioriErr_i = errorTools.aPosterioriError(
+        double aposterioriErr_i = ErrorTools::aPosterioriError(
             bilinearFormsEnriched[i], innerProductsEnriched[i], x[i], rhs[i]);
         aposterioriErr += aposterioriErr_i * aposterioriErr_i;
       }
