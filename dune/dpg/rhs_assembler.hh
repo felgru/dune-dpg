@@ -155,7 +155,6 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     copyLocalToGlobalVector<LFIndices>(
         localRhs,
         rhs,
-        testLocalViews,
         testLocalIndexSets,
         rhsLinearForm.getLocalSpaceOffsets(),
         globalTestSpaceOffsets);

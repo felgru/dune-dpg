@@ -1,3 +1,5 @@
+#include "faces.hh"
+
 namespace Dune {
 namespace detail {
 
@@ -118,17 +120,17 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
   const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-  const auto& gridView = lhsLocalView.globalBasis().gridView();
-
-  unsigned int nInflowIntersections = 0;
-  unsigned int nOutflowIntersections = 0;
-  for (auto&& intersection : intersections(gridView, element))
+  unsigned int nInflowFaces = 0;
+  unsigned int nOutflowFaces = 0;
+  for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
   {
-    double prod = lhsBeta * intersection.centerUnitOuterNormal();
+    auto face = element.template subEntity<1>(f);
+    double prod = lhsBeta
+      * FaceComputations<Element>(face, element).unitOuterNormal();
     if(prod > 0)
-      ++nOutflowIntersections;
+      ++nOutflowFaces;
     else if (prod < 0)
-      ++nInflowIntersections;
+      ++nInflowFaces;
   }
 
   FieldVector<double,dim> referenceBeta;
@@ -137,27 +139,28 @@ faceImpl(const LhsLocalView& lhsLocalView,
     jacobianInverse.mtv(lhsBeta, referenceBeta);
   }
 
-  for (auto&& intersection : intersections(gridView, element))
+  for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
   {
+    auto face = element.template subEntity<1>(f);
+    auto faceComputations = FaceComputations<Element>(face, element);
     if(type == IntegrationType::travelDistanceWeighted &&
-       lhsBeta * intersection.centerUnitOuterNormal() >= 0) {
+       lhsBeta * faceComputations.unitOuterNormal() >= 0) {
       /* Only integrate over inflow boundaries. */
       continue;
     }
 
-    using intersectionType
-      = typename std::decay<decltype(intersection)>::type;
+    using Face = std::decay_t<decltype(face)>;
     // TODO: Do we really want to have a transport quadrature rule
     //       on the faces, if one of the FE spaces is a transport space?
     QuadratureRule<double, 1> quadFace
-      = detail::ChooseQuadrature<LhsSpace, RhsSpace, intersectionType>
-        ::Quadrature(intersection, quadratureOrder, lhsBeta);
+      = detail::ChooseQuadrature<LhsSpace, RhsSpace, Face>
+        ::Quadrature(face, quadratureOrder, lhsBeta);
     if (type == IntegrationType::travelDistanceWeighted &&
-        nOutflowIntersections > 1) {
+        nOutflowFaces > 1) {
       quadFace = SplitQuadratureRule<double>(
           quadFace,
-          detail::splitPointOfInflowFaceInTriangle(intersection,
-                                                   referenceBeta));
+          detail::splitPointOfInflowFaceInTriangle(
+              faceComputations.geometryInElement(), referenceBeta));
     }
 
     for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
@@ -166,8 +169,8 @@ faceImpl(const LhsLocalView& lhsLocalView,
       const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
 
       // The multiplicative factor in the integral transformation formula multiplied with outer normal
-      const FieldVector<double,dim>& integrationOuterNormal =
-              intersection.integrationOuterNormal(quadFacePos);
+      const FieldVector<double,dim> integrationOuterNormal =
+              faceComputations.integrationOuterNormal();
 
       // The multiplicative factor in the integral transformation formula -
 
@@ -186,10 +189,10 @@ faceImpl(const LhsLocalView& lhsLocalView,
           integrationWeight *= (lhsBeta*integrationOuterNormal);
       } else if(type == IntegrationType::normalSign) {
         const double integrationElement =
-            intersection.geometry().integrationElement(quadFacePos);
+            face.geometry().integrationElement(quadFacePos);
 
         const FieldVector<double,dim>& centerOuterNormal =
-            intersection.centerUnitOuterNormal();
+               faceComputations.unitOuterNormal();
 
         int sign = 1;
         bool signfound = false;
@@ -216,7 +219,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
       // position of the quadrature point within the element
       const FieldVector<double,dim> elementQuadPos =
-              intersection.geometryInInside().global(quadFacePos);
+              faceComputations.faceToElementPosition(quadFacePos);
 
       if(type == IntegrationType::travelDistanceWeighted) {
         // factor r_K(s)/|beta|

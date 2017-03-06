@@ -8,9 +8,24 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 ### Added
 * New `ErrorTools::l2norm` function to compute the L_2 norm of a
   finite element function.
+* New GlobalBasis `HangingNodeP2NodalBasis` that implements P2 elements
+  with hanging nodes. Since we only handle hanging nodes of order one,
+  you have to make sure that neighboring cells in the grid do not vary
+  in level by more than one. This can be assured by using
+  [dune-subgrid](http://numerik.mi.fu-berlin.de/dune-subgrid/index.php)
+  which by default limits the difference in level to maximally one.
+  since dune-subgrid does not implement the whole grid interface, we
+  defined missing functionality in `dune/dpg/subgrid_workarounds.hh`.
+* Since `HangingNodeP2NodalBasis` does not fit the GlobalBasis interface
+  as its index set does not implement DefaultIndexSet, we introduce a
+  new `ConstrainedGlobalBasis` interface.
+  Use the auxiliary functions `iterateOverLocalIndexSet` and
+  `addToGlobalMatrix` to conveniently handle index sets from both
+  interfaces.
 
 ### Changed
-* We now require version 2.5 of the DUNE core modules.
+* We now require version 2.5 of the DUNE core modules and a fully C++14
+  compatible compiler, e.g. GCC-6.
 * Restrict usage of Boost::Fusion.
   In many places we now use functions from dune/common/hybridutilities.hh
   or dune/common/tupleutility.hh instead.

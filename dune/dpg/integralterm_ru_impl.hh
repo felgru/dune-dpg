@@ -1,3 +1,5 @@
+#include "refinedfaces.hh"
+
 namespace Dune {
 namespace detail {
 
@@ -153,58 +155,41 @@ faceImpl(const LhsLocalView& lhsLocalView,
   unsigned int subElementIndex = 0;
   for(const auto& subElement : elements(referenceGridView))
   {
+    using SubElement = std::decay_t<decltype(subElement)>;
     auto subGeometryInReferenceElement = subElement.geometry();
 
-    unsigned int nInflowIntersections = 0;
-    unsigned int nOutflowIntersections = 0;
-    for (auto&& intersection : intersections(referenceGridView, subElement))
+    unsigned int nInflowFaces = 0;
+    unsigned int nOutflowFaces = 0;
+    for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
     {
-      const FieldVector<double,dim> globalCorner0
-        = geometry.global(intersection.geometry().global({0}));
-      const FieldVector<double,dim> globalCorner1
-        = geometry.global(intersection.geometry().global({1}));
+      const auto face = subElement.template subEntity<1>(f);
+      const FieldVector<double,dim> unitOuterNormal
+          = RefinedFaceComputations<SubElement>(face, subElement, element)
+              .unitOuterNormal();
 
-      static_assert(dim==2, "Computation of unit outer normal for subcell"
-                            " only implemented in 2d!");
-      /* This won't work for curvilinear elements, but they don't seem
-       * to be supported by UG anyway. */
-      FieldVector<double,dim> unitOuterNormal
-        = { (globalCorner1[1] - globalCorner0[1])
-          , (globalCorner0[0] - globalCorner1[0]) };
-      unitOuterNormal /= unitOuterNormal.two_norm();
-
-      double prod = lhsBeta * unitOuterNormal;
+      const double prod = lhsBeta * unitOuterNormal;
       if(prod > 0)
-        ++nOutflowIntersections;
+        ++nOutflowFaces;
       else if (prod < 0)
-        ++nInflowIntersections;
+        ++nInflowFaces;
     }
 
     FieldVector<double,dim> referenceBeta
         = detail::referenceBeta(geometry,
             subGeometryInReferenceElement, lhsBeta);
 
-    for (auto&& intersection : intersections(referenceGridView, subElement))
+    for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
     {
-      using intersectionType
-        = typename std::decay<decltype(intersection)>::type;
+      const auto face = subElement.template subEntity<1>(f);
+      auto faceComputations
+          = RefinedFaceComputations<SubElement>(face, subElement, element);
 
-      const FieldVector<double,dim> globalCorner0
-        = geometry.global(intersection.geometry().global({0}));
-      const FieldVector<double,dim> globalCorner1
-        = geometry.global(intersection.geometry().global({1}));
-      // compute integration element for interface
-      const double integrationElement
-        = (globalCorner1 - globalCorner0).two_norm();
+      using Face = std::decay_t<decltype(face)>;
 
-      static_assert(dim==2, "Computation of unit outer normal for subcell"
-                            " only implemented in 2d!");
-      /* This won't work for curvilinear elements, but they don't seem
-       * to be supported by UG anyway. */
-      FieldVector<double,dim> unitOuterNormal
-        = { (globalCorner1[1] - globalCorner0[1])
-          , (globalCorner0[0] - globalCorner1[0]) };
-      unitOuterNormal /= unitOuterNormal.two_norm();
+      const double integrationElement = faceComputations.integrationElement();
+
+      const FieldVector<double,dim> unitOuterNormal
+          = faceComputations.unitOuterNormal();
 
       if(type == IntegrationType::travelDistanceWeighted &&
          lhsBeta * unitOuterNormal >= 0) {
@@ -215,22 +200,20 @@ faceImpl(const LhsLocalView& lhsLocalView,
       // TODO: Do we really want to have a transport quadrature rule
       //       on the faces, if one of the FE spaces is a transport space?
       QuadratureRule<double, 1> quadFace
-        = detail::ChooseQuadrature<LhsSpace, RhsSpace, intersectionType>
-          ::Quadrature(intersection, quadratureOrder, lhsBeta);
+        = detail::ChooseQuadrature<LhsSpace, RhsSpace, Face>
+          ::Quadrature(face, quadratureOrder, lhsBeta);
       if (type == IntegrationType::travelDistanceWeighted &&
-          nOutflowIntersections > 1) {
+          nOutflowFaces > 1) {
         quadFace = SplitQuadratureRule<double>(
             quadFace,
-            detail::splitPointOfInflowFaceInTriangle(intersection,
-                                                     referenceBeta));
+            detail::splitPointOfInflowFaceInTriangle(
+                faceComputations.geometryInElement(), referenceBeta));
       }
 
       for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
 
         // Position of the current quadrature point in the reference element (face!)
         const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
-        // const FieldVector<double,dim>& quadFacePosInReferenceElement
-        //   = intersection.geometry().global(quadFacePos);
 
         // The multiplicative factor in the integral transformation formula -
 
@@ -272,7 +255,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
         // position of the quadrature point within the subelement
         const FieldVector<double,dim> elementQuadPosSubCell =
-                intersection.geometryInInside().global(quadFacePos);
+                faceComputations.faceToElementPosition(quadFacePos);
 
         // position of the quadrature point within the reference element
         const FieldVector<double,dim> elementQuadPos =

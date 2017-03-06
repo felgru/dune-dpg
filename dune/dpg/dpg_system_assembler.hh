@@ -4,6 +4,7 @@
 #define DUNE_DPG_SYSTEM_ASSEMBLER_DPG_HH
 
 #include <functional>
+#include <iterator>
 #include <list>
 #include <map>
 #include <memory>
@@ -28,6 +29,7 @@
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 
+#include <dune/dpg/functions/localindexsetiteration.hh>
 #include "assemble_helper.hh"
 #include "assemble_types.hh"
 #include "bilinearform.hh"
@@ -35,6 +37,7 @@
 #include "quadrature.hh"
 #include "linearform.hh"
 #include "localevaluation.hh"
+#include "subgrid_workarounds.hh"
 #include "testspace_coefficient_matrix.hh"
 
 
@@ -259,6 +262,30 @@ public:
   { return solutionSpaces_; }
 
 private:
+  template<size_t spaceIndex, unsigned int dim,
+    typename std::enable_if<models<Functions::Concept::GlobalBasis<typename
+                        std::tuple_element_t<spaceIndex, typename
+                            BilinearForm::SolutionSpaces>::GridView>,
+                  std::tuple_element_t<spaceIndex, typename
+                        BilinearForm::SolutionSpaces>>()>::type* = nullptr>
+  void defineCharacteristicFaces_impl(
+      BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+      BlockVector<FieldVector<double,1> >& rhs,
+      const FieldVector<double,dim>& beta,
+      double delta);
+
+  template<size_t spaceIndex, unsigned int dim,
+    typename std::enable_if<models<Functions::Concept::ConstrainedGlobalBasis<
+                      typename std::tuple_element_t<spaceIndex, typename
+                          BilinearForm::SolutionSpaces>::GridView>,
+                  std::tuple_element_t<spaceIndex, typename
+                        BilinearForm::SolutionSpaces>>()>::type* = nullptr>
+  void defineCharacteristicFaces_impl(
+      BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+      BlockVector<FieldVector<double,1> >& rhs,
+      const FieldVector<double,dim>& beta,
+      double delta);
+
   TestSearchSpaces              testSearchSpaces_;
   SolutionSpaces                solutionSpaces_;
   BilinearForm&                 bilinearForm_;
@@ -358,9 +385,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     detail::getOccupationPattern<Indices, false>
-                        (solutionLocalViews,
-                         solutionLocalViews,
-                         solutionLocalIndexSets,
+                        (solutionLocalIndexSets,
                          solutionLocalIndexSets,
                          globalSolutionSpaceOffsets,
                          globalSolutionSpaceOffsets,
@@ -419,11 +444,9 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     copyLocalToGlobalMatrix<Indices>(
         elementMatrix,
         matrix,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
@@ -446,7 +469,6 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     copyLocalToGlobalVector<LFIndices>(
         localRhs,
         rhs,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
@@ -499,9 +521,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
 
     detail::getOccupationPattern<Indices, false>
-                        (solutionLocalViews,
-                         solutionLocalViews,
-                         solutionLocalIndexSets,
+                        (solutionLocalIndexSets,
                          solutionLocalIndexSets,
                          globalSolutionSpaceOffsets,
                          globalSolutionSpaceOffsets,
@@ -531,11 +551,9 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     copyLocalToGlobalMatrix<Indices>(
         elementMatrix,
         matrix,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
@@ -626,7 +644,6 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     copyLocalToGlobalVector<LFIndices>(
         localRhs,
         rhs,
-        solutionLocalViews,
         solutionLocalIndexSets,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
@@ -832,7 +849,7 @@ applyWeakBoundaryCondition
       if (intersection.boundary())
       { // the intersection is at the (physical) boundary of the domain
         const FieldVector<double,dim>& centerOuterNormal =
-                intersection.centerUnitOuterNormal();
+               centerUnitOuterNormal(intersection);
 
         if ((beta*centerOuterNormal) > -1e-10)
         { // everywhere except inflow boundary
@@ -853,7 +870,7 @@ applyWeakBoundaryCondition
 
             // position of the quadrature point within the element
             const FieldVector<double,dim> elementQuadPos
-                = intersection.geometryInInside().global(quadFacePos);
+                = geometryInInside(intersection).global(quadFacePos);
 
             // values of the shape functions
             std::vector<FieldVector<double,1> > solutionValues;
@@ -873,28 +890,33 @@ applyWeakBoundaryCondition
         }
       }
     }
-    for (size_t i=0; i<n; i++)
-    {
-      auto row = localIndexSet.index(i)[0];
-      for (size_t j=0; j<n; j++)
-      {
-        auto col = localIndexSet.index(j)[0];
-        matrix[row+globalOffset][col+globalOffset]
-                        += elementMatrix[i][j];
-
-      }
-    }
+    addToGlobalMatrix(
+        localIndexSet,
+        localIndexSet,
+        [&elementMatrix](size_t i, size_t j) -> auto {
+          return elementMatrix[i][j];
+        },
+        [&](auto gi, auto gj) -> auto& {
+          return matrix[gi[0]+globalOffset][gj[0]+globalOffset];
+        }
+    );
   }
 }
 
 
 template<class BilinearForm, class InnerProduct, class BufferPolicy>
-template<size_t spaceIndex, unsigned int dim>
+template<size_t spaceIndex, unsigned int dim,
+  typename std::enable_if<models<Functions::Concept::GlobalBasis<typename
+                       std::tuple_element_t<spaceIndex, typename
+                          BilinearForm::SolutionSpaces>::GridView>,
+                 std::tuple_element_t<spaceIndex, typename
+                       BilinearForm::SolutionSpaces>>()>::type*>
 void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
-defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
-                          BlockVector<FieldVector<double,1> >& rhs,
-                          const FieldVector<double,dim>& beta,
-                          double delta)
+defineCharacteristicFaces_impl(
+    BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+    BlockVector<FieldVector<double,1> >& rhs,
+    const FieldVector<double,dim>& beta,
+    double delta)
 {
   auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
 
@@ -919,7 +941,7 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     for (auto&& intersection : intersections(gridView, e))
     {
       const bool characteristic =
-          fabs(beta * intersection.centerUnitOuterNormal()) < delta;
+          fabs(beta * centerUnitOuterNormal(intersection)) < delta;
       characteristicFaces[intersection.indexInInside()] = characteristic;
       characteristicFound = characteristicFound || characteristic;
     }
@@ -973,8 +995,8 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
         size_t face;
         std::list<std::pair<size_t,size_t>> dofs;
         std::tie(face, dofs) = faceAndDOFs;
-          size_t left, right;
-          std::tie(left, right) = endpoints[face];
+        size_t left, right;
+        std::tie(left, right) = endpoints[face];
         for(auto&& dof: dofs)
         {
           auto row = localIndexSet.index(dof.first)[0];
@@ -1000,6 +1022,170 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 }
 
 
+namespace detail {
+  template<class ConstrainedLocalIndexSet>
+  typename ConstrainedLocalIndexSet::MultiIndex
+  getUnconstrainedIndex(const ConstrainedLocalIndexSet& localIndexSet,
+      size_t localIndex)
+  {
+    using size_type
+        = typename std::decay_t<ConstrainedLocalIndexSet>::size_type;
+    auto globalIndex = localIndexSet.indicesLocalGlobal().begin();
+    const size_type numConstraints = localIndexSet.constraintsSize();
+    size_type i = 0;
+    for(size_type c = 0; c < numConstraints; c++) {
+      const size_type nextConstraint = i + localIndexSet.constraintOffset(c);
+      if(localIndex < nextConstraint) {
+        return globalIndex[localIndex - i];
+      } else {
+        assert(localIndex != nextConstraint);
+        std::advance(globalIndex, localIndexSet.constraintOffset(c)
+            + localIndexSet.constraintWeights(c).size());
+        i = nextConstraint + 1;
+      }
+    }
+    return globalIndex[localIndex - i];
+  }
+}
+
+
+template<class BilinearForm, class InnerProduct, class BufferPolicy>
+template<size_t spaceIndex, unsigned int dim,
+  typename std::enable_if<models<Functions::Concept::ConstrainedGlobalBasis<
+                    typename std::tuple_element_t<spaceIndex, typename
+                        BilinearForm::SolutionSpaces>::GridView>,
+                std::tuple_element_t<spaceIndex, typename
+                      BilinearForm::SolutionSpaces>>()>::type*>
+void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
+defineCharacteristicFaces_impl(
+    BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+    BlockVector<FieldVector<double,1> >& rhs,
+    const FieldVector<double,dim>& beta,
+    double delta)
+{
+  auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
+
+  const size_t globalOffset =
+        detail::computeOffset<spaceIndex>(solutionSpaces_);
+
+  auto solutionLocalView = std::get<spaceIndex>(solutionSpaces_).localView();
+  auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
+
+  for(const auto& e : elements(gridView))
+  {
+    solutionLocalView.bind(e);
+    localIndexSet.bind(solutionLocalView);
+
+    const auto& localFiniteElement = solutionLocalView.tree().finiteElement();
+
+    size_t n = localFiniteElement.localBasis().size();
+
+    std::vector<bool>  characteristicFaces(e.subEntities(1), false);
+    bool characteristicFound = false;
+
+    for (auto&& intersection : intersections(gridView, e))
+    {
+      if (conforming(intersection)) {
+        const bool characteristic =
+            fabs(beta * centerUnitOuterNormal(intersection)) < delta;
+        characteristicFaces[intersection.indexInInside()] = characteristic;
+        characteristicFound = characteristicFound || characteristic;
+      }
+    }
+
+    if(characteristicFound)
+    {
+      std::map<size_t,std::list<std::pair<size_t,size_t>>> characteristicDOFs;
+      std::vector<size_t> vertexDOFs(e.subEntities(dim));
+
+      for (unsigned int i=0; i<n; i++)
+      {
+        if (localFiniteElement.localCoefficients().localKey(i).codim()==1)
+            // edge DOFs
+        {
+          const size_t face =
+              localFiniteElement.localCoefficients().localKey(i).subEntity();
+          const size_t localIndex =
+              localFiniteElement.localCoefficients().localKey(i).index();
+          if(characteristicFaces[face])
+            characteristicDOFs[face].emplace_back(i,localIndex);
+        } else if (localFiniteElement.localCoefficients().localKey(i).codim()
+                   == dim)
+        {
+          const size_t vertex =
+              localFiniteElement.localCoefficients().localKey(i).subEntity();
+          vertexDOFs[vertex] = i;
+        }
+        // Vertex DOFs are never characteristic because the corresponding
+        // basis functions have support on at least two edges which can
+        // never be both (almost) characteristic.
+      }
+
+      std::vector<std::pair<size_t,size_t>> endpoints(e.subEntities(1));
+      if(e.type().isQuadrilateral()) {
+        endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
+        endpoints[1] = std::make_pair(vertexDOFs[1], vertexDOFs[3]);
+        endpoints[2] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
+        endpoints[3] = std::make_pair(vertexDOFs[2], vertexDOFs[3]);
+      } else if(e.type().isTriangle()) {
+        endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
+        endpoints[1] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
+        endpoints[2] = std::make_pair(vertexDOFs[1], vertexDOFs[2]);
+      } else {
+        DUNE_THROW(Dune::NotImplemented,
+                   "defineCharacteristicFaces not implemented for element type"
+                   << e.type().id());
+      }
+
+      for (auto&& faceAndDOFs: characteristicDOFs)
+      {
+        size_t face;
+        std::list<std::pair<size_t,size_t>> dofs;
+        std::tie(face, dofs) = faceAndDOFs;
+        size_t left, right;
+        std::tie(left, right) = endpoints[face];
+        for(auto&& dof: dofs)
+        {
+          auto row = detail::getUnconstrainedIndex(localIndexSet,
+                                                   dof.first)[0];
+          auto col = row;
+          const size_t k = dofs.size()+1;
+
+          /* replace the row of dof on characteristic face
+           * by an interpolation of the two endpoints of the
+           * characteristic face. */
+          matrix[row+globalOffset][col+globalOffset] = -1;
+          col = detail::getUnconstrainedIndex(localIndexSet, left)[0];
+          matrix[row+globalOffset][col+globalOffset]
+              = (double)(k-dof.second-1)/k;
+          col = detail::getUnconstrainedIndex(localIndexSet, right)[0];
+          matrix[row+globalOffset][col+globalOffset]
+              = (double)(dof.second+1)/k;
+
+          rhs[row+globalOffset] = 0;
+        }
+      }
+    }
+  }
+}
+
+
+template<class BilinearForm, class InnerProduct, class BufferPolicy>
+template<size_t spaceIndex, unsigned int dim>
+void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
+defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                          BlockVector<FieldVector<double,1> >& rhs,
+                          const FieldVector<double,dim>& beta,
+                          double delta)
+{
+  defineCharacteristicFaces_impl<spaceIndex, dim>(
+      matrix,
+      rhs,
+      beta,
+      delta);
+}
+
+
 template<class BilinearForm, class InnerProduct, class BufferPolicy>
 template <size_t spaceIndex, class MinInnerProduct, unsigned int dim>
 void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
@@ -1014,7 +1200,8 @@ applyMinimization
 
   auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
 
-  const size_t globalOffset = computeOffset<spaceIndex>(solutionSpaces_);
+  //const size_t globalOffset = computeOffset<spaceIndex>(solutionSpaces_);
+  const size_t globalOffset = 0;
 
   size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
@@ -1023,6 +1210,7 @@ applyMinimization
   auto solutionLocalViews = getLocalViews(solutionSpaces_);
 
   auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
+  using LocalIndexSet = decltype(localIndexSet);
 
   const bool epsilonSmallerDelta(epsilon<delta);
 
@@ -1049,7 +1237,7 @@ applyMinimization
     for (auto&& intersection : intersections(gridView, e))
     {
       const FieldVector<double,dim>& centerOuterNormal =
-              intersection.centerUnitOuterNormal();
+             centerUnitOuterNormal(intersection);
       //set relevant faces for almost characteristic faces
       relevantFaces[intersection.indexInInside()]
           = (std::abs(beta*centerOuterNormal) < delta);
@@ -1074,20 +1262,63 @@ applyMinimization
       // never be both (almost) characteristic.
     }
 
-    for (size_t i=0; i<n; i++)
-    {
-      if (relevantDOFs[i])
+    using MultiIndex = typename std::decay_t<LocalIndexSet>::MultiIndex;
+    iterateOverLocalIndexSet(
+      localIndexSet,
+      [&](size_t i, MultiIndex gi)
       {
-        auto row = localIndexSet.index(i)[0];
-        for (size_t j=0; j<n; j++)
+        if (relevantDOFs[i])
         {
-          auto col = localIndexSet.index(j)[0];
-          matrix[row+globalOffset][col+globalOffset]
-              += elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
-                              [localSolutionSpaceOffsets[spaceIndex]+j];
+          auto row = gi[0];
+          iterateOverLocalIndexSet(
+            localIndexSet,
+            [&](size_t j, MultiIndex gj)
+            {
+              auto col = gj[0];
+              matrix[row+globalOffset][col+globalOffset]
+                  += elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                  [localSolutionSpaceOffsets[spaceIndex]+j];
+            },
+            [](size_t j) {},
+            [&](size_t j, MultiIndex gj, double wj)
+            {
+              auto col = gj[0];
+              matrix[row+globalOffset][col+globalOffset]
+                += wj * elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                     [localSolutionSpaceOffsets[spaceIndex]+j];
+            }
+          );
+        }
+      },
+      [](size_t i) {},
+      [&](size_t i, MultiIndex gi, double wi)
+      {
+        if (relevantDOFs[i])
+        {
+          auto row = gi[0];
+          iterateOverLocalIndexSet(
+            localIndexSet,
+            [&](size_t j, MultiIndex gj)
+            {
+              auto col = gj[0];
+              matrix[row+globalOffset][col+globalOffset]
+                  += wi
+                     * elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                    [localSolutionSpaceOffsets[spaceIndex]+j];
+            },
+            [](size_t j) {},
+            [&](size_t j, MultiIndex gj, double wj)
+            {
+              auto col = gj[0];
+              matrix[row+globalOffset][col+globalOffset]
+                += wi * wj
+                   * elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
+                                  [localSolutionSpaceOffsets[spaceIndex]+j];
+            }
+          );
         }
       }
-    }
+    );
   }
 }
 
