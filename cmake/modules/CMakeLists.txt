@@ -1,5 +1,5 @@
 install(FILES
         DuneBoost.cmake
         DuneDpgMacros.cmake
-        FindBoostFusion.cmake
+        FindBoostHana.cmake
         DESTINATION ${DUNE_INSTALL_MODULEDIR})

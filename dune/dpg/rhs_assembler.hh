@@ -11,14 +11,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <boost/mpl/identity.hpp>
-#include <boost/mpl/range_c.hpp>
-#include <boost/mpl/set.hpp>
-#include <boost/mpl/transform.hpp>
-
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/mpl.hpp>
-#include <boost/fusion/container/vector/convert.hpp>
+#include <boost/hana.hpp>
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -143,16 +136,14 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     rhsLinearForm.getLocalVector(localRhs);
 
     // TODO: We might copy zero blocks that could be avoided.
-    typedef
-      typename boost::fusion::result_of::as_vector<
-                typename boost::mpl::range_c<
-                    size_t, 0, std::tuple_size<TestSpaces>::value
-                >::type
-            >::type LFIndices;
+    namespace hana = boost::hana;
+    auto lfIndices = hana::to<hana::tuple_tag>(
+        hana::make_range(hana::int_c<0>,
+              hana::int_c<std::tuple_size<TestSpaces>::value>));
 
     /* copy every local subvector indexed by a pair of indices from
      * LFIndices exactly once. */
-    copyLocalToGlobalVector<LFIndices>(
+    copyLocalToGlobalVector<decltype(lfIndices)>(
         localRhs,
         rhs,
         testLocalIndexSets,

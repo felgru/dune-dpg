@@ -24,9 +24,10 @@ The installation of pkg-config is recommended:
 
     brew install pkg-config
 
-Boost 1.59 installation (since newer versions of Boost::Fusion are broken):
+Boost 1.63 or newer is needed, since we make use of Boost Hana for
+template meta programming:
 
-    brew install homebrew/versions/boost159
+    brew install boost
 
 UMFPACK installation:
 
@@ -64,14 +65,12 @@ Installation of Dune on Debian GNU/Linux
    into `$DUNEDIR` like it is explained below in the MacOS instructions.
    This is necessary if you are using an older Debian release like Jessie.
 
-   Since Debian Stretch now has Boost 1.61 which causes problems with
-   dune-dpg, you can download Boost 1.59 from the Boost website and
-   add the following line to your dune.opts file
+   If you are using a Debian release which does not include Boost Hana
+   (i.e., Boost < 1.61), you can download a recent version from the Boost
+   website extract it to some directory `$BOOSTDIR` and add the following
+   line to your dune.opts file
 
-    CMAKE_FLAGS+=" -DBOOST_INCLUDEDIR=$DUNEDIR/boost_1_59_0/"
-
-   assuming that you extracted Boost to `$DUNEDIR`, otherwise you have to
-   adjust the path accordingly.
+    CMAKE_FLAGS+=" -DBOOST_INCLUDEDIR=$BOOSTDIR"
 
 Installation of Dune on MacOS
 -----------------------------

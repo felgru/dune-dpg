@@ -4,6 +4,7 @@
 #define DUNE_DPG_SYSTEM_ASSEMBLER_DPG_HH
 
 #include <functional>
+#include <iterator>
 #include <list>
 #include <map>
 #include <memory>
@@ -11,16 +12,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <boost/mpl/empty_sequence.hpp>
-#include <boost/mpl/identity.hpp>
-#include <boost/mpl/joint_view.hpp>
-#include <boost/mpl/range_c.hpp>
-#include <boost/mpl/set.hpp>
-#include <boost/mpl/transform.hpp>
-
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/mpl.hpp>
-#include <boost/fusion/container/vector/convert.hpp>
+#include <boost/hana.hpp>
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -261,6 +253,30 @@ public:
   { return solutionSpaces_; }
 
 private:
+  template<size_t spaceIndex, unsigned int dim,
+    typename std::enable_if<models<Functions::Concept::GlobalBasis<typename
+                        std::tuple_element_t<spaceIndex, typename
+                            BilinearForm::SolutionSpaces>::GridView>,
+                  std::tuple_element_t<spaceIndex, typename
+                        BilinearForm::SolutionSpaces>>()>::type* = nullptr>
+  void defineCharacteristicFaces_impl(
+      BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+      BlockVector<FieldVector<double,1> >& rhs,
+      const FieldVector<double,dim>& beta,
+      double delta);
+
+  template<size_t spaceIndex, unsigned int dim,
+    typename std::enable_if<models<Functions::Concept::ConstrainedGlobalBasis<
+                      typename std::tuple_element_t<spaceIndex, typename
+                          BilinearForm::SolutionSpaces>::GridView>,
+                  std::tuple_element_t<spaceIndex, typename
+                        BilinearForm::SolutionSpaces>>()>::type* = nullptr>
+  void defineCharacteristicFaces_impl(
+      BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+      BlockVector<FieldVector<double,1> >& rhs,
+      const FieldVector<double,dim>& beta,
+      double delta);
+
   TestSearchSpaces              testSearchSpaces_;
   SolutionSpaces                solutionSpaces_;
   BilinearForm&                 bilinearForm_;
@@ -338,21 +354,12 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   MatrixIndexSet occupationPattern;
   occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
 
-  typedef
-      typename boost::fusion::result_of::as_vector<
-                typename boost::mpl::range_c<
-                    size_t, 0, std::tuple_size<SolutionSpaces>::value
-                >::type
-            >::type IndexRange;
-  typedef
-      typename boost::mpl::fold<
-            typename boost::mpl::transform<
-                IndexRange
-              , mpl::prefixSequenceWith<IndexRange, boost::mpl::_1>
-              >::type
-          , boost::mpl::empty_sequence
-          , boost::mpl::joint_view<boost::mpl::_1, boost::mpl::_2>
-          >::type Indices;
+  namespace hana = boost::hana;
+  auto indexRange = hana::make_range(hana::int_c<0>,
+            hana::int_c<std::tuple_size<SolutionSpaces>::value>);
+  auto indices = hana::cartesian_product(hana::make_tuple(indexRange,
+                                                          indexRange));
+  using Indices = decltype(indices);
 
   for(const auto& e : elements(gridView))
   {
@@ -426,19 +433,18 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
 
-    typedef typename boost::mpl::fold<
-        typename boost::mpl::transform<
-            /* This as_vector is probably not needed for boost::fusion 1.58
-             * or higher. */
-            typename boost::fusion::result_of::as_vector<
-                  typename std::remove_reference<
-                      decltype(bilinearForm_.getTerms())>::type
-                >::type
-          , mpl::second<boost::mpl::_1>
-          >::type
-      , boost::mpl::set0<>
-      , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-      >::type LFIndices;
+    // TODO: shouldn't LFIndices be taken from rhsLinearFrom.getTerms()?
+    namespace hana = boost::hana;
+    using BilinearTerms = std::decay_t<decltype(bilinearForm_.getTerms())>;
+    auto lfIndices = hana::to<hana::set_tag>(
+        hana::transform(hana::to<hana::tuple_tag>(
+            hana::make_range(hana::int_c<0>,
+                hana::int_c<std::tuple_size<BilinearTerms>::value>)),
+          [](auto i) -> auto {
+            using Term = std::tuple_element_t<i.value, BilinearTerms>;
+            return hana::type_c<std::tuple_element_t<1, Term>>;
+          }));
+    using LFIndices = decltype(hana::to<hana::tuple_tag>(lfIndices));
 
     // Add local right-hand side onto the global right-hand side
     copyLocalToGlobalVector<LFIndices>(
@@ -474,21 +480,12 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   MatrixIndexSet occupationPattern;
   occupationPattern.resize(globalTotalSolutionSize, globalTotalSolutionSize);
 
-  typedef
-      typename boost::fusion::result_of::as_vector<
-                typename boost::mpl::range_c<
-                    size_t, 0, std::tuple_size<SolutionSpaces>::value
-                >::type
-            >::type IndexRange;
-  typedef
-      typename boost::mpl::fold<
-            typename boost::mpl::transform<
-                IndexRange
-              , mpl::prefixSequenceWith<IndexRange, boost::mpl::_1>
-              >::type
-          , boost::mpl::empty_sequence
-          , boost::mpl::joint_view<boost::mpl::_1, boost::mpl::_2>
-          >::type Indices;
+  namespace hana = boost::hana;
+  auto indexRange = hana::make_range(hana::int_c<0>,
+            hana::int_c<std::tuple_size<SolutionSpaces>::value>);
+  auto indices = hana::cartesian_product(hana::make_tuple(indexRange,
+                                                          indexRange));
+  using Indices = decltype(indices);
 
   for(const auto& e : elements(gridView))
   {
@@ -601,19 +598,16 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     /* copy every local subvector indexed by an index from
      * lfIndices exactly once. */
-    typedef typename boost::mpl::fold<
-        typename boost::mpl::transform<
-            /* This as_vector is probably not needed for boost::fusion 1.58
-             * or higher. */
-            typename boost::fusion::result_of::as_vector<
-                  typename std::remove_reference<
-                      decltype(bilinearForm_.getTerms())>::type
-                >::type
-          , mpl::second<boost::mpl::_1>
-          >::type
-      , boost::mpl::set0<>
-      , boost::mpl::insert<boost::mpl::_1,boost::mpl::_2>
-      >::type LFIndices;
+    namespace hana = boost::hana;
+    using BilinearTerms = std::decay_t<decltype(bilinearForm_.getTerms())>;
+    auto lfIndices = hana::to<hana::set_tag>(
+        hana::transform(hana::make_range(hana::int_c<0>,
+              hana::int_c<std::tuple_size<BilinearTerms>::value>),
+          [](auto i) {
+            using Term = std::tuple_element_t<i.value, BilinearTerms>;
+            return hana::type_c<std::tuple_element_t<1, Term>>;
+          }));
+    using LFIndices = decltype(lfIndices);
 
     // Add local right-hand side onto the global right-hand side
     copyLocalToGlobalVector<LFIndices>(
@@ -880,12 +874,18 @@ applyWeakBoundaryCondition
 
 
 template<class BilinearForm, class InnerProduct, class BufferPolicy>
-template<size_t spaceIndex, unsigned int dim>
+template<size_t spaceIndex, unsigned int dim,
+  typename std::enable_if<models<Functions::Concept::GlobalBasis<typename
+                       std::tuple_element_t<spaceIndex, typename
+                          BilinearForm::SolutionSpaces>::GridView>,
+                 std::tuple_element_t<spaceIndex, typename
+                       BilinearForm::SolutionSpaces>>()>::type*>
 void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
-defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
-                          BlockVector<FieldVector<double,1> >& rhs,
-                          const FieldVector<double,dim>& beta,
-                          double delta)
+defineCharacteristicFaces_impl(
+    BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+    BlockVector<FieldVector<double,1> >& rhs,
+    const FieldVector<double,dim>& beta,
+    double delta)
 {
   auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
 
@@ -964,8 +964,8 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
         size_t face;
         std::list<std::pair<size_t,size_t>> dofs;
         std::tie(face, dofs) = faceAndDOFs;
-          size_t left, right;
-          std::tie(left, right) = endpoints[face];
+        size_t left, right;
+        std::tie(left, right) = endpoints[face];
         for(auto&& dof: dofs)
         {
           auto row = localIndexSet.index(dof.first)[0];
@@ -988,6 +988,170 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       }
     }
   }
+}
+
+
+namespace detail {
+  template<class ConstrainedLocalIndexSet>
+  typename ConstrainedLocalIndexSet::MultiIndex
+  getUnconstrainedIndex(const ConstrainedLocalIndexSet& localIndexSet,
+      size_t localIndex)
+  {
+    using size_type
+        = typename std::decay_t<ConstrainedLocalIndexSet>::size_type;
+    auto globalIndex = localIndexSet.indicesLocalGlobal().begin();
+    const size_type numConstraints = localIndexSet.constraintsSize();
+    size_type i = 0;
+    for(size_type c = 0; c < numConstraints; c++) {
+      const size_type nextConstraint = i + localIndexSet.constraintOffset(c);
+      if(localIndex < nextConstraint) {
+        return globalIndex[localIndex - i];
+      } else {
+        assert(localIndex != nextConstraint);
+        std::advance(globalIndex, localIndexSet.constraintOffset(c)
+            + localIndexSet.constraintWeights(c).size());
+        i = nextConstraint + 1;
+      }
+    }
+    return globalIndex[localIndex - i];
+  }
+}
+
+
+template<class BilinearForm, class InnerProduct, class BufferPolicy>
+template<size_t spaceIndex, unsigned int dim,
+  typename std::enable_if<models<Functions::Concept::ConstrainedGlobalBasis<
+                    typename std::tuple_element_t<spaceIndex, typename
+                        BilinearForm::SolutionSpaces>::GridView>,
+                std::tuple_element_t<spaceIndex, typename
+                      BilinearForm::SolutionSpaces>>()>::type*>
+void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
+defineCharacteristicFaces_impl(
+    BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+    BlockVector<FieldVector<double,1> >& rhs,
+    const FieldVector<double,dim>& beta,
+    double delta)
+{
+  auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
+
+  const size_t globalOffset =
+        detail::computeOffset<spaceIndex>(solutionSpaces_);
+
+  auto solutionLocalView = std::get<spaceIndex>(solutionSpaces_).localView();
+  auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
+
+  for(const auto& e : elements(gridView))
+  {
+    solutionLocalView.bind(e);
+    localIndexSet.bind(solutionLocalView);
+
+    const auto& localFiniteElement = solutionLocalView.tree().finiteElement();
+
+    size_t n = localFiniteElement.localBasis().size();
+
+    std::vector<bool>  characteristicFaces(e.subEntities(1), false);
+    bool characteristicFound = false;
+
+    for (auto&& intersection : intersections(gridView, e))
+    {
+      if (conforming(intersection)) {
+        const bool characteristic =
+            fabs(beta * centerUnitOuterNormal(intersection)) < delta;
+        characteristicFaces[intersection.indexInInside()] = characteristic;
+        characteristicFound = characteristicFound || characteristic;
+      }
+    }
+
+    if(characteristicFound)
+    {
+      std::map<size_t,std::list<std::pair<size_t,size_t>>> characteristicDOFs;
+      std::vector<size_t> vertexDOFs(e.subEntities(dim));
+
+      for (unsigned int i=0; i<n; i++)
+      {
+        if (localFiniteElement.localCoefficients().localKey(i).codim()==1)
+            // edge DOFs
+        {
+          const size_t face =
+              localFiniteElement.localCoefficients().localKey(i).subEntity();
+          const size_t localIndex =
+              localFiniteElement.localCoefficients().localKey(i).index();
+          if(characteristicFaces[face])
+            characteristicDOFs[face].emplace_back(i,localIndex);
+        } else if (localFiniteElement.localCoefficients().localKey(i).codim()
+                   == dim)
+        {
+          const size_t vertex =
+              localFiniteElement.localCoefficients().localKey(i).subEntity();
+          vertexDOFs[vertex] = i;
+        }
+        // Vertex DOFs are never characteristic because the corresponding
+        // basis functions have support on at least two edges which can
+        // never be both (almost) characteristic.
+      }
+
+      std::vector<std::pair<size_t,size_t>> endpoints(e.subEntities(1));
+      if(e.type().isQuadrilateral()) {
+        endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
+        endpoints[1] = std::make_pair(vertexDOFs[1], vertexDOFs[3]);
+        endpoints[2] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
+        endpoints[3] = std::make_pair(vertexDOFs[2], vertexDOFs[3]);
+      } else if(e.type().isTriangle()) {
+        endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
+        endpoints[1] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
+        endpoints[2] = std::make_pair(vertexDOFs[1], vertexDOFs[2]);
+      } else {
+        DUNE_THROW(Dune::NotImplemented,
+                   "defineCharacteristicFaces not implemented for element type"
+                   << e.type().id());
+      }
+
+      for (auto&& faceAndDOFs: characteristicDOFs)
+      {
+        size_t face;
+        std::list<std::pair<size_t,size_t>> dofs;
+        std::tie(face, dofs) = faceAndDOFs;
+        size_t left, right;
+        std::tie(left, right) = endpoints[face];
+        for(auto&& dof: dofs)
+        {
+          auto row = detail::getUnconstrainedIndex(localIndexSet,
+                                                   dof.first)[0];
+          auto col = row;
+          const size_t k = dofs.size()+1;
+
+          /* replace the row of dof on characteristic face
+           * by an interpolation of the two endpoints of the
+           * characteristic face. */
+          matrix[row+globalOffset][col+globalOffset] = -1;
+          col = detail::getUnconstrainedIndex(localIndexSet, left)[0];
+          matrix[row+globalOffset][col+globalOffset]
+              = (double)(k-dof.second-1)/k;
+          col = detail::getUnconstrainedIndex(localIndexSet, right)[0];
+          matrix[row+globalOffset][col+globalOffset]
+              = (double)(dof.second+1)/k;
+
+          rhs[row+globalOffset] = 0;
+        }
+      }
+    }
+  }
+}
+
+
+template<class BilinearForm, class InnerProduct, class BufferPolicy>
+template<size_t spaceIndex, unsigned int dim>
+void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
+defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                          BlockVector<FieldVector<double,1> >& rhs,
+                          const FieldVector<double,dim>& beta,
+                          double delta)
+{
+  defineCharacteristicFaces_impl<spaceIndex, dim>(
+      matrix,
+      rhs,
+      beta,
+      delta);
 }
 
 

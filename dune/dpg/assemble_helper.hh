@@ -12,11 +12,7 @@
 #include <dune/dpg/functions/concepts.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/istl/matrixindexset.hh>
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/array.hpp>
-#include <boost/fusion/algorithm/iteration/for_each.hpp>
-#include <boost/fusion/algorithm/transformation/zip.hpp>
-#include <boost/fusion/sequence/intrinsic/at.hpp>
+#include <boost/hana.hpp>
 
 namespace Dune {
 
@@ -231,7 +227,8 @@ struct getOccupationPatternHelper
   template <class testSpaceIndex,
             class solutionSpaceIndex>
   void operator()
-         (const std::tuple<testSpaceIndex, solutionSpaceIndex>& indexTuple)
+         (const boost::hana::tuple<testSpaceIndex,
+                                   solutionSpaceIndex>& indexTuple)
   {
     const auto& testLIS =
         std::get<testSpaceIndex::value>(testLocalIndexSets);
@@ -308,8 +305,7 @@ inline void getOccupationPattern(
                        leftGlobalOffsets,
                        rightGlobalOffsets,
                        occupationPattern);
-  boost::fusion::for_each(Indices{},
-      std::ref(gOPH));
+  boost::hana::for_each(Indices{}, [&](const auto& index) { gOPH(index); });
 }
 
 template<class LocalMatrix, class GlobalMatrix,
@@ -338,9 +334,8 @@ struct localToGlobalCopier
   template <class testSpaceIndex,
             class solutionSpaceIndex>
   void operator()
-         (const std::tuple<
-          testSpaceIndex,
-          solutionSpaceIndex>& indexTuple) const
+         (const boost::hana::tuple<testSpaceIndex,
+                                   solutionSpaceIndex>& indexTuple)
   {
     const auto& testLocalIndexSet
         = std::get<testSpaceIndex::value>(testLocalIndexSets);
@@ -432,7 +427,7 @@ inline void copyLocalToGlobalMatrix(
 
   /* copy every local submatrix indexed by a pair of indices from
    * Indices exactly once. */
-  boost::fusion::for_each(Indices{}, cpMatrix);
+  boost::hana::for_each(Indices{}, cpMatrix);
 }
 
 template<class Indices,
@@ -480,10 +475,11 @@ struct localToGlobalRHSCopier
   template <class TestSpaceIndex>
   void operator() (const TestSpaceIndex& index) const
   {
+    constexpr auto testSpaceIndex = TestSpaceIndex::type::value;
     const auto& testLocalIndexSet
-        = std::get<TestSpaceIndex::value>(testLocalIndexSets);
-    const size_t testLocalOffset = testLocalOffsets[TestSpaceIndex::value];
-    const size_t testGlobalOffset = testGlobalOffsets[TestSpaceIndex::value];
+        = std::get<testSpaceIndex>(testLocalIndexSets);
+    const size_t testLocalOffset = testLocalOffsets[testSpaceIndex];
+    const size_t testGlobalOffset = testGlobalOffsets[testSpaceIndex];
 
     using MultiIndex
         = typename std::decay_t<decltype(testLocalIndexSet)>::MultiIndex;
@@ -533,7 +529,7 @@ inline void copyLocalToGlobalVector(
 
   /* copy every local subvector indexed by an index from
    * Indices exactly once. */
-  boost::fusion::for_each(Indices{}, cpRhs);
+  boost::hana::for_each(Indices{}, cpRhs);
 }
 
 template<class SpacesOrLocalViews, class Offsets>
@@ -566,57 +562,6 @@ inline size_t computeOffset(const SpacesOrLocalViews& s,
       });
 
   return numDofs;
-}
-
-
-namespace mpl {
-  template<class Seq>
-  struct first
-  {
-    typedef typename std::remove_reference<
-      typename boost::fusion::result_of::at_c<Seq,0>::type>::type
-        type;
-  };
-
-  template<class Seq>
-  struct second
-  {
-    typedef typename std::remove_reference<
-      typename boost::fusion::result_of::at_c<Seq,1>::type>::type
-        type;
-  };
-
-  template<class Seq>
-  struct firstTwo
-  {
-    template <size_t i>
-    using type_at = typename std::remove_reference<
-        typename boost::fusion::result_of::at_c<Seq,i>::type>::type;
-
-    typedef std::tuple<type_at<0>, type_at<1> > type;
-  };
-
-  template<class T>
-  struct tupleOf0And
-  {
-    typedef std::tuple<std::integral_constant<size_t,0>, T> type;
-  };
-
-  template<class I, class J>
-  struct tupleOfIAndJ
-  {
-    typedef std::tuple<I, J> type;
-  };
-
-  template<class Seq, class I>
-  struct prefixSequenceWith
-  {
-    typedef
-        typename boost::mpl::transform<
-            Seq
-          , tupleOfIAndJ<I, boost::mpl::_1>
-          >::type type;
-  };
 }
 
 } } // end namespace Dune::detail

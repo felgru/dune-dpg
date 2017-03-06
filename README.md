@@ -26,9 +26,9 @@ libraries installed on your system:
     - a C++14-compatible compiler (e.g. GCC >= 6)
     - cmake >= 2.8.12
   - Libraries:
-    - Boost Fusion >= 1.56, < 1.60
-      (Boost Fusion 1.60 and 1.61 are known to cause compilation errors.
-       Versions other than 1.59 have not been thoroughly tested.)
+    - Boost >= 1.63
+      (Boost versions as low as 1.61, which introduced Boost::Hana, might
+       work but have not been tested.)
     - Eigen >= 3.2
       (http://eigen.tuxfamily.org)
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
