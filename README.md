@@ -28,7 +28,7 @@ libraries installed on your system:
   - Libraries:
     - Boost >= 1.63
       (Boost versions as low as 1.61, which introduced Boost::Hana, might
-       work but not been tested.)
+       work but have not been tested.)
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
     - DUNE core libraries 2.5
       including the staging modules dune-typetree and dune-functions
