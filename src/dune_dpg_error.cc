@@ -134,14 +134,6 @@ int main()
                 make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
                                       DomainOfIntegration::face>(1., beta)));
 
-    auto minInnerProduct = make_InnerProduct(solutionSpaces,
-            make_tuple(
-                make_IntegralTerm<1,1,IntegrationType::valueValue,              // (u^,u^)
-                                      DomainOfIntegration::interior>(1),
-                make_IntegralTerm<1,1,IntegrationType::gradGrad,                // (beta grad u^,beta grad u^)
-                                      DomainOfIntegration::interior>(1, beta)
-          ));
-
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
     auto innerProduct_aposteriori

@@ -143,13 +143,6 @@ int main(int argc, char** argv)
      auto innerProduct_aposteriori
         = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
-    auto minInnerProduct = make_InnerProduct(solutionSpaces,
-          make_tuple(
-              make_IntegralTerm<1,1,IntegrationType::valueValue,              // (u^,u^)
-                                    DomainOfIntegration::interior>(1),
-              make_IntegralTerm<1,1,IntegrationType::gradGrad,                // (beta grad u^,beta grad u^)
-                                    DomainOfIntegration::interior>(1, beta)
-          ));
     auto aPosterioriInnerProduct = make_InnerProduct(solutionSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,              // (u,u)
@@ -172,8 +165,6 @@ int main(int argc, char** argv)
               make_LinearIntegralTerm<1,LinearIntegrationType::valueFunction,    // -2(cw,f)
                                     DomainOfIntegration::interior>([beta, c](const FieldVector<double, dim>& x){return (-2)*c*f(beta)(x);})
           ));
-
-    using MinInnerProduct = decltype(minInnerProduct);
 
     //  System assembler without geometry buffer
     //auto systemAssembler
@@ -207,8 +198,17 @@ int main(int argc, char** argv)
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
 #if 1
+    auto minInnerProduct = make_InnerProduct(solutionSpaces,
+          make_tuple(
+              make_IntegralTerm<1,1,IntegrationType::valueValue,              // (u^,u^)
+                                    DomainOfIntegration::interior>(1),
+              make_IntegralTerm<1,1,IntegrationType::gradGrad,                // (beta grad u^,beta grad u^)
+                                    DomainOfIntegration::interior>(1, beta)
+          ));
+    using MinInnerProduct = decltype(minInnerProduct);
+
     double delta = 1e-5;
-    systemAssembler.applyMinimization<1, MinInnerProduct,2>
+    systemAssembler.applyMinimization<1, MinInnerProduct, 2>
                     (stiffnessMatrix,
                      minInnerProduct,
                      beta,
