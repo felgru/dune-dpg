@@ -311,7 +311,7 @@ public:
     const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
     const auto& element = node_->element();
 
-    switch (dim)
+    switch ((unsigned int)dim)
     {
       case 1:
       {
