@@ -3,4 +3,5 @@ install(FILES
         constraineddiscreteglobalbasisfunction.hh
         interpolate.hh
         localindexsetiteration.hh
+        refinementinterpolation.hh
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/dpg/functions)
