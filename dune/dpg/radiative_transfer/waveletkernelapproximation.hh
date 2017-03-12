@@ -37,7 +37,7 @@ namespace ScatteringKernelApproximation {
                             size_t pos1)
     {
       Eigen::VectorXd result(pos1-pos0);
-      for (int i = pos0; i < pos1; i++)
+      for (size_t i = pos0; i < pos1; i++)
       {
           result(i-pos0) = data(i);
       }
@@ -385,25 +385,23 @@ namespace ScatteringKernelApproximation {
       std::vector<Eigen::MatrixXd>
         elem_matrix = get_alpert_transform_matrices(L,quadOrder);
       std::vector<Eigen::VectorXd> s(J+1);
-      for(int j=0; j<=J; j++){
-        if(j==0) s[0]=w.first;
-        else{
-          s[j].resize(static_cast<int>(L*pow(2,j)));
-          Eigen::VectorXd stmp(L);
-          Eigen::VectorXd wtmp(L);
-          for(int k=0; k<pow(2.,j); k++){
-            int kdiv2=(int) k/2;
-            int kmod2=k%2;
-            stmp=s[j-1].segment(L*kdiv2,L);
-            wtmp=w.second[j-1].segment(L*kdiv2,L);
-            if(kmod2==0){
-              s[j].segment(L*k,L)=elem_matrix[0].transpose()*stmp
-                                  +elem_matrix[2].transpose()*wtmp;
-            }
-            else{
-              s[j].segment(L*k,L)=elem_matrix[1].transpose()*stmp
-                                  +elem_matrix[3].transpose()*wtmp;
-            }
+      s[0]=w.first;
+      for(size_t j=1; j<=J; j++){
+        s[j].resize(static_cast<int>(L*pow(2,j)));
+        Eigen::VectorXd stmp(L);
+        Eigen::VectorXd wtmp(L);
+        for(int k=0; k<pow(2.,j); k++){
+          int kdiv2=(int) k/2;
+          int kmod2=k%2;
+          stmp=s[j-1].segment(L*kdiv2,L);
+          wtmp=w.second[j-1].segment(L*kdiv2,L);
+          if(kmod2==0){
+            s[j].segment(L*k,L)=elem_matrix[0].transpose()*stmp
+                                +elem_matrix[2].transpose()*wtmp;
+          }
+          else{
+            s[j].segment(L*k,L)=elem_matrix[1].transpose()*stmp
+                                +elem_matrix[3].transpose()*wtmp;
           }
         }
       }
