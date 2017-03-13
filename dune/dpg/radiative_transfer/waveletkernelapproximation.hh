@@ -219,7 +219,7 @@ namespace ScatteringKernelApproximation {
       for(size_t l=0; l<L; l++){
         P_higher[l]=pow(x.array(),l+L);
         F[l]=pow(x.array(),l);
-        for(size_t i=0;i<x.size();i++){
+        for(Eigen::Index i=0;i<x.size();i++){
           if(x(i)<= (xmin+xmax)/2.) F[l](i)=-pow(x(i),l);
         }
       }
