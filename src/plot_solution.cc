@@ -300,8 +300,7 @@ int main(int argc, char** argv)
 
     std::chrono::steady_clock::time_point starterror = std::chrono::steady_clock::now();
     const double ratio = .2;
-    ErrorTools errorTools = ErrorTools();
-    err = errorTools.DoerflerMarking(*grid, ratio,
+    err = ErrorTools::DoerflerMarking(*grid, ratio,
                                      bilinearForm_aposteriori,
                                      innerProduct_aposteriori,
                                      aPosterioriInnerProduct,

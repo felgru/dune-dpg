@@ -68,6 +68,7 @@ namespace Dune {
         const BlockVector<FieldVector<double,1> >& );
 
     template <unsigned int subsamples, class FEBasis, class VolumeTerms>
+    static
     double computeL2error(const FEBasis& ,
                           const BlockVector<FieldVector<double,1> >& ,
                           VolumeTerms&&,
@@ -75,20 +76,29 @@ namespace Dune {
 
     template <class InnerProduct, class LinearForm,
               class RhsFunction, class VectorType>
+    static
     double aPosterioriL2Error(InnerProduct& ,
                               LinearForm& ,
                               const RhsFunction& ,
                               const VectorType&);
 
     template <class BilinearForm, class InnerProduct, class VectorType>
+    static
     double aPosterioriError(BilinearForm& ,
                             InnerProduct& ,
                             const VectorType& ,
                             const VectorType& );
 
+    template <class Grid, class EntitySeed>
+    static
+    double DoerflerMarking(Grid& ,
+                           double ,
+                           std::vector<std::tuple<EntitySeed, double>>&& );
+
     template <class Grid, class BilinearForm, class InnerProduct,
               class APosterioriInnerProduct, class LinearForm,
               class RhsFunction, class VectorType>
+    static
     double DoerflerMarking(Grid& ,
                            double ,
                            BilinearForm& ,
@@ -100,6 +110,35 @@ namespace Dune {
                            const VectorType& ,
                            double );
 
+    template <class BilinearForm, class InnerProduct, class VectorType>
+    static
+    std::vector<std::tuple<typename
+        std::tuple_element_t<0,typename BilinearForm::SolutionSpaces>
+          ::GridView::template Codim<0>::Entity::EntitySeed,
+        double>>
+    residual(
+        BilinearForm& ,
+        InnerProduct& ,
+        const VectorType& ,
+        const VectorType& );
+
+    template <class BilinearForm, class InnerProduct,
+              class APosterioriInnerProduct, class LinearForm,
+              class RhsFunction, class VectorType>
+    static
+    std::vector<std::tuple<typename
+        std::tuple_element_t<0,typename BilinearForm::SolutionSpaces>
+          ::GridView::template Codim<0>::Entity::EntitySeed,
+        double>>
+    residual(BilinearForm& ,
+             InnerProduct& ,
+             APosterioriInnerProduct& ,
+             LinearForm& ,
+             const RhsFunction& ,
+             const VectorType& ,
+             const VectorType& ,
+             double );
+
   private:
     template <class LocalView>
     static double l2normSquaredElement(
@@ -107,7 +146,7 @@ namespace Dune {
         const BlockVector<FieldVector<double,1> >& );
 
     template <unsigned int subsamples, class LocalView, class VolumeTerms>
-    double computeL2errorSquareElement(
+    static double computeL2errorSquareElement(
         const LocalView& ,
         const BlockVector<FieldVector<double,1> >& ,
         VolumeTerms&&,
@@ -116,6 +155,7 @@ namespace Dune {
     template <class InnerProduct, class LinearForm,
               class RhsFunction, class SolutionLocalViews,
               class SolutionLocalIndexSets, class VectorType>
+    static
     double aPosterioriL2ErrorSquareElement(InnerProduct& ,
                                            LinearForm& ,
                                            const RhsFunction& ,
@@ -127,6 +167,7 @@ namespace Dune {
               class TestLocalViews, class SolutionLocalViews,
               class TestLocalIndexSets, class SolutionLocalIndexSets,
               class VectorType>
+    static
     double aPosterioriErrorSquareElement(BilinearForm& ,
                                          InnerProduct& ,
                                          TestLocalViews& ,
@@ -689,7 +730,7 @@ namespace Dune {
 /**
  * \brief Mark elements for refinement according to Dörfler's strategy
  *
- * This mean, given a ratio \f$\theta \in (0,1]\f$, the set
+ * This means, given a ratio \f$\theta \in (0,1]\f$, the set
  * \f$\mathcal M \subset \Omega_h\f$ of marked elements satisfies
  * \f[\mathrm{err}(u_h, \mathcal M)
      \geq \mathrm{err}(u_h, \Omega_h).\f]
@@ -698,6 +739,50 @@ namespace Dune {
  *
  * \param grid
  * \param ratio  the marking ratio \f$\theta \in (0,1]\f$
+ * \param errorEstimates holds an error estimate for each entity
+ *
+ * \return estimate for global a posteriori error
+ */
+  template <class Grid, class EntitySeed>
+  double ErrorTools::DoerflerMarking(
+      Grid& grid,
+      double ratio,
+      std::vector<std::tuple<EntitySeed, double>>&& errorEstimates)
+  {
+    using namespace Dune::detail;
+
+    using Entity = typename Grid::template Codim<0>::Entity;
+    static_assert(std::is_same<EntitySeed,
+        typename Entity::EntitySeed>::value,
+        "EntitySeed type does not fit the Grid type.");
+
+    std::sort(errorEstimates.begin(), errorEstimates.end(),
+        [](const auto& a, const auto& b) {
+            return std::get<1>(a) > std::get<1>(b);
+        });
+    const double errorSquared = std::accumulate(
+        errorEstimates.cbegin(), errorEstimates.cend(), 0.,
+        [](double a, const auto& b) {
+            return a + std::get<1>(b);
+        });
+    // Since we used squared errors, we have to square the marking ratio
+    const double targetError = ratio * ratio * errorSquared;
+    double error = 0.;
+    auto currElem = errorEstimates.begin();
+    while(error < targetError) {
+      error += std::get<1>(*currElem);
+      grid.mark(1, grid.entity(std::get<0>(*currElem)));
+      ++currElem;
+    }
+
+    return std::sqrt(errorSquared);
+  }
+
+/**
+ * \brief Element-wise residual of an (ultra-)weak formulation
+ *
+ * \todo document \p aPosterioriInnerProduct, \p linearForm and \p splitRatio
+ *
  * \param bilinearForm
  * \param innerProduct
  * \param aPosterioriInnerProduct
@@ -707,14 +792,16 @@ namespace Dune {
  * \param rhs  Rhs of the problem in enriched test space
  * \param splitRatio
  *
- * \return estimate for global a posteriori error
+ * \return cell-wise estimate for a posteriori error
  */
-  template <class Grid, class BilinearForm, class InnerProduct,
+  template <class BilinearForm, class InnerProduct,
             class APosterioriInnerProduct, class LinearForm,
             class RhsFunction, class VectorType>
-  double ErrorTools::DoerflerMarking(
-      Grid& grid,
-      double ratio,
+  std::vector<std::tuple<typename
+      std::tuple_element_t<0,typename BilinearForm::SolutionSpaces>
+        ::GridView::template Codim<0>::Entity::EntitySeed,
+      double>>
+  ErrorTools::residual(
       BilinearForm& bilinearForm,
       InnerProduct& innerProduct,
       APosterioriInnerProduct& aPosterioriInnerProduct,
@@ -722,8 +809,7 @@ namespace Dune {
       const RhsFunction& f,
       const VectorType& solution,
       const VectorType& rhs,
-      double splitRatio
-                                    )
+      double splitRatio)
   {
     using namespace Dune::detail;
 
@@ -731,8 +817,6 @@ namespace Dune {
     using GridView
         = typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>
                         ::type::GridView;
-    static_assert(std::is_same<typename GridView::Grid, Grid>::value,
-        "Type mismatch between Grid and Grid of BilinearForm!");
     using Entity = typename GridView::template Codim<0>::Entity;
     using EntitySeed = typename Entity::EntitySeed;
 
@@ -792,26 +876,138 @@ namespace Dune {
       }
       errorEstimates.emplace_back(e.seed(), elementError);
     }
-    std::sort(errorEstimates.begin(), errorEstimates.end(),
-        [](const auto& a, const auto& b) {
-            return std::get<1>(a) > std::get<1>(b);
-        });
-    const double errorSquared = std::accumulate(
-        errorEstimates.cbegin(), errorEstimates.cend(), 0.,
-        [](double a, const auto& b) {
-            return a + std::get<1>(b);
-        });
-    // Since we used squared errors, we have to square the marking ratio
-    const double targetError = ratio * ratio * errorSquared;
-    double error = 0.;
-    auto currElem = errorEstimates.begin();
-    while(error < targetError) {
-      error += std::get<1>(*currElem);
-      grid.mark(1, grid.entity(std::get<0>(*currElem)));
-      ++currElem;
-    }
+    return errorEstimates;
+  }
 
-    return std::sqrt(errorSquared);
+/**
+ * \brief Element-wise residual of an (ultra-)weak formulation
+ *
+ * \param bilinearForm
+ * \param innerProduct
+ * \param solution  FE solution
+ * \param rhs  Rhs of the problem in enriched test space
+ *
+ * \return cell-wise estimate for a posteriori error
+ */
+  template <class BilinearForm, class InnerProduct, class VectorType>
+  std::vector<std::tuple<typename
+      std::tuple_element_t<0,typename BilinearForm::SolutionSpaces>
+        ::GridView::template Codim<0>::Entity::EntitySeed,
+      double>>
+  ErrorTools::residual(
+      BilinearForm& bilinearForm,
+      InnerProduct& innerProduct,
+      const VectorType& solution,
+      const VectorType& rhs)
+  {
+    using namespace Dune::detail;
+
+    using GridView
+        = typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>
+                        ::type::GridView;
+    using Entity = typename GridView::template Codim<0>::Entity;
+    using EntitySeed = typename Entity::EntitySeed;
+
+    const GridView gridView
+        = std::get<0>(bilinearForm.getSolutionSpaces()).gridView();
+
+    using SolutionSpaces = typename BilinearForm::SolutionSpaces;
+    using EnrichedTestspaces = typename BilinearForm::TestSpaces;
+
+    using SolutionLocalViews = getLocalViews_t<SolutionSpaces>;
+    using TestLocalViews = getLocalViews_t<EnrichedTestspaces>;
+
+    SolutionLocalViews solutionLocalViews
+        = getLocalViews(bilinearForm.getSolutionSpaces());
+    TestLocalViews testLocalViews
+        = getLocalViews(bilinearForm.getTestSpaces());
+
+    // We get the local index sets of the test spaces
+    auto testLocalIndexSets = getLocalIndexSets(bilinearForm.getTestSpaces());
+    // We get the local index sets of the solution spaces
+    auto solutionLocalIndexSets
+            = getLocalIndexSets(bilinearForm.getSolutionSpaces());
+
+    std::vector<std::tuple<EntitySeed, double>> errorEstimates;
+    errorEstimates.reserve(gridView.size(0));
+    for(const auto& e : elements(gridView))
+    {
+      // Bind localViews and localIndexSets
+      bindLocalViews(testLocalViews, e);
+      bindLocalViews(solutionLocalViews, e);
+      bindLocalIndexSets(testLocalIndexSets, testLocalViews);
+      bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+
+      // Now we compute the error inside the element
+      double elementError = aPosterioriErrorSquareElement(
+                                bilinearForm,
+                                innerProduct,
+                                testLocalViews,
+                                solutionLocalViews,
+                                testLocalIndexSets,
+                                solutionLocalIndexSets,
+                                solution,
+                                rhs);
+      errorEstimates.emplace_back(e.seed(), elementError);
+    }
+    return errorEstimates;
+  }
+
+/**
+ * \brief Mark elements for refinement according to Dörfler's strategy
+ *
+ * This means, given a ratio \f$\theta \in (0,1]\f$, the set
+ * \f$\mathcal M \subset \Omega_h\f$ of marked elements satisfies
+ * \f[\mathrm{err}(u_h, \mathcal M)
+     \geq \mathrm{err}(u_h, \Omega_h).\f]
+ *
+ * \todo document \p aPosterioriInnerProduct, \p linearForm and \p splitRatio
+ *
+ * \param grid
+ * \param ratio  the marking ratio \f$\theta \in (0,1]\f$
+ * \param bilinearForm
+ * \param innerProduct
+ * \param aPosterioriInnerProduct
+ * \param linearForm
+ * \param f
+ * \param solution  FE solution
+ * \param rhs  Rhs of the problem in enriched test space
+ * \param splitRatio
+ *
+ * \return estimate for global a posteriori error
+ */
+  template <class Grid, class BilinearForm, class InnerProduct,
+            class APosterioriInnerProduct, class LinearForm,
+            class RhsFunction, class VectorType>
+  double ErrorTools::DoerflerMarking(
+      Grid& grid,
+      double ratio,
+      BilinearForm& bilinearForm,
+      InnerProduct& innerProduct,
+      APosterioriInnerProduct& aPosterioriInnerProduct,
+      LinearForm& linearForm,
+      const RhsFunction& f,
+      const VectorType& solution,
+      const VectorType& rhs,
+      double splitRatio)
+  {
+    using GridView
+        = typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>
+                        ::type::GridView;
+    static_assert(std::is_same<typename GridView::Grid, Grid>::value,
+        "Type mismatch between Grid and Grid of BilinearForm!");
+
+    return DoerflerMarking(grid, ratio,
+        residual(
+            bilinearForm,
+            innerProduct,
+            aPosterioriInnerProduct,
+            linearForm,
+            f,
+            solution,
+            rhs,
+            splitRatio)
+        );
   }
 
 } // end namespace Dune
