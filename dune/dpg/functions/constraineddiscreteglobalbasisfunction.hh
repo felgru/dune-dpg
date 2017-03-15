@@ -7,6 +7,7 @@
 
 #include <dune/common/shared_ptr.hh>
 
+#include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/functions/functionspacebases/defaultnodetorangemap.hh>
 #include <dune/functions/functionspacebases/flatvectorbackend.hh>
 #include <dune/functions/gridfunctions/gridviewentityset.hh>
@@ -100,24 +101,18 @@ public:
       localIndexSet_.bind(localBasisView_);
 
       localDoFs_.resize(localBasisView_.size());
-      auto globalIndex = localIndexSet_.indicesLocalGlobal().begin();
-      auto globalIndexEnd = localIndexSet_.indicesLocalGlobal().end();
-      const size_type numConstraints = localIndexSet_.constraintsSize();
-      size_type i = 0;
-      for(size_type c = 0; c < numConstraints; c++) {
-        const size_type nextConstraint = i + localIndexSet_.constraintOffset(c);
-        for (; i < nextConstraint; ++i) {
-          localDoFs_[i] = globalFunction_.dofs()[*(globalIndex++)];
+      iterateOverLocalIndexSet(
+        localIndexSet_,
+        [&](size_type i, auto gi) {
+          localDoFs_[i] = globalFunction_.dofs()[gi];
+        },
+        [&](size_type i) {
+          localDoFs_[i] = 0;
+        },
+        [&](size_type i, auto gi, double wi) {
+          localDoFs_[i] += wi * globalFunction_.dofs()[gi];
         }
-        localDoFs_[i] = 0;
-        for(auto w : localIndexSet_.constraintWeights(c)) {
-          localDoFs_[i] += w * globalFunction_.dofs()[*(globalIndex++)];
-        }
-        ++i;
-      }
-      for (; i < localDoFs_.size(); ++i)
-        localDoFs_[i] = globalFunction_.dofs()[*(globalIndex++)];
-      assert(globalIndex == globalIndexEnd);
+      );
     }
 
     void unbind()
