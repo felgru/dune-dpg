@@ -96,7 +96,7 @@ public:
   void initializeIndices()
   {
     edgeOffset_          = 0;
-    if (dim==3)
+    if constexpr (dim==3)
     {
       DUNE_THROW(Dune::NotImplemented, "LagrangeFaceNodalBasis for 3D grids is not implemented");
       triangleOffset_      = 0;
@@ -336,7 +336,7 @@ public:
 
       if (dofDim==1)
       {  // edge dof
-        if (dim==1)   // element dof -- any local numbering is fine
+        if constexpr (dim==1)   // element dof -- any local numbering is fine
         {
           DUNE_THROW(Dune::NotImplemented,
               "faces have no elements of codimension 0");
@@ -364,7 +364,7 @@ public:
 
       if (dofDim==2)
       {
-        if (dim==2)   // element dof -- any local numbering is fine
+        if constexpr (dim==2)   // element dof -- any local numbering is fine
         {
           DUNE_THROW(Dune::NotImplemented,
                      "faces have no elements of codimension 0");

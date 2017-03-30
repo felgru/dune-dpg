@@ -169,7 +169,7 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
           ++entry;
         }
       }
-      if(is_DGRefinedFiniteElement<TestSpace>::value)
+      if constexpr (is_DGRefinedFiniteElement<TestSpace>::value)
         subElementOffset += localFiniteElementTest.size();
       subElementIndex++;
     }

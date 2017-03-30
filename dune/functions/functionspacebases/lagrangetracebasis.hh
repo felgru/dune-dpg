@@ -98,7 +98,7 @@ public:
   {
     vertexOffset_        = 0;
     edgeOffset_          = vertexOffset_ + gridView_.size(dim);
-    if (dim==3)
+    if constexpr (dim==3)
     {
       triangleOffset_      = edgeOffset_
                            + dofsPerEdge * gridView_.size(dim-1);
@@ -338,7 +338,7 @@ public:
 
       if (dofDim==1)
       {  // edge dof
-        if (dim==1)   // element dof -- any local numbering is fine
+        if constexpr (dim==1)   // element dof -- any local numbering is fine
         {
           DUNE_THROW(Dune::NotImplemented,
               "traces have no elements of codimension 0");
@@ -366,7 +366,7 @@ public:
 
       if (dofDim==2)
       {
-        if (dim==2)   // element dof -- any local numbering is fine
+        if constexpr (dim==2)   // element dof -- any local numbering is fine
         {
           DUNE_THROW(Dune::NotImplemented,
               "traces have no elements of codimension 0");
