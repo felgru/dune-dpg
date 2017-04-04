@@ -30,7 +30,8 @@ template<class SolutionSpaces,
 class ApproximateScatteringAssembler
 {
 public:
-  enum : unsigned int { dim = 2 };
+  enum : unsigned int {
+    dim = std::tuple_element_t<0, SolutionSpaces>::GridView::dimension };
   using Direction = FieldVector<double, dim>;
 
   ApproximateScatteringAssembler () = delete;
@@ -118,7 +119,7 @@ inline static void interiorImpl(
     const std::vector<BlockVector<FieldVector<double,1> >>& x,
     size_t si)
 {
-  const int dim = Element::dimension;
+  const int dim = Element::mydimension;
   auto geometry = element.geometry();
 
   // Get set of shape functions for this element

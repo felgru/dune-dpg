@@ -207,7 +207,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
     // Get the grid element from the local FE basis view
     typedef typename std::remove_reference<decltype(e)>::type Element;
 
-    const int dim = Element::dimension;
+    const int dim = Element::mydimension;
 
     // Get set of shape functions for this element
     const auto& localFiniteElementTest =

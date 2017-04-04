@@ -293,7 +293,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       || std::is_same<RHSApproximation, ApproximateRHSandBoundary>::value,
       "Unknown type provided for RHSApproximation!\n"
       "Should be either FeRHSandBoundary or ApproximateRHSandBoundary.");
-  const unsigned int dim = 2;
   constexpr bool rhsIsFeFunction
       = std::is_same<RHSApproximation, FeRHSandBoundary>::value;
 
@@ -301,6 +300,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   typedef typename Grid::LevelGridView LevelGridView;
   typedef typename LeafGridView::template Codim<0>::Geometry Geometry;
   LeafGridView gridView = grid.leafGridView();
+
+  const unsigned int dim = LeafGridView::dimension;
 
   ///////////////////////////////////
   // To print information
