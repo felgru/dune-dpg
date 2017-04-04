@@ -21,7 +21,7 @@ inline static void interiorImpl(
     const Element& element,
     const FunctionalVector& functionalVector)
 {
-  const int dim = Element::dimension;
+  const int dim = Element::mydimension;
   auto geometry = element.geometry();
 
   // Get set of shape functions for this element

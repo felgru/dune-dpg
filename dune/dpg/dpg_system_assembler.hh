@@ -14,8 +14,9 @@
 
 #include <boost/hana.hpp>
 
-#include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
+#include <dune/istl/bvector.hh>
+#include <dune/istl/matrix.hh>
 #include <dune/istl/matrixindexset.hh>
 
 #include <dune/functions/functionspacebases/interpolate.hh>

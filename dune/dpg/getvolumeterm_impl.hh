@@ -60,7 +60,7 @@ struct GetVolumeTerm_Impl<integrationType, Space, false>
     typedef typename LocalViewTest::Element Element;
     const Element& element = localViewTest.element();
 
-    const int dim = Element::dimension;
+    const int dim = Element::mydimension;
     auto geometry = element.geometry();
 
     // Get set of shape functions for this element
@@ -135,7 +135,7 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
     typedef typename LocalViewTest::Element Element;
     const Element& element = localViewTest.element();
 
-    const int dim = Element::dimension;
+    const int dim = Element::mydimension;
     auto geometry = element.geometry();
 
     // Get set of shape functions for this element

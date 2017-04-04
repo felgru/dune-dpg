@@ -22,6 +22,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   Use the auxiliary functions `iterateOverLocalIndexSet` and
   `addToGlobalMatrix` to conveniently handle index sets from both
   interfaces.
+* New functions to save grid functions before adaptive refinement and to
+  restore them to the refined grid, namely `attachDataToGrid` and
+  `restoreDataToRefinedGrid`.
 
 ### Changed
 * We now require version 2.5 of the DUNE core modules and a fully C++14
@@ -32,7 +35,13 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   we needed to do some more complicated type computations, we now use
   Boost Hana. Thus our Boost dependency has been increased to Boost 1.63
   or newer.
-* ErrorTools: the element-wise operations are now marked as private.
+* ErrorTools: The element-wise operations are now marked as private.
+* ErrorTools: Mark all methods as static.
+  In the future, we might make ErrorTools a namespace instead of a class.
+* `ErrorTools::DoerflerMarking` now be called as
+  `DoerflerMarking(grid, ratio, errorEstimates)` where `errorEstimates`
+  is a `std::vector<std::tuple<EntitySeed, double>>&&` so that you can use
+  Dörfler marking with your own error estimators.
 * README, INSTALL: Mention dune-uggrid instead of ug.
 * Remove some noise from the API documentation.
 

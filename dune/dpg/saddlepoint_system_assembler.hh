@@ -11,8 +11,9 @@
 #include <type_traits>
 #include <utility>
 
-#include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
+#include <dune/istl/bvector.hh>
+#include <dune/istl/matrix.hh>
 #include <dune/istl/matrixindexset.hh>
 
 #include "assemble_helper.hh"
