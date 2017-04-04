@@ -26,7 +26,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                                 const DirectionType& lhsBeta,
                                 const DirectionType& rhsBeta)
 {
-  const int dim = Element::dimension;
+  const int dim = Element::mydimension;
   auto geometry = element.geometry();
 
   // Get set of shape functions for this element
@@ -111,7 +111,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
          const DirectionType& lhsBeta,
          const DirectionType& rhsBeta)
 {
-  const int dim = Element::dimension;
+  const int dim = Element::mydimension;
 
   // Get set of shape functions for this element
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
