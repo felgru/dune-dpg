@@ -30,6 +30,11 @@ namespace Dune {
   {
   public:
     typedef std::decay_t<Sps> Spaces;
+    static_assert(Concept::tupleEntriesModel<
+        Functions::Concept::GeneralizedGlobalBasis<
+            typename std::tuple_element_t<0, Spaces>::GridView>,
+        Spaces>(),
+        "Spaces need to model the GeneralizedGlobalBasis concept.");
     //! tuple type for the local views of the test spaces
     typedef detail::getLocalViews_t<Spaces>  LocalViews;
 
@@ -39,8 +44,8 @@ namespace Dune {
      *
      * \note For your convenience, use make_LinearForm() instead.
      */
-    constexpr LinearForm (const Spaces&       spaces,
-                          const LinearTerms&  terms)
+    constexpr LinearForm (const std::shared_ptr<Spaces>& spaces,
+                          const LinearTerms&             terms)
                : spaces(spaces),
                  terms(terms),
                  localViews(nullptr)
@@ -101,7 +106,7 @@ namespace Dune {
     /**
      * \brief Does exactly what it says on the tin.
      */
-    const Spaces& getSpaces() const
+    std::shared_ptr<Spaces> getSpaces() const
     { return spaces; }
 
     /**
@@ -121,8 +126,8 @@ namespace Dune {
     { return localSpaceOffsets; }
 
   private:
-    Spaces       spaces;
-    LinearTerms  terms;
+    std::shared_ptr<Spaces> spaces;
+    LinearTerms             terms;
 
     size_t localSpaceOffsets[std::tuple_size<Spaces>::value];
     size_t localTotalSpaceSize;
@@ -134,8 +139,8 @@ namespace Dune {
  * \brief Creates a LinearForm for a saddlepoint formulation,
  *        deducing the target type from the types of arguments.
  *
- * \param testSpaces      a tuple of test spaces
- * \param solutionSpaces  a tuple of solution spaces
+ * \param testSpaces      a shared_ptr to a tuple of test spaces
+ * \param solutionSpaces  a shared_ptr to a tuple of solution spaces
  * \param terms           a tuple of LinearIntegralTerm
  */
 template<class TestSpaces, class SolutionSpaces, class LinearTerms>
@@ -157,6 +162,11 @@ auto make_Saddlepoint_LinearForm(TestSpaces      testSpaces,
                            std::declval<SolutionSpaces>()
             ))>::type;
   return LinearForm<Spaces, LinearTerms>
+                    // TODO: Wrap concatenated tuple into a shared_ptr.
+                    //       We cannot do it here, as the LinearForm would
+                    //       than hold copies to the spaces we were giving
+                    //       here, thus making it possible to have
+                    //       inconsistent spaces after refinement.
                     (std::tuple_cat(testSpaces, solutionSpaces), terms);
 }
 
@@ -164,12 +174,12 @@ auto make_Saddlepoint_LinearForm(TestSpaces      testSpaces,
  * \brief Creates a LinearForm (i.e. for a saddlepoint formulation),
  *        deducing the target type from the types of arguments.
  *
- * \param spaces          a tuple of spaces
+ * \param spaces          a shared_ptr to a tuple of spaces
  * \param terms           a tuple of LinearIntegralTerm
  */
 template<class Spaces, class LinearTerms>
-auto make_LinearForm(Spaces      spaces,
-                     LinearTerms     terms)
+auto make_LinearForm(const std::shared_ptr<Spaces>& spaces,
+                     LinearTerms                    terms)
     -> LinearForm<Spaces, LinearTerms>
 {
   return LinearForm<Spaces, LinearTerms>
@@ -179,10 +189,10 @@ auto make_LinearForm(Spaces      spaces,
 template<class TestSpaces, class LinearTerms, class NewTestSpaces>
 auto replaceTestSpaces(
     const LinearForm<TestSpaces, LinearTerms>& linearForm,
-    NewTestSpaces&& newTestSpaces)
+    const std::shared_ptr<NewTestSpaces>& newTestSpaces)
   -> LinearForm<NewTestSpaces, LinearTerms> {
   return LinearForm<NewTestSpaces, LinearTerms>
-                     (std::forward<NewTestSpaces>(newTestSpaces),
+                     (newTestSpaces,
                       linearForm.getTerms());
 }
 

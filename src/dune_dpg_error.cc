@@ -99,17 +99,17 @@ int main()
 
     typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
     typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
-    auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView),
-                                          FEBasisTrace(gridView));
+    auto solutionSpaces
+      = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
     typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;     // v
-    auto testSpaces = std::make_tuple(FEBasisTest(gridView));
+    auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
         = Functions::LagrangeDGBasis<GridView, 4>;
     auto testSpaces_aposteriori
-        = std::make_tuple(FEBasisTest_aposteriori(gridView));
+        = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
     /////////////////////////////////////////////////////////
     //   Choose a bilinear form
@@ -198,10 +198,9 @@ int main()
     {
       std::vector<bool> dirichletNodesInflow;
 
-      BoundaryTools boundaryTools = BoundaryTools();
-      boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
-                                          dirichletNodesInflow,
-                                          beta);
+      BoundaryTools::getInflowBoundaryMask(std::get<1>(*solutionSpaces),
+                                           dirichletNodesInflow,
+                                           beta);
 
 
       systemAssembler.applyDirichletBoundary<1>
@@ -229,8 +228,8 @@ int main()
     //  Make a discrete function from the FE basis and the coefficient vector
     ////////////////////////////////////////////////////////////////////////////
 
-    size_t nFace = std::get<1>(solutionSpaces).size();
-    size_t nInner = std::get<0>(solutionSpaces).size();
+    size_t nFace = std::get<1>(*solutionSpaces).size();
+    size_t nInner = std::get<0>(*solutionSpaces).size();
     VectorType u(nInner);
     VectorType theta(nFace);
     u=0;
@@ -248,8 +247,8 @@ int main()
       theta[i] = x[nInner+i];
     }
 
-    auto innerSpace = std::get<0>(solutionSpaces);
-    auto feBasisTrace = std::get<1>(solutionSpaces);
+    auto innerSpace = std::get<0>(*solutionSpaces);
+    auto feBasisTrace = std::get<1>(*solutionSpaces);
 
     ////////////////////////////////////////////////////////////////////////////
     //  Error evaluation

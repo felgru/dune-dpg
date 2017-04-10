@@ -446,7 +446,7 @@ namespace Dune {
 
     // Create and fill vector with offsets for global dofs
     size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-    computeOffsets(globalSolutionSpaceOffsets, innerProduct.getTestSpaces());
+    computeOffsets(globalSolutionSpaceOffsets, *innerProduct.getTestSpaces());
 
     // Create and fill vector with offsets for local dofs on element
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -542,19 +542,19 @@ namespace Dune {
     typedef typename std::tuple_element<0, typename InnerProduct::TestSpaces>
                         ::type::GridView GridView;
     const GridView gridView
-        = std::get<0>(innerProduct.getTestSpaces()).gridView();
+        = std::get<0>(*innerProduct.getTestSpaces()).gridView();
 
     typedef typename InnerProduct::TestSpaces SolutionSpaces;
 
     typedef getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
 
     SolutionLocalViews solutionLocalViews
-        = getLocalViews(innerProduct.getTestSpaces());
+        = getLocalViews(*innerProduct.getTestSpaces());
 
 
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
-            = getLocalIndexSets(innerProduct.getTestSpaces());
+            = getLocalIndexSets(*innerProduct.getTestSpaces());
 
     // Variable where we compute the residual
     double res = 0.;
@@ -613,9 +613,9 @@ namespace Dune {
     size_t globalTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
     size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-    computeOffsets(globalTestSpaceOffsets, bilinearForm.getTestSpaces());
+    computeOffsets(globalTestSpaceOffsets, *bilinearForm.getTestSpaces());
     computeOffsets(globalSolutionSpaceOffsets,
-                   bilinearForm.getSolutionSpaces());
+                   *bilinearForm.getSolutionSpaces());
 
     // Create and fill vector with offsets for local dofs on element
     size_t localTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
@@ -683,7 +683,7 @@ namespace Dune {
         , typename BilinearForm::SolutionSpaces
         >::type::GridView GridView;
     const GridView gridView
-        = std::get<0>(bilinearForm.getSolutionSpaces()).gridView();
+        = std::get<0>(*bilinearForm.getSolutionSpaces()).gridView();
 
     typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
     typedef typename BilinearForm::TestSpaces EnrichedTestspaces;
@@ -692,15 +692,15 @@ namespace Dune {
     typedef detail::getLocalViews_t<EnrichedTestspaces>  TestLocalViews;
 
     SolutionLocalViews solutionLocalViews
-        = getLocalViews(bilinearForm.getSolutionSpaces());
+        = getLocalViews(*bilinearForm.getSolutionSpaces());
     TestLocalViews testLocalViews
-        = getLocalViews(bilinearForm.getTestSpaces());
+        = getLocalViews(*bilinearForm.getTestSpaces());
 
     // We get the local index sets of the test spaces
-    auto testLocalIndexSets = getLocalIndexSets(bilinearForm.getTestSpaces());
+    auto testLocalIndexSets = getLocalIndexSets(*bilinearForm.getTestSpaces());
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
-            = getLocalIndexSets(bilinearForm.getSolutionSpaces());
+            = getLocalIndexSets(*bilinearForm.getSolutionSpaces());
 
     // Variable where we compute the residual
     double res = 0.;
@@ -821,7 +821,7 @@ namespace Dune {
     using EntitySeed = typename Entity::EntitySeed;
 
     const GridView gridView
-        = std::get<0>(bilinearForm.getSolutionSpaces()).gridView();
+        = std::get<0>(*bilinearForm.getSolutionSpaces()).gridView();
 
     using SolutionSpaces = typename BilinearForm::SolutionSpaces;
     using EnrichedTestspaces = typename BilinearForm::TestSpaces;
@@ -830,15 +830,15 @@ namespace Dune {
     using TestLocalViews = getLocalViews_t<EnrichedTestspaces>;
 
     SolutionLocalViews solutionLocalViews
-        = getLocalViews(bilinearForm.getSolutionSpaces());
+        = getLocalViews(*bilinearForm.getSolutionSpaces());
     TestLocalViews testLocalViews
-        = getLocalViews(bilinearForm.getTestSpaces());
+        = getLocalViews(*bilinearForm.getTestSpaces());
 
     // We get the local index sets of the test spaces
-    auto testLocalIndexSets = getLocalIndexSets(bilinearForm.getTestSpaces());
+    auto testLocalIndexSets = getLocalIndexSets(*bilinearForm.getTestSpaces());
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
-            = getLocalIndexSets(bilinearForm.getSolutionSpaces());
+            = getLocalIndexSets(*bilinearForm.getSolutionSpaces());
 
     std::vector<std::tuple<EntitySeed, double>> errorEstimates;
     errorEstimates.reserve(gridView.size(0));
@@ -909,7 +909,7 @@ namespace Dune {
     using EntitySeed = typename Entity::EntitySeed;
 
     const GridView gridView
-        = std::get<0>(bilinearForm.getSolutionSpaces()).gridView();
+        = std::get<0>(*bilinearForm.getSolutionSpaces()).gridView();
 
     using SolutionSpaces = typename BilinearForm::SolutionSpaces;
     using EnrichedTestspaces = typename BilinearForm::TestSpaces;
@@ -918,15 +918,15 @@ namespace Dune {
     using TestLocalViews = getLocalViews_t<EnrichedTestspaces>;
 
     SolutionLocalViews solutionLocalViews
-        = getLocalViews(bilinearForm.getSolutionSpaces());
+        = getLocalViews(*bilinearForm.getSolutionSpaces());
     TestLocalViews testLocalViews
-        = getLocalViews(bilinearForm.getTestSpaces());
+        = getLocalViews(*bilinearForm.getTestSpaces());
 
     // We get the local index sets of the test spaces
-    auto testLocalIndexSets = getLocalIndexSets(bilinearForm.getTestSpaces());
+    auto testLocalIndexSets = getLocalIndexSets(*bilinearForm.getTestSpaces());
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
-            = getLocalIndexSets(bilinearForm.getSolutionSpaces());
+            = getLocalIndexSets(*bilinearForm.getSolutionSpaces());
 
     std::vector<std::tuple<EntitySeed, double>> errorEstimates;
     errorEstimates.reserve(gridView.size(0));

@@ -244,13 +244,13 @@ public:
   /**
    * \brief Does exactly what it says on the tin.
    */
-  const TestSearchSpaces& getTestSearchSpaces() const
+  std::shared_ptr<TestSearchSpaces> getTestSearchSpaces() const
   { return testSearchSpaces_; }
 
   /**
    * \brief Does exactly what it says on the tin.
    */
-  const SolutionSpaces& getSolutionSpaces() const
+  std::shared_ptr<SolutionSpaces> getSolutionSpaces() const
   { return solutionSpaces_; }
 
 private:
@@ -278,10 +278,10 @@ private:
       const FieldVector<double,dim>& beta,
       double delta);
 
-  TestSearchSpaces              testSearchSpaces_;
-  SolutionSpaces                solutionSpaces_;
-  BilinearForm&                 bilinearForm_;
-  TestspaceCoefficientMatrix    testspaceCoefficientMatrix_;
+  std::shared_ptr<TestSearchSpaces> testSearchSpaces_;
+  std::shared_ptr<SolutionSpaces>   solutionSpaces_;
+  BilinearForm&                     bilinearForm_;
+  TestspaceCoefficientMatrix        testspaceCoefficientMatrix_;
 };
 
 
@@ -336,19 +336,19 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 {
   using namespace Dune::detail;
 
-  auto gridView = std::get<0>(testSearchSpaces_).gridView();
+  auto gridView = std::get<0>(*testSearchSpaces_).gridView();
 
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
   size_t globalTotalSolutionSize =
-      computeOffsets(globalSolutionSpaceOffsets, solutionSpaces_);
+      computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces_);
 
   // Views on the FE bases on a single element
-  auto testLocalViews = getLocalViews(testSearchSpaces_);
+  auto testLocalViews = getLocalViews(*testSearchSpaces_);
 
-  auto solutionLocalViews = getLocalViews(solutionSpaces_);
-  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces_);
+  auto solutionLocalViews = getLocalViews(*solutionSpaces_);
+  auto solutionLocalIndexSets = getLocalIndexSets(*solutionSpaces_);
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
@@ -464,17 +464,17 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 {
   using namespace Dune::detail;
 
-  auto gridView = std::get<0>(testSearchSpaces_).gridView();
+  auto gridView = std::get<0>(*testSearchSpaces_).gridView();
 
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
   const size_t globalTotalSolutionSize =
-      computeOffsets(globalSolutionSpaceOffsets, solutionSpaces_);
+      computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces_);
 
   // Views on the FE bases on a single element
-  auto solutionLocalViews = getLocalViews(solutionSpaces_);
-  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces_);
+  auto solutionLocalViews = getLocalViews(*solutionSpaces_);
+  auto solutionLocalIndexSets = getLocalIndexSets(*solutionSpaces_);
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
@@ -542,13 +542,13 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 {
   using namespace Dune::detail;
 
-  auto gridView = std::get<0>(testSearchSpaces_).gridView();
+  auto gridView = std::get<0>(*testSearchSpaces_).gridView();
 
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
   const size_t globalTotalSolutionSize =
-      computeOffsets(globalSolutionSpaceOffsets, solutionSpaces_);
+      computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces_);
 
   // set rhs to correct length -- the total number of basis vectors in the basis
   rhs.resize(globalTotalSolutionSize);
@@ -557,10 +557,10 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   rhs = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews = getLocalViews(testSearchSpaces_);
+  auto testLocalViews = getLocalViews(*testSearchSpaces_);
 
-  auto solutionLocalViews = getLocalViews(solutionSpaces_);
-  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces_);
+  auto solutionLocalViews = getLocalViews(*solutionSpaces_);
+  auto solutionLocalIndexSets = getLocalIndexSets(*solutionSpaces_);
 
   for(const auto& e : elements(gridView)) {
 
@@ -647,10 +647,10 @@ applyDirichletBoundaryToMatrix
                        const ValueType& boundaryValue)
 {
   const size_t spaceSize =
-        std::get<spaceIndex>(solutionSpaces_).size();
+        std::get<spaceIndex>(*solutionSpaces_).size();
 
   const size_t globalOffset =
-        detail::computeOffset<spaceIndex>(solutionSpaces_);
+        detail::computeOffset<spaceIndex>(*solutionSpaces_);
 
   ////////////////////////////////////////////
   //   Modify Dirichlet rows
@@ -692,10 +692,10 @@ applyDirichletBoundaryToRhs
                        const ValueType& boundaryValue)
 {
   const size_t spaceSize =
-        std::get<spaceIndex>(solutionSpaces_).size();
+        std::get<spaceIndex>(*solutionSpaces_).size();
 
   const size_t globalOffset =
-        detail::computeOffset<spaceIndex>(solutionSpaces_);
+        detail::computeOffset<spaceIndex>(*solutionSpaces_);
 
   // Set Dirichlet values
   for (size_t i=0; i<spaceSize; i++)
@@ -720,10 +720,10 @@ applyNonzeroDirichletBoundary(
                               const ValueType& value)
 {
   const size_t spaceSize =
-        std::get<spaceIndex>(solutionSpaces_).size();
+        std::get<spaceIndex>(*solutionSpaces_).size();
 
   const size_t globalOffset =
-        detail::computeOffset<spaceIndex>(solutionSpaces_);
+        detail::computeOffset<spaceIndex>(*solutionSpaces_);
 
   ////////////////////////////////////////////
   //    Modify rhs vector
@@ -731,8 +731,8 @@ applyNonzeroDirichletBoundary(
 
   // compute the coefficients for the Dirichlet nodes
   std::vector<double> dirichletValues;
-  dirichletValues.resize(std::get<spaceIndex>(solutionSpaces_).size());
-  interpolate(std::get<spaceIndex>(solutionSpaces_),
+  dirichletValues.resize(std::get<spaceIndex>(*solutionSpaces_).size());
+  interpolate(std::get<spaceIndex>(*solutionSpaces_),
               Dune::TypeTree::hybridTreePath(),
               dirichletValues, value,
               dirichletNodes);
@@ -789,13 +789,13 @@ applyWeakBoundaryCondition
                      FieldVector<double, dim> beta,
                      double mu)
 {
-  auto gridView = std::get<0>(solutionSpaces_).gridView();
+  auto gridView = std::get<0>(*solutionSpaces_).gridView();
 
   const size_t globalOffset =
-        detail::computeOffset<spaceIndex>(solutionSpaces_);
+        detail::computeOffset<spaceIndex>(*solutionSpaces_);
 
-  auto localView     = std::get<spaceIndex>(solutionSpaces_).localView();
-  auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
+  auto localView     = std::get<spaceIndex>(*solutionSpaces_).localView();
+  auto localIndexSet = std::get<spaceIndex>(*solutionSpaces_).localIndexSet();
 
   for(const auto& e : elements(gridView))
   {
@@ -888,13 +888,13 @@ defineCharacteristicFaces_impl(
     const FieldVector<double,dim>& beta,
     double delta)
 {
-  auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
+  auto gridView = std::get<spaceIndex>(*solutionSpaces_).gridView();
 
   const size_t globalOffset =
-        detail::computeOffset<spaceIndex>(solutionSpaces_);
+        detail::computeOffset<spaceIndex>(*solutionSpaces_);
 
-  auto solutionLocalView = std::get<spaceIndex>(solutionSpaces_).localView();
-  auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
+  auto solutionLocalView = std::get<spaceIndex>(*solutionSpaces_).localView();
+  auto localIndexSet = std::get<spaceIndex>(*solutionSpaces_).localIndexSet();
 
   for(const auto& e : elements(gridView))
   {
@@ -1033,13 +1033,13 @@ defineCharacteristicFaces_impl(
     const FieldVector<double,dim>& beta,
     double delta)
 {
-  auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
+  auto gridView = std::get<spaceIndex>(*solutionSpaces_).gridView();
 
   const size_t globalOffset =
-        detail::computeOffset<spaceIndex>(solutionSpaces_);
+        detail::computeOffset<spaceIndex>(*solutionSpaces_);
 
-  auto solutionLocalView = std::get<spaceIndex>(solutionSpaces_).localView();
-  auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
+  auto solutionLocalView = std::get<spaceIndex>(*solutionSpaces_).localView();
+  auto localIndexSet = std::get<spaceIndex>(*solutionSpaces_).localIndexSet();
 
   for(const auto& e : elements(gridView))
   {
@@ -1168,18 +1168,18 @@ applyMinimization
 {
   using namespace Dune::detail;
 
-  auto gridView = std::get<spaceIndex>(solutionSpaces_).gridView();
+  auto gridView = std::get<spaceIndex>(*solutionSpaces_).gridView();
 
-  //const size_t globalOffset = computeOffset<spaceIndex>(solutionSpaces_);
+  //const size_t globalOffset = computeOffset<spaceIndex>(*solutionSpaces_);
   const size_t globalOffset = 0;
 
   size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
   // get local view for solution space
   // (necessary if we want to use inner product) // TODO inefficient (why?)
-  auto solutionLocalViews = getLocalViews(solutionSpaces_);
+  auto solutionLocalViews = getLocalViews(*solutionSpaces_);
 
-  auto localIndexSet = std::get<spaceIndex>(solutionSpaces_).localIndexSet();
+  auto localIndexSet = std::get<spaceIndex>(*solutionSpaces_).localIndexSet();
   using LocalIndexSet = decltype(localIndexSet);
 
   const bool epsilonSmallerDelta(epsilon<delta);

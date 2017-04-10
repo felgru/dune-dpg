@@ -98,7 +98,7 @@ int main(int argc, char** argv)
     FEBasisTrace feBasisTrace(gridView);
 
     auto solutionSpaces
-        = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
+      = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
     // v search space
     using FEBasisTest
@@ -107,7 +107,7 @@ int main(int argc, char** argv)
 #else
         = Functions::LagrangeDGBasis<GridView, 3>;
 #endif
-    auto testSpaces = std::make_tuple(FEBasisTest(gridView));
+    auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
@@ -117,7 +117,7 @@ int main(int argc, char** argv)
         = Functions::LagrangeDGBasis<GridView, 4>;
 #endif
     auto testSpaces_aposteriori
-        = std::make_tuple(FEBasisTest_aposteriori(gridView));
+        = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
     FieldVector<double, dim> beta
                = {cos(boost::math::constants::pi<double>()/8),
@@ -227,10 +227,9 @@ int main(int argc, char** argv)
     // Determine Dirichlet dofs for theta (inflow boundary)
     {
       std::vector<bool> dirichletNodesInflow;
-      BoundaryTools boundaryTools = BoundaryTools();
-      boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
-                                          dirichletNodesInflow,
-                                          beta);
+      BoundaryTools::getInflowBoundaryMask(std::get<1>(*solutionSpaces),
+                                           dirichletNodesInflow,
+                                           beta);
       systemAssembler.applyDirichletBoundary<1>
           (stiffnessMatrix,
            rhs,

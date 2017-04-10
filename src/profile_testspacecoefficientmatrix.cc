@@ -114,13 +114,16 @@ int main(int argc, char** argv)
   //   Choose finite element spaces and weak formulation of problem
   ////////////////////////////////////////////////////////////////////
 
+  // phi
   using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
-  FEBasisInterior spacePhi(gridView);
+  using Phi = FEBasisInterior;
 
+  // w
   using FEBasisTraceLifting = Functions::PQkNodalBasis<GridView, 2>;
-  FEBasisTraceLifting spaceW(gridView);
+  using W = FEBasisTraceLifting;
 
-  auto solutionSpaces = std::make_tuple(spacePhi, spaceW);
+  auto solutionSpaces
+    = make_space_tuple<FEBasisInterior, FEBasisTraceLifting>(gridView);
 
 #if LEVEL_SEARCH>0
   using FEBasisTest
@@ -129,7 +132,7 @@ int main(int argc, char** argv)
   using FEBasisTest
       = Functions::LagrangeDGBasis<GridView, K_SEARCH>;
 #endif
-  auto testSearchSpaces = std::make_tuple(FEBasisTest(gridView));
+  auto testSearchSpaces = make_space_tuple<FEBasisTest>(gridView);
 
   auto bilinearForm = make_BilinearForm(testSearchSpaces, solutionSpaces,
           make_tuple(
@@ -215,10 +218,9 @@ int main(int argc, char** argv)
     // Determine Dirichlet dofs for w (inflow boundary)
     {
       std::vector<bool> dirichletNodesInflow;
-      BoundaryTools boundaryTools = BoundaryTools();
-      boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
-                                          dirichletNodesInflow,
-                                          beta);
+      BoundaryTools::getInflowBoundaryMask(std::get<1>(*solutionSpaces),
+                                           dirichletNodesInflow,
+                                           beta);
       unbufferedSystemAssembler.applyDirichletBoundary<1>
           (stiffnessMatrix,
            rhsVector,
@@ -230,8 +232,8 @@ int main(int argc, char** argv)
     //   Compute solution
     ////////////////////////////
 
-    VectorType x(spaceW.size()
-                 +spacePhi.size());
+    VectorType x(std::get<W>(*solutionSpaces).size()
+                 + std::get<Phi>(*solutionSpaces).size());
     x = 0;
 
     std::chrono::steady_clock::time_point startsolver
