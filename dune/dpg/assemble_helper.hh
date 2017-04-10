@@ -104,6 +104,13 @@ inline void bindLocalIndexSets(LocalIndexSets&   lis,
       });
 }
 
+template<class Spaces, class GridView>
+inline void updateSpaces(Spaces& spaces,
+                         const GridView& gridView)
+{
+  Hybrid::forEach(spaces, [&](auto& s) { s.update(gridView); });
+}
+
 template <class MatrixType,
           class TestSpaces,
           class SolutionSpaces>
