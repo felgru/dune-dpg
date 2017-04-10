@@ -45,6 +45,7 @@ namespace detail {
       ConstrainedEvaluation&& constrainedEvaluation) {
     using size_type = typename std::decay_t<LocalIndexSet>::size_type;
     auto globalIndex = localIndexSet.indicesLocalGlobal().begin();
+    assert(!localIndexSet.indicesLocalGlobal().empty());
     const size_type numConstraints = localIndexSet.constraintsSize();
     size_type i = 0;
     for(size_type c = 0; c < numConstraints; c++) {
