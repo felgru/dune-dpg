@@ -42,7 +42,7 @@ public:
    *
    * \note For your convenience, use make_RhsAssembler() instead.
    */
-  constexpr RhsAssembler (TestSpaces testSpaces)
+  constexpr RhsAssembler (const std::shared_ptr<TestSpaces>& testSpaces)
              : testSpaces(testSpaces)
   { }
 
@@ -78,22 +78,22 @@ public:
   /**
    * \brief Does exactly what it says on the tin.
    */
-  const TestSpaces& getTestSpaces() const
+  std::shared_ptr<TestSpaces> getTestSpaces() const
   { return testSpaces; }
 
 private:
-  TestSpaces     testSpaces;
+  std::shared_ptr<TestSpaces> testSpaces;
 };
 
 /**
  * \brief Creates an RhsAssembler,
  *        deducing the target type from the types of arguments.
  *
- * \param testSpaces     a tuple of test spaces
+ * \param testSpaces     a shared_ptr to a tuple of test spaces
  */
 template<class TestSpaces>
 RhsAssembler<TestSpaces>
-make_RhsAssembler(TestSpaces testSpaces)
+make_RhsAssembler(const std::shared_ptr<TestSpaces>& testSpaces)
 {
   return RhsAssembler<TestSpaces>(testSpaces);
 }
@@ -107,12 +107,12 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   using namespace Dune::detail;
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(testSpaces).gridView();
+  GridView gridView = std::get<0>(*testSpaces).gridView();
 
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   const size_t globalTotalTestSize =
-      computeOffsets(globalTestSpaceOffsets, testSpaces);
+      computeOffsets(globalTestSpaceOffsets, *testSpaces);
 
   // set rhs to correct length -- the total number of basis vectors in the basis
   rhs.resize(globalTotalTestSize);
@@ -121,8 +121,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   rhs = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews     = getLocalViews(testSpaces);
-  auto testLocalIndexSets = getLocalIndexSets(testSpaces);
+  auto testLocalViews     = getLocalViews(*testSpaces);
+  auto testLocalIndexSets = getLocalIndexSets(*testSpaces);
 
   for(const auto& e : elements(gridView)) {
 
@@ -165,9 +165,9 @@ applyDirichletBoundary(BlockVector<FieldVector<double,1> >& rhs,
                 "boundary data types.");
 
   const size_t spaceSize =
-        std::get<spaceIndex>(testSpaces).size();
+        std::get<spaceIndex>(*testSpaces).size();
 
-  const size_t globalOffset = detail::computeOffset<spaceIndex>(testSpaces);
+  const size_t globalOffset = detail::computeOffset<spaceIndex>(*testSpaces);
 
   // Set Dirichlet values
   for (size_t i=0; i<spaceSize; i++)

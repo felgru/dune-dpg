@@ -58,11 +58,11 @@ int main(int argc, char** argv)
 
   typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
-  auto solutionSpaces = std::make_tuple(FEBasisTrace(gridView),
-                                        FEBasisInterior(gridView));
+  auto solutionSpaces
+    = make_space_tuple<FEBasisTrace, FEBasisInterior>(gridView);
 
   typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v
-  auto testSpaces = std::make_tuple(FEBasisTest(gridView));
+  auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
   /////////////////////////////////////////////////////////
   //   Choose a bilinear form
@@ -125,7 +125,7 @@ int main(int argc, char** argv)
   {
     std::vector<bool> dirichletNodesInflow;
     BoundaryTools boundaryTools = BoundaryTools();
-    boundaryTools.getInflowBoundaryMask(std::get<0>(solutionSpaces),
+    boundaryTools.getInflowBoundaryMask(std::get<0>(*solutionSpaces),
                                         dirichletNodesInflow,
                                         beta);
     systemAssembler.applyDirichletBoundary<0>
@@ -140,7 +140,7 @@ int main(int argc, char** argv)
   {
     std::vector<bool> dirichletNodesInflowTest;
     BoundaryTools boundaryTools = BoundaryTools();
-    boundaryTools.getInflowBoundaryMask(std::get<0>(testSpaces),
+    boundaryTools.getInflowBoundaryMask(std::get<0>(*testSpaces),
                                         dirichletNodesInflowTest,
                                         beta);
     /* TODO: applyDirichletBoundaryTest has been removed */
@@ -171,11 +171,11 @@ int main(int argc, char** argv)
   //////////////////////////////////////////////////////////////////
   //  Write result to VTK file
   //////////////////////////////////////////////////////////////////
-  size_t nTest = std::get<0>(testSpaces).size();
-  size_t nFace = std::get<0>(solutionSpaces).size();
+  size_t nTest = std::get<0>(*testSpaces).size();
+  size_t nFace = std::get<0>(*solutionSpaces).size();
 
   FunctionPlotter uPlotter("solution_transport");
-  uPlotter.plot("u", x, std::get<1>(solutionSpaces), 2, nTest+nFace);
+  uPlotter.plot("u", x, std::get<1>(*solutionSpaces), 2, nTest+nFace);
 
   return 0;
   }

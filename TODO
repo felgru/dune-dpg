@@ -1,5 +1,11 @@
 known bugs:
 
+* src/dune_dpg_saddlepoint.cc currently does not compile.
+  The concatenation of solution and test spaces in SaddlepointSystemAssembler
+  cannot be done properly with the new shared_ptr-to-space-tuple interface.
+  The concatenation would introduce copies of spaces which would in turn defy
+  the purpose of using shared_ptrs, i.e. having only a single set of spaces
+  that can be refined all at once after grid refinement.
 * evaluateFactor() in integralterm.hh is called with the *local* position
   of a given quadrature point, this should be first transformed into
   global coordinates. (Already fixed but not tested for interior implementation,

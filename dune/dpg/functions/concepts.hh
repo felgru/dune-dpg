@@ -119,6 +119,16 @@ struct ConstrainedGlobalBasis
   );
 };
 
+template<class GridView>
+struct GeneralizedGlobalBasis
+{
+  template<class B>
+  auto require(const B& basis) -> decltype(
+    requireTrue<models<GlobalBasis<GridView>, B>() or
+                models<ConstrainedGlobalBasis<GridView>, B>()>()
+  );
+};
+
 
 } // namespace Dune::Functions::Concept
 } // namespace Dune::Functions

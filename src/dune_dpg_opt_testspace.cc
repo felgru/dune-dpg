@@ -83,12 +83,13 @@ int main(int argc, char** argv)
   typedef Functions::PQkNodalBasis<GridView, 2> FEBasisTrace;
   FEBasisTrace feBasisTrace(gridView);
 
-  auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
+  auto solutionSpaces
+    = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
   // v search space
   typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
   //typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;
-  auto testSpaces = std::make_tuple(FEBasisTest(gridView));
+  auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
   FieldVector<double, dim> beta
              = {cos(boost::math::constants::pi<double>()/8),
@@ -159,7 +160,7 @@ int main(int argc, char** argv)
   {
     std::vector<bool> dirichletNodesInflow;
     BoundaryTools boundaryTools = BoundaryTools();
-    boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
+    boundaryTools.getInflowBoundaryMask(std::get<1>(*solutionSpaces),
                                         dirichletNodesInflow,
                                         beta);
     systemAssembler.applyDirichletBoundary<1>
