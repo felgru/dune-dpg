@@ -142,8 +142,8 @@ auto make_InnerProduct(const std::shared_ptr<TestSpaces>& testSpaces,
 template<class TestSpaces, class InnerProductTerms, class NewTestSpaces>
 auto replaceTestSpaces(
     const InnerProduct<TestSpaces, InnerProductTerms>& innerProduct,
-    NewTestSpaces&& newTestSpaces) {
-  return make_InnerProduct(std::forward<NewTestSpaces>(newTestSpaces),
+    const shared_ptr<NewTestSpaces>& newTestSpaces) {
+  return make_InnerProduct(newTestSpaces,
                            innerProduct.getTerms());
 }
 
