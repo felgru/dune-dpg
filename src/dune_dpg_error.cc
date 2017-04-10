@@ -198,10 +198,9 @@ int main()
     {
       std::vector<bool> dirichletNodesInflow;
 
-      BoundaryTools boundaryTools = BoundaryTools();
-      boundaryTools.getInflowBoundaryMask(std::get<1>(*solutionSpaces),
-                                          dirichletNodesInflow,
-                                          beta);
+      BoundaryTools::getInflowBoundaryMask(std::get<1>(*solutionSpaces),
+                                           dirichletNodesInflow,
+                                           beta);
 
 
       systemAssembler.applyDirichletBoundary<1>

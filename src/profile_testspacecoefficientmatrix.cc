@@ -218,10 +218,9 @@ int main(int argc, char** argv)
     // Determine Dirichlet dofs for w (inflow boundary)
     {
       std::vector<bool> dirichletNodesInflow;
-      BoundaryTools boundaryTools = BoundaryTools();
-      boundaryTools.getInflowBoundaryMask(std::get<1>(*solutionSpaces),
-                                          dirichletNodesInflow,
-                                          beta);
+      BoundaryTools::getInflowBoundaryMask(std::get<1>(*solutionSpaces),
+                                           dirichletNodesInflow,
+                                           beta);
       unbufferedSystemAssembler.applyDirichletBoundary<1>
           (stiffnessMatrix,
            rhsVector,
