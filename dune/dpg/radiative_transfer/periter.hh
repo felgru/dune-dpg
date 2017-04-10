@@ -425,14 +425,15 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       FEBasisTrace feBasisTrace(gridView);
 
       auto solutionSpaces
-        = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
+        = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
       // v enriched
       typedef Functions::LagrangeDGBasis<LeafGridView, 4> FEBasisTest;
-      auto testSpaces = std::make_tuple(FEBasisTest(gridView));
+      auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
       typedef FEBasisTest FEBasisTestEnriched;
-      auto testSpacesEnriched = std::make_tuple(FEBasisTestEnriched(gridView));
+      auto testSpacesEnriched
+        = make_space_tuple<FEBasisTestEnriched>(gridView);
       using TestSpacesEnriched = decltype(testSpacesEnriched);
       auto rhsAssemblerEnriched = make_RhsAssembler(testSpacesEnriched);
 
@@ -525,13 +526,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       for(unsigned int i = 0; i < numS; ++i)
       {
         Direction s = sVector[i];
-        BoundaryTools boundaryTools = BoundaryTools();
-        boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
+        BoundaryTools::getInflowBoundaryMask(std::get<1>(*solutionSpaces),
                                               dirichletNodesInflow[i],
                                               s);
 
         auto gSfixed = std::make_tuple([s] (const Domain& x){ return 0.;});
-        boundaryTools.getInflowBoundaryValue(std::get<1>(solutionSpaces),
+        BoundaryTools::getInflowBoundaryValue(std::get<1>(*solutionSpaces),
                                               rhsInflowContrib[i],
                                               gSfixed);
       }
@@ -552,7 +552,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               systemAssemblers[i].getTestSearchSpaces(),
               std::make_tuple(
                 make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
-                  (rhsFunctional[i], std::get<0>(solutionSpaces))));
+                  (rhsFunctional[i], std::get<0>(*solutionSpaces))));
         systemAssemblers[i].assembleSystem(
             stiffnessMatrix[i], rhs[i],
             rhsFunction);
@@ -618,7 +618,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               rhsAssemblerEnriched.getTestSpaces(),
               std::make_tuple(
                 make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
-                  (rhsFunctional[i], std::get<0>(solutionSpaces))));
+                  (rhsFunctional[i], std::get<0>(*solutionSpaces))));
         rhsAssemblerEnriched.assembleRhs(rhs[i],
             rhsFunction);
         // - Computation of the a posteriori error
@@ -739,7 +739,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
   const size_t numS = x.size();
   std::vector<VectorType> rhsFunctional(numS);
   auto solutionSpaces =
-      std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
+      make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
   for(unsigned int i = 0; i < numS; ++i) {
     auto scatteringAssembler_i =

@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_RADIATIVE_TRANSFER_APPROXIMATE_SCATTERING_HH
 #define DUNE_DPG_RADIATIVE_TRANSFER_APPROXIMATE_SCATTERING_HH
 
+#include <memory>
 #include <tuple>
 #include <vector>
 
@@ -38,16 +39,17 @@ public:
   /**
    * \brief constructor for ApproximateScatteringAssembler
    *
-   * \param solutionSpaces   a tuple of solution spaces
+   * \param solutionSpaces   a shared_ptr to a tuple of solution spaces
    * \param kernel           an approximation of the scattering kernel
    * \param si  index of the scattering direction
    *
    * \note For your convenience, use make_ApproximateScatteringAssembler()
    *       instead.
    */
-  ApproximateScatteringAssembler (const SolutionSpaces& solutionSpaces,
-                                  const KernelApproximation& kernel,
-                                  size_t si)
+  ApproximateScatteringAssembler (
+      const std::shared_ptr<SolutionSpaces>& solutionSpaces,
+      const KernelApproximation& kernel,
+      size_t si)
              : solutionSpaces(solutionSpaces),
                si(si),
                kernelApproximation(kernel)
@@ -71,7 +73,7 @@ public:
            const std::vector<BlockVector<FieldVector<double,1> >>& x);
 
 private:
-  SolutionSpaces solutionSpaces;
+  std::shared_ptr<SolutionSpaces> solutionSpaces;
   const size_t si;
   const KernelApproximation& kernelApproximation;
 };
@@ -80,14 +82,14 @@ private:
  * \brief Creates a ScatteringAssembler for a DPG discretization,
  *        deducing the target type from the types of arguments.
  *
- * \param  solutionSpaces   a tuple of solution spaces
+ * \param  solutionSpaces   a shared_ptr to a tuple of solution spaces
  * \param  kernel           an approximation of the scattering kernel
  * \param  si               index of scattering direction (0 < si < numS)
  */
 template<class SolutionSpaces,
          class KernelApproximation>
 auto make_ApproximateScatteringAssembler(
-      const SolutionSpaces& solutionSpaces,
+      const std::shared_ptr<SolutionSpaces>& solutionSpaces,
       const KernelApproximation& kernel,
       size_t si)
      -> ApproximateScatteringAssembler<SolutionSpaces, KernelApproximation>
@@ -205,24 +207,24 @@ precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
 
   typedef typename std::tuple_element<0,SolutionSpaces>::type::GridView
           GridView;
-  GridView gridView = std::get<0>(solutionSpaces).gridView();
+  GridView gridView = std::get<0>(*solutionSpaces).gridView();
 
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-  computeOffsets(globalSolutionSpaceOffsets, solutionSpaces);
+  computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces);
 
   const size_t globalSolutionSpaceOffset =
       globalSolutionSpaceOffsets[solutionSpaceIndex];
 
-  scattering.resize(std::get<solutionSpaceIndex>(solutionSpaces).size());
+  scattering.resize(std::get<solutionSpaceIndex>(*solutionSpaces).size());
   scattering = 0;
   BlockVector<FieldVector<double,1>> normSquared(scattering.size());
   normSquared = 0;
 
   // Views on the FE bases on a single element
-  auto solutionLocalViews = getLocalViews(solutionSpaces);
-  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces);
+  auto solutionLocalViews = getLocalViews(*solutionSpaces);
+  auto solutionLocalIndexSets = getLocalIndexSets(*solutionSpaces);
 
   for(const auto& e : elements(gridView)) {
 

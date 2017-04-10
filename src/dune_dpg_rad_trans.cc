@@ -262,20 +262,19 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////////////
 
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
-  FEBasisInterior feBasisInterior(gridView);
 
   typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
-  FEBasisTrace feBasisTrace(gridView);
 
-  auto solutionSpaces = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
+  auto solutionSpaces
+      = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
   typedef Functions::PQkSubsampledDGNodalBasis<GridView, 4, 3> FEBasisTest; // v enriched
-  auto testSpaces = std::make_tuple(FEBasisTest(gridView));
+  auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
   auto rhsAssembler = make_RhsAssembler(testSpaces);
 
-  // typedef decltype(testSpaces) TestSpaces;
-  typedef decltype(solutionSpaces) SolutionSpaces;
+  // typedef typename decltype(testSpaces)::element_type TestSpaces;
+  typedef typename decltype(solutionSpaces)::element_type SolutionSpaces;
 
   typedef decltype(make_BilinearForm(testSpaces, solutionSpaces,
             make_tuple(
@@ -321,15 +320,15 @@ int main(int argc, char** argv)
   scatteringAssemblers.reserve(numS);
 
   // Scattering assembler with enriched test space
-  ScatteringAssembler<std::tuple<FEBasisTest>,
-                                  SolutionSpaces
-                      > scatteringAssemblerEnriched
+  ScatteringAssembler<std::tuple<FEBasisTest>, SolutionSpaces>
+      scatteringAssemblerEnriched
                           = make_DPG_ScatteringAssembler(
                                 testSpaces,
                                 solutionSpaces);
 
   /* create an FEBasisOptimalTest for each direction */
-  std::vector<std::tuple<FEBasisOptimalTest> > optimalTestSpaces;
+  std::vector<std::shared_ptr<std::tuple<FEBasisOptimalTest>>>
+    optimalTestSpaces;
   optimalTestSpaces.reserve(numS);
   /* All the following objects have to be created outside of the
    * following for loop, as the optimalTestSpace holds references
@@ -366,7 +365,8 @@ int main(int argc, char** argv)
     coefficientMatrices.emplace_back(bilinearForms[i], innerProducts[i]);
 
     optimalTestSpaces.emplace_back(
-            make_tuple(FEBasisOptimalTest(coefficientMatrices[i])));
+            make_shared<std::tuple<FEBasisOptimalTest>>(
+              make_tuple(FEBasisOptimalTest(coefficientMatrices[i]))));
 
     systemAssemblers.emplace_back(
         make_DPGSystemAssembler(bilinearForms[i],
@@ -393,13 +393,12 @@ int main(int argc, char** argv)
   for(int i = 0; i < numS; ++i)
   {
     Direction s = sVector[i];
-    BoundaryTools boundaryTools = BoundaryTools();
-    boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
+    BoundaryTools::getInflowBoundaryMask(std::get<1>(*solutionSpaces),
                                           dirichletNodesInflow[i],
                                           s);
 
     auto gSfixed = std::make_tuple([s] (const Domain& x){ return 0.;});
-    boundaryTools.getInflowBoundaryValue(std::get<1>(solutionSpaces),
+    BoundaryTools::getInflowBoundaryValue(std::get<1>(*solutionSpaces),
                                           rhsInflowContrib[i],
                                           gSfixed);
   }
@@ -412,10 +411,10 @@ int main(int argc, char** argv)
   xPrevious.reserve(numS);
   for(int i = 0; i < numS; ++i)
   {
-    x.emplace_back(feBasisTrace.size()
-                   +feBasisInterior.size());
-    xPrevious.emplace_back(feBasisTrace.size()
-                   +feBasisInterior.size());
+    x.emplace_back(std::get<FEBasisTrace>(*solutionSpaces).size()
+                   + std::get<FEBasisInterior>(*solutionSpaces).size());
+    xPrevious.emplace_back(std::get<FEBasisTrace>(*solutionSpaces).size()
+                   + std::get<FEBasisInterior>(*solutionSpaces).size());
     x[i] = 0;
     xPrevious[i] = 0;
   }
@@ -429,9 +428,9 @@ int main(int argc, char** argv)
   uPrevious.reserve(numS);
   for(int i = 0; i < numS; ++i)
   {
-    u.emplace_back(feBasisInterior.size());
+    u.emplace_back(std::get<FEBasisInterior>(*solutionSpaces).size());
     u[i] = 0;
-    uPrevious.emplace_back(feBasisInterior.size());
+    uPrevious.emplace_back(std::get<FEBasisInterior>(*solutionSpaces).size());
     uPrevious[i] = 0;
   }
 
@@ -440,16 +439,16 @@ int main(int argc, char** argv)
   thetaPrevious.reserve(numS);
   for(int i = 0; i < numS; ++i)
   {
-    theta.emplace_back(feBasisTrace.size());
+    theta.emplace_back(std::get<FEBasisTrace>(*solutionSpaces).size());
     theta[i] = 0;
-    thetaPrevious.emplace_back(feBasisTrace.size());
+    thetaPrevious.emplace_back(std::get<FEBasisTrace>(*solutionSpaces).size());
     thetaPrevious[i] = 0;
   }
 
-  VectorType diffU(feBasisInterior.size());
+  VectorType diffU(std::get<FEBasisInterior>(*solutionSpaces).size());
   diffU = 0;
 
-  VectorType diffTheta(feBasisTrace.size());
+  VectorType diffTheta(std::get<FEBasisTrace>(*solutionSpaces).size());
   diffTheta = 0;
 
   /////////////////////////////////////////////////////////
@@ -465,7 +464,8 @@ int main(int argc, char** argv)
     /////////////////////////////////////////////////////////
     xPrevious = x;
     extractSolution(uPrevious, xPrevious, 0);
-    extractSolution(thetaPrevious, xPrevious, feBasisInterior.size());
+    extractSolution(thetaPrevious, xPrevious,
+                    std::get<FEBasisInterior>(*solutionSpaces).size());
 
     /////////////////////////////////////////////////////////
     //  Assemble the systems
@@ -526,7 +526,8 @@ int main(int argc, char** argv)
     }
 
     extractSolution(u, x, 0);
-    extractSolution(theta, x, feBasisInterior.size());
+    extractSolution(theta, x,
+                    std::get<FEBasisInterior>(*solutionSpaces).size());
 
     ////////////////////////////////////
     //  Error computation and print in VTK file
@@ -547,13 +548,14 @@ int main(int argc, char** argv)
                        + std::string("_s")
                        + std::to_string(i);
       FunctionPlotter uPlotter(name);
-      uPlotter.plot("u", u[i], feBasisInterior, 0);
+      uPlotter.plot("u", u[i], std::get<FEBasisInterior>(*solutionSpaces), 0);
       name = std::string("theta_rad_trans_n")
                        + std::to_string(n)
                        + std::string("_s")
                        + std::to_string(i);
       FunctionPlotter thetaPlotter(name);
-      thetaPlotter.plot("theta", theta[i], feBasisTrace, 2);
+      thetaPlotter.plot("theta", theta[i],
+                        std::get<FEBasisTrace>(*solutionSpaces), 2);
 
       ////////////////////////////////////
       //  Error wrt exact solution
@@ -561,7 +563,7 @@ int main(int argc, char** argv)
       //We build an object of type ErrorTools to study errors, residuals and do h-adaptivity
       //We compute the L2 error between the exact and the fem solutions
       auto uExactSfixed = std::make_tuple([s] (const Domain& x){ return uAnalytic(x,s);});
-      double err = ErrorTools::computeL2error<1>(std::get<0>(solutionSpaces),u[i],uExactSfixed);
+      double err = ErrorTools::computeL2error<1>(std::get<0>(*solutionSpaces),u[i],uExactSfixed);
       ofs << "'Exact' error u: || u["<< i << "] - u_fem["<< i <<"] ||_L2 = " << err << std::endl;
       // We compute the a posteriori error
           // - We compute the rhs with the enriched test space ("rhs[i]=f(v_i)")
@@ -589,10 +591,10 @@ int main(int argc, char** argv)
       ofs << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = " << aposterioriErr << std::endl;
 
       // We compute the L2 error wrt previous iterate
-      for (unsigned int j=0; j<feBasisInterior.size(); j++)
+      for (unsigned int j=0; j<std::get<0>(*solutionSpaces).size(); j++)
         diffU[j] = u[i][j]-uPrevious[i][j];
 
-      for (unsigned int j=0; j<feBasisTrace.size(); j++)
+      for (unsigned int j=0; j<std::get<1>(*solutionSpaces).size(); j++)
         diffTheta[j] = theta[i][j]-thetaPrevious[i][j];
 
       ofs << "Diff wrt previous iteration: " << std::endl;

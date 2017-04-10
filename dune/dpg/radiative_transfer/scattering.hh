@@ -35,8 +35,9 @@ public:
    *
    * \note For your convenience, use make_ScatteringAssembler() instead.
    */
-  constexpr ScatteringAssembler (const TestSpaces& testSpaces,
-                                 const SolutionSpaces& solutionSpaces)
+  constexpr ScatteringAssembler (
+      const std::shared_ptr<TestSpaces>& testSpaces,
+      const std::shared_ptr<SolutionSpaces>& solutionSpaces)
              : testSpaces(testSpaces),
                solutionSpaces(solutionSpaces)
   { };
@@ -70,21 +71,22 @@ private:
     const QuadratureRule&,
     const std::vector<Direction>&);
 
-  TestSpaces     testSpaces;
-  SolutionSpaces solutionSpaces;
+  std::shared_ptr<TestSpaces>     testSpaces;
+  std::shared_ptr<SolutionSpaces> solutionSpaces;
 };
 
 /**
  * \brief Creates a ScatteringAssembler for a DPG discretization,
  *        deducing the target type from the types of arguments.
  *
- * \param  testSpaces       a tuple of test spaces
- * \param  solutionSpaces   a tuple of solution spaces
+ * \param  testSpaces       a shared_ptr to a tuple of test spaces
+ * \param  solutionSpaces   a shared_ptr to a tuple of solution spaces
  */
 template<class TestSpaces,
          class SolutionSpaces>
-auto make_DPG_ScatteringAssembler(const TestSpaces& testSpaces,
-                                  const SolutionSpaces& solutionSpaces)
+auto make_DPG_ScatteringAssembler(
+    const std::shared_ptr<TestSpaces>& testSpaces,
+    const std::shared_ptr<SolutionSpaces>& solutionSpaces)
      -> ScatteringAssembler<TestSpaces, SolutionSpaces>
 {
   return ScatteringAssembler<TestSpaces, SolutionSpaces>
@@ -95,13 +97,14 @@ auto make_DPG_ScatteringAssembler(const TestSpaces& testSpaces,
  * \brief Creates a ScatteringAssembler for a saddlepoint discretization,
  *        deducing the target type from the types of arguments.
  *
- * \param  testSpaces       a tuple of test spaces
- * \param  solutionSpaces   a tuple of solution spaces
+ * \param  testSpaces       a shared_ptr to a tuple of test spaces
+ * \param  solutionSpaces   a shared_ptr to a tuple of solution spaces
  */
 template<class TestSpaces,
          class SolutionSpaces>
-auto make_Saddlepoint_ScatteringAssembler(const TestSpaces& testSpaces,
-                                          const SolutionSpaces& solutionSpaces)
+auto make_Saddlepoint_ScatteringAssembler(
+    const std::shared_ptr<TestSpaces>& testSpaces,
+    const std::shared_ptr<SolutionSpaces>& solutionSpaces)
      -> ScatteringAssembler<TestSpaces, SolutionSpaces>
 {
   return ScatteringAssembler<TestSpaces, SolutionSpaces>
@@ -157,13 +160,13 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
   const unsigned int numS = x.size();
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(testSpaces).gridView();
+  GridView gridView = std::get<0>(*testSpaces).gridView();
 
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
   const size_t globalTotalTestSize
-      = computeOffsets(globalTestSpaceOffsets, testSpaces);
+      = computeOffsets(globalTestSpaceOffsets, *testSpaces);
 
   if(usesOptimalTestBasis)
   {
@@ -174,7 +177,7 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
   }
 
   size_t globalTotalSolutionSize =
-    computeOffsets(globalSolutionSpaceOffsets, solutionSpaces,
+    computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces,
                    (!usesOptimalTestBasis)?globalTotalTestSize:0);
   globalTotalSolutionSize -= globalSolutionSpaceOffsets[0];
 
@@ -186,11 +189,11 @@ assembleScattering(BlockVector<FieldVector<double,1> >& scattering,
   scattering = 0;
 
   // Views on the FE bases on a single element
-  auto testLocalViews     = getLocalViews(testSpaces);
-  auto solutionLocalViews = getLocalViews(solutionSpaces);
+  auto testLocalViews     = getLocalViews(*testSpaces);
+  auto solutionLocalViews = getLocalViews(*solutionSpaces);
 
-  auto testLocalIndexSets     = getLocalIndexSets(testSpaces);
-  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces);
+  auto testLocalIndexSets     = getLocalIndexSets(*testSpaces);
+  auto solutionLocalIndexSets = getLocalIndexSets(*solutionSpaces);
 
   for(const auto& e : elements(gridView)) {
 
