@@ -170,7 +170,7 @@ public:
   {
     Dune::detail::computeOffsets(
              globalOffsets,
-             testspaceCoefficientMatrix_.bilinearForm().getSolutionSpaces());
+             *testspaceCoefficientMatrix_.bilinearForm().getSolutionSpaces());
   }
 
   /** \brief Obtain the grid view that the basis is defined on
@@ -199,7 +199,7 @@ public:
 
   size_type size() const
   {
-    return Hybrid::accumulate(testspaceCoefficientMatrix_.bilinearForm()
+    return Hybrid::accumulate(*testspaceCoefficientMatrix_.bilinearForm()
                               .getSolutionSpaces(), 0,
                               [&](size_type acc, const auto& s) {
                                 return acc + s.size();
@@ -221,7 +221,7 @@ public:
 
   size_type maxNodeSize() const
   {
-    return Hybrid::accumulate(testspaceCoefficientMatrix_.bilinearForm()
+    return Hybrid::accumulate(*testspaceCoefficientMatrix_.bilinearForm()
                               .getSolutionSpaces(), 0,
                               [&](size_type acc, const auto& s) {
                                 return acc + s.nodeFactory().maxNodeSize();
@@ -308,9 +308,9 @@ public:
     testspaceCoefficientMatrix(testCoeffMat),
     finiteElement_(nullptr),
     testSearchSpace_(nullptr),
-    localViewsSolution_(Dune::detail::getLocalViews(testCoeffMat.bilinearForm()
+    localViewsSolution_(Dune::detail::getLocalViews(*testCoeffMat.bilinearForm()
                                                 .getSolutionSpaces())),
-    localViewsTest(Dune::detail::getLocalViews(testCoeffMat.bilinearForm()
+    localViewsTest(Dune::detail::getLocalViews(*testCoeffMat.bilinearForm()
                                                     .getTestSpaces()))
   {}
 
@@ -390,7 +390,7 @@ public:
   OptimalTestBasisNodeIndexSet(const NodeFactory& nodeFactory) :
     nodeFactory_(&nodeFactory),
     solutionLocalIndexSets_(Dune::detail::getLocalIndexSets(
-                      nodeFactory.testspaceCoefficientMatrix_
+                      *nodeFactory.testspaceCoefficientMatrix_
                           .bilinearForm().getSolutionSpaces()))
   {}
 
