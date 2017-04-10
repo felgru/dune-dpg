@@ -50,9 +50,9 @@ namespace Dune {
      *
      * \note For your convenience, use make_BilinearForm() instead.
      */
-    constexpr BilinearForm (const TestSpaces&     testSpaces,
-                            const SolutionSpaces& solutionSpaces,
-                            const BilinearTerms&  terms)
+    constexpr BilinearForm (const shared_ptr<TestSpaces>&     testSpaces,
+                            const shared_ptr<SolutionSpaces>& solutionSpaces,
+                            const BilinearTerms&              terms)
                : testSpaces(testSpaces),
                  solutionSpaces(solutionSpaces),
                  terms(terms),
@@ -127,13 +127,13 @@ namespace Dune {
     /**
      * \brief Does exactly what it says on the tin.
      */
-    const TestSpaces& getTestSpaces() const
+    std::shared_ptr<TestSpaces> getTestSpaces() const
     { return testSpaces; }
 
     /**
      * \brief Does exactly what it says on the tin.
      */
-    const SolutionSpaces& getSolutionSpaces() const
+    std::shared_ptr<SolutionSpaces> getSolutionSpaces() const
     { return solutionSpaces; }
 
     /**
@@ -161,9 +161,9 @@ namespace Dune {
     { return localSolutionSpaceOffsets; }
 
   private:
-    TestSpaces     testSpaces;
-    SolutionSpaces solutionSpaces;
-    BilinearTerms  terms;
+    std::shared_ptr<TestSpaces>     testSpaces;
+    std::shared_ptr<SolutionSpaces> solutionSpaces;
+    BilinearTerms                   terms;
 
     size_t localTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -183,9 +183,9 @@ namespace Dune {
  * \param terms          a tuple of IntegralTerm
  */
 template<class TestSpaces, class SolutionSpaces, class BilinearTerms>
-auto make_BilinearForm(TestSpaces     testSpaces,
-                       SolutionSpaces solutionSpaces,
-                       BilinearTerms  terms)
+auto make_BilinearForm(const shared_ptr<TestSpaces>&     testSpaces,
+                       const shared_ptr<SolutionSpaces>& solutionSpaces,
+                       BilinearTerms                     terms)
     -> BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>
 {
   return BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>
@@ -198,9 +198,9 @@ template<class TestSpaces, class SolutionSpaces, class BilinearTerms,
          class NewTestSpaces>
 auto replaceTestSpaces(
     const BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>& bilinearForm,
-    NewTestSpaces&& newTestSpaces) {
+    const std::shared_ptr<NewTestSpaces>& newTestSpaces) {
   return make_BilinearForm
-                     (std::forward<NewTestSpaces>(newTestSpaces),
+                     (newTestSpaces,
                       bilinearForm.getSolutionSpaces(),
                       bilinearForm.getTerms());
 }
@@ -216,18 +216,18 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-  computeOffsets(globalTestSpaceOffsets, testSpaces, testShift);
-  computeOffsets(globalSolutionSpaceOffsets, solutionSpaces, solutionShift);
+  computeOffsets(globalTestSpaceOffsets, *testSpaces, testShift);
+  computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces, solutionShift);
 
   // A view on the FE basis on a single element
-  auto solutionLocalViews = getLocalViews(solutionSpaces);
-  auto testLocalViews     = getLocalViews(testSpaces);
+  auto solutionLocalViews = getLocalViews(*solutionSpaces);
+  auto testLocalViews     = getLocalViews(*testSpaces);
 
-  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces);
-  auto testLocalIndexSets = getLocalIndexSets(testSpaces);
+  auto solutionLocalIndexSets = getLocalIndexSets(*solutionSpaces);
+  auto testLocalIndexSets = getLocalIndexSets(*testSpaces);
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(testSpaces).gridView();
+  GridView gridView = std::get<0>(*testSpaces).gridView();
 
   /* create set of index pairs from bilinearTerms to loop over. */
   namespace hana = boost::hana;

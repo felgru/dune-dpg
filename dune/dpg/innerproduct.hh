@@ -45,8 +45,8 @@ namespace Dune {
      *
      * \note For your convenience, use make_InnerProduct() instead.
      */
-    constexpr InnerProduct (const TestSpaces&        testSpaces,
-                            const InnerProductTerms& terms)
+    constexpr InnerProduct (const std::shared_ptr<TestSpaces>& testSpaces,
+                            const InnerProductTerms&           terms)
                : testSpaces(testSpaces),
                  terms(terms),
                  testLocalViews(nullptr)
@@ -105,7 +105,7 @@ namespace Dune {
     /**
      * \brief Does exactly what it says on the tin.
      */
-    const TestSpaces& getTestSpaces() const
+    std::shared_ptr<TestSpaces> getTestSpaces() const
     { return testSpaces; }
 
     /**
@@ -117,8 +117,8 @@ namespace Dune {
     }
 
   private:
-    TestSpaces         testSpaces;
-    InnerProductTerms  terms;
+    std::shared_ptr<TestSpaces> testSpaces;
+    InnerProductTerms           terms;
     size_t localTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
     size_t localTotalTestSize;
     const TestLocalViews* testLocalViews;
@@ -128,12 +128,12 @@ namespace Dune {
  * \brief Creates an InnerProduct,
  *        deducing the target type from the types of arguments.
  *
- * \param testSpaces  a tuple of test spaces
+ * \param testSpaces  a shared_ptr to a tuple of test spaces
  * \param terms       a tuple of IntegralTerm
  */
 template<class TestSpaces, class InnerProductTerms>
-auto make_InnerProduct(TestSpaces        testSpaces,
-                       InnerProductTerms terms)
+auto make_InnerProduct(const std::shared_ptr<TestSpaces>& testSpaces,
+                       InnerProductTerms                  terms)
     -> InnerProduct<TestSpaces, InnerProductTerms>
 {
   return InnerProduct<TestSpaces, InnerProductTerms> (testSpaces, terms);
@@ -155,13 +155,13 @@ getOccupationPattern(MatrixIndexSet& nb) const
 
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-  computeOffsets(globalTestSpaceOffsets, testSpaces);
+  computeOffsets(globalTestSpaceOffsets, *testSpaces);
 
-  auto testLocalViews     = getLocalViews(testSpaces);
-  auto testLocalIndexSets = getLocalIndexSets(testSpaces);
+  auto testLocalViews     = getLocalViews(*testSpaces);
+  auto testLocalIndexSets = getLocalIndexSets(*testSpaces);
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(testSpaces).gridView();
+  GridView gridView = std::get<0>(*testSpaces).gridView();
 
   /* create set of index pairs from innerProductTerms to loop over. */
   namespace hana = boost::hana;

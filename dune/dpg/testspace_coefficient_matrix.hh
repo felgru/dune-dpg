@@ -153,10 +153,10 @@ public:
                                        InnerProduct& innerProd) :
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
-    gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
+    gridView_(std::get<0>(*bilinForm.getSolutionSpaces()).gridView()),
     localViewsSolution_(detail::getLocalViews(
-                          bilinearForm_.getSolutionSpaces())),
-    localViewsTest_(detail::getLocalViews(bilinearForm_.getTestSpaces()))
+                          *bilinearForm_.getSolutionSpaces())),
+    localViewsTest_(detail::getLocalViews(*bilinearForm_.getTestSpaces()))
   {}
 
   void bind(const typename GridView::template Codim<0>::Entity& e)
@@ -293,10 +293,10 @@ class BufferedTestspaceCoefficientMatrix
   BufferedTestspaceCoefficientMatrix(BilinearForm& bilinForm, InnerProduct& innerProd, GeoBuffer& buffer) :
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
-    gridView_(std::get<0>(bilinForm.getSolutionSpaces()).gridView()),
+    gridView_(std::get<0>(*bilinForm.getSolutionSpaces()).gridView()),
     localViewsSolution_(detail::getLocalViews(
-                          bilinearForm_.getSolutionSpaces())),
-    localViewsTest_(detail::getLocalViews(bilinearForm_.getTestSpaces())),
+                          *bilinearForm_.getSolutionSpaces())),
+    localViewsTest_(detail::getLocalViews(*bilinearForm_.getTestSpaces())),
     geometryBuffer_(buffer)
   {}
 

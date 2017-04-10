@@ -176,13 +176,13 @@ public:
   /**
    * \brief Does exactly what it says on the tin.
    */
-  const TestSpaces& getTestSpaces() const
+  std::shared_ptr<TestSpaces> getTestSpaces() const
   { return testSpaces; }
 
   /**
    * \brief Does exactly what it says on the tin.
    */
-  const SolutionSpaces& getSolutionSpaces() const
+  std::shared_ptr<SolutionSpaces> getSolutionSpaces() const
   { return solutionSpaces; }
 
 private:
@@ -226,10 +226,10 @@ private:
   // TODO: IPIndices seems to have some type_c too much.
   using IPIndices = decltype(ipIndices());
 
-  TestSpaces     testSpaces;
-  SolutionSpaces solutionSpaces;
-  BilinearForm   bilinearForm;
-  InnerProduct   innerProduct;
+  std::shared_ptr<TestSpaces>     testSpaces;
+  std::shared_ptr<SolutionSpaces> solutionSpaces;
+  BilinearForm                    bilinearForm;
+  InnerProduct                    innerProduct;
 };
 
 /**
@@ -270,16 +270,16 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   constexpr bool isSaddlepoint = true;
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(testSpaces).gridView();
+  GridView gridView = std::get<0>(*testSpaces).gridView();
 
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
   const size_t globalTotalTestSize = computeOffsets(globalTestSpaceOffsets,
-                                                    testSpaces);
+                                                    *testSpaces);
 
   const size_t globalTotalSolutionSize =
-      computeOffsets(globalSolutionSpaceOffsets, solutionSpaces,
+      computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces,
                      globalTotalTestSize) - globalTotalTestSize;
 
   const auto n = globalTotalSolutionSize + globalTotalTestSize;
@@ -305,11 +305,11 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   matrix = 0;
 
   // Views on the FE bases on a single element
-  auto solutionLocalViews = getLocalViews(solutionSpaces);
-  auto testLocalViews     = getLocalViews(testSpaces);
+  auto solutionLocalViews = getLocalViews(*solutionSpaces);
+  auto testLocalViews     = getLocalViews(*testSpaces);
 
-  auto solutionLocalIndexSets = getLocalIndexSets(solutionSpaces);
-  auto testLocalIndexSets = getLocalIndexSets(testSpaces);
+  auto solutionLocalIndexSets = getLocalIndexSets(*solutionSpaces);
+  auto testLocalIndexSets = getLocalIndexSets(*testSpaces);
 
   for(const auto& e : elements(gridView)) {
 
@@ -368,14 +368,14 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   using namespace Dune::detail;
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(testSpaces).gridView();
+  GridView gridView = std::get<0>(*testSpaces).gridView();
 
   /* set up global offsets */
   size_t globalSpaceOffsets[std::tuple_size<TestSpaces>::value
                             + std::tuple_size<SolutionSpaces>::value];
   const size_t globalTotalSpaceSize =
       computeOffsets(globalSpaceOffsets,
-                     std::tuple_cat(testSpaces, solutionSpaces));
+                     std::tuple_cat(*testSpaces, *solutionSpaces));
 
   // set rhs to correct length -- the total number of basis vectors in the bases
   rhs.resize(globalTotalSpaceSize);
@@ -385,10 +385,10 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
   // Views on the FE bases on a single element
   auto localViews
-        = getLocalViews(std::tuple_cat(testSpaces, solutionSpaces));
+        = getLocalViews(std::tuple_cat(*testSpaces, *solutionSpaces));
 
   auto localIndexSets
-        = getLocalIndexSets(std::tuple_cat(testSpaces, solutionSpaces));
+        = getLocalIndexSets(std::tuple_cat(*testSpaces, *solutionSpaces));
 
 
   for(const auto& e : elements(gridView)) {
@@ -454,12 +454,12 @@ applyDirichletBoundaryToMatrix
                        const ValueType& boundaryValue)
 {
   const size_t spaceSize =
-        std::get<spaceIndex>(solutionSpaces).size();
+        std::get<spaceIndex>(*solutionSpaces).size();
 
   const size_t globalOffset
-      = detail::computeOffset<spaceIndex>(solutionSpaces,
+      = detail::computeOffset<spaceIndex>(*solutionSpaces,
               detail::computeOffset<std::tuple_size<TestSpaces>::value>
-                                   (testSpaces));
+                                   (*testSpaces));
 
   ////////////////////////////////////////////
   //   Modify Dirichlet rows
@@ -500,12 +500,12 @@ applyDirichletBoundaryToRhs
                        const ValueType& boundaryValue)
 {
   const size_t spaceSize =
-        std::get<spaceIndex>(solutionSpaces).size();
+        std::get<spaceIndex>(*solutionSpaces).size();
 
   const size_t globalOffset
-      = detail::computeOffset<spaceIndex>(solutionSpaces,
+      = detail::computeOffset<spaceIndex>(*solutionSpaces,
               detail::computeOffset<std::tuple_size<TestSpaces>::value>
-                                   (testSpaces));
+                                   (*testSpaces));
 
   // Set Dirichlet values
   for (size_t i=0; i<spaceSize; i++)

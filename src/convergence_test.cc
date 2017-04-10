@@ -104,7 +104,8 @@ int main(int argc, char** argv)
   FEBasisTrace feBasisTrace(gridView);
 
   auto solutionSpaces
-      = std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView));
+    = std::make_shared<std::tuple<FEBasisInterior, FEBasisTrace>>(
+        std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView)));
 
   // v search space
 #if LEVEL_SEARCH>0
@@ -114,14 +115,16 @@ int main(int argc, char** argv)
   using FEBasisTest
       = Functions::LagrangeDGBasis<GridView, K_SEARCH>;
 #endif
-  auto testSpaces = std::make_tuple(FEBasisTest(gridView));
+  auto testSpaces = std::make_shared<std::tuple<FEBasisTest>>(
+                      std::make_tuple(FEBasisTest(gridView)));
 
   // enriched test space for error estimation
   using FEBasisTest_aposteriori
       = Functions::PQkDGRefinedDGBasis<GridView, LEVEL_APOSTERIORI,
                                                  K_APOSTERIORI>;
   auto testSpaces_aposteriori
-      = std::make_tuple(FEBasisTest_aposteriori(gridView));
+      = std::make_shared<std::tuple<FEBasisTest_aposteriori>>(
+          std::make_tuple(FEBasisTest_aposteriori(gridView)));
 
   FieldVector<double, dim> beta
              = {cos(boost::math::constants::pi<double>()/8),
@@ -192,7 +195,7 @@ int main(int argc, char** argv)
   {
     std::vector<bool> dirichletNodesInflow;
     BoundaryTools boundaryTools = BoundaryTools();
-    boundaryTools.getInflowBoundaryMask(std::get<1>(solutionSpaces),
+    boundaryTools.getInflowBoundaryMask(std::get<1>(*solutionSpaces),
                                         dirichletNodesInflow,
                                         beta);
     systemAssembler.applyDirichletBoundary<1>
@@ -234,7 +237,7 @@ int main(int argc, char** argv)
     theta[i] = x[i+feBasisInterior.size()];
   }
 
-  double err = ErrorTools::computeL2error<1>(std::get<0>(solutionSpaces),
+  double err = ErrorTools::computeL2error<1>(std::get<0>(*solutionSpaces),
                                          u, std::make_tuple(uAnalytic(beta)));
 
   // We compute the a posteriori error
