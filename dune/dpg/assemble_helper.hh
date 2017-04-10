@@ -4,6 +4,7 @@
 #define DUNE_DPG_ASSEMBLE_HELPER_HH
 
 #include <functional>
+#include <memory>
 #include <utility>
 #include <tuple>
 #include <dune/common/hybridutilities.hh>
@@ -15,6 +16,22 @@
 #include <boost/hana.hpp>
 
 namespace Dune {
+
+/**
+ * Create a shared_ptr to a tuple of spaces over the same GridView
+ */
+template<class... Spaces, class GridView>
+std::shared_ptr<std::tuple<Spaces...>>
+make_space_tuple(const GridView& gridView)
+{
+  static_assert(Concept::tupleEntriesModel<
+      Functions::Concept::GeneralizedGlobalBasis<GridView>,
+      std::tuple<Spaces...>>(),
+      "Spaces need to model the GeneralizedGlobalBasis concept.");
+
+  return std::make_shared<typename std::tuple<Spaces...>>(
+      std::make_tuple(Spaces(gridView)...));
+}
 
 namespace detail {
 

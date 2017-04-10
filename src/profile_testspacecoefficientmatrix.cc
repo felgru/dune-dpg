@@ -123,9 +123,7 @@ int main(int argc, char** argv)
   using W = FEBasisTraceLifting;
 
   auto solutionSpaces
-    = std::make_shared<std::tuple<FEBasisInterior, FEBasisTraceLifting>>(
-        std::make_tuple(FEBasisInterior(gridView),
-                        FEBasisTraceLifting(gridView)));
+    = make_space_tuple<FEBasisInterior, FEBasisTraceLifting>(gridView);
 
 #if LEVEL_SEARCH>0
   using FEBasisTest
@@ -134,8 +132,7 @@ int main(int argc, char** argv)
   using FEBasisTest
       = Functions::LagrangeDGBasis<GridView, K_SEARCH>;
 #endif
-  auto testSearchSpaces = std::make_shared<std::tuple<FEBasisTest>>(
-      std::make_tuple(FEBasisTest(gridView)));
+  auto testSearchSpaces = make_space_tuple<FEBasisTest>(gridView);
 
   auto bilinearForm = make_BilinearForm(testSearchSpaces, solutionSpaces,
           make_tuple(

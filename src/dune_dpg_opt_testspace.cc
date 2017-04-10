@@ -84,14 +84,12 @@ int main(int argc, char** argv)
   FEBasisTrace feBasisTrace(gridView);
 
   auto solutionSpaces
-    = std::make_shared<std::tuple<FEBasisInterior, FEBasisTrace>>(
-        std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView)));
+    = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
   // v search space
   typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
   //typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;
-  auto testSpaces = std::make_shared<std::tuple<FEBasisTest>>(
-      std::make_tuple(FEBasisTest(gridView)));
+  auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
   FieldVector<double, dim> beta
              = {cos(boost::math::constants::pi<double>()/8),

@@ -100,19 +100,16 @@ int main()
     typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
     typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
     auto solutionSpaces
-      = std::make_shared<std::tuple<FEBasisInterior, FEBasisTrace>>(
-          std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView)));
+      = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
     typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;     // v
-    auto testSpaces = std::make_shared<std::tuple<FEBasisTest>>(
-        std::make_tuple(FEBasisTest(gridView)));
+    auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
         = Functions::LagrangeDGBasis<GridView, 4>;
     auto testSpaces_aposteriori
-        = std::make_shared<std::tuple<FEBasisTest_aposteriori>>(
-            std::make_tuple(FEBasisTest_aposteriori(gridView)));
+        = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
     /////////////////////////////////////////////////////////
     //   Choose a bilinear form

@@ -104,8 +104,7 @@ int main(int argc, char** argv)
   FEBasisTrace feBasisTrace(gridView);
 
   auto solutionSpaces
-    = std::make_shared<std::tuple<FEBasisInterior, FEBasisTrace>>(
-        std::make_tuple(FEBasisInterior(gridView), FEBasisTrace(gridView)));
+    = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
   // v search space
 #if LEVEL_SEARCH>0
@@ -115,16 +114,14 @@ int main(int argc, char** argv)
   using FEBasisTest
       = Functions::LagrangeDGBasis<GridView, K_SEARCH>;
 #endif
-  auto testSpaces = std::make_shared<std::tuple<FEBasisTest>>(
-                      std::make_tuple(FEBasisTest(gridView)));
+  auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
   // enriched test space for error estimation
   using FEBasisTest_aposteriori
       = Functions::PQkDGRefinedDGBasis<GridView, LEVEL_APOSTERIORI,
                                                  K_APOSTERIORI>;
   auto testSpaces_aposteriori
-      = std::make_shared<std::tuple<FEBasisTest_aposteriori>>(
-          std::make_tuple(FEBasisTest_aposteriori(gridView)));
+      = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
   FieldVector<double, dim> beta
              = {cos(boost::math::constants::pi<double>()/8),
