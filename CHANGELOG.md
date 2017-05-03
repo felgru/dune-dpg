@@ -25,6 +25,11 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * New functions to save grid functions before adaptive refinement and to
   restore them to the refined grid, namely `attachDataToGrid` and
   `restoreDataToRefinedGrid`.
+* New function `BoundaryTools::getBoundaryMask` that marks the boundary
+  DoFs of a global basis.
+  This works like `BoundaryTools::getInflowBoundaryMask` but marks the
+  complete boundary instead of only the inflow boundary and might be
+  useful to define the boundary of an elliptical problem.
 
 ### Changed
 * We now require version 2.5 of the DUNE core modules and a fully C++14
