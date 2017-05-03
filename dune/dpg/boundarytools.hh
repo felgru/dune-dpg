@@ -23,26 +23,26 @@
 
 namespace Dune {
 
-  template<class Function>
-  class BoundaryCondition{
-
-  Function g_;
-
-  public:
-
-    using DomainType = FieldVector<double, 2>;
-    using RangeType  = FieldVector<double, 1>;
-
-    BoundaryCondition(Function g) : g_(g) {};
-
-    void evaluate(
-      const DomainType& x,
-      RangeType& y) const; /// Remark: this signature assumes that we have a 2D scalar problem
-
-  };
-
   class BoundaryTools
   {
+
+    template<class Function>
+    class BoundaryCondition
+    {
+      Function g_;
+
+    public:
+
+      using DomainType = FieldVector<double, 2>;
+      using RangeType  = FieldVector<double, 1>;
+
+      BoundaryCondition(Function g) : g_(g) {};
+
+      // Remark: this signature assumes that we have a 2D scalar problem
+      void evaluate(
+        const DomainType& x,
+        RangeType& y) const;
+    };
 
   public:
     template <class FEBasis,class Direction>
@@ -51,11 +51,13 @@ namespace Dune {
                   std::vector<bool>& ,
                   const Direction&
                   );
+
     template <class FEBasis>
     static void getBoundaryMask(
                   const FEBasis& ,
                   std::vector<bool>&
                   );
+
     template <class FEBasis, class Function>
     static void getInflowBoundaryValue(
                   const FEBasis& ,
@@ -68,12 +70,10 @@ namespace Dune {
                         unsigned int ,
                         GeometryType
                         );
-
   };
 
-  //*******************************************************************
   template<class Function>
-  void BoundaryCondition<Function>::evaluate(
+  void BoundaryTools::BoundaryCondition<Function>::evaluate(
                                             const DomainType& x,
                                             RangeType& y
                                             ) const
@@ -81,15 +81,14 @@ namespace Dune {
     y = std::get<0>(g_)(x);
   }
 
-  //*******************************************************************
   /**
- * \brief Writes in the vector dirichletNodes whether a degree of freedom is in the boundary (value 1) or not (value 0).
- *        The degrees of freedom are relative to the finite element basis feBasis.
- *        In the transport problem, the result depends on the direction of propagation beta.
- * \param feBasis        a finite element basis
- * \param dirichletNodes the vector where we store the output
- * \param beta           the direction of propagation
- */
+   * \brief Writes in the vector dirichletNodes whether a degree of freedom is in the boundary (value 1) or not (value 0).
+   *        The degrees of freedom are relative to the finite element basis feBasis.
+   *        In the transport problem, the result depends on the direction of propagation beta.
+   * \param feBasis        a finite element basis
+   * \param dirichletNodes the vector where we store the output
+   * \param beta           the direction of propagation
+   */
   template <class FEBasis,class Direction>
   void BoundaryTools::getInflowBoundaryMask(
                         const FEBasis& feBasis,
@@ -102,7 +101,7 @@ namespace Dune {
     typedef typename FEBasis::GridView GridView;
     GridView gridView = feBasis.gridView();
 
-    const unsigned int dofs = feBasis.size();
+    const size_t dofs = feBasis.size();
 
     dirichletNodes.resize(dofs);
     std::vector<unsigned int> dirichletNodesInt(dofs,0);
@@ -225,19 +224,18 @@ namespace Dune {
 
     } // end element e
 
-    for(unsigned int i=0; i<dirichletNodes.size(); i++)
+    for(size_t i=0; i<dirichletNodes.size(); i++)
     {
       dirichletNodes[i] = (dirichletNodesInt[i]>0);
     }
   }
 
-    //*******************************************************************
   /**
- * \brief Writes in the vector dirichletNodes whether a degree of freedom is in the boundary (value 1) or not (value 0).
- *        The degrees of freedom are relative to the finite element basis feBasis.
- * \param feBasis        a finite element basis
- * \param dirichletNodes the vector where we store the output
- */
+   * \brief Writes in the vector dirichletNodes whether a degree of freedom is in the boundary (value 1) or not (value 0).
+   *        The degrees of freedom are relative to the finite element basis feBasis.
+   * \param feBasis        a finite element basis
+   * \param dirichletNodes the vector where we store the output
+   */
   template <class FEBasis>
   void BoundaryTools::getBoundaryMask(
                         const FEBasis& feBasis,
@@ -249,7 +247,7 @@ namespace Dune {
     typedef typename FEBasis::GridView GridView;
     GridView gridView = feBasis.gridView();
 
-    const unsigned int dofs = feBasis.size();
+    const size_t dofs = feBasis.size();
 
     dirichletNodes.resize(dofs);
     std::vector<unsigned int> dirichletNodesInt(dofs,0);
@@ -334,24 +332,23 @@ namespace Dune {
 
     } // end element e
 
-    for(unsigned int i=0; i<dirichletNodes.size(); i++)
+    for(size_t i=0; i<dirichletNodes.size(); i++)
     {
       dirichletNodes[i] = (dirichletNodesInt[i]>0);
     }
   }
 
-//*************************************
   template <class FEBasis, class Function>
   void BoundaryTools::getInflowBoundaryValue(
                   const FEBasis& feBasis,
                   std::vector<double>& rhsInflowContrib,
                   Function& g
                   )
-{
+  {
     typedef typename FEBasis::GridView GridView;
     GridView gridView = feBasis.gridView();
 
-    const unsigned int dofs = feBasis.size();
+    const size_t dofs = feBasis.size();
 
     rhsInflowContrib.resize(dofs);
 
@@ -384,9 +381,8 @@ namespace Dune {
         },
         [](size_type, MultiIndex, double) {});
     }
-}
+  }
 
-//*************************************
   std::vector<unsigned int> BoundaryTools::getVertexOfIntersection(
                               unsigned int indexIntersection,
                               GeometryType geometryType
