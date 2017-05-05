@@ -37,8 +37,8 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * `SystemAssembler`, `RhsAssembler`, `BilinearForm`, `LinearForm` and
   `InnerProduct` now try to share spaces. This allows the user to update
   all spaces at once after refining the grid. To make this sharing of
-  spaces possible, The interfaces of those classes now take `shared_ptr`s
-  to tuples of spaces. To create such shared_ptrs to tuples, you can use
+  spaces possible, the interfaces of those classes now take `shared_ptr`s
+  to tuples of spaces. To create such `shared_ptr`s to tuples, you can use
   the new function `make_space_tuple`.
 * Replace all usage of Boost::Fusion and MPI with C++14 metaprogramming.
   In many places we now use functions from dune/common/hybridutilities.hh
@@ -57,8 +57,8 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * Remove some noise from the API documentation.
 
 ### Removed
-* Remove the make_DPGLinearForm and make_DPG_LinearForm functions,
-  use make_LinearForm instead.
+* Remove the `make_DPGLinearForm` and `make_DPG_LinearForm` functions,
+  use `make_LinearForm` instead.
 * Remove some unused auxiliary types.
 
 ## 0.2.1 - 2016-11-07
