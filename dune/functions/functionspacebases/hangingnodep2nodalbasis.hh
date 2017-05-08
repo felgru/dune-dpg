@@ -183,8 +183,8 @@ public:
             edgeConstraints[gridIndexSet.subIndex(outsideElement,edgeOutside,1)]
                 = std::array<size_t,3>{commonVertex, midVertex, farVertex};
           } else {
-            edgeDofs[gridIndexSet.subIndex(e, intersection.indexInInside(), 1)]
-                = nextEdgeDof++;
+            // Nothing to be done here, as the edge DoF from this face
+            // is constrained by the larger neighboring element.
           }
         } else {
           size_t& edgeDof
