@@ -76,13 +76,6 @@ private:
 
   using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;
 
-  // Precompute the number of dofs per entity type
-  // TODO: With hanging nodes, we don't have uniform DOFs per
-  //       entity type anymore!
-  const static size_type dofsPerVertex = 1;
-  const static size_type dofsPerTriangle = (2-1)*(2-2)/2;
-  const static size_type dofsPerQuad = (2-1)*(2-1);
-
 public:
 
   //! Template mapping root tree path to type of created tree node
