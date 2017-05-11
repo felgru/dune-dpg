@@ -150,7 +150,7 @@ double gFunction(const Domain& x,
   return 1.5;
 }
 
-void printHelp(char* name) {
+void printHelp(const char* name) {
   std::cerr << "Usage: " << name << " [-p] <# of ordinates>"
             << " <# of iterations>"
             << " <size of grid>\n"
