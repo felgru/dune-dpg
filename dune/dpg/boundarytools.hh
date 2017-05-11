@@ -23,26 +23,26 @@
 
 namespace Dune {
 
-  template<class Function>
-  class BoundaryCondition{
-
-  Function g_;
-
-  public:
-
-    using DomainType = FieldVector<double, 2>;
-    using RangeType  = FieldVector<double, 1>;
-
-    BoundaryCondition(Function g) : g_(g) {};
-
-    void evaluate(
-      const DomainType& x,
-      RangeType& y) const; /// Remark: this signature assumes that we have a 2D scalar problem
-
-  };
-
   class BoundaryTools
   {
+
+    template<class Function>
+    class BoundaryCondition
+    {
+      Function g_;
+
+    public:
+
+      using DomainType = FieldVector<double, 2>;
+      using RangeType  = FieldVector<double, 1>;
+
+      BoundaryCondition(Function g) : g_(g) {};
+
+      // Remark: this signature assumes that we have a 2D scalar problem
+      void evaluate(
+        const DomainType& x,
+        RangeType& y) const;
+    };
 
   public:
     template <class FEBasis,class Direction>
@@ -51,6 +51,13 @@ namespace Dune {
                   std::vector<bool>& ,
                   const Direction&
                   );
+
+    template <class FEBasis>
+    static void getBoundaryMask(
+                  const FEBasis& ,
+                  std::vector<bool>&
+                  );
+
     template <class FEBasis, class Function>
     static void getInflowBoundaryValue(
                   const FEBasis& ,
@@ -63,12 +70,10 @@ namespace Dune {
                         unsigned int ,
                         GeometryType
                         );
-
   };
 
-  //*******************************************************************
   template<class Function>
-  void BoundaryCondition<Function>::evaluate(
+  void BoundaryTools::BoundaryCondition<Function>::evaluate(
                                             const DomainType& x,
                                             RangeType& y
                                             ) const
@@ -76,15 +81,14 @@ namespace Dune {
     y = std::get<0>(g_)(x);
   }
 
-  //*******************************************************************
   /**
- * \brief Writes in the vector dirichletNodes whether a degree of freedom is in the boundary (value 1) or not (value 0).
- *        The degrees of freedom are relative to the finite element basis feBasis.
- *        In the transport problem, the result depends on the direction of propagation beta.
- * \param feBasis        a finite element basis
- * \param dirichletNodes the vector where we store the output
- * \param beta           the direction of propagation
- */
+   * \brief Writes in the vector dirichletNodes whether a degree of freedom is in the boundary (value 1) or not (value 0).
+   *        The degrees of freedom are relative to the finite element basis feBasis.
+   *        In the transport problem, the result depends on the direction of propagation beta.
+   * \param feBasis        a finite element basis
+   * \param dirichletNodes the vector where we store the output
+   * \param beta           the direction of propagation
+   */
   template <class FEBasis,class Direction>
   void BoundaryTools::getInflowBoundaryMask(
                         const FEBasis& feBasis,
@@ -97,7 +101,7 @@ namespace Dune {
     typedef typename FEBasis::GridView GridView;
     GridView gridView = feBasis.gridView();
 
-    const unsigned int dofs = feBasis.size();
+    const size_t dofs = feBasis.size();
 
     dirichletNodes.resize(dofs);
     std::vector<unsigned int> dirichletNodesInt(dofs,0);
@@ -220,24 +224,131 @@ namespace Dune {
 
     } // end element e
 
-    for(unsigned int i=0; i<dirichletNodes.size(); i++)
+    for(size_t i=0; i<dirichletNodes.size(); i++)
     {
       dirichletNodes[i] = (dirichletNodesInt[i]>0);
     }
   }
 
-//*************************************
+  /**
+   * \brief Writes in the vector dirichletNodes whether a degree of freedom is in the boundary (value 1) or not (value 0).
+   *        The degrees of freedom are relative to the finite element basis feBasis.
+   * \param feBasis        a finite element basis
+   * \param dirichletNodes the vector where we store the output
+   */
+  template <class FEBasis>
+  void BoundaryTools::getBoundaryMask(
+                        const FEBasis& feBasis,
+                        std::vector<bool>& dirichletNodes
+                        )
+  {
+    const unsigned int dim = FEBasis::GridView::dimension;
+
+    typedef typename FEBasis::GridView GridView;
+    GridView gridView = feBasis.gridView();
+
+    const size_t dofs = feBasis.size();
+
+    dirichletNodes.resize(dofs);
+    std::vector<unsigned int> dirichletNodesInt(dofs,0);
+
+    auto localView = feBasis.localView();
+    auto localIndexSet = feBasis.localIndexSet();
+
+
+    for(const auto& e : elements(gridView))
+    {
+      localView.bind(e);
+      const auto& localFE = localView.tree().finiteElement();
+
+      localIndexSet.bind(localView);
+
+      // dofs in the current finite element
+      const unsigned int dofsLocal = localFE.localCoefficients().size();
+
+      const unsigned int nFace
+          = ReferenceElements<double, dim>::general(e.type()).size(dim-1);
+      const unsigned int nVertex
+          = ReferenceElements<double, dim>::general(e.type()).size(dim);
+
+      // For every vertex, we have to see whether it is on the inflow boundary.
+      // If vertex i is on the inflow boundary, we will have vertexOnInflowBoundary[i] >0.
+      std::vector<unsigned int> vertexOnBoundary(nVertex,0);
+
+      // for all intersections, we see which one lies on the inflow boundary
+      // if intersection i lies on the inflow boundary, then faceOnInflowBoundary[i]=true
+      // we will assume that an intersection is simply a face for us
+
+
+      std::vector<unsigned int> faceOnBoundary(nFace,0);
+
+      for (auto&& intersection : intersections(gridView, e))
+      {
+        // Local index of the intersection
+        const unsigned int indexIntersection = intersection.indexInInside();
+
+        // We store this information in faceOnInflowBoundary
+        faceOnBoundary[indexIntersection] = intersection.boundary();
+
+        // if the intersection is on the inflow boundary, we have to update
+        // what are the local vertices that are also on the inflow boundary
+        if(intersection.boundary())
+        {
+          // We see what are the vertices associated to the current
+          // intersection (assumed to be a face)
+          std::vector<unsigned int> vertexOfIntersection
+              = getVertexOfIntersection(indexIntersection, e.type());
+
+          vertexOnBoundary[ vertexOfIntersection[0] ] += 1;
+          vertexOnBoundary[ vertexOfIntersection[1] ] += 1;
+        }
+      }
+
+      // For each dof, we check whether it belongs to the inflow boundary
+      for(unsigned int i=0; i<dofsLocal; i++)
+      {
+        unsigned int dofOnBoundary = 0;
+
+        // localkey of dof i
+        const auto& dofLocalKey = localFE.localCoefficients().localKey(i);
+
+        // Codimension and subentity index of the current dof
+        const unsigned int dofCodim = dofLocalKey.codim();
+        const unsigned int dofIndex = dofLocalKey.subEntity();
+
+        if(dofCodim == 1) //the dof belongs to a face
+        {
+           dofOnBoundary += faceOnBoundary[dofIndex];
+        }
+        if(dofCodim == 2) //the dof belongs to a vertex
+        {
+          dofOnBoundary += vertexOnBoundary[dofIndex];
+        }
+
+        dirichletNodesInt[ localIndexSet.index(i)[0] ] += dofOnBoundary;
+
+      } // end dof
+
+
+    } // end element e
+
+    for(size_t i=0; i<dirichletNodes.size(); i++)
+    {
+      dirichletNodes[i] = (dirichletNodesInt[i]>0);
+    }
+  }
+
   template <class FEBasis, class Function>
   void BoundaryTools::getInflowBoundaryValue(
                   const FEBasis& feBasis,
                   std::vector<double>& rhsInflowContrib,
                   Function& g
                   )
-{
+  {
     typedef typename FEBasis::GridView GridView;
     GridView gridView = feBasis.gridView();
 
-    const unsigned int dofs = feBasis.size();
+    const size_t dofs = feBasis.size();
 
     rhsInflowContrib.resize(dofs);
 
@@ -270,9 +381,8 @@ namespace Dune {
         },
         [](size_type, MultiIndex, double) {});
     }
-}
+  }
 
-//*************************************
   std::vector<unsigned int> BoundaryTools::getVertexOfIntersection(
                               unsigned int indexIntersection,
                               GeometryType geometryType
