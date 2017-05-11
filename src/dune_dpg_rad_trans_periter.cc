@@ -14,14 +14,6 @@
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
-#include <dune/functions/functionspacebases/optimaltestbasis.hh>
-#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqksubsampleddgbasis.hh>
-
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-
 #include <dune/dpg/radiative_transfer/periter.hh>
 #include <dune/dpg/radiative_transfer/henyey_greenstein_scattering.hh>
 
