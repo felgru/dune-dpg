@@ -3,9 +3,10 @@ Description
 
 This folder contains the sources of the dune-dpg library, which allows to
 solve Partial Differential Equations with Discontinuous Petrov-Galerkin
-finite elements. It is built upon the finite element package Dune. The
-scientific interest of the code can be found in the paper "The dune-dpg
-library for solving PDEs with Discontinuous Petrov-Galerkin finite elements"
+finite elements. It is built upon the finite element package Dune. For
+further information on the dune-dpg library, we refer to the paper
+[The dune-dpg library for solving PDEs with Discontinuous Petrov-Galerkin
+finite elements](http://dx.doi.org/10.11588/ans.2017.1.27719)
 by F. Gruber, A. Klewinghaus and O. Mula.
 
 For build instruction see the accompanying [INSTALL.md](INSTALL.md) file.
@@ -206,6 +207,31 @@ The release mode can be configured with
 Afterwards, we can compile the test programs with
 
     make
+
+Citing dune-dpg
+===============
+
+If you use dune-dpg in your own scientific work, please consider
+citing our [overview paper](http://dx.doi.org/10.11588/ans.2017.1.27719)
+([PDF](http://journals.ub.uni-heidelberg.de/index.php/ans/article/download/27719/29543)).
+Here's the BibTeX data for the paper:
+
+```bibtex
+@Article{GKM2017,
+  author         = {Felix Gruber and Angela Klewinghaus and Olga Mula},
+  title          = {The {DUNE-DPG} Library for Solving {PDE}s with {Discontinuous Petrov--Galerkin} Finite Elements},
+  journal        = {Archive of Numerical Software},
+  year           = {2017},
+  volume         = {5},
+  number         = {1},
+  pages          = {111--128},
+  doi            = {10.11588/ans.2017.1.27719},
+  keywords       = {discontinuous Petrov-Galerkin; partial differential equations; inf-sup stability; transport equation; finite elements; DUNE},
+}
+```
+
+If you are using other Dune modules, you might find the corresponding
+papers [here](https://dune-project.org/about/publications/).
 
 License
 =======
