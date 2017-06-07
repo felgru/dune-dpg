@@ -26,32 +26,28 @@ namespace Dune {
  *
  * \tparam SolutionSpaces  tuple of solution spaces
  */
-template<class SolutionSpaces,
+template<class SolutionSpace,
          class KernelApproximation>
 class ApproximateScatteringAssembler
 {
 public:
-  enum : unsigned int {
-    dim = std::tuple_element_t<0, SolutionSpaces>::GridView::dimension };
+  enum : unsigned int { dim = SolutionSpace::GridView::dimension };
   using Direction = FieldVector<double, dim>;
 
   ApproximateScatteringAssembler () = delete;
   /**
    * \brief constructor for ApproximateScatteringAssembler
    *
-   * \param solutionSpaces   a shared_ptr to a tuple of solution spaces
+   * \param solutionSpace    a reference to a solution space (on the host grid)
    * \param kernel           an approximation of the scattering kernel
-   * \param si  index of the scattering direction
    *
    * \note For your convenience, use make_ApproximateScatteringAssembler()
    *       instead.
    */
   ApproximateScatteringAssembler (
-      const std::shared_ptr<SolutionSpaces>& solutionSpaces,
-      const KernelApproximation& kernel,
-      size_t si)
-             : solutionSpaces(solutionSpaces),
-               si(si),
+      const SolutionSpace& solutionSpace,
+      const KernelApproximation& kernel)
+             : solutionSpace(solutionSpace),
                kernelApproximation(kernel)
   {}
 
@@ -66,15 +62,15 @@ public:
    * \param[out] scattering  the scattering vector
    * \param[in]  x           the vectors of the solutions of the
    *                           previous iteration
+   * \param[in]  si          index of scattering direction (0 < si < numS)
    */
-  template<size_t solutionSpaceIndex>
   void precomputeScattering
           (BlockVector<FieldVector<double,1> >& scattering,
-           const std::vector<BlockVector<FieldVector<double,1> >>& x);
+           const std::vector<BlockVector<FieldVector<double,1> >>& x,
+           size_t si);
 
 private:
-  std::shared_ptr<SolutionSpaces> solutionSpaces;
-  const size_t si;
+  const SolutionSpace& solutionSpace;
   const KernelApproximation& kernelApproximation;
 };
 
@@ -82,20 +78,20 @@ private:
  * \brief Creates a ScatteringAssembler for a DPG discretization,
  *        deducing the target type from the types of arguments.
  *
- * \param  solutionSpaces   a shared_ptr to a tuple of solution spaces
+ * \param  solutionSpace    a reference to a solution spaces (on host grid).
+ *                          It is assumed that the solutions given later have
+ *                          all been interpolated to this solutionSpace.
  * \param  kernel           an approximation of the scattering kernel
- * \param  si               index of scattering direction (0 < si < numS)
  */
-template<class SolutionSpaces,
+template<class SolutionSpace,
          class KernelApproximation>
 auto make_ApproximateScatteringAssembler(
-      const std::shared_ptr<SolutionSpaces>& solutionSpaces,
-      const KernelApproximation& kernel,
-      size_t si)
-     -> ApproximateScatteringAssembler<SolutionSpaces, KernelApproximation>
+      const SolutionSpace& solutionSpace,
+      const KernelApproximation& kernel)
+     -> ApproximateScatteringAssembler<SolutionSpace, KernelApproximation>
 {
-  return ApproximateScatteringAssembler<SolutionSpaces, KernelApproximation>
-                            (solutionSpaces, kernel, si);
+  return ApproximateScatteringAssembler<SolutionSpace, KernelApproximation>
+                            (solutionSpace, kernel);
 }
 
 namespace detail {
@@ -114,7 +110,6 @@ inline static void interiorImpl(
     VectorType& localScattering,
     VectorType& localNormSquared,
     const SolutionLocalIndexSet& solutionLocalIndexSet,
-    size_t globalSolutionSpaceOffset,
     // unsigned int quadratureOrder,
     const Element& element,
     const KernelApproximation& kernelApproximation,
@@ -166,13 +161,11 @@ inline static void interiorImpl(
           evaluateFunction(quadPos, shapeFunctionValues);
       for (size_t j=0, jMax=shapeFunctionValues.size(); j<jMax; j++)
       {
-        /* This assumes that solutionLocalIndexSets and
-         * globalSolutionSpaceOffset don't change for different
-         * scattering angles.
+        /* This assumes that solutionLocalIndexSet and
+         * doesn't change for different * scattering angles.
          */
         auto row =
-            solutionLocalIndexSet.index(j)[0]
-          + globalSolutionSpaceOffset;
+            solutionLocalIndexSet.index(j)[0];
         uValue += x[scatteringAngle][row] * shapeFunctionValues[j];
       }
       uValues(scatteringAngle) = uValue;
@@ -196,95 +189,83 @@ inline static void interiorImpl(
 } // end namespace detail
 
 
-template<class SolutionSpaces,
+template<class SolutionSpace,
          class KernelApproximation>
-template<size_t solutionSpaceIndex>
-void ApproximateScatteringAssembler<SolutionSpaces, KernelApproximation>::
+void ApproximateScatteringAssembler<SolutionSpace, KernelApproximation>::
 precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
-                     const std::vector<BlockVector<FieldVector<double,1> >>& x)
+                     const std::vector<BlockVector<FieldVector<double,1> >>& x,
+                     size_t si)
 {
   using namespace Dune::detail;
 
-  typedef typename std::tuple_element<0,SolutionSpaces>::type::GridView
-          GridView;
-  GridView gridView = std::get<0>(*solutionSpaces).gridView();
+  typedef typename SolutionSpace::GridView GridView;
+  GridView gridView = solutionSpace.gridView();
 
-  /* set up global offsets */
-  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
-
-  computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces);
-
-  const size_t globalSolutionSpaceOffset =
-      globalSolutionSpaceOffsets[solutionSpaceIndex];
-
-  scattering.resize(std::get<solutionSpaceIndex>(*solutionSpaces).size());
+  scattering.resize(solutionSpace.size());
   scattering = 0;
   BlockVector<FieldVector<double,1>> normSquared(scattering.size());
   normSquared = 0;
 
   // Views on the FE bases on a single element
-  auto solutionLocalViews = getLocalViews(*solutionSpaces);
-  auto solutionLocalIndexSets = getLocalIndexSets(*solutionSpaces);
+  auto solutionLocalView = solutionSpace.localView();
+  auto solutionLocalIndexSet = solutionSpace.localIndexSet();
 
   for(const auto& e : elements(gridView)) {
 
     // Bind the local FE basis view to the current element
-    /* TODO: only bind the space we use later */
-    bindLocalViews(solutionLocalViews, e);
-    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+    solutionLocalView.bind(e);
+    solutionLocalIndexSet.bind(solutionLocalView);
 
     // Now get the local contribution to the scattering functional
 
     BlockVector<FieldVector<double,1>>
-        localScattering(std::get<solutionSpaceIndex>(solutionLocalViews)
-                                                                  .size());
+        localScattering(solutionLocalView.size());
     localScattering = 0;
     BlockVector<FieldVector<double,1>> localNormSquared(localScattering.size());
     localNormSquared = 0;
 
-    detail::GetLocalApproximateScattering
-      < std::tuple_element_t<solutionSpaceIndex, SolutionSpaces>
-      >::interiorImpl(
-            std::get<solutionSpaceIndex>(solutionLocalViews),
+    detail::GetLocalApproximateScattering<SolutionSpace>::interiorImpl(
+            solutionLocalView,
             localScattering,
             localNormSquared,
-            std::get<solutionSpaceIndex>(solutionLocalIndexSets),
-            globalSolutionSpaceOffset,
+            solutionLocalIndexSet,
             // unsigned int quadratureOrder,
             e,
             kernelApproximation,
             x,
             si);
 
-    typename std::remove_reference<decltype(globalSolutionSpaceOffsets)>
-                         ::type zeroes;
-    for(size_t i = 0; i < std::tuple_size<SolutionSpaces>::value; i++)
-      zeroes[i] = 0;
-    auto scatteringCopier
-        = localToGlobalRHSCopier
-            <typename std::remove_reference<decltype(localScattering)>::type,
-             typename std::remove_reference<decltype(scattering)>::type,
-             typename std::remove_reference<decltype(solutionLocalIndexSets)>
-                         ::type,
-             typename std::remove_reference<decltype(zeroes)>::type>
-            (localScattering, scattering,
-             solutionLocalIndexSets,
-             zeroes,
-             zeroes);
-    scatteringCopier(std::integral_constant<size_t, solutionSpaceIndex>{});
+    using MultiIndex
+        = typename std::decay_t<decltype(solutionLocalIndexSet)>::MultiIndex;
+    iterateOverLocalIndexSet(
+        solutionLocalIndexSet,
+        [&](size_t i, MultiIndex gi)
+        {
+          scattering[gi[0]]
+              += localScattering[i];
+        },
+        [](size_t i){},
+        [&](size_t i, MultiIndex gi, double wi)
+        {
+          scattering[gi[0]]
+              += wi * localScattering[i];
+        }
+    );
 
-    auto normCopier
-        = localToGlobalRHSCopier
-            <typename std::remove_reference<decltype(localNormSquared)>::type,
-             typename std::remove_reference<decltype(normSquared)>::type,
-             typename std::remove_reference<decltype(solutionLocalIndexSets)>
-                         ::type,
-             typename std::remove_reference<decltype(zeroes)>::type>
-            (localNormSquared, normSquared,
-             solutionLocalIndexSets,
-             zeroes,
-             zeroes);
-    normCopier(std::integral_constant<size_t, solutionSpaceIndex>{});
+    iterateOverLocalIndexSet(
+        solutionLocalIndexSet,
+        [&](size_t i, MultiIndex gi)
+        {
+          normSquared[gi[0]]
+              += localNormSquared[i];
+        },
+        [](size_t i){},
+        [&](size_t i, MultiIndex gi, double wi)
+        {
+          normSquared[gi[0]]
+              += wi * localNormSquared[i];
+        }
+    );
   }
 
   for(size_t i=0, iMax=scattering.size(); i<iMax; ++i)
