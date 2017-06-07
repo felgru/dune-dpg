@@ -23,6 +23,9 @@ namespace Functions {
   template<class NF>
   class DefaultGlobalBasis;
 
+  template<class NF>
+  class ConstrainedGlobalBasis;
+
   template<typename GV, int k, class MI>
   class PQkNodeFactory;
 
@@ -44,6 +47,9 @@ namespace Functions {
   template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
            class MI>
   class OptimalTestBasisNodeFactory;
+
+  template<typename GV, class MI>
+  class HangingNodeP2NodeFactory;
 
   template<typename BilinForm, typename InnerProd>
   class TestspaceCoefficientMatrix;
@@ -236,14 +242,21 @@ struct is_TransportFiniteElement<Functions::DefaultGlobalBasis<
 template<class T, class GridView>
 struct changeGridView {};
 
-#ifndef DOXYGEN
 template<class T, class GridView>
 using changeGridView_t = typename changeGridView<T, GridView>::type;
 
+#ifndef DOXYGEN
 template<class NF, class GridView>
 struct changeGridView<Functions::DefaultGlobalBasis<NF>, GridView>
 {
   typedef Functions::DefaultGlobalBasis<changeGridView_t<NF, GridView>> type;
+};
+
+template<class NF, class GridView>
+struct changeGridView<Functions::ConstrainedGlobalBasis<NF>, GridView>
+{
+  typedef Functions::ConstrainedGlobalBasis<changeGridView_t<NF, GridView>>
+        type;
 };
 
 template<typename GV, int k, class MI, class GridView>
@@ -294,6 +307,12 @@ struct changeGridView<Functions::OptimalTestBasisNodeFactory
   typedef Functions::OptimalTestBasisNodeFactory<
     changeGridView_t<TestspaceCoefficientMatrix, GridView>,
     testIndex, MI>   type;
+};
+
+template<typename GV, class MI, class GridView>
+struct changeGridView<Functions::HangingNodeP2NodeFactory<GV, MI>, GridView>
+{
+  typedef Functions::HangingNodeP2NodeFactory<GridView, MI> type;
 };
 
 template<typename BilinForm, typename InnerProd, class GridView>

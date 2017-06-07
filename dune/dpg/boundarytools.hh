@@ -376,8 +376,8 @@ namespace Dune {
           rhsInflowContrib[ g[0] ] = out[i];
         },
         [](size_type) {
-          DUNE_THROW(InvalidStateException,
-              "The boundary should not contain constrained DoFs!");
+          //DUNE_THROW(InvalidStateException,
+          //    "The boundary should not contain constrained DoFs!");
         },
         [](size_type, MultiIndex, double) {});
     }

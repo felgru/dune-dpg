@@ -45,7 +45,7 @@ namespace detail {
       ConstrainedEvaluation&& constrainedEvaluation) {
     using size_type = typename std::decay_t<LocalIndexSet>::size_type;
     auto globalIndex = localIndexSet.indicesLocalGlobal().begin();
-    auto globalIndexEnd = localIndexSet.indicesLocalGlobal().end();
+    assert(!localIndexSet.indicesLocalGlobal().empty());
     const size_type numConstraints = localIndexSet.constraintsSize();
     size_type i = 0;
     for(size_type c = 0; c < numConstraints; c++) {
@@ -61,7 +61,7 @@ namespace detail {
     }
     for (; i < localIndexSet.size(); ++i)
       unconstrainedEvaluation(i, *(globalIndex++));
-    assert(globalIndex == globalIndexEnd);
+    assert(globalIndex == localIndexSet.indicesLocalGlobal().end());
   }
 }
 

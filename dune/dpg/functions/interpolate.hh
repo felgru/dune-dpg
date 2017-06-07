@@ -86,7 +86,7 @@ VectorType interpolateToUniformlyRefinedGrid(
         coarseLocalBasis.evaluateFunction(xCoarse, shapeValues);
         FiniteElementRange y
           = std::inner_product(shapeValues.cbegin(), shapeValues.cend(),
-                               local_v_coarse.begin(), 0.);
+                               local_v_coarse.begin(), FiniteElementRange{0.});
         return y;
       };
 
