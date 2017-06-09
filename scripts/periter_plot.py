@@ -17,8 +17,8 @@ def readData(datafile):
         r', kappa3 = ([0-9]*\.?[0-9]*)'
         , re.MULTILINE)
     dataPattern = re.compile(
-        r'^Iteration ([0-9]+)\.([0-9]+): [^0-9]*([0-9\.e\-\+]+)'
-        r', grid level: ([0-9]+), number of DOFs: ([0-9]+)'
+        r'^Error at end of Iteration ([0-9]+): ([0-9]+\.?[0-9]*)'
+        r', using ([0-9]+) DoFs'
         r', applying the kernel took ([0-9]+)us, (.*)$',
         re.MULTILINE)
     svdPattern = re.compile(
@@ -28,7 +28,6 @@ def readData(datafile):
     waveletCompressionPattern = re.compile(
         r'MatrixCompression approximation with level ([0-9]+)')
     iterationIndices = list()
-    gridResolutions = list()
     dofs = list()
     aposterioriErrors = list()
     kernelTimings = list()
@@ -43,19 +42,12 @@ def readData(datafile):
                      , 'kappa2': parametersMatch.group(5)
                      , 'kappa3': parametersMatch.group(6)
                      }
-        for (n, nRefinement, aPostErr, gridLevel, numDOFs, time, rest) \
+        for (n, aPostErr, numDOFs, time, rest) \
                 in dataPattern.findall(errors):
-            iterationIndices.append((n, nRefinement))
-            n = int(n)
-            nRefinement = int(nRefinement)
-            aPostErr = float(aPostErr)
-            gridLevel = int(gridLevel)
-            numDOFs = int(numDOFs)
-            time = int(time) / 1000000.;
-            gridResolutions.append(np.exp2(-gridLevel))
-            dofs.append(numDOFs)
-            aposterioriErrors.append(aPostErr)
-            kernelTimings.append(time)
+            iterationIndices.append(int(n))
+            dofs.append(int(numDOFs))
+            aposterioriErrors.append(float(aPostErr))
+            kernelTimings.append(int(time) / 1000000.);
             m = svdPattern.match(rest)
             if m:
                 ranks.append(m.group(1))
@@ -70,38 +62,48 @@ def readData(datafile):
     return { 'parameters': parameters
            , 'datapoints': len(iterationIndices)
            , 'iterationIndices': iterationIndices
-           , 'gridResolutions': gridResolutions
            , 'dofs': dofs
            , 'aposterioriErrors': aposterioriErrors
            , 'kernelTimings': kernelTimings
            , 'ranks': ranks
            }
 
-def plot(gridResolutions,
+def plot(iterationIndices,
          errors,
+         numDoFs,
          outputfile='periter_error.pdf',
          title=None,
-         xlabel='mesh size $H$',
-         ylabel='a posteriori error estimators',
+         xlabel='outer iteration',
+         ylabel=('a posteriori error estimator', '# of DoFs'),
          xlim=None,
          ylim=None,
          xscale='log',
          yscale='log'):
-    fig = plt.figure()
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
     if title != None:
         plt.title(title)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.ticklabel_format(axis='both', style='sci', scilimits=(0,0))
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(ylabel[0])
+    ax2.set_ylabel(ylabel[1])
+    ax1.ticklabel_format(style='sci', scilimits=(0,0))
+    ax2.ticklabel_format(style='sci', scilimits=(0,0))
 
-    line = plt.plot(gridResolutions, errors)
+    line1 = ax1.plot(iterationIndices, errors)
     # plot in RWTH blue
-    plt.setp(line, linewidth=2.0,
+    plt.setp(line1, linewidth=2.0,
              marker='o', markersize=3.0,
              color='#0054AF')
 
+    line1 = ax2.plot(iterationIndices, numDoFs)
+    # plot in RWTH purple
+    plt.setp(line1, linewidth=2.0,
+             marker='x', markersize=3.0,
+             color='#612158')
+
     plt.xscale(xscale)
-    plt.yscale(yscale)
+    ax1.set_yscale(yscale)
+    ax2.set_yscale(yscale)
     if xlim != None:
         plt.xlim(xlim)
     if ylim != None:
@@ -117,41 +119,17 @@ def print_table(data):
            r' with {p[numS]} directions'
            '\n'
           ).format(p=data['parameters']))
-    data2 = list()
-    for i in range(data['datapoints']):
-        (it, it_inner) = data['iterationIndices'][i]
-        d = { 'innerIteration': it_inner
-            , 'gridResolution': data['gridResolutions'][i]
-            , 'dofs': data['dofs'][i]
-            , 'aposterioriError': data['aposterioriErrors'][i]
-            }
-        if data2 and (data2[-1]['n'] == it):
-            data2[-1]['inner_data'].append(d)
-        else:
-            data2.append({ 'n': it
-                         , 'kernelTiming': data['kernelTimings'][i]
-                         , 'rank': data['ranks'][i]
-                         , 'inner_data': [d]
-                         })
-    print(r'\begin{tabular}{rr|rrlrl}')
-    print(r'& & \multicolumn{2}{c}{kernel approximation} & & & \\')
-    print('\\multicolumn{2}{c|}{iteration} & duration / s & rank & $h$ & \#DOFs & aposteriori error \\\\\n')
-    for row in data2:
+    print(r'\begin{tabular}{r|rrrl}')
+    print(r'& \multicolumn{2}{c}{kernel approximation} & & \\')
+    print('iteration & duration / s & rank & \#DOFs & aposteriori error \\\\\n')
+    for row in range(len(data)):
         print(r'\hline')
-        print(r'\multirow{{{s}}}{{*}}{{{n}}} '
-                .format(n=row['n'], s=len(row['inner_data'])))
-        print(r'& {} '.format(row['inner_data'][0]['innerIteration']))
-        print(r'& \multirow{{{s}}}{{*}}{{{t}}} '
-                .format(t=row['kernelTiming'], s=len(row['inner_data'])))
-        print(r'& \multirow{{{s}}}{{*}}{{{r}}} '
-                .format(r=row['rank'], s=len(row['inner_data'])))
-        print((r'& {d[gridResolution]} '
-               r'& {d[dofs]} & {d[aposterioriError]} \\'
-              ).format(d=row['inner_data'][0]))
-        for d in row['inner_data'][1:]:
-            print((r'& {d[innerIteration]} & & & {d[gridResolution]} '
-                   r'& {d[dofs]} & {d[aposterioriError]} \\'
-                  ).format(d=d))
+        print(r'{n} '.format(n=data['iterationIndices'][row]))
+        print(r'& {t} & {r} '
+                .format(t=data['kernelTimings'][row], r=data['ranks'][row]))
+        print(r'& {dofs} & {err} \\'
+               .format(dofs=data['dofs'][row],
+                        err=data['aposterioriErrors'][row]))
     print(r'\end{tabular}')
 
 def print_preamble():
@@ -169,8 +147,6 @@ def print_preamble():
           '\n'
           r'% For \MoveEqLeft, \coloneqq, etc.' '\n'
           r'\usepackage{mathtools}' '\n'
-          '\n'
-          r'\usepackage{multirow}' '\n'
           '\n'
           r'\begin{document}')
 
@@ -194,10 +170,11 @@ if args.print_preamble:
 else:
     print_table(data)
 
-mpl.rc('text', usetex=True)
+#mpl.rc('text', usetex=True)
 
-plot(data['gridResolutions'],
+plot(data['iterationIndices'],
      data['aposterioriErrors'],
+     data['dofs'],
      outputfile=args.outfile,
      # title='a posteriori errors of Periter',
     )

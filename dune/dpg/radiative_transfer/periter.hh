@@ -540,6 +540,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     ////////////////////////////////////////////////////
     // Inner loop
     ////////////////////////////////////////////////////
+    double accumulatedAPosterioriError = 0.;
     for(unsigned int i = 0; i < numS; ++i)
     {
       const Direction s = sVector[i];
@@ -590,7 +591,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         // thus the inner loop terminates eventually.
       {
         std::cout << "Direction " << i
-                  << ", inner iteration " << nRefinement << std::endl;
+                  << ", inner iteration " << nRefinement << '\n';
 
         // Determine Dirichlet dofs for u^ (inflow boundary)
         std::vector<bool> dirichletNodesInflow;
@@ -729,12 +730,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                 (endScatteringApproximation - startScatteringApproximation)
                 .count()
             << "us, " << kernelApproximation.info()
-            << std::endl;
-        std::cout << std::endl;
+            << '\n';
+        std::cout << '\n';
 
         std::cout << "\nStatistics at end of inner iteration:\n";
         std::cout << "Grid level: " << grids[i]->maxLevel() << '\n';
-        std::cout << "A posteriori error: " << aposterioriErr << std::endl;
+        std::cout << "A posteriori error: " << aposterioriErr << '\n';
 
         if(++nRefinement >= maxNumberOfInnerIterations
             || aposterioriErr <= kappa3*eta) {
@@ -752,7 +753,24 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           detail::updateSpaces(*testSpacesEnriched[i], grids[i]->leafGridView());
         }
       }
+      accumulatedAPosterioriError += aposterioriErr * aposterioriErr;
     }
+    accumulatedAPosterioriError
+        = std::sqrt(accumulatedAPosterioriError / static_cast<double>(numS));
+    const size_t accumulatedDoFs = std::accumulate(x.cbegin(), x.cend(),
+        static_cast<size_t>(0),
+        [](size_t acc, auto vec) { return acc + vec.size(); });
+    ofs << "Error at end of Iteration " << n << ": "
+        << accumulatedAPosterioriError << ", using "
+        << accumulatedDoFs << " DoFs, applying the kernel took "
+        << std::chrono::duration_cast<std::chrono::microseconds>
+            (endScatteringApproximation - startScatteringApproximation)
+            .count()
+        << "us, " << kernelApproximation.info()
+        << '\n';
+    std::cout << "Error at end of Iteration " << n << ": "
+              << accumulatedAPosterioriError << ", using "
+              << accumulatedDoFs << " DoFs\n";
 
     accuracy = std::pow(rho, n) * CT * fnorm + 2*eta;
     eta /= rhobar;
