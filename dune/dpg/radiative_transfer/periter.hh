@@ -384,12 +384,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   std::vector<std::unique_ptr<Grid>> grids;
   grids.reserve(sVector.size());
   for(size_t i = 0, imax = sVector.size(); i < imax; i++) {
-    std::unique_ptr<Grid> g = std::make_unique<Grid>(hostGrid);
-    g->createBegin();
-    g->insertLevel(hostGrid.maxLevel());
-    g->createEnd();
-    g->setMaxLevelDifference(1);
-    grids.emplace_back(std::move(g));
+    std::unique_ptr<Grid> gr = std::make_unique<Grid>(hostGrid);
+    gr->createBegin();
+    gr->insertLevel(hostGrid.maxLevel());
+    gr->createEnd();
+    gr->setMaxLevelDifference(1);
+    grids.emplace_back(std::move(gr));
   }
 
   std::vector<GridIdSet> gridIdSets;
