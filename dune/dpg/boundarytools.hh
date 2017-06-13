@@ -78,7 +78,7 @@ namespace Dune {
                                             RangeType& y
                                             ) const
   {
-    y = std::get<0>(g_)(x);
+    y = g_(x);
   }
 
   /**
@@ -172,7 +172,7 @@ namespace Dune {
       using size_type = typename LocalIndexSet::size_type;
       using MultiIndex = typename LocalIndexSet::MultiIndex;
       iterateOverLocalIndexSet(localIndexSet,
-        [&](size_type i, MultiIndex g)
+        [&](size_type i, MultiIndex gi)
         {
           unsigned int dofOnInflowBoundary = 0;
 
@@ -192,7 +192,7 @@ namespace Dune {
             dofOnInflowBoundary += vertexOnInflowBoundary[dofIndex];
           }
 
-          dirichletNodesInt[ g[0] ] += dofOnInflowBoundary;
+          dirichletNodesInt[ gi[0] ] += dofOnInflowBoundary;
 
         },
         [&](size_type i) {
@@ -372,8 +372,8 @@ namespace Dune {
       using size_type = typename LocalIndexSet::size_type;
       using MultiIndex = typename LocalIndexSet::MultiIndex;
       iterateOverLocalIndexSet(localIndexSet,
-        [&](size_type i, MultiIndex g) {
-          rhsInflowContrib[ g[0] ] = out[i];
+        [&](size_type i, MultiIndex gi) {
+          rhsInflowContrib[ gi[0] ] = out[i];
         },
         [](size_type) {
           //DUNE_THROW(InvalidStateException,
