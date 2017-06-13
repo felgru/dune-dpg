@@ -40,10 +40,12 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   spaces possible, the interfaces of those classes now take `shared_ptr`s
   to tuples of spaces. To create such `shared_ptr`s to tuples, you can use
   the new function `make_space_tuple`.
-* `BoundaryTools::getInflowBoundaryValue` now takes a single boundary
-  value function instead of a tuple of functions. Since the function takes
-  only a single FE space, it didn’t make any sense to pass multiple
-  boundary value functions to it.
+* `BoundaryTools::getInflowBoundaryValue` has been renamed to
+  `BoundaryTools::getBoundaryValue` as it also works for other boundary
+  values. Additionaly, it now takes a single boundary value function
+  instead of a tuple of functions. Since `getBoundaryValue` takes only a
+  single FE space, it didn’t make any sense to pass multiple boundary
+  value functions to it.
 * Replace all usage of Boost::Fusion and MPI with C++14 metaprogramming.
   In many places we now use functions from dune/common/hybridutilities.hh
   or dune/common/tupleutility.hh instead. In the remaining places, where
