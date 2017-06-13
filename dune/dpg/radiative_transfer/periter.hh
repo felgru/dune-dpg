@@ -603,9 +603,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                                 s);
 
           auto gSfixed = [s](const Domain& x){ return 0.;};
-          BoundaryTools::getInflowBoundaryValue(std::get<1>(*solutionSpaces[i]),
-                                                rhsInflowContrib,
-                                                gSfixed);
+          BoundaryTools::getBoundaryValue(std::get<1>(*solutionSpaces[i]),
+                                          rhsInflowContrib,
+                                          gSfixed);
         }
 
         VectorType rhsFunctional;
