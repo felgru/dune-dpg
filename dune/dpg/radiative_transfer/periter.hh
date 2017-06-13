@@ -602,7 +602,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                                 dirichletNodesInflow,
                                                 s);
 
-          auto gSfixed = std::make_tuple([s] (const Domain& x){ return 0.;});
+          auto gSfixed = [s](const Domain& x){ return 0.;};
           BoundaryTools::getInflowBoundaryValue(std::get<1>(*solutionSpaces[i]),
                                                 rhsInflowContrib,
                                                 gSfixed);
