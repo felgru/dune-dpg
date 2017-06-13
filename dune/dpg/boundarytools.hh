@@ -29,14 +29,14 @@ namespace Dune {
     template<class Function>
     class BoundaryCondition
     {
-      Function g_;
+      const Function& g_;
 
     public:
 
       using DomainType = FieldVector<double, 2>;
       using RangeType  = FieldVector<double, 1>;
 
-      BoundaryCondition(Function g) : g_(g) {};
+      BoundaryCondition(const Function& g) : g_(g) {};
 
       // Remark: this signature assumes that we have a 2D scalar problem
       void evaluate(
@@ -59,10 +59,10 @@ namespace Dune {
                   );
 
     template <class FEBasis, class Function>
-    static void getInflowBoundaryValue(
+    static void getBoundaryValue(
                   const FEBasis& ,
                   std::vector<double>& ,
-                  Function&
+                  const Function&
                   );
 
   private:
@@ -338,19 +338,30 @@ namespace Dune {
     }
   }
 
+  /**
+   * \brief Interpolates a given function to a finite element space
+   *
+   *        This interpolated data can then be used for handling boundary
+   *        values in the FE discretization.
+   *
+   * \todo We actually only need to interpolate at the boundary if we want
+   *       to interpolate Dirichlet boundary values.
+   *
+   * \param feBasis     a finite element basis
+   * \param rhsContrib  the vector where we store the output
+   * \param g           the right hand side function to interpolate
+   */
   template <class FEBasis, class Function>
-  void BoundaryTools::getInflowBoundaryValue(
+  void BoundaryTools::getBoundaryValue(
                   const FEBasis& feBasis,
-                  std::vector<double>& rhsInflowContrib,
-                  Function& g
+                  std::vector<double>& rhsContrib,
+                  const Function& g
                   )
   {
     typedef typename FEBasis::GridView GridView;
     GridView gridView = feBasis.gridView();
 
-    const size_t dofs = feBasis.size();
-
-    rhsInflowContrib.resize(dofs);
+    rhsContrib.resize(feBasis.size());
 
     auto localView = feBasis.localView();
     auto localIndexSet = feBasis.localIndexSet();
@@ -373,7 +384,7 @@ namespace Dune {
       using MultiIndex = typename LocalIndexSet::MultiIndex;
       iterateOverLocalIndexSet(localIndexSet,
         [&](size_type i, MultiIndex gi) {
-          rhsInflowContrib[ gi[0] ] = out[i];
+          rhsContrib[ gi[0] ] = out[i];
         },
         [](size_type) {
           //DUNE_THROW(InvalidStateException,
