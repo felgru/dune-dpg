@@ -12,6 +12,9 @@
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/dpg/subgrid_workarounds.hh>
 
+#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
+#include <dune/functions/gridfunctions/gridviewfunction.hh>
+
 #include <dune/geometry/referenceelements.hh>
 #include <dune/geometry/type.hh>
 
@@ -357,27 +360,24 @@ namespace Dune {
                   const Function& g
                   )
   {
-    typedef typename FEBasis::GridView GridView;
-    GridView gridView = feBasis.gridView();
-
     rhsContrib.resize(feBasis.size());
 
     auto localView = feBasis.localView();
     auto localIndexSet = feBasis.localIndexSet();
     using LocalIndexSet = decltype(localIndexSet);
 
-    BoundaryCondition<Function> bc = BoundaryCondition<Function>(g);
+    auto localG = localFunction(Functions::makeGridViewFunction(g,
+                                                feBasis.gridView()));
     std::vector<double> out;
 
-    for(const auto& e : elements(gridView))
+    for(const auto& e : elements(feBasis.gridView()))
     {
       localView.bind(e);
-      const auto& localInterp
-          = localView.tree().finiteElement().localInterpolation();
-
       localIndexSet.bind(localView);
+      localG.bind(e);
 
-      localInterp.interpolate(bc, out);
+      localView.tree().finiteElement().localInterpolation()
+               .interpolate(BoundaryCondition<decltype(localG)>(localG), out);
 
       using size_type = typename LocalIndexSet::size_type;
       using MultiIndex = typename LocalIndexSet::MultiIndex;
