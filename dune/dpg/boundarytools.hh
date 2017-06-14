@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+#include <array>
 #include <vector>
 
 #include <dune/common/exceptions.hh>
@@ -66,7 +67,7 @@ namespace Dune {
                   );
 
   private:
-    static std::vector<unsigned int> getVertexOfIntersection(
+    static std::array<unsigned int, 2> getVerticesOfIntersection(
                         unsigned int ,
                         GeometryType
                         );
@@ -160,8 +161,8 @@ namespace Dune {
         {
           // We see what are the vertices associated to the current
           // intersection (assumed to be a face)
-          std::vector<unsigned int> vertexOfIntersection
-              = getVertexOfIntersection(indexIntersection, e.type());
+          std::array<unsigned int, 2> vertexOfIntersection
+              = getVerticesOfIntersection(indexIntersection, e.type());
 
           vertexOnInflowBoundary[ vertexOfIntersection[0] ] += 1;
           vertexOnInflowBoundary[ vertexOfIntersection[1] ] += 1;
@@ -296,8 +297,8 @@ namespace Dune {
         {
           // We see what are the vertices associated to the current
           // intersection (assumed to be a face)
-          std::vector<unsigned int> vertexOfIntersection
-              = getVertexOfIntersection(indexIntersection, e.type());
+          std::array<unsigned int, 2> vertexOfIntersection
+              = getVerticesOfIntersection(indexIntersection, e.type());
 
           vertexOnBoundary[ vertexOfIntersection[0] ] += 1;
           vertexOnBoundary[ vertexOfIntersection[1] ] += 1;
@@ -394,12 +395,12 @@ namespace Dune {
     }
   }
 
-  std::vector<unsigned int> BoundaryTools::getVertexOfIntersection(
+  std::array<unsigned int, 2> BoundaryTools::getVerticesOfIntersection(
                               unsigned int indexIntersection,
                               GeometryType geometryType
                               )
   {
-    std::vector<unsigned int> indexVertex(2,0);
+    std::array<unsigned int, 2> indexVertex{0, 0};
 
     if(geometryType.isSimplex()) {
       if(indexIntersection==0)
@@ -439,7 +440,7 @@ namespace Dune {
         indexVertex[1]=3;
       }
     } else {
-      DUNE_THROW(Dune::NotImplemented, "getVertexOfIntersection not "
+      DUNE_THROW(Dune::NotImplemented, "getVerticesOfIntersection not "
               "implemented for geometry type" << geometryType.id());
     }
 
