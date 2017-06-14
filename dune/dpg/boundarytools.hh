@@ -186,11 +186,11 @@ namespace Dune {
 
           if(dofCodim == 1) //the dof belongs to a face
           {
-            dofOnInflowBoundary += faceOnInflowBoundary[dofIndex];
+            dofOnInflowBoundary = faceOnInflowBoundary[dofIndex];
           }
           if(dofCodim == 2) //the dof belongs to a vertex
           {
-            dofOnInflowBoundary += vertexOnInflowBoundary[dofIndex];
+            dofOnInflowBoundary = vertexOnInflowBoundary[dofIndex];
           }
 
           dirichletNodesInt[ gi[0] ] += dofOnInflowBoundary;
@@ -208,11 +208,11 @@ namespace Dune {
 
           if(dofCodim == 1) //the dof belongs to a face
           {
-            dofOnInflowBoundary += faceOnInflowBoundary[dofIndex];
+            dofOnInflowBoundary = faceOnInflowBoundary[dofIndex];
           }
           if(dofCodim == 2) //the dof belongs to a vertex
           {
-            dofOnInflowBoundary += vertexOnInflowBoundary[dofIndex];
+            dofOnInflowBoundary = vertexOnInflowBoundary[dofIndex];
           }
 
           if(dofOnInflowBoundary) {
@@ -272,31 +272,29 @@ namespace Dune {
       const unsigned int nVertex
           = ReferenceElements<double, dim>::general(e.type()).size(dim);
 
-      // For every vertex, we have to see whether it is on the inflow boundary.
-      // If vertex i is on the inflow boundary, we will have vertexOnInflowBoundary[i] >0.
-      std::vector<unsigned int> vertexOnBoundary(nVertex,0);
+      // For every vertex, we have to see whether it is on the boundary.
+      // If vertex i is on the boundary, we will have vertexOnBoundary[i] > 0.
+      std::vector<unsigned int> vertexOnBoundary(nVertex, 0);
 
-      // for all intersections, we see which one lies on the inflow boundary
-      // if intersection i lies on the inflow boundary, then faceOnInflowBoundary[i]=true
+      // for all intersections, we see which one lies on the boundary
+      // if intersection i lies on the boundary, then faceOnBoundary[i] == true
       // we will assume that an intersection is simply a face for us
-
-
-      std::vector<unsigned int> faceOnBoundary(nFace,0);
+      std::vector<unsigned int> faceOnBoundary(nFace, 0);
 
       for (auto&& intersection : intersections(gridView, e))
       {
         // Local index of the intersection
         const unsigned int indexIntersection = intersection.indexInInside();
 
-        // We store this information in faceOnInflowBoundary
         faceOnBoundary[indexIntersection] = intersection.boundary();
 
         // if the intersection is on the inflow boundary, we have to update
         // what are the local vertices that are also on the inflow boundary
-        if(intersection.boundary())
+        if(faceOnBoundary[indexIntersection])
         {
           // We see what are the vertices associated to the current
           // intersection (assumed to be a face)
+          // TODO: That might give false indices on elements with hanging nodes.
           std::array<unsigned int, 2> vertexOfIntersection
               = getVerticesOfIntersection(indexIntersection, e.type());
 
@@ -305,7 +303,7 @@ namespace Dune {
         }
       }
 
-      // For each dof, we check whether it belongs to the inflow boundary
+      // For each dof, we check whether it belongs to the boundary
       for(unsigned int i=0; i<dofsLocal; i++)
       {
         unsigned int dofOnBoundary = 0;
@@ -319,11 +317,11 @@ namespace Dune {
 
         if(dofCodim == 1) //the dof belongs to a face
         {
-           dofOnBoundary += faceOnBoundary[dofIndex];
+           dofOnBoundary = faceOnBoundary[dofIndex];
         }
         if(dofCodim == 2) //the dof belongs to a vertex
         {
-          dofOnBoundary += vertexOnBoundary[dofIndex];
+          dofOnBoundary = vertexOnBoundary[dofIndex];
         }
 
         dirichletNodesInt[ localIndexSet.index(i)[0] ] += dofOnBoundary;
