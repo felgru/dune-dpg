@@ -62,6 +62,10 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * README, INSTALL: Mention dune-uggrid instead of ug.
 * Remove some noise from the API documentation.
 
+### Fixed
+* `BoundaryTools::getBoundaryValue` was mixing up local and global functions,
+  thus giving wrong results. This has now been fixed.
+
 ### Removed
 * Remove the `make_DPGLinearForm` and `make_DPG_LinearForm` functions,
   use `make_LinearForm` instead.

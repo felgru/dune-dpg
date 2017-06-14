@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+#include <array>
 #include <vector>
 
 #include <dune/common/exceptions.hh>
@@ -10,6 +11,9 @@
 
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/dpg/subgrid_workarounds.hh>
+
+#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
+#include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/geometry/referenceelements.hh>
 #include <dune/geometry/type.hh>
@@ -66,7 +70,7 @@ namespace Dune {
                   );
 
   private:
-    static std::vector<unsigned int> getVertexOfIntersection(
+    static std::array<unsigned int, 2> getVerticesOfIntersection(
                         unsigned int ,
                         GeometryType
                         );
@@ -160,8 +164,8 @@ namespace Dune {
         {
           // We see what are the vertices associated to the current
           // intersection (assumed to be a face)
-          std::vector<unsigned int> vertexOfIntersection
-              = getVertexOfIntersection(indexIntersection, e.type());
+          std::array<unsigned int, 2> vertexOfIntersection
+              = getVerticesOfIntersection(indexIntersection, e.type());
 
           vertexOnInflowBoundary[ vertexOfIntersection[0] ] += 1;
           vertexOnInflowBoundary[ vertexOfIntersection[1] ] += 1;
@@ -185,11 +189,11 @@ namespace Dune {
 
           if(dofCodim == 1) //the dof belongs to a face
           {
-            dofOnInflowBoundary += faceOnInflowBoundary[dofIndex];
+            dofOnInflowBoundary = faceOnInflowBoundary[dofIndex];
           }
           if(dofCodim == 2) //the dof belongs to a vertex
           {
-            dofOnInflowBoundary += vertexOnInflowBoundary[dofIndex];
+            dofOnInflowBoundary = vertexOnInflowBoundary[dofIndex];
           }
 
           dirichletNodesInt[ gi[0] ] += dofOnInflowBoundary;
@@ -207,11 +211,11 @@ namespace Dune {
 
           if(dofCodim == 1) //the dof belongs to a face
           {
-            dofOnInflowBoundary += faceOnInflowBoundary[dofIndex];
+            dofOnInflowBoundary = faceOnInflowBoundary[dofIndex];
           }
           if(dofCodim == 2) //the dof belongs to a vertex
           {
-            dofOnInflowBoundary += vertexOnInflowBoundary[dofIndex];
+            dofOnInflowBoundary = vertexOnInflowBoundary[dofIndex];
           }
 
           if(dofOnInflowBoundary) {
@@ -271,40 +275,38 @@ namespace Dune {
       const unsigned int nVertex
           = ReferenceElements<double, dim>::general(e.type()).size(dim);
 
-      // For every vertex, we have to see whether it is on the inflow boundary.
-      // If vertex i is on the inflow boundary, we will have vertexOnInflowBoundary[i] >0.
-      std::vector<unsigned int> vertexOnBoundary(nVertex,0);
+      // For every vertex, we have to see whether it is on the boundary.
+      // If vertex i is on the boundary, we will have vertexOnBoundary[i] > 0.
+      std::vector<unsigned int> vertexOnBoundary(nVertex, 0);
 
-      // for all intersections, we see which one lies on the inflow boundary
-      // if intersection i lies on the inflow boundary, then faceOnInflowBoundary[i]=true
+      // for all intersections, we see which one lies on the boundary
+      // if intersection i lies on the boundary, then faceOnBoundary[i] == true
       // we will assume that an intersection is simply a face for us
-
-
-      std::vector<unsigned int> faceOnBoundary(nFace,0);
+      std::vector<unsigned int> faceOnBoundary(nFace, 0);
 
       for (auto&& intersection : intersections(gridView, e))
       {
         // Local index of the intersection
         const unsigned int indexIntersection = intersection.indexInInside();
 
-        // We store this information in faceOnInflowBoundary
         faceOnBoundary[indexIntersection] = intersection.boundary();
 
         // if the intersection is on the inflow boundary, we have to update
         // what are the local vertices that are also on the inflow boundary
-        if(intersection.boundary())
+        if(faceOnBoundary[indexIntersection])
         {
           // We see what are the vertices associated to the current
           // intersection (assumed to be a face)
-          std::vector<unsigned int> vertexOfIntersection
-              = getVertexOfIntersection(indexIntersection, e.type());
+          // TODO: That might give false indices on elements with hanging nodes.
+          std::array<unsigned int, 2> vertexOfIntersection
+              = getVerticesOfIntersection(indexIntersection, e.type());
 
           vertexOnBoundary[ vertexOfIntersection[0] ] += 1;
           vertexOnBoundary[ vertexOfIntersection[1] ] += 1;
         }
       }
 
-      // For each dof, we check whether it belongs to the inflow boundary
+      // For each dof, we check whether it belongs to the boundary
       for(unsigned int i=0; i<dofsLocal; i++)
       {
         unsigned int dofOnBoundary = 0;
@@ -318,11 +320,11 @@ namespace Dune {
 
         if(dofCodim == 1) //the dof belongs to a face
         {
-           dofOnBoundary += faceOnBoundary[dofIndex];
+           dofOnBoundary = faceOnBoundary[dofIndex];
         }
         if(dofCodim == 2) //the dof belongs to a vertex
         {
-          dofOnBoundary += vertexOnBoundary[dofIndex];
+          dofOnBoundary = vertexOnBoundary[dofIndex];
         }
 
         dirichletNodesInt[ localIndexSet.index(i)[0] ] += dofOnBoundary;
@@ -358,27 +360,24 @@ namespace Dune {
                   const Function& g
                   )
   {
-    typedef typename FEBasis::GridView GridView;
-    GridView gridView = feBasis.gridView();
-
     rhsContrib.resize(feBasis.size());
 
     auto localView = feBasis.localView();
     auto localIndexSet = feBasis.localIndexSet();
     using LocalIndexSet = decltype(localIndexSet);
 
-    BoundaryCondition<Function> bc = BoundaryCondition<Function>(g);
+    auto localG = localFunction(Functions::makeGridViewFunction(g,
+                                                feBasis.gridView()));
     std::vector<double> out;
 
-    for(const auto& e : elements(gridView))
+    for(const auto& e : elements(feBasis.gridView()))
     {
       localView.bind(e);
-      const auto& localInterp
-          = localView.tree().finiteElement().localInterpolation();
-
       localIndexSet.bind(localView);
+      localG.bind(e);
 
-      localInterp.interpolate(bc, out);
+      localView.tree().finiteElement().localInterpolation()
+               .interpolate(BoundaryCondition<decltype(localG)>(localG), out);
 
       using size_type = typename LocalIndexSet::size_type;
       using MultiIndex = typename LocalIndexSet::MultiIndex;
@@ -394,12 +393,12 @@ namespace Dune {
     }
   }
 
-  std::vector<unsigned int> BoundaryTools::getVertexOfIntersection(
+  std::array<unsigned int, 2> BoundaryTools::getVerticesOfIntersection(
                               unsigned int indexIntersection,
                               GeometryType geometryType
                               )
   {
-    std::vector<unsigned int> indexVertex(2,0);
+    std::array<unsigned int, 2> indexVertex{0, 0};
 
     if(geometryType.isSimplex()) {
       if(indexIntersection==0)
@@ -439,7 +438,7 @@ namespace Dune {
         indexVertex[1]=3;
       }
     } else {
-      DUNE_THROW(Dune::NotImplemented, "getVertexOfIntersection not "
+      DUNE_THROW(Dune::NotImplemented, "getVerticesOfIntersection not "
               "implemented for geometry type" << geometryType.id());
     }
 
