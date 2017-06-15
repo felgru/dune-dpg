@@ -162,6 +162,9 @@ int main(int argc, char** argv)
 {
   try{
 
+  // Set up MPI, if available
+  MPIHelper::instance(argc, argv);
+
   ///////////////////////////////////
   // Get arguments
   // argv[1]: number of discrete ordinates
