@@ -21,7 +21,7 @@ namespace Dune {
 
 namespace ScatteringKernelApproximation {
 
-  namespace AlpertToolbox{
+  namespace AlpertWavelet {
 
     void add(Eigen::VectorXd& target,
              const Eigen::VectorXd& data,
@@ -407,7 +407,7 @@ namespace ScatteringKernelApproximation {
       }
       return s[J];
     }
-  } //End namespace AlpertToolbox
+  } //End namespace AlpertWavelet
 
 
   namespace HaarWavelet {
