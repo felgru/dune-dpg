@@ -287,7 +287,8 @@ namespace ScatteringKernelApproximation {
     }
 
     Eigen::MatrixXd lagrangeToLegendre(const Eigen::VectorXd& xInterp,
-        double xmin, double xmax, double quadOrder){
+        double xmin, double xmax, double quadOrder)
+    {
 
       int L=xInterp.size();
       Eigen::MatrixXd A(L,L);
@@ -407,6 +408,195 @@ namespace ScatteringKernelApproximation {
       }
       return s[J];
     }
+
+    template<class Function>
+      Eigen::MatrixXd waveletKernelMatrix(const Function& kernelFunction,
+                                          size_t wltOrder,
+                                          size_t maxLevel)
+      {
+        using namespace Eigen;
+        using namespace boost::math::constants;
+
+        const size_t num_s = (wltOrder+1) << maxLevel;
+        std::cout << num_s << " " << (wltOrder+1)*std::pow(2,maxLevel) << std::endl;
+        MatrixXd kernelMatrix(num_s, num_s);
+
+        // TODO: Imitate what I did in Python in MRA_kernel.py
+        // /* compute wavelet transform of the kernel matrix */
+        // const double r = pi<double>();
+
+        // // jy, ky = 0
+        // {
+        //   VectorXd y; double qwy;
+        //   std::tie(y, qwy) = computeQuadPoints(0, 0, r, maxLevel);
+        //   VectorXd sfy = sf(y, r);
+        //   // jx, kx = 0
+        //   {
+        //     VectorXd x; double qwx;
+        //     std::tie(x, qwx) = computeQuadPoints(0, 0, r, maxLevel);
+        //     VectorXd sfx = sf(x, r);
+        //     kernelMatrix(0, 0)
+        //         = evalKernel(kernelFunction, x, sfx, qwx, y, sfy, qwy);
+        //   }
+        //   for(size_t jx = 0; jx < maxLevel; jx++) {
+        //     for(size_t kx = 0, kx_max = 1 << jx; kx < kx_max; kx++) {
+        //       VectorXd x; double qwx;
+        //       std::tie(x, qwx) = computeQuadPoints(jx, kx, r, maxLevel);
+        //       VectorXd wltx = wlt(jx, kx, x, r);
+        //       const size_t i = (1 << jx) + kx;
+        //       kernelMatrix(i, 0)
+        //           = evalKernel(kernelFunction, x, wltx, qwx, y, sfy, qwy);
+        //     }
+        //   }
+        // }
+        // for(size_t jy = 0; jy < maxLevel; jy++) {
+        //   for(size_t ky = 0, ky_max = 1 << jy; ky < ky_max; ky++) {
+        //     VectorXd y; double qwy;
+        //     std::tie(y, qwy) = computeQuadPoints(jy, ky, r, maxLevel);
+        //     VectorXd wlty = wlt(jy, ky, y, r);
+        //     // jx, kx = 0
+        //     {
+        //       VectorXd x; double qwx;
+        //       std::tie(x, qwx) = computeQuadPoints(0, 0, r, maxLevel);
+        //       VectorXd sfx = sf(x, r);
+        //       const size_t j = (1 << jy) + ky;
+        //       kernelMatrix(0, j)
+        //           = evalKernel(kernelFunction, x, sfx, qwx, y, wlty, qwy);
+        //     }
+        //     for(size_t jx = 0; jx < maxLevel; jx++) {
+        //       for(size_t kx = 0, kx_max = 1 << jx; kx < kx_max; kx++) {
+        //         VectorXd x; double qwx;
+        //         std::tie(x, qwx) = computeQuadPoints(jx, kx, r, maxLevel);
+        //         VectorXd wltx = wlt(jx, kx, x, r);
+        //         const size_t i = (1 << jx) + kx;
+        //         const size_t j = (1 << jy) + ky;
+        //         kernelMatrix(i, j)
+        //             = evalKernel(kernelFunction, x, wltx, qwx, y, wlty, qwy);
+        //       }
+        //     }
+        //   }
+        // }
+        return kernelMatrix;
+      }
+
+    class SVD {
+
+      public:
+        enum : unsigned int { dim = 2 };
+        using Direction = FieldVector<double, dim>;
+
+        SVD() = delete;
+        SVD(const SVD&) = delete;
+
+        template<class Function>
+        SVD(const Function& kernelFunction,
+            size_t wltOrder,
+            double accuracyKernel)
+          : waveletOrder(wltOrder),
+            maxLevel(set_maxLevel(wltOrder,accuracyKernel)),
+            num_s((wltOrder+1) << maxLevel),
+            kernelSVD(num_s, num_s, Eigen::ComputeThinU | Eigen::ComputeThinV),
+            level(maxLevel),
+            rank(num_s) {
+          // if((1u << maxLevel) != num_s)
+          //   DUNE_THROW(MathError, "You are using " << num_s
+          //       << " directions, but only powers of 2 are supported.");
+          std::cout << "Accuracu kernel " << accuracyKernel
+            << " with wlt order " << wltOrder
+            << " requires J = " << maxLevel
+            << " and " << num_s << " directions." << std::endl;
+
+          Eigen::MatrixXd kernelMatrix(waveletKernelMatrix(kernelFunction,
+                                                           wltOrder,maxLevel));
+          /* initialize SVD of kernel (using Eigen) */
+          kernelSVD.compute(kernelMatrix);
+        }
+
+        void applyToVector(Eigen::VectorXd& v) const {
+          // DWT(v);
+          // // TODO: trunkate matrix (and vector?) to level
+          // v = kernelSVD.matrixU().leftCols(rank)
+          //   * kernelSVD.singularValues().head(rank).asDiagonal()
+          //   * kernelSVD.matrixV().leftCols(rank).adjoint() * v;
+          // IDWT(v);
+        }
+
+        void setAccuracy(double accuracy) {
+          using namespace Eigen;
+          VectorXd singularValues = kernelSVD.singularValues();
+          size_t i = singularValues.size() - 1;
+          double err = 0,
+                rank_err = singularValues(i) * singularValues(i);
+          accuracy = accuracy * accuracy;
+          while (err + rank_err < accuracy && i > 0) {
+            err += rank_err;
+            i -= 1;
+            rank_err = singularValues(i) * singularValues(i);
+          }
+          rank = i+1;
+          // TODO: If accuracy is low enough to allow rank = 0,
+          //       this gives rank = 1.
+
+          // TODO: properly set level dependent on accuracy
+          level = maxLevel;
+        }
+
+        template<class Direction>
+        void compute_sVector(std::vector< Direction >& sVector) {
+
+          // Get Gauss-Legendre quadrature
+          int quadOrder=2*waveletOrder+1;
+          GeometryType type;
+          type.makeLine();
+          const size_t dim = 1;
+          const Dune::QuadratureRule<double, dim>& quad =
+            Dune::QuadratureRules<double, dim>::rule(type,
+                                                    quadOrder,
+                                                    QuadratureType::GaussLegendre);
+          using namespace boost::math::constants;
+          size_t i=0;
+          for(int k = 0; k < (1<<maxLevel); ++k)
+          {
+            for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
+              double angle = 2*pi<double>()*(k+quad[pt].position())/(1<<maxLevel);
+              // std::cout << "Angle: " << angle << " " << i << std::endl;
+              sVector[i] = {cos(angle),sin(angle)};
+              i++;
+            }
+          }
+        }
+
+        size_t getNumS() {
+          return num_s;
+        }
+
+        std::string info() const {
+          std::string s = "Wavelet SVD approximation with rank "
+                          + std::to_string(rank)
+                          + " and level "
+                          + std::to_string(level);
+          return s;
+        }
+
+      private:
+
+        static size_t set_maxLevel(
+          const size_t wltOrder,
+          const double accuracyKernel) {
+          size_t J=0;
+          while(std::pow(2,(wltOrder+1)*J)*std::pow((J+1),2)*accuracyKernel < 1  ) {
+            J += 1;
+          }
+          return J;
+        }
+
+        size_t waveletOrder;
+        size_t maxLevel;
+        size_t num_s;
+        Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner> kernelSVD;
+        size_t level;
+        size_t rank;
+      };
   } //End namespace AlpertWavelet
 
 

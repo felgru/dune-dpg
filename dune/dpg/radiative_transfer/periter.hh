@@ -130,7 +130,8 @@ class Periter {
              const GDeriv& gDeriv,
              double sigma,
              const Kernel& kernel,
-             unsigned int numS,
+             unsigned int wltOrder,
+             double accuracyKernel,
              double rho,
              double CT,
              double targetAccuracy,
@@ -328,7 +329,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            const GDeriv& gDeriv,
            double sigma,
            const Kernel& kernel,
-           unsigned int numS,
+           unsigned int wltOrder,
+           double accuracyKernel,
            double rho,
            double CT,
            double targetAccuracy,
@@ -362,15 +364,19 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
+  // via declaration of an object
+  // ScatteringKernelApproximation
   ////////////////////////////////////////////
-  // Vector of directions: sVector
+  ScatteringKernelApproximation kernelApproximation(
+    kernel, wltOrder, accuracyKernel);
+
+  unsigned int numS = kernelApproximation.getNumS();
   std::vector< Direction > sVector(numS);
-  for(unsigned int i = 0; i < numS; ++i)
-  {
-    using namespace boost::math::constants;
-    sVector[i] = {cos(2*pi<double>()*i/numS),
-                  sin(2*pi<double>()*i/numS)};
-  }
+  kernelApproximation.compute_sVector(sVector);
+
+  /////////////////
+  // Handle grids
+  /////////////////
 
   std::vector<std::unique_ptr<Grid>> grids;
   grids.reserve(sVector.size());
@@ -436,8 +442,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     x[i] = 0;
   }
 
-  ScatteringKernelApproximation kernelApproximation(kernel, numS);
-
   /////////////////////////////////////////////////////////
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
@@ -455,8 +459,10 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   const double kappa2 = rhsIsFeFunction? 0.         : 1./(3.*(1+CT));
   const double kappa3 = rhsIsFeFunction? 1./4.      : 1./6.;
 
-  ofs << "Periter with " << numS
-      << " directions, rho = " << rho << ", CT = " << CT
+  ofs << "Periter with " << numS << " directions, "
+      << ", wltOrder = " << wltOrder
+      << ", accuracyKernel = " << accuracyKernel
+      << ", rho = " << rho << ", CT = " << CT
       << ", kappa1 = " << kappa1
       << ", kappa2 = " << kappa2
       << ", kappa3 = " << kappa3
@@ -833,6 +839,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       make_ApproximateScatteringAssembler(hostGridBasis,
                                           kernelApproximation);
   std::vector<VectorType> rhsFunctional(numS);
+  // Olga: adapt precomputeScattering?
   for(size_t i = 0; i < numS; ++i) {
     scatteringAssembler.precomputeScattering(
         rhsFunctional[i],

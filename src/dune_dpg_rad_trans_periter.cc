@@ -151,7 +151,9 @@ double gFunction(const Domain& x,
 }
 
 void printHelp(const char* name) {
-  std::cerr << "Usage: " << name << " [-p] <# of ordinates>"
+  std::cerr << "Usage: " << name
+            << " [-p] <wlt order>"
+            << " <accuracy of Kernel>"
             << " <# of iterations>"
             << " <size of grid>\n"
             << " -p: plot solutions" << std::endl;
@@ -167,7 +169,8 @@ int main(int argc, char** argv)
 
   ///////////////////////////////////
   // Get arguments
-  // argv[1]: number of discrete ordinates
+  // argv[1]: order of Alpert wlt
+  // argv[2]: level of Alpert wlt
   // argv[2]: number of fixed-point iterations
   // argv[3]: size of grid
   ///////////////////////////////////
@@ -184,13 +187,15 @@ int main(int argc, char** argv)
       case 'h':
         printHelp(argv[0]);
     }
-  if(optind != argc-3) {
+  if(optind != argc-4) {
     printHelp(argv[0]);
   }
 
-  const unsigned int numS = atoi(argv[optind]);
-  const int N = atoi(argv[optind+1]);
-  const unsigned int sizeGrid = atoi(argv[optind+2]);
+
+  const unsigned int wltOrder = atoi(argv[optind]);
+  const double accuracyKernel = atof(argv[optind+1]);
+  const int N = atoi(argv[optind+2]);
+  const unsigned int sizeGrid = atoi(argv[optind+3]);
 
   ///////////////////////////////////
   //   Generate the grid
@@ -229,10 +234,10 @@ int main(int argc, char** argv)
   // TODO: Estimate the constant C_T.
   const double CT = 1;
 
-  Periter<ScatteringKernelApproximation::HaarWavelet::SVD, FeRHSandBoundary>()
+  Periter<ScatteringKernelApproximation::AlpertWavelet::SVD, FeRHSandBoundary>()
       .solve(*grid, f, g, gDeriv, sigma,
              HenyeyGreensteinScattering<Direction>(0.5),
-             numS, rho, CT, 1e-2, N, plotSolutions);
+             wltOrder, accuracyKernel, rho, CT, 1e-2, N, plotSolutions);
 
   return 0;
   }
