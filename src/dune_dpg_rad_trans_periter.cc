@@ -154,6 +154,7 @@ void printHelp(const char* name) {
   std::cerr << "Usage: " << name
             << " [-p] <wlt order>"
             << " <accuracy of Kernel>"
+            << " <gamma>"
             << " <# of iterations>"
             << " <size of grid>\n"
             << " -p: plot solutions" << std::endl;
@@ -187,15 +188,16 @@ int main(int argc, char** argv)
       case 'h':
         printHelp(argv[0]);
     }
-  if(optind != argc-4) {
+  if(optind != argc-5) {
     printHelp(argv[0]);
   }
 
 
   const unsigned int wltOrder = atoi(argv[optind]);
   const double accuracyKernel = atof(argv[optind+1]);
-  const int N = atoi(argv[optind+2]);
-  const unsigned int sizeGrid = atoi(argv[optind+3]);
+  const double gamma = atof(argv[optind+2]);
+  const int N = atoi(argv[optind+3]);
+  const unsigned int sizeGrid = atoi(argv[optind+4]);
 
   ///////////////////////////////////
   //   Generate the grid
@@ -236,7 +238,7 @@ int main(int argc, char** argv)
 
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD, FeRHSandBoundary>()
       .solve(*grid, f, g, gDeriv, sigma,
-             HenyeyGreensteinScattering<Direction>(0.5), 0.5,
+             HenyeyGreensteinScattering<Direction>(gamma), gamma,
              wltOrder, accuracyKernel, rho, CT, 1e-2, N, plotSolutions);
 
   return 0;
