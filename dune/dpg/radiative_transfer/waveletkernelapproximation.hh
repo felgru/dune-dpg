@@ -576,7 +576,7 @@ namespace ScatteringKernelApproximation {
           }
         }
 
-        std::cout << kernelMatrix << std::endl;
+        // std::cout << kernelMatrix << std::endl;
         return kernelMatrix;
       }
 
@@ -604,7 +604,7 @@ namespace ScatteringKernelApproximation {
           // if((1u << maxLevel) != num_s)
           //   DUNE_THROW(MathError, "You are using " << num_s
           //       << " directions, but only powers of 2 are supported.");
-          std::cout << "Accuracu kernel " << accuracyKernel
+          std::cout << "Accuracy kernel " << accuracyKernel
             << " with wlt order " << wltOrder
             << " requires level J = " << maxLevel
             << " and " << num_s << " directions." << std::endl;
@@ -613,7 +613,6 @@ namespace ScatteringKernelApproximation {
             kernelMatrix(waveletKernelMatrix(gamma,wltOrder,maxLevel));
           /* initialize SVD of kernel (using Eigen) */
           kernelSVD.compute(kernelMatrix);
-          std::cout << kernelSVD.singularValues() << std::endl;
         }
 
         void applyToVector(Eigen::VectorXd& v) const {
@@ -662,7 +661,7 @@ namespace ScatteringKernelApproximation {
           for(int k = 0; k < (1<<maxLevel); ++k)
           {
             for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
-              double angle = 2*pi<double>()*(k+quad[pt].position())/(1<<maxLevel);
+              double angle = 2*pi<double>()*(k+quad[pt].position())/(1<<maxLevel) - pi<double>(); // Angle in [-pi,pi]
               // std::cout << "Angle: " << angle << " " << i << std::endl;
               sVector[i] = {cos(angle),sin(angle)};
               i++;
