@@ -169,41 +169,32 @@ namespace detail {
   using VectorType = BlockVector<FieldVector<double,1>>;
   using Direction = FieldVector<double, dim>;
 
-  template<class FEBases, class Grids,
+  template<class FEHostBasis, class Grids,
            class F, class G, class GDeriv>
   inline void approximate_rhs_and_bv (
       std::vector<VectorType>& rhsFunctional,
       Grids&,
       double,
-      const std::vector<std::shared_ptr<FEBases>>& solutionSpaces,
+      const FEHostBasis& hostGridBasis,
       const std::vector<Direction>& sVector,
       F& f, G& g, GDeriv& gDeriv, double sigma,
       FeRHSandBoundary) {
-    const size_t spaceIndex = 0;
-    using FEBasisInterior = std::tuple_element_t<spaceIndex, FEBases>;
-    using HostGridView = typename FEBasisInterior::GridView::Grid
-                                    ::HostGridType::LeafGridView;
-    using FEBasisHostInterior
-        = changeGridView_t<FEBasisInterior, HostGridView>;
-    static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
+    static_assert(!is_RefinedFiniteElement<FEHostBasis>::value,
         "Functions::interpolate won't work for refined finite elements");
     size_t numS = sVector.size();
-    const auto& hostGrid = std::get<spaceIndex>(*solutionSpaces[0]).gridView()
-                                                        .grid().getHostGrid();
-    const FEBasisHostInterior hostGridSolutionSpace(hostGrid.leafGridView());
     for(unsigned int i = 0; i < numS; ++i)
     {
-      VectorType gInterpolation(hostGridSolutionSpace.size());
+      VectorType gInterpolation(hostGridBasis.size());
       const Direction s = sVector[i];
-      Functions::interpolate(hostGridSolutionSpace, gInterpolation,
+      Functions::interpolate(hostGridBasis, gInterpolation,
           [s,&f,&g,&gDeriv,sigma](const Direction& x)
           { return f(x,s) + gDeriv(x,s) - sigma*g(x,s); });
 
-      // Add gInterpolate to first hostGridSolutionSpace.size() entries of
+      // Add gInterpolate to first hostGridBasis.size() entries of
       // rhsFunctional[i].
       using Iterator = std::decay_t<decltype(rhsFunctional[i].begin())>;
       for(Iterator rIt=rhsFunctional[i].begin(),
-                   rEnd=rhsFunctional[i].begin()+hostGridSolutionSpace.size(),
+                   rEnd=rhsFunctional[i].begin()+hostGridBasis.size(),
                    gIt=gInterpolation.begin(); rIt!=rEnd; ++rIt, ++gIt) {
         *rIt += *gIt;
       }
@@ -506,9 +497,10 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     std::vector<RHSData> rhsData;
     rhsData.reserve(numS);
     {
+      FEBasisHostInterior hostGridGlobalBasis(hostGrid.leafGridView());
       std::vector<VectorType> rhsFunctional =
           apply_scattering (
-            kernelApproximation, x, solutionSpaces, hostGrid,
+            kernelApproximation, x, solutionSpaces, hostGridGlobalBasis,
             kappa1 * eta / (kappaNorm * uNorm));
 
       // TODO: restore grids from gridIdSets and update spaces
@@ -518,10 +510,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           rhsFunctional,
           grids,
           kappa2*eta,
-          solutionSpaces,
+          hostGridGlobalBasis,
           sVector,
           f, g, gDeriv, sigma, RHSApproximation{});
-      FEBasisHostInterior hostGridGlobalBasis(hostGrid.leafGridView());
       for(size_t i = 0; i < numS; i++) {
         FEBasisTest& subGridGlobalBasis
             = std::get<FEBasisTest>(*testSpaces[i]);
@@ -817,35 +808,31 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class SolutionSpaces, class HostGrid>
+template<class SolutionSpaces, class HostGridBasis>
 std::vector<typename Periter<ScatteringKernelApproximation,
                              RHSApproximation>::VectorType>
 Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
       const std::vector<std::shared_ptr<SolutionSpaces>>& solutionSpaces,
-      const HostGrid& hostGrid,
+      const HostGridBasis& hostGridBasis,
       double accuracy) {
   kernelApproximation.setAccuracy(accuracy);
 
-  using HostGridView = typename HostGrid::LeafGridView;
   using FEBasisInterior = std::tuple_element_t<0, SolutionSpaces>;
-  using FEBasisHostInterior
-      = changeGridView_t<FEBasisInterior, HostGridView>;
-  FEBasisHostInterior hostGridSolutionSpace(hostGrid.leafGridView());
 
   const size_t numS = x.size();
-  // Interpolate x[i] to hostGridSolutionSpace.
+  // Interpolate x[i] to hostGridBasis.
   std::vector<VectorType> xHost(numS);
   for(size_t i = 0; i < numS; ++i) {
     FEBasisInterior& feBasisInterior = std::get<0>(*solutionSpaces[i]);
     interpolateFromSubGrid(
         feBasisInterior, x[i],
-        hostGridSolutionSpace, xHost[i]);
+        hostGridBasis, xHost[i]);
   }
 
   auto scatteringAssembler =
-      make_ApproximateScatteringAssembler(hostGridSolutionSpace,
+      make_ApproximateScatteringAssembler(hostGridBasis,
                                           kernelApproximation);
   std::vector<VectorType> rhsFunctional(numS);
   for(size_t i = 0; i < numS; ++i) {
