@@ -236,7 +236,7 @@ int main(int argc, char** argv)
 
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD, FeRHSandBoundary>()
       .solve(*grid, f, g, gDeriv, sigma,
-             HenyeyGreensteinScattering<Direction>(0.5),
+             HenyeyGreensteinScattering<Direction>(0.5), 0.5,
              wltOrder, accuracyKernel, rho, CT, 1e-2, N, plotSolutions);
 
   return 0;

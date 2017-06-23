@@ -130,6 +130,7 @@ class Periter {
              const GDeriv& gDeriv,
              double sigma,
              const Kernel& kernel,
+             double gamma,
              unsigned int wltOrder,
              double accuracyKernel,
              double rho,
@@ -329,6 +330,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            const GDeriv& gDeriv,
            double sigma,
            const Kernel& kernel,
+           double gamma,
            unsigned int wltOrder,
            double accuracyKernel,
            double rho,
@@ -368,7 +370,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // ScatteringKernelApproximation
   ////////////////////////////////////////////
   ScatteringKernelApproximation kernelApproximation(
-    kernel, wltOrder, accuracyKernel);
+    kernel, wltOrder, accuracyKernel, gamma);
 
   unsigned int numS = kernelApproximation.getNumS();
   std::vector< Direction > sVector(numS);
