@@ -519,8 +519,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   //   Choose finite element spaces for the solution and test functions
   //////////////////////////////////////////////////////////////////////
 
-  typedef Functions::LagrangeDGBasis<LeafGridView, 1> FEBasisInterior; // u
-  typedef Functions::HangingNodeP2NodalBasis<LeafGridView> FEBasisTrace; // u^
+  using FEBasisInterior = Functions::LagrangeDGBasis<LeafGridView, 1>; // u
+  using FEBasisTrace = Functions::HangingNodeP2NodalBasis<LeafGridView>; // u^
 
   using FEBasisTest = Functions::PQkDGRefinedDGBasis<LeafGridView, 1, 3>;
   using FEBasisTestEnriched = FEBasisTest;
@@ -605,11 +605,11 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     // To prevent division by zero.
     if(uNorm == 0.) uNorm = 1e-5;
 
-    using FEBasisHostInterior
-        = changeGridView_t<FEBasisInterior, HostGridView>;
+    using FEBasisHostTraceDiscontinuous
+        = Functions::LagrangeDGBasis<HostGridView, 2>;
     using RHSData = std::decay_t<decltype(attachDataToSubGrid(
               std::declval<FEBasisTest>(),
-              std::declval<FEBasisHostInterior>(),
+              std::declval<FEBasisHostTraceDiscontinuous>(),
               std::declval<VectorType>()))>;
     std::vector<RHSData> rhsData;
     using FEBasisHostTrace
@@ -625,7 +625,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 #endif
     const double accuKernel = kappa1 * eta / (kappaNorm * uNorm);
     {
-      FEBasisHostInterior hostGridGlobalBasis(hostGrid.leafGridView());
+      FEBasisHostTraceDiscontinuous
+          hostGridGlobalBasis(hostGrid.leafGridView());
 
       std::vector<VectorType> rhsFunctional =
           apply_scattering (
@@ -1125,14 +1126,15 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       double accuracy) {
   sVector = kernelApproximation.setAccuracyAndInputSize(accuracy, x.size());
 
-  using FEBasisInterior = std::tuple_element_t<0, SolutionSpaces>;
+  using FEBasisTrace = std::tuple_element_t<1, SolutionSpaces>;
 
   // Interpolate x[i] to hostGridBasis.
   std::vector<VectorType> xHost(x.size());
   for(size_t i = 0, imax = x.size(); i < imax; i++) {
-    const FEBasisInterior& feBasisInterior = std::get<0>(*solutionSpaces[i]);
+    const FEBasisTrace& feBasisTrace = std::get<1>(*solutionSpaces[i]);
+    const size_t  feBasisTraceOffset = std::get<0>(*solutionSpaces[i]).size();
     interpolateFromSubGrid(
-        feBasisInterior, x[i],
+        feBasisTrace, x[i].begin() + feBasisTraceOffset,
         hostGridBasis, xHost[i]);
   }
 
