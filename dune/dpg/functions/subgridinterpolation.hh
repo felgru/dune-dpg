@@ -10,12 +10,15 @@
 #include <type_traits>
 #include <vector>
 
+#include <dune/dpg/functions/constraineddiscreteglobalbasisfunction.hh>
+#include <dune/dpg/functions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
 namespace Dune {
 
 
-template<class SubGridGlobalBasis, class HostGridGlobalBasis, class Vector>
+template<class SubGridGlobalBasis, class HostGridGlobalBasis,
+         class InputVector, class OutputVector>
 class SubGridGlobalBasisInterpolator
 {
 public:
@@ -29,10 +32,9 @@ public:
 private:
   struct SubGridFunction {
     using DiscreteGlobalBasisFunction = std::decay_t<decltype(
-        Dune::Functions::makeDiscreteGlobalBasisFunction<double>
+        discreteGlobalBasisFunction
             (std::declval<SubGridGlobalBasis>(),
-             Dune::TypeTree::hybridTreePath(),
-             std::declval<Vector>()))>;
+             std::declval<InputVector>()))>;
 
     using HostGeometry = typename HostElement::Geometry;
     using SubGridDomain = typename DiscreteGlobalBasisFunction::Domain;
@@ -40,11 +42,10 @@ private:
     using Range = typename DiscreteGlobalBasisFunction::Range;
 
     SubGridFunction(const SubGridGlobalBasis& subGridBasis,
-        const Vector& subGridCoefficients)
+        const InputVector& subGridCoefficients)
       : subGridFunction(
-            Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-                (subGridBasis, Dune::TypeTree::hybridTreePath(),
-                 subGridCoefficients)),
+            discreteGlobalBasisFunction
+                (subGridBasis, subGridCoefficients)),
         subGridLocalFunction(localFunction(subGridFunction)),
         hostElement(nullptr)
     {}
@@ -69,9 +70,9 @@ private:
 
 public:
   SubGridGlobalBasisInterpolator(const SubGridGlobalBasis& subGridBasis,
-      const Vector& subGridCoefficients,
+      const InputVector& subGridCoefficients,
       const HostGridGlobalBasis& hostGridBasis,
-      Vector& hostGridCoefficients)
+      OutputVector& hostGridCoefficients)
     : subGridCoefficients(subGridCoefficients),
       hostGridCoefficients(hostGridCoefficients),
       subGridBasis(subGridBasis),
@@ -119,8 +120,8 @@ public:
 
 
 private:
-  const Vector& subGridCoefficients;
-  Vector& hostGridCoefficients;
+  const InputVector& subGridCoefficients;
+  OutputVector& hostGridCoefficients;
 
   const SubGridGlobalBasis& subGridBasis;
   const HostGridGlobalBasis& hostGridBasis;
@@ -134,11 +135,12 @@ private:
 * This is a shortcut for creating an (temporary) interpolator
 * object and handing it to the transfer method in the subgrid
 */
-template<class SubGridGlobalBasis, class HostGridGlobalBasis, class Vector>
+template<class SubGridGlobalBasis, class HostGridGlobalBasis,
+         class InputVector, class OutputVector>
 void interpolateFromSubGrid(const SubGridGlobalBasis& subGridBasis,
-    const Vector& subGridFunction,
+    const InputVector& subGridFunction,
     const HostGridGlobalBasis& hostGridBasis,
-    Vector& hostGridFunction)
+    OutputVector& hostGridFunction)
 {
   static_assert(std::is_same<
       typename SubGridGlobalBasis::GridView::Grid::HostGridType,
@@ -147,7 +149,7 @@ void interpolateFromSubGrid(const SubGridGlobalBasis& subGridBasis,
 
   using Interpolator
     = SubGridGlobalBasisInterpolator
-      <SubGridGlobalBasis, HostGridGlobalBasis, Vector>;
+      <SubGridGlobalBasis, HostGridGlobalBasis, InputVector, OutputVector>;
 
   Interpolator interpolator(subGridBasis, subGridFunction,
                             hostGridBasis, hostGridFunction);
