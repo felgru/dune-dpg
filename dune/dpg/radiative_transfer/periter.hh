@@ -408,7 +408,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            unsigned int maxNumberOfInnerIterations,
            const std::string& outputfolder,
            PlotSolutions plotSolutions) {
-  if(plotSolutions == PlotSolutions::plotLastIteration) {
+  if((plotSolutions & PlotSolutions::plotLastIteration)
+      == PlotSolutions::plotLastIteration) {
     std::cerr
         << "Plotting of only the last iteration is not implemented yet!\n";
     std::exit(1);
@@ -640,6 +641,25 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       x.resize(numS);
       rhsData.reserve(numS);
 
+      if((plotSolutions & PlotSolutions::plotScattering)
+          == PlotSolutions::plotScattering) {
+        std::cout << "Plot scattering:\n";
+
+        for(unsigned int i = 0; i < numS; ++i)
+        {
+          std::cout << "Direction " << i << '\n';
+
+          std::string name = outputfolder
+                          + std::string("/scattering_n")
+                          + std::to_string(n)
+                          + std::string("_s")
+                          + std::to_string(i);
+          FunctionPlotter scatteringPlotter(name);
+          scatteringPlotter.plot("scattering", rhsFunctional[i],
+                                 hostGridGlobalBasis, 0);
+        }
+      }
+
       // TODO: restore grids from gridIdSets and update spaces
       //       shouldn't be necessary, as long as RHSApproximation == FeRHS
       detail::approximate_rhs (
@@ -833,7 +853,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       aposterioriTransportGlobal = std::max(aposterioriTransportGlobal,
                                             aposteriori_s);
 
-      if(plotSolutions == PlotSolutions::plotOuterIterations) {
+      if((plotSolutions & PlotSolutions::plotOuterIterations)
+          == PlotSolutions::plotOuterIterations) {
         //////////////////////////////////////////////////////////////////////
         //  Write result to VTK file
         //  We need to subsample, because VTK cannot natively display
