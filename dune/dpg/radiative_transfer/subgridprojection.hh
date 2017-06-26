@@ -340,7 +340,7 @@ public:
                   .node(Dune::TypeTree::hybridTreePath());
 
     HostGridGlobalBasis hostGridGlobalBasis(
-        subGridGlobalBasis.gridView().grid().getHostGrid().leafGridView());
+        subGrid.getHostGrid().leafGridView());
 
     std::vector<FieldVector<double, 1>> data(subGridGlobalBasis.size());
 
