@@ -78,7 +78,8 @@ def plot(iterationIndices,
          xlim=None,
          ylim=None,
          xscale='log',
-         yscale='log'):
+         yscale='log',
+         legendlocation='best'):
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
     if title != None:
@@ -89,21 +90,26 @@ def plot(iterationIndices,
     ax1.ticklabel_format(style='sci', scilimits=(0,0))
     ax2.ticklabel_format(style='sci', scilimits=(0,0))
 
-    line1 = ax1.plot(iterationIndices, errors)
+    line1 = ax1.plot(iterationIndices, errors, label='a posteriori error')
     # plot in RWTH blue
     plt.setp(line1, linewidth=2.0,
              marker='o', markersize=3.0,
              color='#0054AF')
 
-    line1 = ax2.plot(iterationIndices, numDoFs)
+    line2 = ax2.plot(iterationIndices, numDoFs, label='# of DoFs')
     # plot in RWTH purple
-    plt.setp(line1, linewidth=2.0,
+    plt.setp(line2, linewidth=2.0,
              marker='x', markersize=3.0,
              color='#612158')
 
     plt.xscale(xscale)
     ax1.set_yscale(yscale)
     ax2.set_yscale(yscale)
+    if legendlocation != None:
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        plt.legend(lines1 + lines2, labels1 + labels2,
+                   loc=legendlocation, shadow=True)
     if xlim != None:
         plt.xlim(xlim)
     if ylim != None:
