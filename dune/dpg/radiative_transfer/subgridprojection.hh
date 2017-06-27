@@ -372,7 +372,7 @@ public:
               }
             }
             std::vector<FieldVector<double, 1>> childProjection
-              = detail::projectCellDataToSubGrid(e,
+              = detail::projectCellDataToSubGrid(child,
                                                  subGridGlobalBasis,
                                                  hostGridGlobalBasis,
                                                  childData);
