@@ -77,7 +77,7 @@ def plot(iterationIndices,
          ylabel=('a posteriori error estimator', '# of DoFs'),
          xlim=None,
          ylim=None,
-         xscale='log',
+         xscale='linear',
          yscale='log',
          legendlocation='best'):
     fig, ax1 = plt.subplots()
@@ -102,7 +102,8 @@ def plot(iterationIndices,
              marker='x', markersize=3.0,
              color='#612158')
 
-    plt.xscale(xscale)
+    ax1.set_xscale(xscale)
+    ax2.set_xscale(xscale)
     ax1.set_yscale(yscale)
     ax2.set_yscale(yscale)
     if legendlocation != None:
