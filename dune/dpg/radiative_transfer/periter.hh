@@ -369,8 +369,11 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // via declaration of an object
   // ScatteringKernelApproximation
   ////////////////////////////////////////////
+  size_t nQuadAngle = 30; // Number of points to do Gauss-Legendre
+                          // quadratures for the angular variable.
+                          // nQuadAngle <= 30
   ScatteringKernelApproximation kernelApproximation(
-    kernel, wltOrder, accuracyKernel, gamma);
+    kernel, wltOrder, accuracyKernel, gamma, nQuadAngle);
 
   unsigned int numS = kernelApproximation.getNumS();
   std::vector< Direction > sVector(numS);
