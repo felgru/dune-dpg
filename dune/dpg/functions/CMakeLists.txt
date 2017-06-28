@@ -4,4 +4,5 @@ install(FILES
         interpolate.hh
         localindexsetiteration.hh
         refinementinterpolation.hh
+        subgridinterpolation.hh
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/dpg/functions)

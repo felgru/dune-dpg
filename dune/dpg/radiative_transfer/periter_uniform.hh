@@ -102,13 +102,12 @@ class Periter {
    * (see Dahmen, Gruber, Mula).
    *
    * \tparam FEBasisInterior  type of the space for inner DOFs
-   * \tparam FEBasisTrace     type of the space for trace DOFs
    * \param kernelApproximation an approximation to the scattering kernel
    * \param x  solution to which we want to apply the scattering kernel
    * \param gridView
    * \param accuracy
    */
-  template<class FEBasisInterior, class FEBasisTrace, class GridView>
+  template<class FEBasisInterior, class GridView>
   static std::vector<VectorType> apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
@@ -390,7 +389,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         = std::chrono::steady_clock::now();
 
     std::vector<VectorType> rhsFunctional =
-        apply_scattering<FEBasisInterior, FEBasisTrace> (
+        apply_scattering<FEBasisInterior> (
           kernelApproximation, x, gridView, kappa1*eta);
 
     std::chrono::steady_clock::time_point endScatteringApproximation
@@ -530,10 +529,10 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                               dirichletNodesInflow[i],
                                               s);
 
-        auto gSfixed = std::make_tuple([s] (const Domain& x){ return 0.;});
-        BoundaryTools::getInflowBoundaryValue(std::get<1>(*solutionSpaces),
-                                              rhsInflowContrib[i],
-                                              gSfixed);
+        auto gSfixed = [s] (const Domain& x){ return 0.;};
+        BoundaryTools::getBoundaryValue(std::get<1>(*solutionSpaces),
+                                        rhsInflowContrib[i],
+                                        gSfixed);
       }
 
       std::vector<VectorType> rhs(numS);
@@ -727,7 +726,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class FEBasisInterior, class FEBasisTrace, class GridView>
+template<class FEBasisInterior, class GridView>
 std::vector<Dune::BlockVector<Dune::FieldVector<double, 1> >>
 Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
@@ -738,17 +737,15 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
 
   const size_t numS = x.size();
   std::vector<VectorType> rhsFunctional(numS);
-  auto solutionSpaces =
-      make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
+  const FEBasisInterior solutionSpace(gridView);
 
+  auto scatteringAssembler =
+      make_ApproximateScatteringAssembler(solutionSpace,
+                                          kernelApproximation);
   for(unsigned int i = 0; i < numS; ++i) {
-    auto scatteringAssembler_i =
-        make_ApproximateScatteringAssembler(solutionSpaces,
-                                            kernelApproximation,
-                                            i);
-    scatteringAssembler_i.template precomputeScattering<0>(
+    scatteringAssembler.precomputeScattering(
         rhsFunctional[i],
-        x);
+        x, i);
   }
 
   return rhsFunctional;
