@@ -305,7 +305,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   ///////////////////////////////////
   // To print information
   ///////////////////////////////////
-  std::ofstream ofs("output_rad_trans");
+  std::ofstream ofs("output_rad_trans_uniform");
 
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
@@ -382,8 +382,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
   {
-    ofs << "\nIteration " << n << std::endl;
-    std::cout << "\nIteration " << n << std::endl << std::endl;
+    ofs << "\nIteration " << n << '\n';
+    std::cout << "\nIteration " << n << "\n\n";
 
     std::chrono::steady_clock::time_point startScatteringApproximation
         = std::chrono::steady_clock::now();
@@ -418,7 +418,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         // or ++nRefinement >= maxNumberOfInnerIterations
         // thus the inner loop terminates eventually.
     {
-      std::cout << "Inner iteration " << nRefinement << std::endl;
+      std::cout << "Inner iteration " << nRefinement << '\n';
 
       FEBasisInterior feBasisInterior(gridView);
       FEBasisTrace feBasisTrace(gridView);
@@ -656,12 +656,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           << std::chrono::duration_cast<std::chrono::microseconds>
              (endScatteringApproximation - startScatteringApproximation).count()
           << "us, " << kernelApproximation.info()
-          << std::endl;
-      std::cout << std::endl;
+          << '\n';
+      std::cout << '\n';
 
       std::cout << "\nStatistics at end of inner iteration:\n";
       std::cout << "Grid level: " << grid.maxLevel() << '\n';
-      std::cout << "A posteriori error: " << aposterioriErr << std::endl;
+      std::cout << "A posteriori error: " << aposterioriErr << '\n';
 
       if(++nRefinement >= maxNumberOfInnerIterations
           || aposterioriErr <= kappa3*eta) {
@@ -685,6 +685,21 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         }
       }
     }
+
+    const size_t accumulatedDoFs = std::accumulate(x.cbegin(), x.cend(),
+        static_cast<size_t>(0),
+        [](size_t acc, auto vec) { return acc + vec.size(); });
+    ofs << "Error at end of Iteration " << n << ": "
+        << aposterioriErr << ", using "
+        << accumulatedDoFs << " DoFs, applying the kernel took "
+        << std::chrono::duration_cast<std::chrono::microseconds>
+            (endScatteringApproximation - startScatteringApproximation)
+            .count()
+        << "us, " << kernelApproximation.info()
+        << '\n';
+    std::cout << "Error at end of Iteration " << n << ": "
+              << aposterioriErr << ", using "
+              << accumulatedDoFs << " DoFs\n";
 
     accuracy = std::pow(rho, n) * CT * fnorm + 2*eta;
     eta /= rhobar;
