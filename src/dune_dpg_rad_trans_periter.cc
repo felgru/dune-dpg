@@ -14,7 +14,11 @@
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
-#include <dune/dpg/radiative_transfer/periter.hh>
+#ifndef PERITER_USE_UNIFORM_GRID
+#  include <dune/dpg/radiative_transfer/periter.hh>
+#else
+#  include <dune/dpg/radiative_transfer/periter_uniform.hh>
+#endif
 #include <dune/dpg/radiative_transfer/henyey_greenstein_scattering.hh>
 
 
@@ -212,10 +216,12 @@ int main(int argc, char** argv)
 
   //shared_ptr<GridType> grid = shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh"));
 
+#ifndef PERITER_USE_UNIFORM_GRID
   // UG by default uses red-green refinements which would create and remove
   // auxiliary cells. This doesn't play well with the SubGrids we use, so
   // disable it here.
   grid->setClosureType(GridType::NONE);
+#endif
 
   auto f = [](const Domain& x, const Direction& s)
            { return 1.; };
