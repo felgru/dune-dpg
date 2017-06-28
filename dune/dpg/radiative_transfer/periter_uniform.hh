@@ -1,7 +1,7 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
-#define DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
+#ifndef DUNE_DPG_RADIATIVE_TRANSFER_PERITER_UNIFORM_HH
+#define DUNE_DPG_RADIATIVE_TRANSFER_PERITER_UNIFORM_HH
 
 #include <chrono>
 #include <vector>
@@ -756,4 +756,4 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
 
 } // end namespace Dune
 
-#endif // DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
+#endif // DUNE_DPG_RADIATIVE_TRANSFER_PERITER_UNIFORM_HH

@@ -14,7 +14,7 @@
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
-#include <dune/dpg/radiative_transfer/periter.hh>
+#include <dune/dpg/radiative_transfer/periter_uniform.hh>
 #include <dune/dpg/radiative_transfer/henyey_greenstein_scattering.hh>
 
 
