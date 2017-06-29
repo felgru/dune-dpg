@@ -67,7 +67,7 @@ public:
   void precomputeScattering
           (BlockVector<FieldVector<double,1> >& scattering,
            const std::vector<BlockVector<FieldVector<double,1> >>& x,
-           size_t si);
+           size_t si) const;
 
 private:
   const SolutionSpace& solutionSpace;
@@ -194,7 +194,7 @@ template<class SolutionSpace,
 void ApproximateScatteringAssembler<SolutionSpace, KernelApproximation>::
 precomputeScattering(BlockVector<FieldVector<double,1> >& scattering,
                      const std::vector<BlockVector<FieldVector<double,1> >>& x,
-                     size_t si)
+                     size_t si) const
 {
   using namespace Dune::detail;
 

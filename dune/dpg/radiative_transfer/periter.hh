@@ -831,7 +831,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
         hostGridBasis, xHost[i]);
   }
 
-  auto scatteringAssembler =
+  const auto scatteringAssembler =
       make_ApproximateScatteringAssembler(hostGridBasis,
                                           kernelApproximation);
   std::vector<VectorType> rhsFunctional(numS);
