@@ -779,8 +779,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
                                                  hostGrid);
         detail::updateSpaces(*solutionSpaces[i], grids[i]->leafGridView());
-        detail::updateSpaces(*testSpaces[i], grids[i]->leafGridView());
-        detail::updateSpaces(*testSpacesEnriched[i], grids[i]->leafGridView());
 
         FEBasisInterior& feBasisInterior
             = std::get<FEBasisInterior>(*solutionSpaces[i]);
