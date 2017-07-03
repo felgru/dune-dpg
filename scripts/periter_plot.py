@@ -129,7 +129,7 @@ def print_table(data):
     print(r'\begin{tabular}{r|rrrl}')
     print(r'& \multicolumn{2}{c}{kernel approximation} & & \\')
     print('iteration & duration / s & rank & \#DOFs & aposteriori error \\\\\n')
-    for row in range(len(data)):
+    for row in range(len(data['iterationIndices'])):
         print(r'\hline')
         print(r'{n} '.format(n=data['iterationIndices'][row]))
         print(r'& {t} & {r} '
