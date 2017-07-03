@@ -699,8 +699,8 @@ namespace ScatteringKernelApproximation {
           size_t i = singularValues.size() - 1;
           double err = 0,
                 rank_err = singularValues(i) * singularValues(i);
-          accuracy = accuracy * accuracy;
-          while (err + rank_err < accuracy && i > 0) {
+          const double accuracy_squared = accuracy * accuracy / 4.;
+          while (err + rank_err < accuracy_squared && i > 0) {
             err += rank_err;
             i -= 1;
             rank_err = singularValues(i) * singularValues(i);
@@ -709,8 +709,11 @@ namespace ScatteringKernelApproximation {
           // TODO: If accuracy is low enough to allow rank = 0,
           //       this gives rank = 1.
 
-          // TODO: properly set level dependent on accuracy
-          level = maxLevel;
+          // set level according to given accuracy
+          for(level = 1; level < maxLevel; ++level){
+            if(1./((1 << level)*(1+level*level)) < accuracy/4.)
+              break;
+          }
           rows = 1u << level;
 
           // compute transport directions corresponding to quadrature points
