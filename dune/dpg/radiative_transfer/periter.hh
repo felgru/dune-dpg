@@ -398,7 +398,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   const double kappa2 = rhsIsFeFunction? 0.         : 1./(3.*(1+CT));
   const double kappa3 = rhsIsFeFunction? 1./4.      : 1./6.;
 
-  ofs << "Periter with " << maxNumS
+  ofs << "Periter with up to " << maxNumS
       << " directions, rho = " << rho << ", CT = " << CT
       << ", kappa1 = " << kappa1
       << ", kappa2 = " << kappa2
