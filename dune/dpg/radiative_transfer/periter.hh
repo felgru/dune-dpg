@@ -788,7 +788,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         [](size_t acc, auto vec) { return acc + vec.size(); });
     ofs << "Error at end of Iteration " << n << ": "
         << accumulatedAPosterioriError << ", using "
-        << accumulatedDoFs << " DoFs, applying the kernel took "
+        << accumulatedDoFs << " DoFs, target accuracy was " << eta
+        << ", applying the kernel took "
         << std::chrono::duration_cast<std::chrono::microseconds>
             (endScatteringApproximation - startScatteringApproximation)
             .count()

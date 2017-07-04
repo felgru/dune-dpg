@@ -19,6 +19,7 @@ def readData(datafile):
     dataPattern = re.compile(
         r'^Error at end of Iteration ([0-9]+): ([0-9]+\.?[0-9]*)'
         r', using ([0-9]+) DoFs'
+        r', target accuracy was ([0-9]+\.?[0-9]*)'
         r', applying the kernel took ([0-9]+)us, (.*)$',
         re.MULTILINE)
     svdPattern = re.compile(
@@ -29,6 +30,7 @@ def readData(datafile):
         r'MatrixCompression approximation with level ([0-9]+)')
     iterationIndices = list()
     dofs = list()
+    etas = list()
     aposterioriErrors = list()
     kernelTimings = list()
     ranks = list()
@@ -43,10 +45,11 @@ def readData(datafile):
                      , 'kappa2': parametersMatch.group(6)
                      , 'kappa3': parametersMatch.group(7)
                      }
-        for (n, aPostErr, numDOFs, time, rest) \
+        for (n, aPostErr, numDOFs, eta, time, rest) \
                 in dataPattern.findall(errors):
             iterationIndices.append(int(n))
             dofs.append(int(numDOFs))
+            etas.append(float(eta))
             aposterioriErrors.append(float(aPostErr))
             kernelTimings.append(int(time) / 1000000.);
             m = svdPattern.match(rest)
@@ -64,14 +67,13 @@ def readData(datafile):
            , 'datapoints': len(iterationIndices)
            , 'iterationIndices': iterationIndices
            , 'dofs': dofs
+           , 'etas': etas
            , 'aposterioriErrors': aposterioriErrors
            , 'kernelTimings': kernelTimings
            , 'ranks': ranks
            }
 
-def plot(iterationIndices,
-         errors,
-         numDoFs,
+def plot(data,
          outputfile='periter_error.pdf',
          title=None,
          xlabel='outer iteration',
@@ -91,11 +93,16 @@ def plot(iterationIndices,
     ax1.ticklabel_format(style='sci', scilimits=(0,0))
     ax2.ticklabel_format(style='sci', scilimits=(0,0))
 
+    iterationIndices = data['iterationIndices']
+    errors = data['aposterioriErrors']
+    etas = data['etas']
+    numDoFs = data['dofs']
     line1 = ax1.plot(iterationIndices, errors, label='a posteriori error')
     # plot in RWTH blue
     plt.setp(line1, linewidth=2.0,
              marker='o', markersize=3.0,
              color='#0054AF')
+    line1_ = ax1.plot(iterationIndices, etas, label='prescribed tolerance')
 
     line2 = ax2.plot(iterationIndices, numDoFs, label='# of DoFs')
     # plot in RWTH purple
@@ -184,9 +191,7 @@ else:
 
 #mpl.rc('text', usetex=True)
 
-plot(data['iterationIndices'],
-     data['aposterioriErrors'],
-     data['dofs'],
+plot(data,
      outputfile=args.outfile,
      # title='a posteriori errors of Periter',
     )
