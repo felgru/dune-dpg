@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 def readData(datafile):
     parametersPattern = re.compile(
-        r'^Periter with ([0-9]+) directions, rho = ([0-9]*\.?[0-9]*)'
+        r'^Periter with( up to)? ([0-9]+) directions, rho = ([0-9]*\.?[0-9]*)'
         r', CT = ([0-9]*\.?[0-9]*)'
         r', kappa1 = ([0-9]*\.?[0-9]*)'
         r', kappa2 = ([0-9]*\.?[0-9]*)'
@@ -35,12 +35,13 @@ def readData(datafile):
     with open(datafile,"r") as errors:
         errors = errors.read()
         parametersMatch = parametersPattern.search(errors)
-        parameters = { 'numS':   parametersMatch.group(1)
-                     , 'rho':    parametersMatch.group(2)
-                     , 'CT':     parametersMatch.group(3)
-                     , 'kappa1': parametersMatch.group(4)
-                     , 'kappa2': parametersMatch.group(5)
-                     , 'kappa3': parametersMatch.group(6)
+        parameters = { 'adaptiveInS': parametersMatch.group(1) != ''
+                     , 'numS':   parametersMatch.group(2)
+                     , 'rho':    parametersMatch.group(3)
+                     , 'CT':     parametersMatch.group(4)
+                     , 'kappa1': parametersMatch.group(5)
+                     , 'kappa2': parametersMatch.group(6)
+                     , 'kappa3': parametersMatch.group(7)
                      }
         for (n, aPostErr, numDOFs, time, rest) \
                 in dataPattern.findall(errors):
@@ -120,12 +121,16 @@ def plot(iterationIndices,
     plt.clf()
 
 def print_table(data):
+    if data['parameters']['adaptiveInS']:
+        up_to = 'up to'
+    else:
+        up_to = ''
     print((r'convergence table for $\rho = {p[rho]}$'
            r', $C_T = {p[CT]}$, $\kappa_1 = {p[kappa1]}$'
            r', $\kappa_2 = {p[kappa2]}$, $\kappa_3 = {p[kappa3]}$'
-           r' with {p[numS]} directions'
+           r' with {up_to} {p[numS]} directions'
            '\n'
-          ).format(p=data['parameters']))
+          ).format(p=data['parameters'], up_to=up_to))
     print(r'\begin{tabular}{r|rrrl}')
     print(r'& \multicolumn{2}{c}{kernel approximation} & & \\')
     print('iteration & duration / s & rank & \#DOFs & aposteriori error \\\\\n')
