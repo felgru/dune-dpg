@@ -114,9 +114,11 @@ class Periter {
    * \param f  right hand side function
    * \param g  lifting of the boundary values
    * \param gDeriv  derivative of g in direction s
-   * \param sigma
+   * \param sigma   absorbtion coefficient
    * \param kernel  the scattering kernel, e.g. a Henyey–Greenstein kernel
-   * \param numS  number of directions used in the discretization
+   * \param maxNumS  maximal number of directions used in the discretization
+   *                 of the unit sphere from which we take the
+   *                 scattering directions
    * \param rho  the contraction parameter ρ
    * \param CT  the constant C_T from the paper
    * \param targetAccuracy  periter solves up to this accuracy
@@ -132,7 +134,7 @@ class Periter {
              const GDeriv& gDeriv,
              double sigma,
              const Kernel& kernel,
-             unsigned int numS,
+             unsigned int maxNumS,
              double rho,
              double CT,
              double targetAccuracy,
@@ -348,7 +350,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            const GDeriv& gDeriv,
            double sigma,
            const Kernel& kernel,
-           unsigned int numS,
+           unsigned int maxNumS,
            double rho,
            double CT,
            double targetAccuracy,
@@ -396,25 +398,25 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   const double kappa2 = rhsIsFeFunction? 0.         : 1./(3.*(1+CT));
   const double kappa3 = rhsIsFeFunction? 1./4.      : 1./6.;
 
-  ofs << "Periter with " << numS
+  ofs << "Periter with " << maxNumS
       << " directions, rho = " << rho << ", CT = " << CT
       << ", kappa1 = " << kappa1
       << ", kappa2 = " << kappa2
       << ", kappa3 = " << kappa3
-      << std::endl;
+      << '\n';
 
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
   ////////////////////////////////////////////
 
-  ScatteringKernelApproximation kernelApproximation(kernel, numS);
+  ScatteringKernelApproximation kernelApproximation(kernel, maxNumS);
 
   // TODO: The estimate for the accuracy might not be good enough.
   //       It should depend on the last solution, but this is of course
   //       not known at this time.
   std::vector<Direction> sVector(kernelApproximation.setAccuracy(
                                  kappa1 * eta));
-  numS = sVector.size();
+  unsigned int numS = sVector.size();
 
   std::vector<std::unique_ptr<Grid>> grids;
   grids.reserve(sVector.size());
@@ -807,6 +809,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       ////////////////////////////////////////////////////////////////////////
       std::cout << "Print solutions:\n";
 
+      const unsigned int stride = maxNumS / numS;
       for(unsigned int i = 0; i < numS; ++i)
       {
         grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
@@ -823,13 +826,13 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         std::string name = std::string("u_rad_trans_n")
                         + std::to_string(n)
                         + std::string("_s")
-                        + std::to_string(i);
+                        + std::to_string(i*stride);
         FunctionPlotter uPlotter(name);
         uPlotter.plot("u", x[i], feBasisInterior, 0, 0);
         name = std::string("theta_rad_trans_n")
                         + std::to_string(n)
                         + std::string("_s")
-                        + std::to_string(i);
+                        + std::to_string(i*stride);
         FunctionPlotter thetaPlotter(name);
         thetaPlotter.plot("theta", x[i], feBasisTrace, 2,
                           feBasisInterior.size());
