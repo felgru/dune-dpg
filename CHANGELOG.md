@@ -66,6 +66,14 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * `BoundaryTools::getBoundaryValue` was mixing up local and global functions,
   thus giving wrong results. This has now been fixed.
 
+### Deprecated
+* The old `ErrorTools::DoerflerMarking` function which could choose between
+  two residual has been deprecated. Instead use the new function described
+  in the Changed section. There is now a `ErrorTools::residual(...)` function
+  that computes the residual from the old `DoerflerMarking` function. Thus
+  you can replace your old function call with
+  `ErrorTools::DoerflerMarking(grid, ratio, ErrorTools::residual(...))`.
+
 ### Removed
 * Remove the `make_DPGLinearForm` and `make_DPG_LinearForm` functions,
   use `make_LinearForm` instead.
