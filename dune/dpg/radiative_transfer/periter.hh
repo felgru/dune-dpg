@@ -608,7 +608,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                   innerProduct,
                                   geometryBuffer);
 
-      const unsigned int maxNumberOfInnerIterations = 6;
+      const unsigned int maxNumberOfInnerIterations = 16;
       double aposterioriErr;
       for(unsigned int nRefinement = 0; ; )
         // At the end of the loop, we will break if
