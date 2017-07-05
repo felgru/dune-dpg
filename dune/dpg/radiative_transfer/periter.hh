@@ -612,7 +612,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       double aposterioriErr;
       for(unsigned int nRefinement = 0; ; )
         // At the end of the loop, we will break if
-        // aposterioriErr < kapp3*eta TODO: / numS ?
+        // aposterioriErr < kapp3*eta
         // or ++nRefinement >= maxNumberOfInnerIterations
         // thus the inner loop terminates eventually.
       {
@@ -764,7 +764,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         std::cout << "A posteriori error: " << aposterioriErr << '\n';
 
         if(++nRefinement >= maxNumberOfInnerIterations
-            || aposterioriErr <= kappa3*eta / static_cast<double>(numS)) {
+            || aposterioriErr <= kappa3*eta) {
           gridIdSets[i] = saveSubGridToIdSet(*grids[i]);
           break;
         } else {
@@ -781,6 +781,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       }
       accumulatedAPosterioriError += aposterioriErr * aposterioriErr;
     }
+
     accumulatedAPosterioriError
         = std::sqrt(accumulatedAPosterioriError / static_cast<double>(numS));
     const size_t accumulatedDoFs = std::accumulate(x.cbegin(), x.cend(),
