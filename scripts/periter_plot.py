@@ -20,6 +20,7 @@ def readData(datafile):
         r'^Error at end of Iteration ([0-9]+): ([0-9]+\.?[0-9]*)'
         r', using ([0-9]+) DoFs'
         r', target accuracy was ([0-9]+\.?[0-9]*)'
+        r', eta was ([0-9]+\.?[0-9]*)'
         r', applying the kernel took ([0-9]+)us, (.*)$',
         re.MULTILINE)
     svdPattern = re.compile(
@@ -30,6 +31,7 @@ def readData(datafile):
         r'MatrixCompression approximation with level ([0-9]+)')
     iterationIndices = list()
     dofs = list()
+    targetAccuracies = list()
     etas = list()
     aposterioriErrors = list()
     kernelTimings = list()
@@ -45,10 +47,11 @@ def readData(datafile):
                      , 'kappa2': parametersMatch.group(6)
                      , 'kappa3': parametersMatch.group(7)
                      }
-        for (n, aPostErr, numDOFs, eta, time, rest) \
+        for (n, aPostErr, numDOFs, targetAccuracy, eta, time, rest) \
                 in dataPattern.findall(errors):
             iterationIndices.append(int(n))
             dofs.append(int(numDOFs))
+            targetAccuracies.append(float(targetAccuracy))
             etas.append(float(eta))
             aposterioriErrors.append(float(aPostErr))
             kernelTimings.append(int(time) / 1000000.);
@@ -67,6 +70,7 @@ def readData(datafile):
            , 'datapoints': len(iterationIndices)
            , 'iterationIndices': iterationIndices
            , 'dofs': dofs
+           , 'targetAccuracies': targetAccuracies
            , 'etas': etas
            , 'aposterioriErrors': aposterioriErrors
            , 'kernelTimings': kernelTimings
@@ -94,17 +98,17 @@ def plot(data,
     ax2.ticklabel_format(style='sci', scilimits=(0,0))
 
     iterationIndices = data['iterationIndices']
-    errors = data['aposterioriErrors']
-    etas = data['etas']
-    numDoFs = data['dofs']
-    line1 = ax1.plot(iterationIndices, errors, label='a posteriori error')
+    line1 = ax1.plot(iterationIndices, data['aposterioriErrors'],
+                     label='a posteriori error')
     # plot in RWTH blue
     plt.setp(line1, linewidth=2.0,
              marker='o', markersize=3.0,
              color='#0054AF')
-    line1_ = ax1.plot(iterationIndices, etas, label='prescribed tolerance')
+    line1_ = ax1.plot(iterationIndices, data['targetAccuracies'],
+                      label='prescribed tolerance')
+    line1__ = ax1.plot(iterationIndices, data['etas'], label='$\eta$')
 
-    line2 = ax2.plot(iterationIndices, numDoFs, label='# of DoFs')
+    line2 = ax2.plot(iterationIndices, data['dofs'], label='# of DoFs')
     # plot in RWTH purple
     plt.setp(line2, linewidth=2.0,
              marker='x', markersize=3.0,
