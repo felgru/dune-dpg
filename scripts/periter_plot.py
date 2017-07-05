@@ -19,7 +19,7 @@ def readData(datafile):
     dataPattern = re.compile(
         r'^Error at end of Iteration ([0-9]+): ([0-9]+\.?[0-9]*)'
         r', using ([0-9]+) DoFs'
-        r', target accuracy was ([0-9]+\.?[0-9]*)'
+        r', accuracy was ([0-9]+\.?[0-9]*)'
         r', eta was ([0-9]+\.?[0-9]*)'
         r', applying the kernel took ([0-9]+)us, (.*)$',
         re.MULTILINE)
@@ -105,7 +105,8 @@ def plot(data,
              marker='o', markersize=3.0,
              color='#0054AF')
     line1_ = ax1.plot(iterationIndices, data['targetAccuracies'],
-                      label='prescribed tolerance')
+                      label='estimate for '
+                            '$\\rho^nC_{\mathcal{T}}\|f\|_{V\'}+2\eta_n$')
     line1__ = ax1.plot(iterationIndices, data['etas'], label='$\eta$')
 
     line2 = ax2.plot(iterationIndices, data['dofs'], label='# of DoFs')

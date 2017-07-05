@@ -787,9 +787,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     const size_t accumulatedDoFs = std::accumulate(x.cbegin(), x.cend(),
         static_cast<size_t>(0),
         [](size_t acc, auto vec) { return acc + vec.size(); });
+
+    accuracy = std::pow(rho, n) * CT * fnorm + 2*eta;
+
     ofs << "Error at end of Iteration " << n << ": "
         << accumulatedAPosterioriError << ", using "
-        << accumulatedDoFs << " DoFs, target accuracy was " << accuracy
+        << accumulatedDoFs << " DoFs, accuracy was " << accuracy
         << ", eta was " << eta
         << ", applying the kernel took "
         << std::chrono::duration_cast<std::chrono::microseconds>
@@ -801,7 +804,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << accumulatedAPosterioriError << ", using "
               << accumulatedDoFs << " DoFs\n";
 
-    accuracy = std::pow(rho, n) * CT * fnorm + 2*eta;
     eta /= rhobar;
 
     if(plotSolutions == PlotSolutions::plotOuterIterations) {
