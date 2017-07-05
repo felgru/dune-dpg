@@ -764,7 +764,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         std::cout << "A posteriori error: " << aposterioriErr << '\n';
 
         if(++nRefinement >= maxNumberOfInnerIterations
-            || aposterioriErr <= kappa3*eta) {
+            || aposterioriErr <= kappa3*eta / static_cast<double>(numS)) {
           gridIdSets[i] = saveSubGridToIdSet(*grids[i]);
           break;
         } else {
