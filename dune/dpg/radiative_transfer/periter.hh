@@ -610,7 +610,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
       const unsigned int maxNumberOfInnerIterations = 16;
       double aposterioriErr;
-      for(unsigned int nRefinement = 0; ; )
+      unsigned int nRefinement = 0;
+      for( ; ; )
         // At the end of the loop, we will break if
         // aposterioriErr < kapp3*eta
         // or ++nRefinement >= maxNumberOfInnerIterations
@@ -780,6 +781,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         }
       }
       accumulatedAPosterioriError += aposterioriErr * aposterioriErr;
+
+      ofs << "after " << nRefinement << " transport solves, accuracy was "
+          << ((aposterioriErr <= kappa3*eta)?"reached.":"not reached.")
+          << "\na posteriori error:   " << aposterioriErr
+          << "\nprescribed tolerance: " << kappa3*eta
+          << '\n';
     }
 
     accumulatedAPosterioriError
