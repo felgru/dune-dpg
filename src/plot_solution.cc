@@ -300,11 +300,12 @@ int main(int argc, char** argv)
     std::chrono::steady_clock::time_point starterror = std::chrono::steady_clock::now();
     const double ratio = .2;
     err = ErrorTools::DoerflerMarking(*grid, ratio,
+                              ErrorTools::residual(
                                      bilinearForm_aposteriori,
                                      innerProduct_aposteriori,
                                      aPosterioriInnerProduct,
                                      aPosterioriLinearForm, f(beta),
-                                     x, rhs, 1);    // the last parameter is in [0,1] and
+                                     x, rhs, 1));   // the last parameter is in [0,1] and
                                                     // determines which error indicator
                                                     // is used
                                                     // 1 = residuum
