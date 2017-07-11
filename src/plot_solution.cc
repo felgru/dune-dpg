@@ -102,7 +102,7 @@ int main(int argc, char** argv)
 
     // v search space
     using FEBasisTest
-#if 0
+#if 1
         = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
 #else
         = Functions::LagrangeDGBasis<GridView, 3>;
@@ -197,7 +197,7 @@ int main(int argc, char** argv)
     std::chrono::steady_clock::time_point startsystemassembler = std::chrono::steady_clock::now();
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
-#if 1
+#if 0
     auto minInnerProduct = make_InnerProduct(solutionSpaces,
           make_tuple(
               make_IntegralTerm<1,1,IntegrationType::valueValue,              // (u^,u^)
