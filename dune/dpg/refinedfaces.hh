@@ -79,19 +79,20 @@ private:
         const MacroElement& element,
         GlobalCoordinate globalCorner0, GlobalCoordinate globalCorner1)
     : integrationElement_((globalCorner1 - globalCorner0).two_norm())
+    /* This won't work for curvilinear elements, but they don't seem
+     * to be supported by UG anyway: */
+    , unitOuterNormal_{ (globalCorner1[1] - globalCorner0[1])
+                      , (globalCorner0[0] - globalCorner1[0]) }
     , geometryInElement_{getGeometryInElement(face, subElement)}
   {
     static_assert(cdim==2, "Computation of unit outer normal for face"
                            " only implemented in 2d!");
-    /* This won't work for curvilinear elements, but they don't seem
-     * to be supported by UG anyway. */
-    unitOuterNormal_
-      = { (globalCorner1[1] - globalCorner0[1])
-        , (globalCorner0[0] - globalCorner1[0]) };
     unitOuterNormal_ /= unitOuterNormal_.two_norm();
-    // TODO: why does unitOuterNormal always point outwards
-    //       here when it doesn't do it in faces.hh?
-    assert((globalCorner0-element.geometry().center())* unitOuterNormal_ > 0);
+    if((globalCorner0
+        -element.geometry().global(subElement.geometry().center()))
+       * unitOuterNormal_ <= 0) {
+      unitOuterNormal_ *= -1.;
+    }
   }
 
   const ctype integrationElement_;
