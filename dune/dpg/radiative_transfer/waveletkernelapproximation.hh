@@ -582,6 +582,8 @@ namespace ScatteringKernelApproximation {
         enum : unsigned int { dim = 2 };
         using Direction = FieldVector<double, dim>;
 
+        enum : unsigned int { numSperInterval = wltOrder };
+
         SVD() = delete;
         SVD(const SVD&) = delete;
 
@@ -665,15 +667,15 @@ namespace ScatteringKernelApproximation {
           auto wPair = DWT(v,wltOrder+1,maxLevel,quadOrder);
           Eigen::VectorXd w = PairToXd(wPair);
           // Approx with SVD up to level given by rank
-          v = kernelSVD.matrixU().leftCols(rank)
+          v = kernelSVD.matrixU().topLeftCorner(rows, rank)
             * kernelSVD.singularValues().head(rank).asDiagonal()
-            * kernelSVD.matrixV().leftCols(rank).adjoint() * v;
+            * kernelSVD.matrixV().topLeftCorner(v.size(), rank).adjoint() * v;
           std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
             vPair = XdToPair(v);
           u = IDWT(vPair,wltOrder+1,maxLevel,quadOrder);
         }
 
-        void setAccuracy(double accuracy) {
+        std::vector<Direction> setAccuracy(double accuracy) {
           using namespace Eigen;
           VectorXd singularValues = kernelSVD.singularValues();
           size_t i = singularValues.size() - 1;
@@ -691,6 +693,25 @@ namespace ScatteringKernelApproximation {
 
           // TODO: properly set level dependent on accuracy
           level = maxLevel;
+
+          const int quadsize =
+            [&]()
+            {
+              const int quadOrder = 2*wltOrder+1;
+              GeometryType type;
+              type.makeLine();
+              const size_t dim = 1;
+              const Dune::QuadratureRule<double, dim>& quad =
+                Dune::QuadratureRules<double, dim>::rule(
+                      type,
+                      quadOrder,
+                      QuadratureType::GaussLegendre);
+              return quad.size();
+            }();
+          std::vector<Direction> sVector((1 << level) * quadsize);
+          compute_sVector(sVector);
+          rows = sVector.size();
+          return sVector;
         }
 
         template<class Direction>
@@ -707,10 +728,11 @@ namespace ScatteringKernelApproximation {
                                                     QuadratureType::GaussLegendre);
           using namespace boost::math::constants;
           size_t i=0;
-          for(int k = 0; k < (1<<maxLevel); ++k)
+          for(int k = 0; k < (1<<level); ++k)
           {
             for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
-              double angle = 2*pi<double>()*(k+quad[pt].position())/(1<<maxLevel) - pi<double>(); // Angle in [-pi,pi]
+              double angle = 2*pi<double>()*(k+quad[pt].position())
+                             / (1<<level) - pi<double>(); // Angle in [-pi,pi]
               sVector[i] = {cos(angle),sin(angle)};
               i++;
             }
@@ -747,6 +769,7 @@ namespace ScatteringKernelApproximation {
         size_t num_s;
         Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner> kernelSVD;
         size_t level;
+        size_t rows;
         size_t rank;
       };
 
