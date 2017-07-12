@@ -152,7 +152,7 @@ double gFunction(const Domain& x,
 
 void printHelp(const char* name) {
   std::cerr << "Usage: " << name
-            << " [-p] <wlt order>"
+            << " [-p] "
             << " <accuracy of Kernel>"
             << " <gamma>"
             << " <# of iterations>"
@@ -170,10 +170,10 @@ int main(int argc, char** argv)
 
   ///////////////////////////////////
   // Get arguments
-  // argv[1]: order of Alpert wlt
-  // argv[2]: level of Alpert wlt
-  // argv[2]: number of fixed-point iterations
-  // argv[3]: size of grid
+  // argv[1]: a priori accuracy of kernel approximation
+  // argv[2]: gamma
+  // argv[3]: number of fixed-point iterations
+  // argv[4]: size of grid
   ///////////////////////////////////
 
   PlotSolutions plotSolutions = PlotSolutions::doNotPlot;
@@ -188,16 +188,16 @@ int main(int argc, char** argv)
       case 'h':
         printHelp(argv[0]);
     }
-  if(optind != argc-5) {
+  if(optind != argc-4) {
     printHelp(argv[0]);
   }
 
 
-  const unsigned int wltOrder = atoi(argv[optind]);
-  const double accuracyKernel = atof(argv[optind+1]);
-  const double gamma = atof(argv[optind+2]);
-  const int N = atoi(argv[optind+3]);
-  const unsigned int sizeGrid = atoi(argv[optind+4]);
+  const unsigned int wltOrder = 4;
+  const double accuracyKernel = atof(argv[optind]);
+  const double gamma = atof(argv[optind+1]);
+  const int N = atoi(argv[optind+2]);
+  const unsigned int sizeGrid = atoi(argv[optind+3]);
 
   ///////////////////////////////////
   //   Generate the grid
@@ -236,10 +236,11 @@ int main(int argc, char** argv)
   // TODO: Estimate the constant C_T.
   const double CT = 1;
 
-  Periter<ScatteringKernelApproximation::AlpertWavelet::SVD, FeRHSandBoundary>()
+  Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
+          FeRHSandBoundary>()
       .solve(*grid, f, g, gDeriv, sigma,
-             HenyeyGreensteinScattering<Direction>(gamma), gamma,
-             wltOrder, accuracyKernel, rho, CT, 1e-2, N, plotSolutions);
+             HenyeyGreensteinScattering(gamma),
+             accuracyKernel, rho, CT, 1e-2, N, plotSolutions);
 
   return 0;
   }

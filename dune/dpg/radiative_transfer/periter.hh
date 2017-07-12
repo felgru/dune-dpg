@@ -130,8 +130,6 @@ class Periter {
              const GDeriv& gDeriv,
              double sigma,
              const Kernel& kernel,
-             double gamma,
-             unsigned int wltOrder,
              double accuracyKernel,
              double rho,
              double CT,
@@ -330,8 +328,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            const GDeriv& gDeriv,
            double sigma,
            const Kernel& kernel,
-           double gamma,
-           unsigned int wltOrder,
            double accuracyKernel,
            double rho,
            double CT,
@@ -373,7 +369,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                           // quadratures for the angular variable.
                           // nQuadAngle <= 30
   ScatteringKernelApproximation kernelApproximation(
-    kernel, wltOrder, accuracyKernel, gamma, nQuadAngle);
+    kernel, accuracyKernel, nQuadAngle);
 
   unsigned int numS = kernelApproximation.getNumS();
   std::vector< Direction > sVector(numS);
@@ -465,7 +461,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   const double kappa3 = rhsIsFeFunction? 1./4.      : 1./6.;
 
   ofs << "Periter with " << numS << " directions"
-      << ", wltOrder = " << wltOrder
       << ", accuracyKernel = " << accuracyKernel
       << ", rho = " << rho << ", CT = " << CT
       << ", kappa1 = " << kappa1
