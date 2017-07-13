@@ -232,7 +232,8 @@ int main(int argc, char** argv)
                 { return s[0] + s[1]; };
   const double sigma = 5.;
   // TODO: Estimate ρ from the paper.
-  const double rho = .5;
+  const double rho = 1./sigma;
+  assert(rho < 1.);
   // TODO: Estimate the constant C_T.
   const double CT = 1;
 

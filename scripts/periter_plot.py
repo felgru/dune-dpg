@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 def readData(datafile):
     parametersPattern = re.compile(
-        r'^Periter with ([0-9]+) directions, rho = ([0-9]*\.?[0-9]*)'
+        r'^Periter with( up to)? ([0-9]+) directions, rho = ([0-9]*\.?[0-9]*)'
         r', CT = ([0-9]*\.?[0-9]*)'
         r', kappa1 = ([0-9]*\.?[0-9]*)'
         r', kappa2 = ([0-9]*\.?[0-9]*)'
@@ -19,6 +19,8 @@ def readData(datafile):
     dataPattern = re.compile(
         r'^Error at end of Iteration ([0-9]+): ([0-9]+\.?[0-9]*)'
         r', using ([0-9]+) DoFs'
+        r', accuracy was ([0-9]+\.?[0-9]*)'
+        r', eta was ([0-9]+\.?[0-9]*)'
         r', applying the kernel took ([0-9]+)us, (.*)$',
         re.MULTILINE)
     svdPattern = re.compile(
@@ -29,23 +31,28 @@ def readData(datafile):
         r'MatrixCompression approximation with level ([0-9]+)')
     iterationIndices = list()
     dofs = list()
+    targetAccuracies = list()
+    etas = list()
     aposterioriErrors = list()
     kernelTimings = list()
     ranks = list()
     with open(datafile,"r") as errors:
         errors = errors.read()
         parametersMatch = parametersPattern.search(errors)
-        parameters = { 'numS':   parametersMatch.group(1)
-                     , 'rho':    parametersMatch.group(2)
-                     , 'CT':     parametersMatch.group(3)
-                     , 'kappa1': parametersMatch.group(4)
-                     , 'kappa2': parametersMatch.group(5)
-                     , 'kappa3': parametersMatch.group(6)
+        parameters = { 'adaptiveInS': parametersMatch.group(1) != ''
+                     , 'numS':   parametersMatch.group(2)
+                     , 'rho':    parametersMatch.group(3)
+                     , 'CT':     parametersMatch.group(4)
+                     , 'kappa1': parametersMatch.group(5)
+                     , 'kappa2': parametersMatch.group(6)
+                     , 'kappa3': parametersMatch.group(7)
                      }
-        for (n, aPostErr, numDOFs, time, rest) \
+        for (n, aPostErr, numDOFs, targetAccuracy, eta, time, rest) \
                 in dataPattern.findall(errors):
             iterationIndices.append(int(n))
             dofs.append(int(numDOFs))
+            targetAccuracies.append(float(targetAccuracy))
+            etas.append(float(eta))
             aposterioriErrors.append(float(aPostErr))
             kernelTimings.append(int(time) / 1000000.);
             m = svdPattern.match(rest)
@@ -63,14 +70,14 @@ def readData(datafile):
            , 'datapoints': len(iterationIndices)
            , 'iterationIndices': iterationIndices
            , 'dofs': dofs
+           , 'targetAccuracies': targetAccuracies
+           , 'etas': etas
            , 'aposterioriErrors': aposterioriErrors
            , 'kernelTimings': kernelTimings
            , 'ranks': ranks
            }
 
-def plot(iterationIndices,
-         errors,
-         numDoFs,
+def plot(data,
          outputfile='periter_error.pdf',
          title=None,
          xlabel='outer iteration',
@@ -90,13 +97,19 @@ def plot(iterationIndices,
     ax1.ticklabel_format(style='sci', scilimits=(0,0))
     ax2.ticklabel_format(style='sci', scilimits=(0,0))
 
-    line1 = ax1.plot(iterationIndices, errors, label='a posteriori error')
+    iterationIndices = data['iterationIndices']
+    line1 = ax1.plot(iterationIndices, data['aposterioriErrors'],
+                     label='a posteriori error')
     # plot in RWTH blue
     plt.setp(line1, linewidth=2.0,
              marker='o', markersize=3.0,
              color='#0054AF')
+    line1_ = ax1.plot(iterationIndices, data['targetAccuracies'],
+                      label='estimate for '
+                            '$\\rho^nC_{\mathcal{T}}\|f\|_{V\'}+2\eta_n$')
+    line1__ = ax1.plot(iterationIndices, data['etas'], label='$\eta$')
 
-    line2 = ax2.plot(iterationIndices, numDoFs, label='# of DoFs')
+    line2 = ax2.plot(iterationIndices, data['dofs'], label='# of DoFs')
     # plot in RWTH purple
     plt.setp(line2, linewidth=2.0,
              marker='x', markersize=3.0,
@@ -120,12 +133,16 @@ def plot(iterationIndices,
     plt.clf()
 
 def print_table(data):
+    if data['parameters']['adaptiveInS']:
+        up_to = 'up to'
+    else:
+        up_to = ''
     print((r'convergence table for $\rho = {p[rho]}$'
            r', $C_T = {p[CT]}$, $\kappa_1 = {p[kappa1]}$'
            r', $\kappa_2 = {p[kappa2]}$, $\kappa_3 = {p[kappa3]}$'
-           r' with {p[numS]} directions'
+           r' with {up_to} {p[numS]} directions'
            '\n'
-          ).format(p=data['parameters']))
+          ).format(p=data['parameters'], up_to=up_to))
     print(r'\begin{tabular}{r|rrrl}')
     print(r'& \multicolumn{2}{c}{kernel approximation} & & \\')
     print('iteration & duration / s & rank & \#DOFs & aposteriori error \\\\\n')
@@ -179,9 +196,7 @@ else:
 
 #mpl.rc('text', usetex=True)
 
-plot(data['iterationIndices'],
-     data['aposterioriErrors'],
-     data['dofs'],
+plot(data,
      outputfile=args.outfile,
      # title='a posteriori errors of Periter',
     )

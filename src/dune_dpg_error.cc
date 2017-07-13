@@ -297,11 +297,12 @@ int main()
     ////////////////
     const double ratio = .2;
     ErrorTools::DoerflerMarking(*grid, ratio,
+                            ErrorTools::residual(
                                bilinearForm_aposteriori,
                                innerProduct_aposteriori,
                                aPosterioriInnerProduct,
                                aPosterioriLinearForm, fieldRHS,
-                               x, rhs, 0);    // the last parameter is in [0,1] and
+                               x, rhs, 0));   // the last parameter is in [0,1] and
                                               // determines which error indicator
                                               // is used
                                               // 1 = residuum

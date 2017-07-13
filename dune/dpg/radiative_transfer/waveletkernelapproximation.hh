@@ -1036,8 +1036,8 @@ namespace ScatteringKernelApproximation {
 
       // Wavelet $\psi_{n,k}$ on the interval [-r,r)
       // Its support is in [xmin,xmax] where
-      // 	xmin = r*k*pow(2,-j+1)-r
-      // 	xmax = r*(k+1)*pow(2,-j+1)-r
+      //      xmin = r*k*pow(2,-j+1)-r
+      //      xmax = r*(k+1)*pow(2,-j+1)-r
       Eigen::VectorXd wlt(size_t j, size_t k,
                           const Eigen::VectorXd& x, double r) {
         double xmin = r *   k   * std::exp2(-(double)j+1) - r;
@@ -1212,6 +1212,8 @@ namespace ScatteringKernelApproximation {
         enum : unsigned int { dim = 2 };
         using Direction = FieldVector<double, dim>;
 
+        enum : unsigned int { numSperInterval = 1 };
+
         MatrixCompression() = delete;
         MatrixCompression(const MatrixCompression&) = delete;
 
@@ -1220,7 +1222,8 @@ namespace ScatteringKernelApproximation {
           : kernelMatrix(waveletKernelMatrix(kernelFunction,
                                              std::ilogb(num_s))),
             maxLevel(std::ilogb(num_s)),
-            level(maxLevel) {
+            level(maxLevel),
+            rows(num_s) {
           if((1u << maxLevel) != num_s)
             DUNE_THROW(MathError, "You are using " << num_s
                 << " directions, but only powers of 2 are supported.");
@@ -1228,14 +1231,25 @@ namespace ScatteringKernelApproximation {
 
         void applyToVector(Eigen::VectorXd& v) const {
           DWT(v);
-          // TODO: trunkate matrix (and vector?) to level
-          v = kernelMatrix * v;
+          v = kernelMatrix.topLeftCorner(rows, v.size()) * v;
           IDWT(v);
         }
 
-        void setAccuracy(double accuracy) {
+        std::vector<Direction> setAccuracy(double accuracy) {
           // TODO: properly set level dependent on accuracy
           level = maxLevel;
+          rows = 1u << level;
+
+          // compute transport directions corresponding to quadrature points
+          std::vector<Direction> sVector(rows);
+          for(unsigned int i = 0; i < rows; ++i)
+          {
+            using namespace boost::math::constants;
+            sVector[i] = {cos(2*pi<double>()*i/rows),
+                          sin(2*pi<double>()*i/rows)};
+          }
+
+          return sVector;
         }
 
         std::string info() const {
@@ -1248,12 +1262,15 @@ namespace ScatteringKernelApproximation {
         Eigen::MatrixXd kernelMatrix;
         size_t maxLevel;
         size_t level;
+        size_t rows;
       };
 
       class SVD {
       public:
         enum : unsigned int { dim = 2 };
         using Direction = FieldVector<double, dim>;
+
+        enum : unsigned int { numSperInterval = 1 };
 
         SVD() = delete;
         SVD(const SVD&) = delete;
@@ -1263,6 +1280,7 @@ namespace ScatteringKernelApproximation {
           : kernelSVD(num_s, num_s, Eigen::ComputeThinU | Eigen::ComputeThinV),
             maxLevel(std::ilogb(num_s)),
             level(maxLevel),
+            rows(num_s),
             rank(num_s) {
           if((1u << maxLevel) != num_s)
             DUNE_THROW(MathError, "You are using " << num_s
@@ -1276,21 +1294,20 @@ namespace ScatteringKernelApproximation {
 
         void applyToVector(Eigen::VectorXd& v) const {
           DWT(v);
-          // TODO: trunkate matrix (and vector?) to level
-          v = kernelSVD.matrixU().leftCols(rank)
+          v = kernelSVD.matrixU().topLeftCorner(rows, rank)
             * kernelSVD.singularValues().head(rank).asDiagonal()
-            * kernelSVD.matrixV().leftCols(rank).adjoint() * v;
+            * kernelSVD.matrixV().topLeftCorner(v.size(), rank).adjoint() * v;
           IDWT(v);
         }
 
-        void setAccuracy(double accuracy) {
+        std::vector<Direction> setAccuracy(double accuracy) {
           using namespace Eigen;
           VectorXd singularValues = kernelSVD.singularValues();
           size_t i = singularValues.size() - 1;
           double err = 0,
                 rank_err = singularValues(i) * singularValues(i);
-          accuracy = accuracy * accuracy;
-          while (err + rank_err < accuracy && i > 0) {
+          const double accuracy_squared = accuracy * accuracy / 4.;
+          while (err + rank_err < accuracy_squared && i > 0) {
             err += rank_err;
             i -= 1;
             rank_err = singularValues(i) * singularValues(i);
@@ -1299,8 +1316,23 @@ namespace ScatteringKernelApproximation {
           // TODO: If accuracy is low enough to allow rank = 0,
           //       this gives rank = 1.
 
-          // TODO: properly set level dependent on accuracy
-          level = maxLevel;
+          // set level according to given accuracy
+          for(level = 1; level < maxLevel; ++level){
+            if(1./((1 << level)*(1+level*level)) < accuracy/4.)
+              break;
+          }
+          rows = 1u << level;
+
+          // compute transport directions corresponding to quadrature points
+          std::vector<Direction> sVector(rows);
+          for(unsigned int i = 0; i < rows; ++i)
+          {
+            using namespace boost::math::constants;
+            sVector[i] = {cos(2*pi<double>()*i/rows),
+                          sin(2*pi<double>()*i/rows)};
+          }
+
+          return sVector;
         }
 
         std::string info() const {
@@ -1315,6 +1347,7 @@ namespace ScatteringKernelApproximation {
         Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner> kernelSVD;
         size_t maxLevel;
         size_t level;
+        size_t rows;
         size_t rank;
       };
   }

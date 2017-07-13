@@ -105,6 +105,8 @@ template<class ScatteringKernelApproximation, class RHSApproximation>
 class Periter {
   public:
 
+  using Direction = typename ScatteringKernelApproximation::Direction;
+
   /**
    * Solve a radiative transfer problem using the Periter algorithm
    *
@@ -112,9 +114,9 @@ class Periter {
    * \param f  right hand side function
    * \param g  lifting of the boundary values
    * \param gDeriv  derivative of g in direction s
-   * \param sigma
+   * \param sigma   absorbtion coefficient
    * \param kernel  the scattering kernel, e.g. a Henyey–Greenstein kernel
-   * \param numS  number of directions used in the discretization
+   * \param accuracyKernel  a priori accuracy for the scattering kernel
    * \param rho  the contraction parameter ρ
    * \param CT  the constant C_T from the paper
    * \param targetAccuracy  periter solves up to this accuracy
@@ -151,13 +153,31 @@ class Periter {
    * \param solutionSpaces
    * \param accuracy
    */
-  template<class SolutionSpaces, class HostGrid>
+  template<class SolutionSpaces, class HostGrid, class Grid>
   static std::vector<VectorType> apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
       const std::vector<std::shared_ptr<SolutionSpaces>>& solutionSpaces,
       const HostGrid& hostGrid,
+      std::vector<Direction>& sVector,
+      std::vector<std::unique_ptr<Grid>>& grids,
       double accuracy);
+
+  /**
+   * insert new gridIdSets after apply_scattering added new grids
+   */
+  template<class GridIdSet, class Grid>
+  static void add_missing_gridIdSets(
+      std::vector<GridIdSet>& gridIdSets,
+      const std::vector<std::unique_ptr<Grid>>& grids);
+
+  /**
+   * insert new spaces after apply_scattering added new grids
+   */
+  template<class Grid, class... Spaces>
+  static void add_missing_spaces(
+      std::vector<std::shared_ptr<std::tuple<Spaces...>>>& spaces,
+      const std::vector<std::unique_ptr<Grid>>& grids);
 };
 
 struct FeRHSandBoundary {};
@@ -360,6 +380,29 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   ///////////////////////////////////
   std::ofstream ofs("output_rad_trans");
 
+  ///////////////////////////////////
+  // Parameters for adaptivity
+  ///////////////////////////////////
+
+  // η_n:
+  double eta = 1;
+  // TODO: estimate norm of rhs f
+  const double fnorm = 1;
+  // ρ̄:
+  const double rhobar = (1./rho > 2*rho)? (1./rho) : (2*rho);
+
+  // CT*kappa1 + (1+CT)*kappa2 + 2*kappa3 = 1.
+  const double kappa1 = rhsIsFeFunction? 1./(2.*CT) : 1./(3.*CT);
+  const double kappa2 = rhsIsFeFunction? 0.         : 1./(3.*(1+CT));
+  const double kappa3 = rhsIsFeFunction? 1./4.      : 1./6.;
+
+  ofs << "Periter with a priori accuracy " << accuracyKernel
+      << " for the kernel, rho = " << rho << ", CT = " << CT
+      << ", kappa1 = " << kappa1
+      << ", kappa2 = " << kappa2
+      << ", kappa3 = " << kappa3
+      << '\n';
+
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
   // via declaration of an object
@@ -371,13 +414,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   ScatteringKernelApproximation kernelApproximation(
     kernel, accuracyKernel, nQuadAngle);
 
-  unsigned int numS = kernelApproximation.getNumS();
-  std::vector< Direction > sVector(numS);
-  kernelApproximation.compute_sVector(sVector);
-
-  /////////////////
-  // Handle grids
-  /////////////////
+  // TODO: The estimate for the accuracy might not be good enough.
+  //       It should depend on the last solution, but this is of course
+  //       not known at this time.
+  std::vector<Direction> sVector(kernelApproximation.setAccuracy(
+                                 kappa1 * eta));
+  unsigned int numS = sVector.size();
 
   std::vector<std::unique_ptr<Grid>> grids;
   grids.reserve(sVector.size());
@@ -446,27 +488,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   /////////////////////////////////////////////////////////
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
+
   // TODO: A priori estimate for the accuracy of our solution:
   double accuracy = 1.;
-  // η_n:
-  double eta = 1;
-  // TODO: estimate norm of rhs f
-  const double fnorm = 1;
-  // ρ̄:
-  const double rhobar = (1./rho > 2*rho)? (1./rho) : (2*rho);
-
-  // CT*kappa1 + (1+CT)*kappa2 + 2*kappa3 = 1.
-  const double kappa1 = rhsIsFeFunction? 1./(2.*CT) : 1./(3.*CT);
-  const double kappa2 = rhsIsFeFunction? 0.         : 1./(3.*(1+CT));
-  const double kappa3 = rhsIsFeFunction? 1./4.      : 1./6.;
-
-  ofs << "Periter with " << numS << " directions"
-      << ", accuracyKernel = " << accuracyKernel
-      << ", rho = " << rho << ", CT = " << CT
-      << ", kappa1 = " << kappa1
-      << ", kappa2 = " << kappa2
-      << ", kappa3 = " << kappa3
-      << std::endl;
 
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
@@ -501,13 +525,21 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               std::declval<FEBasisHostInterior>(),
               std::declval<VectorType>()))>;
     std::vector<RHSData> rhsData;
-    rhsData.reserve(numS);
     {
       FEBasisHostInterior hostGridGlobalBasis(hostGrid.leafGridView());
       std::vector<VectorType> rhsFunctional =
           apply_scattering (
             kernelApproximation, x, solutionSpaces, hostGridGlobalBasis,
+            sVector, grids,
             kappa1 * eta / (kappaNorm * uNorm));
+      add_missing_gridIdSets(gridIdSets, grids);
+      add_missing_spaces(solutionSpaces, grids);
+      add_missing_spaces(testSpaces, grids);
+      add_missing_spaces(testSpacesEnriched, grids);
+
+      numS = sVector.size();
+      x.resize(numS);
+      rhsData.reserve(numS);
 
       // TODO: restore grids from gridIdSets and update spaces
       //       shouldn't be necessary, as long as RHSApproximation ==
@@ -579,11 +611,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                   innerProduct,
                                   geometryBuffer);
 
-      const unsigned int maxNumberOfInnerIterations = 6;
+      const unsigned int maxNumberOfInnerIterations = 16;
       double aposterioriErr;
-      for(unsigned int nRefinement = 0; ; )
+      unsigned int nRefinement = 0;
+      for( ; ; )
         // At the end of the loop, we will break if
-        // aposterioriErr < kapp3*eta TODO: / numS ?
+        // aposterioriErr < kapp3*eta
         // or ++nRefinement >= maxNumberOfInnerIterations
         // thus the inner loop terminates eventually.
       {
@@ -751,15 +784,27 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         }
       }
       accumulatedAPosterioriError += aposterioriErr * aposterioriErr;
+
+      ofs << "after " << nRefinement << " transport solves, accuracy was "
+          << ((aposterioriErr <= kappa3*eta)?"reached.":"not reached.")
+          << "\na posteriori error:   " << aposterioriErr
+          << "\nprescribed tolerance: " << kappa3*eta
+          << '\n';
     }
+
     accumulatedAPosterioriError
         = std::sqrt(accumulatedAPosterioriError / static_cast<double>(numS));
     const size_t accumulatedDoFs = std::accumulate(x.cbegin(), x.cend(),
         static_cast<size_t>(0),
         [](size_t acc, auto vec) { return acc + vec.size(); });
+
+    accuracy = std::pow(rho, n) * CT * fnorm + 2*eta;
+
     ofs << "Error at end of Iteration " << n << ": "
         << accumulatedAPosterioriError << ", using "
-        << accumulatedDoFs << " DoFs, applying the kernel took "
+        << accumulatedDoFs << " DoFs, accuracy was " << accuracy
+        << ", eta was " << eta
+        << ", applying the kernel took "
         << std::chrono::duration_cast<std::chrono::microseconds>
             (endScatteringApproximation - startScatteringApproximation)
             .count()
@@ -769,7 +814,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << accumulatedAPosterioriError << ", using "
               << accumulatedDoFs << " DoFs\n";
 
-    accuracy = std::pow(rho, n) * CT * fnorm + 2*eta;
     eta /= rhobar;
 
     if(plotSolutions == PlotSolutions::plotOuterIterations) {
@@ -780,6 +824,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       ////////////////////////////////////////////////////////////////////////
       std::cout << "Print solutions:\n";
 
+      // const unsigned int stride = maxNumS / numS;
       for(unsigned int i = 0; i < numS; ++i)
       {
         grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
@@ -796,12 +841,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         std::string name = std::string("u_rad_trans_n")
                         + std::to_string(n)
                         + std::string("_s")
+                        // + std::to_string(i*stride);
                         + std::to_string(i);
         FunctionPlotter uPlotter(name);
         uPlotter.plot("u", x[i], feBasisInterior, 0, 0);
         name = std::string("theta_rad_trans_n")
                         + std::to_string(n)
                         + std::string("_s")
+                        // + std::to_string(i*stride);
                         + std::to_string(i);
         FunctionPlotter thetaPlotter(name);
         thetaPlotter.plot("theta", x[i], feBasisTrace, 2,
@@ -812,7 +859,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class SolutionSpaces, class HostGridBasis>
+template<class SolutionSpaces, class HostGridBasis, class Grid>
 std::vector<typename Periter<ScatteringKernelApproximation,
                              RHSApproximation>::VectorType>
 Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
@@ -820,12 +867,14 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       const std::vector<VectorType>& x,
       const std::vector<std::shared_ptr<SolutionSpaces>>& solutionSpaces,
       const HostGridBasis& hostGridBasis,
+      std::vector<Direction>& sVector,
+      std::vector<std::unique_ptr<Grid>>& grids,
       double accuracy) {
-  kernelApproximation.setAccuracy(accuracy);
+  sVector = kernelApproximation.setAccuracy(accuracy);
 
   using FEBasisInterior = std::tuple_element_t<0, SolutionSpaces>;
 
-  const size_t numS = x.size();
+  size_t numS = x.size();
   // Interpolate x[i] to hostGridBasis.
   std::vector<VectorType> xHost(numS);
   for(size_t i = 0; i < numS; ++i) {
@@ -838,6 +887,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
   const auto scatteringAssembler =
       make_ApproximateScatteringAssembler(hostGridBasis,
                                           kernelApproximation);
+  numS = sVector.size();
   std::vector<VectorType> rhsFunctional(numS);
   // Olga: adapt precomputeScattering?
   for(size_t i = 0; i < numS; ++i) {
@@ -846,7 +896,74 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
         xHost, i);
   }
 
+  {
+    std::vector<std::unique_ptr<Grid>> newGrids;
+    newGrids.reserve(numS/kernelApproximation.numSperInterval);
+    {
+      const size_t numOldGrids = grids.size();
+      const size_t numNewGrids = numS/kernelApproximation.numSperInterval;
+      const size_t numCopies = numNewGrids / numOldGrids;
+      for(size_t i = 0; i < numOldGrids; i++) {
+        newGrids.push_back(std::move(grids[i]));
+        const Grid& grid = *newGrids.back();
+        for(size_t copies = 1; copies < numCopies; ++copies) {
+          newGrids.push_back(copySubGrid(grid));
+        }
+      }
+    }
+    std::swap(grids, newGrids);
+  }
+
   return rhsFunctional;
+}
+
+template<class ScatteringKernelApproximation, class RHSApproximation>
+template<class GridIdSet, class Grid>
+void
+Periter<ScatteringKernelApproximation, RHSApproximation>::
+add_missing_gridIdSets(
+      std::vector<GridIdSet>& gridIdSets,
+      const std::vector<std::unique_ptr<Grid>>& grids)
+{
+  std::vector<GridIdSet> newGridIdSets;
+  newGridIdSets.reserve(grids.size());
+  const size_t numOldGridIdSets = gridIdSets.size();
+  const size_t numNewGridIdSets = grids.size();
+  const size_t numCopies = numNewGridIdSets / numOldGridIdSets;
+  auto grid = grids.begin();
+  for(size_t i = 0; i < numOldGridIdSets; i++) {
+    newGridIdSets.push_back(std::move(gridIdSets[i]));
+    ++grid;
+    for(size_t copies = 1; copies < numCopies; ++copies) {
+      newGridIdSets.push_back(saveSubGridToIdSet(**grid));
+      ++grid;
+    }
+  }
+  std::swap(gridIdSets, newGridIdSets);
+}
+
+template<class ScatteringKernelApproximation, class RHSApproximation>
+template<class Grid, class... Spaces>
+void
+Periter<ScatteringKernelApproximation, RHSApproximation>::add_missing_spaces(
+      std::vector<std::shared_ptr<std::tuple<Spaces...>>>& spaces,
+      const std::vector<std::unique_ptr<Grid>>& grids)
+{
+  std::vector<std::shared_ptr<std::tuple<Spaces...>>> newSpaces;
+  newSpaces.reserve(grids.size());
+  const size_t numOldSpaces = spaces.size();
+  const size_t numNewSpaces = grids.size();
+  const size_t numCopies = numNewSpaces / numOldSpaces;
+  auto grid = grids.begin();
+  for(size_t i = 0; i < numOldSpaces; i++) {
+    newSpaces.push_back(std::move(spaces[i]));
+    ++grid;
+    for(size_t copies = 1; copies < numCopies; ++copies) {
+      newSpaces.push_back(make_space_tuple<Spaces...>((*grid)->leafGridView()));
+      ++grid;
+    }
+  }
+  std::swap(spaces, newSpaces);
 }
 
 } // end namespace Dune

@@ -979,6 +979,8 @@ namespace Dune {
   template <class Grid, class BilinearForm, class InnerProduct,
             class APosterioriInnerProduct, class LinearForm,
             class RhsFunction, class VectorType>
+  [[deprecated("use ErrorTools::DoerflerMarking(grid, ratio, "
+               "ErrorTools::residual(...)) instead")]]
   double ErrorTools::DoerflerMarking(
       Grid& grid,
       double ratio,

@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_SUBGRID_WORKAROUNDS_HH
 #define DUNE_DPG_SUBGRID_WORKAROUNDS_HH
 
+#include <memory>
 #include <type_traits>
 #include <dune/geometry/affinegeometry.hh>
 #include <dune/geometry/referenceelements.hh>
@@ -129,6 +130,19 @@ auto geometryInInside(const Intersection& intersection) {
 template<class Intersection>
 bool conforming(const Intersection& intersection) {
   return detail::Conforming<std::decay_t<Intersection>>::from(intersection);
+}
+
+template<class SubGrid>
+std::unique_ptr<SubGrid> copySubGrid(const SubGrid& subGrid) {
+  std::unique_ptr<SubGrid> gr
+      = std::make_unique<SubGrid>(subGrid.getHostGrid());
+  gr->createBegin();
+  for(const auto& e : elements(subGrid.leafGridView())) {
+    gr->insert(subGrid.template getHostEntity<0>(e));
+  }
+  gr->createEnd();
+  gr->setMaxLevelDifference(1);
+  return gr;
 }
 
 } // end namespace Dune
