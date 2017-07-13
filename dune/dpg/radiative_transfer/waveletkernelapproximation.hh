@@ -744,7 +744,7 @@ namespace ScatteringKernelApproximation {
 
         std::string info() const {
           std::string s = "Wavelet SVD approximation with "
-                          " Alpert wavelets of order "
+                          "Alpert wavelets of order "
                           + std::to_string(wltOrder) + ", rank "
                           + std::to_string(rank)
                           + " and level "

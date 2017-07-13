@@ -10,7 +10,9 @@ import matplotlib.pyplot as plt
 
 def readData(datafile):
     parametersPattern = re.compile(
-        r'^Periter with( up to)? ([0-9]+) directions, rho = ([0-9]*\.?[0-9]*)'
+        r'^Periter with a priori accuracy( up to)? ([0-9]*\.?[0-9]*)'
+        r' for the kernel'
+        r', rho = ([0-9]*\.?[0-9]*)'
         r', CT = ([0-9]*\.?[0-9]*)'
         r', kappa1 = ([0-9]*\.?[0-9]*)'
         r', kappa2 = ([0-9]*\.?[0-9]*)'
@@ -25,10 +27,13 @@ def readData(datafile):
         re.MULTILINE)
     svdPattern = re.compile(
         r'SVD approximation with rank ([0-9]+)')
-    waveletSVDPattern = re.compile(
+    haarWaveletSVDPattern = re.compile(
         r'Wavelet SVD approximation with rank ([0-9]+) and level ([0-9]+)')
-    waveletCompressionPattern = re.compile(
+    haarWaveletCompressionPattern = re.compile(
         r'MatrixCompression approximation with level ([0-9]+)')
+    alpertWaveletSVDPattern = re.compile(
+        r'Wavelet SVD approximation with Alpert wavelets of order ([0-9]+)'
+        r', rank ([0-9]+) and level ([0-9]+)')
     iterationIndices = list()
     dofs = list()
     targetAccuracies = list()
@@ -40,7 +45,7 @@ def readData(datafile):
         errors = errors.read()
         parametersMatch = parametersPattern.search(errors)
         parameters = { 'adaptiveInS': parametersMatch.group(1) != ''
-                     , 'numS':   parametersMatch.group(2)
+                     , 'kernelAccuracy': parametersMatch.group(2)
                      , 'rho':    parametersMatch.group(3)
                      , 'CT':     parametersMatch.group(4)
                      , 'kappa1': parametersMatch.group(5)
@@ -54,18 +59,22 @@ def readData(datafile):
             targetAccuracies.append(float(targetAccuracy))
             etas.append(float(eta))
             aposterioriErrors.append(float(aPostErr))
-            kernelTimings.append(int(time) / 1000000.);
+            kernelTimings.append(int(time) / 1000000.)
             m = svdPattern.match(rest)
             if m:
                 ranks.append(m.group(1))
             else:
-                m = waveletSVDPattern.match(rest)
+                m = haarWaveletSVDPattern.match(rest)
                 if m:
                     ranks.append(m.group(1))
                 else:
-                    m = waveletCompressionPattern.match(rest)
+                    m = alpertWaveletSVDPattern.match(rest)
                     if m:
-                        ranks.append('-')
+                        ranks.append(m.group(2))
+                    else:
+                        m = haarWaveletCompressionPattern.match(rest)
+                        if m:
+                            ranks.append('-')
     return { 'parameters': parameters
            , 'datapoints': len(iterationIndices)
            , 'iterationIndices': iterationIndices
@@ -140,8 +149,8 @@ def print_table(data):
     print((r'convergence table for $\rho = {p[rho]}$'
            r', $C_T = {p[CT]}$, $\kappa_1 = {p[kappa1]}$'
            r', $\kappa_2 = {p[kappa2]}$, $\kappa_3 = {p[kappa3]}$'
-           r' with {up_to} {p[numS]} directions'
-           '\n'
+           r' with accuracy {up_to} {p[kernelAccuracy]} in the'
+           r' kernel approximation\n'
           ).format(p=data['parameters'], up_to=up_to))
     print(r'\begin{tabular}{r|rrrl}')
     print(r'& \multicolumn{2}{c}{kernel approximation} & & \\')

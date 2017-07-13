@@ -751,7 +751,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         }
 
         ofs << "Iteration " << n << '.' << nRefinement
-            << "for direction " << i << ": "
+            << " for direction " << i << ": "
             << "A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
             << aposterioriErr << ", grid level: " << grids[i]->maxLevel()
             << ", number of DOFs: " << x[i].size()
