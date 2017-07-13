@@ -582,7 +582,20 @@ namespace ScatteringKernelApproximation {
         enum : unsigned int { dim = 2 };
         using Direction = FieldVector<double, dim>;
 
-        enum : unsigned int { numSperInterval = wltOrder };
+        const unsigned int numSperInterval =
+            []()
+            {
+              const int quadOrder = 2*wltOrder+1;
+              GeometryType type;
+              type.makeLine();
+              const size_t dim = 1;
+              const Dune::QuadratureRule<double, dim>& quad =
+                Dune::QuadratureRules<double, dim>::rule(
+                      type,
+                      quadOrder,
+                      QuadratureType::GaussLegendre);
+              return quad.size();
+            }();
 
         SVD() = delete;
         SVD(const SVD&) = delete;
@@ -694,21 +707,7 @@ namespace ScatteringKernelApproximation {
           // TODO: properly set level dependent on accuracy
           level = maxLevel;
 
-          const int quadsize =
-            [&]()
-            {
-              const int quadOrder = 2*wltOrder+1;
-              GeometryType type;
-              type.makeLine();
-              const size_t dim = 1;
-              const Dune::QuadratureRule<double, dim>& quad =
-                Dune::QuadratureRules<double, dim>::rule(
-                      type,
-                      quadOrder,
-                      QuadratureType::GaussLegendre);
-              return quad.size();
-            }();
-          std::vector<Direction> sVector((1 << level) * quadsize);
+          std::vector<Direction> sVector((1 << level) * numSperInterval);
           compute_sVector(sVector);
           rows = sVector.size();
           return sVector;
