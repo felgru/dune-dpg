@@ -769,7 +769,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           gridIdSets[i] = saveSubGridToIdSet(*grids[i]);
           break;
         } else {
-          const double ratio = .2;
+          const double ratio = .6;
           ErrorTools::DoerflerMarking(*grids[i], ratio,
                                       std::move(errorEstimates));
           grids[i]->preAdapt();
