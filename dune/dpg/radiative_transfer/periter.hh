@@ -884,11 +884,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
                                           kernelApproximation);
   numS = sVector.size();
   std::vector<VectorType> rhsFunctional(numS);
-  for(size_t i = 0; i < numS; ++i) {
-    scatteringAssembler.precomputeScattering(
-        rhsFunctional[i],
-        xHost, i);
-  }
+  scatteringAssembler.precomputeScattering(rhsFunctional, xHost);
 
   {
     std::vector<std::unique_ptr<Grid>> newGrids;
