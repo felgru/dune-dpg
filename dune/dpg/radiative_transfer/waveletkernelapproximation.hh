@@ -611,16 +611,12 @@ namespace ScatteringKernelApproximation {
         MatrixCompression(const MatrixCompression&) = delete;
 
         template<class Function>
-        MatrixCompression(const Function& kernelFunction, size_t num_s)
-          : kernelMatrix(waveletKernelMatrix(kernelFunction,
-                                             std::ilogb(num_s))),
-            maxLevel(std::ilogb(num_s)),
+        MatrixCompression(const Function& kernelFunction, double maxAccuracy)
+          : maxLevel(setLevel(maxAccuracy, 1000)),
             level(maxLevel),
-            rows(num_s) {
-          if((1u << maxLevel) != num_s)
-            DUNE_THROW(MathError, "You are using " << num_s
-                << " directions, but only powers of 2 are supported.");
-        }
+            rows(1u << level),
+            kernelMatrix(waveletKernelMatrix(kernelFunction, maxLevel))
+          {}
 
         void applyToVector(Eigen::VectorXd& v) const {
           DWT(v);
@@ -629,8 +625,7 @@ namespace ScatteringKernelApproximation {
         }
 
         std::vector<Direction> setAccuracy(double accuracy) {
-          // TODO: properly set level dependent on accuracy
-          level = maxLevel;
+          level = setLevel(accuracy, maxLevel);
           rows = 1u << level;
 
           // compute transport directions corresponding to quadrature points
@@ -645,6 +640,10 @@ namespace ScatteringKernelApproximation {
           return sVector;
         }
 
+        size_t maxNumS() const {
+          return 1u << maxLevel;
+        }
+
         std::string info() const {
           std::string s = "MatrixCompression approximation with level "
                           + std::to_string(level);
@@ -652,10 +651,19 @@ namespace ScatteringKernelApproximation {
         }
 
       private:
-        Eigen::MatrixXd kernelMatrix;
+        static inline size_t setLevel(double accuracy, size_t maxLevel) {
+          size_t level = 1;
+          for(; level < maxLevel; ++level) {
+            if(1./((1 << level)*(1+level*level)) < accuracy/4.)
+              break;
+          }
+          return level;
+        }
+
         size_t maxLevel;
         size_t level;
         size_t rows;
+        Eigen::MatrixXd kernelMatrix;
       };
 
       class SVD {
@@ -669,18 +677,15 @@ namespace ScatteringKernelApproximation {
         SVD(const SVD&) = delete;
 
         template<class Function>
-        SVD(const Function& kernelFunction, size_t num_s)
-          : kernelSVD(num_s, num_s, Eigen::ComputeThinU | Eigen::ComputeThinV),
-            maxLevel(std::ilogb(num_s)),
+        SVD(const Function& kernelFunction, double maxAccuracy)
+          : maxLevel(setLevel(maxAccuracy, 1000u)),
             level(maxLevel),
-            rows(num_s),
-            rank(num_s) {
-          if((1u << maxLevel) != num_s)
-            DUNE_THROW(MathError, "You are using " << num_s
-                << " directions, but only powers of 2 are supported.");
-
+            kernelSVD(maxLevel, maxLevel,
+                      Eigen::ComputeThinU | Eigen::ComputeThinV),
+            rows(1u << level),
+            rank(rows) {
           Eigen::MatrixXd kernelMatrix(waveletKernelMatrix(kernelFunction,
-                                                           std::ilogb(num_s)));
+                                                           maxLevel));
           /* initialize SVD of kernel (using Eigen) */
           kernelSVD.compute(kernelMatrix);
         }
@@ -710,10 +715,7 @@ namespace ScatteringKernelApproximation {
           //       this gives rank = 1.
 
           // set level according to given accuracy
-          for(level = 1; level < maxLevel; ++level){
-            if(1./((1 << level)*(1+level*level)) < accuracy/4.)
-              break;
-          }
+          level = setLevel(accuracy, maxLevel);
           rows = 1u << level;
 
           // compute transport directions corresponding to quadrature points
@@ -728,6 +730,10 @@ namespace ScatteringKernelApproximation {
           return sVector;
         }
 
+        size_t maxNumS() const {
+          return 1u << maxLevel;
+        }
+
         std::string info() const {
           std::string s = "Wavelet SVD approximation with rank "
                           + std::to_string(rank)
@@ -737,9 +743,18 @@ namespace ScatteringKernelApproximation {
         }
 
       private:
-        Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner> kernelSVD;
+        static inline size_t setLevel(double accuracy, size_t maxLevel) {
+          size_t level = 1;
+          for(; level < maxLevel; ++level){
+            if(1./((1 << level)*(1+level*level)) < accuracy/4.)
+              break;
+          }
+          return level;
+        }
+
         size_t maxLevel;
         size_t level;
+        Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner> kernelSVD;
         size_t rows;
         size_t rank;
       };

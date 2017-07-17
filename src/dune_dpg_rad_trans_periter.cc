@@ -151,8 +151,9 @@ double gFunction(const Domain& x,
 }
 
 void printHelp(const char* name) {
-  std::cerr << "Usage: " << name << " [-p] <max # of ordinates>"
-            << " <# of iterations>"
+  std::cerr << "Usage: " << name << " [-p]"
+            << " <target accuracy>"
+            << " <max # of iterations>"
             << " <size of grid>\n"
             << " -p: plot solutions" << std::endl;
   std::exit(0);
@@ -167,8 +168,8 @@ int main(int argc, char** argv)
 
   ///////////////////////////////////
   // Get arguments
-  // argv[1]: number of discrete ordinates
-  // argv[2]: number of fixed-point iterations
+  // argv[1]: target accuracy
+  // argv[2]: maximal number of fixed-point iterations
   // argv[3]: size of grid
   ///////////////////////////////////
 
@@ -188,7 +189,7 @@ int main(int argc, char** argv)
     printHelp(argv[0]);
   }
 
-  const unsigned int numS = atoi(argv[optind]);
+  const double targetAccuracy = atof(argv[optind]);
   const int N = atoi(argv[optind+1]);
   const unsigned int sizeGrid = atoi(argv[optind+2]);
 
@@ -233,7 +234,7 @@ int main(int argc, char** argv)
   Periter<ScatteringKernelApproximation::HaarWavelet::SVD, FeRHSandBoundary>()
       .solve(*grid, f, g, gDeriv, sigma,
              HenyeyGreensteinScattering<Direction>(0.5),
-             numS, rho, CT, 1e-2, N, plotSolutions);
+             rho, CT, targetAccuracy, N, plotSolutions);
 
   return 0;
   }
