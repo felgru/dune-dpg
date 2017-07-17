@@ -826,9 +826,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                                  hostGrid);
         detail::updateSpaces(*solutionSpaces[i], grids[i]->leafGridView());
 
-        FEBasisInterior& feBasisInterior
+        const FEBasisInterior& feBasisInterior
             = std::get<FEBasisInterior>(*solutionSpaces[i]);
-        FEBasisTrace& feBasisTrace
+        const FEBasisTrace& feBasisTrace
             = std::get<FEBasisTrace>(*solutionSpaces[i]);
 
         std::cout << "Direction " << i << '\n';
