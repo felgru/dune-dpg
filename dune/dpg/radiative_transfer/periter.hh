@@ -864,10 +864,9 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
 
   using FEBasisInterior = std::tuple_element_t<0, SolutionSpaces>;
 
-  size_t numS = x.size();
   // Interpolate x[i] to hostGridBasis.
-  std::vector<VectorType> xHost(numS);
-  for(size_t i = 0; i < numS; ++i) {
+  std::vector<VectorType> xHost(x.size());
+  for(size_t i = 0, xsize = x.size(); i < xsize; ++i) {
     FEBasisInterior& feBasisInterior = std::get<0>(*solutionSpaces[i]);
     interpolateFromSubGrid(
         feBasisInterior, x[i],
@@ -877,7 +876,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
   const auto scatteringAssembler =
       make_ApproximateScatteringAssembler(hostGridBasis,
                                           kernelApproximation);
-  numS = sVector.size();
+  const size_t numS = sVector.size();
   std::vector<VectorType> rhsFunctional(numS);
   scatteringAssembler.precomputeScattering(rhsFunctional, xHost);
 
