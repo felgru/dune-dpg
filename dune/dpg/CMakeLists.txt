@@ -10,6 +10,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               boundarytools.hh
               cholesky.hh
               dpg_system_assembler.hh
+              errorplotter.hh
               errortools.hh
               faces.hh
               functionplotter.hh
