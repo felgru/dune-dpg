@@ -208,7 +208,7 @@ int main(int argc, char** argv)
     using MinInnerProduct = decltype(minInnerProduct);
 
     double delta = 1e-5;
-    systemAssembler.applyMinimization<1, MinInnerProduct, 2>
+    systemAssembler.applyMinimization<1, MinInnerProduct>
                     (stiffnessMatrix,
                      minInnerProduct,
                      beta,
@@ -217,7 +217,7 @@ int main(int argc, char** argv)
 #endif
 #if 0
     double delta = 1e-5;
-    systemAssembler.defineCharacteristicFaces<1,2>
+    systemAssembler.defineCharacteristicFaces<1>
                       (stiffnessMatrix,
                        rhs,
                        beta,

@@ -205,7 +205,7 @@ public:
                               const ValueType& value);
 
 
-  template <size_t spaceIndex, unsigned int dim>
+  template <size_t spaceIndex, int dim>
   void applyWeakBoundaryCondition(
                               BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                               FieldVector<double, dim> beta,
@@ -227,13 +227,13 @@ public:
    * \param         delta   tolerance for numeric definition of
    *                           characteristic face
    */
-  template <size_t spaceIndex, unsigned int dim>
+  template <size_t spaceIndex, int dim>
   void defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                                  BlockVector<FieldVector<double,1> >& rhs,
                                  const FieldVector<double,dim>& beta,
                                  double delta = 10e-10);
 
-  template <size_t spaceIndex, class MinInnerProduct, unsigned int dim>
+  template <size_t spaceIndex, class MinInnerProduct, int dim>
   void applyMinimization(
                       BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                       MinInnerProduct minInnerProduct,
@@ -254,7 +254,7 @@ public:
   { return solutionSpaces_; }
 
 private:
-  template<size_t spaceIndex, unsigned int dim,
+  template<size_t spaceIndex, int dim,
     typename std::enable_if<models<Functions::Concept::GlobalBasis<typename
                         std::tuple_element_t<spaceIndex, typename
                             BilinearForm::SolutionSpaces>::GridView>,
@@ -266,7 +266,7 @@ private:
       const FieldVector<double,dim>& beta,
       double delta);
 
-  template<size_t spaceIndex, unsigned int dim,
+  template<size_t spaceIndex, int dim,
     typename std::enable_if<models<Functions::Concept::ConstrainedGlobalBasis<
                       typename std::tuple_element_t<spaceIndex, typename
                           BilinearForm::SolutionSpaces>::GridView>,
@@ -782,7 +782,7 @@ applyNonzeroDirichletBoundary(
 
 
 template<class BilinearForm, class InnerProduct, class BufferPolicy>
-template <size_t spaceIndex, unsigned int dim>
+template <size_t spaceIndex, int dim>
 void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
 applyWeakBoundaryCondition
                     (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
@@ -875,7 +875,7 @@ applyWeakBoundaryCondition
 
 
 template<class BilinearForm, class InnerProduct, class BufferPolicy>
-template<size_t spaceIndex, unsigned int dim,
+template<size_t spaceIndex, int dim,
   typename std::enable_if<models<Functions::Concept::GlobalBasis<typename
                        std::tuple_element_t<spaceIndex, typename
                           BilinearForm::SolutionSpaces>::GridView>,
@@ -1020,7 +1020,7 @@ namespace detail {
 
 
 template<class BilinearForm, class InnerProduct, class BufferPolicy>
-template<size_t spaceIndex, unsigned int dim,
+template<size_t spaceIndex, int dim,
   typename std::enable_if<models<Functions::Concept::ConstrainedGlobalBasis<
                     typename std::tuple_element_t<spaceIndex, typename
                         BilinearForm::SolutionSpaces>::GridView>,
@@ -1141,13 +1141,28 @@ defineCharacteristicFaces_impl(
 
 
 template<class BilinearForm, class InnerProduct, class BufferPolicy>
-template<size_t spaceIndex, unsigned int dim>
+template<size_t spaceIndex, int dim>
 void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
 defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                           BlockVector<FieldVector<double,1> >& rhs,
                           const FieldVector<double,dim>& beta,
                           double delta)
 {
+  // make sure that the test search spaces are unrefined
+  {
+    namespace hana = boost::hana;
+    auto spacesRefined =
+        hana::transform(hana::to<hana::tuple_tag>(
+            hana::make_range(hana::int_c<0>,
+                hana::int_c<std::tuple_size<TestSearchSpaces>::value>)),
+          [](auto i) -> auto {
+            using Space = std::tuple_element_t<i.value, TestSearchSpaces>;
+            using Refined = typename is_RefinedFiniteElement<Space>::type;
+            return Refined{};
+          });
+    static_assert(hana::none(spacesRefined),
+        "defineCharacteristicFaces only works for unrefined test spaces.");
+  }
   defineCharacteristicFaces_impl<spaceIndex, dim>(
       matrix,
       rhs,
@@ -1157,7 +1172,7 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
 
 template<class BilinearForm, class InnerProduct, class BufferPolicy>
-template <size_t spaceIndex, class MinInnerProduct, unsigned int dim>
+template <size_t spaceIndex, class MinInnerProduct, int dim>
 void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
 applyMinimization
             (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
