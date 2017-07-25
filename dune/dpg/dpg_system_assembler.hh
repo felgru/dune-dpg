@@ -1148,6 +1148,21 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                           const FieldVector<double,dim>& beta,
                           double delta)
 {
+  // make sure that the test search spaces are unrefined
+  {
+    namespace hana = boost::hana;
+    auto spacesRefined =
+        hana::transform(hana::to<hana::tuple_tag>(
+            hana::make_range(hana::int_c<0>,
+                hana::int_c<std::tuple_size<TestSearchSpaces>::value>)),
+          [](auto i) -> auto {
+            using Space = std::tuple_element_t<i.value, TestSearchSpaces>;
+            using Refined = typename is_RefinedFiniteElement<Space>::type;
+            return Refined{};
+          });
+    static_assert(hana::none(spacesRefined),
+        "defineCharacteristicFaces only works for unrefined test spaces.");
+  }
   defineCharacteristicFaces_impl<spaceIndex, dim>(
       matrix,
       rhs,
