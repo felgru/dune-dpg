@@ -665,7 +665,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               dirichletNodesInflow,
               rhsInflowContrib);
 #if 1
-          systemAssembler.template defineCharacteristicFaces<1,dim>(
+          systemAssembler.template defineCharacteristicFaces<1>(
               stiffnessMatrix,
               rhs, s);
 #endif
