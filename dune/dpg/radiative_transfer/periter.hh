@@ -18,9 +18,7 @@
 #include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqksubsampleddgbasis.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
@@ -116,7 +114,6 @@ class Periter {
    * \param gDeriv  derivative of g in direction s
    * \param sigma   absorbtion coefficient
    * \param kernel  the scattering kernel, e.g. a Henyey–Greenstein kernel
-   * \param accuracyKernel  a priori accuracy for the scattering kernel
    * \param rho  the contraction parameter ρ
    * \param CT  the constant C_T from the paper
    * \param targetAccuracy  periter solves up to this accuracy
@@ -132,7 +129,6 @@ class Periter {
              const GDeriv& gDeriv,
              double sigma,
              const Kernel& kernel,
-             double accuracyKernel,
              double rho,
              double CT,
              double targetAccuracy,
@@ -348,7 +344,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            const GDeriv& gDeriv,
            double sigma,
            const Kernel& kernel,
-           double accuracyKernel,
            double rho,
            double CT,
            double targetAccuracy,
@@ -396,13 +391,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   const double kappa2 = rhsIsFeFunction? 0.         : 1./(3.*(1+CT));
   const double kappa3 = rhsIsFeFunction? 1./4.      : 1./6.;
 
-  ofs << "Periter with a priori accuracy " << accuracyKernel
-      << " for the kernel, rho = " << rho << ", CT = " << CT
-      << ", kappa1 = " << kappa1
-      << ", kappa2 = " << kappa2
-      << ", kappa3 = " << kappa3
-      << '\n';
-
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
   // via declaration of an object
@@ -411,8 +399,18 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   size_t nQuadAngle = 30; // Number of points to do Gauss-Legendre
                           // quadratures for the angular variable.
                           // nQuadAngle <= 30
+
+  // TODO: The accuracy also depends on the kappa from K = κG and on \|u\|.
+  //       Adding a factor 1/4. to compensate for that.
   ScatteringKernelApproximation kernelApproximation(
-    kernel, accuracyKernel, nQuadAngle);
+      kernel, kappa1*targetAccuracy/4., nQuadAngle);
+
+  ofs << "Periter with up to " << kernelApproximation.maxNumS()
+      << " directions, rho = " << rho << ", CT = " << CT
+      << ", kappa1 = " << kappa1
+      << ", kappa2 = " << kappa2
+      << ", kappa3 = " << kappa3
+      << '\n';
 
   // TODO: The estimate for the accuracy might not be good enough.
   //       It should depend on the last solution, but this is of course
@@ -672,7 +670,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               dirichletNodesInflow,
               rhsInflowContrib);
 #if 1
-          systemAssembler.template defineCharacteristicFaces<1,dim>(
+          systemAssembler.template defineCharacteristicFaces<1>(
               stiffnessMatrix,
               rhs, s);
 #endif
@@ -772,7 +770,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           gridIdSets[i] = saveSubGridToIdSet(*grids[i]);
           break;
         } else {
-          const double ratio = .2;
+          const double ratio = .6;
           ErrorTools::DoerflerMarking(*grids[i], ratio,
                                       std::move(errorEstimates));
           grids[i]->preAdapt();
@@ -824,16 +822,15 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       ////////////////////////////////////////////////////////////////////////
       std::cout << "Print solutions:\n";
 
-      // const unsigned int stride = maxNumS / numS;
       for(unsigned int i = 0; i < numS; ++i)
       {
         grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
                                                  hostGrid);
         detail::updateSpaces(*solutionSpaces[i], grids[i]->leafGridView());
 
-        FEBasisInterior& feBasisInterior
+        const FEBasisInterior& feBasisInterior
             = std::get<FEBasisInterior>(*solutionSpaces[i]);
-        FEBasisTrace& feBasisTrace
+        const FEBasisTrace& feBasisTrace
             = std::get<FEBasisTrace>(*solutionSpaces[i]);
 
         std::cout << "Direction " << i << '\n';
@@ -841,14 +838,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         std::string name = std::string("u_rad_trans_n")
                         + std::to_string(n)
                         + std::string("_s")
-                        // + std::to_string(i*stride);
                         + std::to_string(i);
         FunctionPlotter uPlotter(name);
         uPlotter.plot("u", x[i], feBasisInterior, 0, 0);
         name = std::string("theta_rad_trans_n")
                         + std::to_string(n)
                         + std::string("_s")
-                        // + std::to_string(i*stride);
                         + std::to_string(i);
         FunctionPlotter thetaPlotter(name);
         thetaPlotter.plot("theta", x[i], feBasisTrace, 2,
@@ -874,10 +869,9 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
 
   using FEBasisInterior = std::tuple_element_t<0, SolutionSpaces>;
 
-  size_t numS = x.size();
   // Interpolate x[i] to hostGridBasis.
-  std::vector<VectorType> xHost(numS);
-  for(size_t i = 0; i < numS; ++i) {
+  std::vector<VectorType> xHost(x.size());
+  for(size_t i = 0, xsize = x.size(); i < xsize; ++i) {
     FEBasisInterior& feBasisInterior = std::get<0>(*solutionSpaces[i]);
     interpolateFromSubGrid(
         feBasisInterior, x[i],
@@ -887,7 +881,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
   const auto scatteringAssembler =
       make_ApproximateScatteringAssembler(hostGridBasis,
                                           kernelApproximation);
-  numS = sVector.size();
+  const size_t numS = sVector.size();
   std::vector<VectorType> rhsFunctional(numS);
   scatteringAssembler.precomputeScattering(rhsFunctional, xHost);
 

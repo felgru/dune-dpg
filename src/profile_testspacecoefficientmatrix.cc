@@ -208,7 +208,7 @@ int main(int argc, char** argv)
 
 #if LEVEL_SEARCH==0
     double delta = 1e-8;
-    unbufferedSystemAssembler.defineCharacteristicFaces<1,2>
+    unbufferedSystemAssembler.defineCharacteristicFaces<1>
                       (stiffnessMatrix,
                        rhsVector,
                        beta,

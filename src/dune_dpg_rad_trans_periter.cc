@@ -153,7 +153,7 @@ double gFunction(const Domain& x,
 void printHelp(const char* name) {
   std::cerr << "Usage: " << name
             << " [-p] "
-            << " <accuracy of Kernel>"
+            << " <target accuracy>"
             << " <gamma>"
             << " <# of iterations>"
             << " <size of grid>\n"
@@ -170,9 +170,9 @@ int main(int argc, char** argv)
 
   ///////////////////////////////////
   // Get arguments
-  // argv[1]: a priori accuracy of kernel approximation
+  // argv[1]: target accuracy
   // argv[2]: gamma
-  // argv[3]: number of fixed-point iterations
+  // argv[3]: maximal number of fixed-point iterations
   // argv[4]: size of grid
   ///////////////////////////////////
 
@@ -192,9 +192,8 @@ int main(int argc, char** argv)
     printHelp(argv[0]);
   }
 
-
   const unsigned int wltOrder = 4;
-  const double accuracyKernel = atof(argv[optind]);
+  const double targetAccuracy = atof(argv[optind]);
   const double gamma = atof(argv[optind+1]);
   const int N = atoi(argv[optind+2]);
   const unsigned int sizeGrid = atoi(argv[optind+3]);
@@ -241,7 +240,7 @@ int main(int argc, char** argv)
           FeRHSandBoundary>()
       .solve(*grid, f, g, gDeriv, sigma,
              HenyeyGreensteinScattering(gamma),
-             accuracyKernel, rho, CT, 1e-2, N, plotSolutions);
+             rho, CT, targetAccuracy, N, plotSolutions);
 
   return 0;
   }

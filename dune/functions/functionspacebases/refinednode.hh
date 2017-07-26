@@ -27,9 +27,13 @@ public:
 
 protected:
 
-  RefinementCache refinementCache_;
+  static RefinementCache refinementCache_;
   const Element* element_;
 };
+
+template<typename Element, typename ctype, int dim, int level>
+ReferenceRefinementCache<ctype, dim, level>
+    RefinedNode<Element, ctype, dim, level>::refinementCache_{};
 
 template<int dim, int level, int k>
 struct DGRefinedNodeFactoryConstants {};

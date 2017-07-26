@@ -159,13 +159,13 @@ public:
    * \param         delta   tolerance for numeric definition of
    *                           characteristic face
    */
-  template <size_t spaceIndex, unsigned int dim>
+  template <size_t spaceIndex, int dim>
   void defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                                  BlockVector<FieldVector<double,1> >& rhs,
                                  const FieldVector<double,dim>& beta,
                                  double delta = 10e-10);
 
-  template <size_t spaceIndex, class MinInnerProduct, unsigned int dim>
+  template <size_t spaceIndex, class MinInnerProduct, int dim>
   void applyMinimization(
                       BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                       MinInnerProduct minInnerProduct,
@@ -521,7 +521,7 @@ applyDirichletBoundaryToRhs
 
 
 template<class BilinearForm, class InnerProduct>
-template<size_t spaceIndex, unsigned int dim>
+template<size_t spaceIndex, int dim>
 void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                           BlockVector<FieldVector<double,1> >& rhs,
@@ -535,7 +535,7 @@ defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
 
 template<class BilinearForm, class InnerProduct>
-template <size_t spaceIndex, class MinInnerProduct, unsigned int dim>
+template <size_t spaceIndex, class MinInnerProduct, int dim>
 void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 applyMinimization
             (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
