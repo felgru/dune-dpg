@@ -393,17 +393,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
-  // via declaration of an object
-  // ScatteringKernelApproximation
   ////////////////////////////////////////////
-  size_t nQuadAngle = 30; // Number of points to do Gauss-Legendre
-                          // quadratures for the angular variable.
-                          // nQuadAngle <= 30
 
   // TODO: The accuracy also depends on the kappa from K = κG and on \|u\|.
   //       Adding a factor 1/4. to compensate for that.
-  ScatteringKernelApproximation kernelApproximation(
-      kernel, kappa1*targetAccuracy/4., nQuadAngle);
+  ScatteringKernelApproximation kernelApproximation(kernel,
+                                                    kappa1*targetAccuracy/4.);
 
   ofs << "Periter with up to " << kernelApproximation.maxNumS()
       << " directions, rho = " << rho << ", CT = " << CT
