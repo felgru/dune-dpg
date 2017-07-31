@@ -27,7 +27,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                                 const DirectionType& rhsBeta)
 {
   const int dim = Element::mydimension;
-  auto geometry = element.geometry();
+  const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
@@ -42,7 +42,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
 
   const auto& referenceGrid
     = lhsLocalView.tree().refinedReferenceElement();
-  auto referenceGridView = referenceGrid.leafGridView();
+  const auto referenceGridView = referenceGrid.leafGridView();
 
   const unsigned int subElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?
@@ -51,7 +51,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
   unsigned int subElementOffset = 0;
   unsigned int subElementIndex = 0;
   for(const auto& subElement : elements(referenceGridView)) {
-    auto subGeometryInReferenceElement = subElement.geometry();
+    const auto subGeometryInReferenceElement = subElement.geometry();
     for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
 
       // Position of the current quadrature point in the reference element
@@ -138,7 +138,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
          const DirectionType& rhsBeta)
 {
   const int dim = Element::mydimension;
-  auto geometry = element.geometry();
+  const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
@@ -149,7 +149,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
   const auto& referenceGrid
     = lhsLocalView.tree().refinedReferenceElement();
-  auto referenceGridView = referenceGrid.leafGridView();
+  const auto referenceGridView = referenceGrid.leafGridView();
 
   const unsigned int subElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?
@@ -160,7 +160,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
   for(const auto& subElement : elements(referenceGridView))
   {
     using SubElement = std::decay_t<decltype(subElement)>;
-    auto subGeometryInReferenceElement = subElement.geometry();
+    const auto subGeometryInReferenceElement = subElement.geometry();
 
     unsigned int nInflowFaces = 0;
     unsigned int nOutflowFaces = 0;

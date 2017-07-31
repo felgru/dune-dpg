@@ -22,7 +22,7 @@ inline static void interiorImpl(
     const FunctionalVector& functionalVector)
 {
   const int dim = Element::mydimension;
-  auto geometry = element.geometry();
+  const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
   const auto& testLocalFiniteElement = testLocalView.tree().finiteElement();
@@ -52,7 +52,7 @@ inline static void interiorImpl(
 
   const auto& referenceGrid
     = testLocalView.tree().refinedReferenceElement();
-  auto referenceGridView = referenceGrid.leafGridView();
+  const auto referenceGridView = referenceGrid.leafGridView();
 
   assert(element.type().isTriangle() || element.type().isQuadrilateral());
   const size_t subElementStride =
@@ -63,7 +63,7 @@ inline static void interiorImpl(
   unsigned int subElementOffset = 0;
   unsigned int subElementIndex = 0;
   for(const auto& subElement : elements(referenceGridView)) {
-    auto subGeometryInReferenceElement = subElement.geometry();
+    const auto subGeometryInReferenceElement = subElement.geometry();
     for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
 
       // Position of the current quadrature point in the reference element
