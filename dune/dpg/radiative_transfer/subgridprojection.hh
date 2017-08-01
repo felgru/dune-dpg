@@ -84,6 +84,9 @@ namespace detail {
       HostGridLocalView& hostGridLocalView,
       BlockVector<FieldVector<double,1>>& projectionRhs)
   {
+    static_assert(!is_RefinedFiniteElement<typename
+              HostGridLocalView::GlobalBasis>::value,
+              "computeProjectionRhs only defined for unrefined HostGrid basis");
     projectionRhs = 0;
     const int dim = Element::mydimension;
     const auto& hostGrid = hostGridLocalView.globalBasis().gridView().grid();
@@ -92,7 +95,7 @@ namespace detail {
       const auto eHost = hostGrid.entity(hostCellData.first);
       const std::vector<FieldVector<double, 1>>& hostCellCoefficients
           = hostCellData.second;
-      auto hostCellEmbedding = hostInSubGridCellGeometry<dim>(eHost, e);
+      const auto hostCellEmbedding = hostInSubGridCellGeometry<dim>(eHost, e);
 
       const auto quadratureOrder
           = subGridLocalView.tree().finiteElement().localBasis().order()
@@ -138,6 +141,111 @@ namespace detail {
           projectionRhs[i] += subGridValues[i] * hostValue * integrationWeight;
         }
       }
+    }
+  }
+
+  template<class Element, class CellData, class SubGridLocalView,
+           class HostGridLocalView,
+           typename std::enable_if<is_RefinedFiniteElement<typename
+              SubGridLocalView::GlobalBasis>::value>::type* = nullptr>
+  void computeProjectionRhs(const Element& e,
+      const CellData& cellData,
+      const SubGridLocalView& subGridLocalView,
+      HostGridLocalView& hostGridLocalView,
+      BlockVector<FieldVector<double,1>>& projectionRhs)
+  {
+    static_assert(!is_RefinedFiniteElement<typename
+              HostGridLocalView::GlobalBasis>::value,
+              "computeProjectionRhs only defined for unrefined HostGrid basis");
+    using SubGridSpace = typename SubGridLocalView::GlobalBasis;
+
+    projectionRhs = 0;
+    const int dim = Element::mydimension;
+    const auto& hostGrid = hostGridLocalView.globalBasis().gridView().grid();
+
+    const auto referenceGridView =
+        subGridLocalView.tree().refinedReferenceElement().leafGridView();
+
+    const auto& subGridLocalFiniteElement
+        = subGridLocalView.tree().finiteElement();
+    const unsigned int subElementStride =
+        (is_DGRefinedFiniteElement<SubGridSpace>::value) ?
+          subGridLocalFiniteElement.localBasis().size() : 0;
+
+    unsigned int subElementOffset = 0;
+    unsigned int subElementIndex = 0;
+    for(const auto& subElement : elements(referenceGridView)) {
+      const auto subGeometryInReferenceElement = subElement.geometry();
+
+      for(const auto& hostCellData : cellData) {
+        const auto eHost = hostGrid.entity(hostCellData.first);
+        const auto eHostGeometry = eHost.geometry();
+        // TODO: write specialization for hostInSubGridCellGeometry?
+        const auto hostCellEmbedding = hostInSubGridCellGeometry<dim>(eHost, e);
+        // TODO: check if eHost lies in subElement.
+        if(!/* TODO */) continue;
+
+        const std::vector<FieldVector<double, 1>>& hostCellCoefficients
+            = hostCellData.second;
+
+        const auto quadratureOrder
+            = subGridLocalFiniteElement.localBasis().order()
+            + hostGridLocalView.tree().finiteElement().localBasis().order();
+        typename detail::ChooseQuadrature<
+          typename SubGridLocalView::GlobalBasis,
+          typename HostGridLocalView::GlobalBasis, Element>::type quad
+            = detail::ChooseQuadrature<
+                typename SubGridLocalView::GlobalBasis,
+                typename HostGridLocalView::GlobalBasis, Element>
+              ::Quadrature(e, quadratureOrder, nullptr);
+
+        for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
+          // Position of the current quadrature point in the reference element
+          const FieldVector<double, dim>& quadPos = quad[pt].position();
+          // Global position of the current quadrature point
+          const FieldVector<double, dim>& subGridQuadPos
+                = hostCellEmbedding.global(quadPos);
+          // TODO: compare with this definition from integralterm_ru_impl.hh:
+          const FieldVector<double, dim>& globalQuadPos
+              = eHostGeometry.global(subGeometryInReferenceElement.global(quadPos));
+
+          // The multiplicative factor in the integral transformation formula
+          const double integrationWeight
+              = eHostGeometry.integrationElement(
+                  subGeometryInReferenceElement.global(quadPos))
+              * subGeometryInReferenceElement.integrationElement(quadPos)
+              * quad[pt].weight();
+
+          // TODO: The computation of subGridValues might need adaptation.
+          const auto& subGridLocalFiniteElement
+              = subGridLocalView.tree().finiteElement();
+          std::vector<FieldVector<double, 1> > subGridValues;
+          subGridLocalFiniteElement.localBasis().evaluateFunction(
+                                                            subGridQuadPos,
+                                                            subGridValues);
+
+          const auto& hostLocalFiniteElement
+              = hostGridLocalView.tree().finiteElement();
+          std::vector<FieldVector<double, 1> > hostValues;
+          hostLocalFiniteElement.localBasis().evaluateFunction(quadPos,
+                                                               hostValues);
+          const FieldVector<double, 1> hostValue
+              = std::inner_product(hostCellCoefficients.cbegin(),
+                  hostCellCoefficients.cend(), hostValues.cbegin(),
+                  FieldVector<double, 1>{0.});
+
+          // compute projectionRhs[i+subElementOffset]
+          //            = <v_{sg,i}, \sum_j c_j v_{hg,j}>
+          auto p = projectionRhs.begin() + subElementOffset;
+          for (unsigned int i=0, imax=subGridValues.size(); i<imax; i++) {
+            *p += subGridValues[i] * hostValue * integrationWeight;
+            ++p;
+          }
+        }
+      }
+      if(is_DGRefinedFiniteElement<SubGridSpace>::value)
+        subElementOffset += subElementStride;
+      subElementIndex++;
     }
   }
 
