@@ -40,9 +40,8 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
     = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
       ::Quadrature(element, quadratureOrder, lhsBeta);
 
-  const auto& referenceGrid
-    = lhsLocalView.tree().refinedReferenceElement();
-  const auto referenceGridView = referenceGrid.leafGridView();
+  const auto referenceGridView =
+      lhsLocalView.tree().refinedReferenceElement().leafGridView();
 
   const unsigned int subElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?
@@ -143,9 +142,8 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
   const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-  const auto& referenceGrid
-    = lhsLocalView.tree().refinedReferenceElement();
-  const auto referenceGridView = referenceGrid.leafGridView();
+  const auto referenceGridView =
+      lhsLocalView.tree().refinedReferenceElement().leafGridView();
 
   const unsigned int subElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?

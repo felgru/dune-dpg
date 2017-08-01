@@ -50,9 +50,8 @@ inline static void interiorImpl(
     = detail::ChooseQuadrature<TestSpace, SolutionSpace, Element>
       ::Quadrature(element, quadratureOrder, nullptr);
 
-  const auto& referenceGrid
-    = testLocalView.tree().refinedReferenceElement();
-  const auto referenceGridView = referenceGrid.leafGridView();
+  const auto referenceGridView =
+      testLocalView.tree().refinedReferenceElement().leafGridView();
 
   assert(element.type().isTriangle() || element.type().isQuadrilateral());
   const size_t subElementStride =

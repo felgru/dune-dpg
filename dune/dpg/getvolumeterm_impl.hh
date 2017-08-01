@@ -148,9 +148,8 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
         ::Quadrature(element, quadratureOrder, nullptr);
 
 
-    const auto& referenceGrid
-      = localViewTest.tree().refinedReferenceElement();
-    const auto referenceGridView = referenceGrid.leafGridView();
+    const auto referenceGridView =
+        localViewTest.tree().refinedReferenceElement().leafGridView();
 
     const unsigned int subElementStride =
         (is_DGRefinedFiniteElement<Space>::value) ?
