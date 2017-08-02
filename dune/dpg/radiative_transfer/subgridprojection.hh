@@ -144,6 +144,44 @@ namespace detail {
     }
   }
 
+  struct PointInTriangleTest
+  {
+    template<class Geometry>
+    PointInTriangleTest(const Geometry& triangle)
+    {
+      assert(triangle.type().isTriangle());
+      using Point = FieldVector<double, 2>;
+      const Point corner0 = triangle.corner(0);
+      const Point corner1 = triangle.corner(1);
+      const Point corner2 = triangle.corner(2);
+
+      m[0][0] = corner0[0] - corner2[0];
+      m[1][0] = corner0[1] - corner2[1];
+      m[0][1] = corner1[0] - corner2[0];
+      m[1][1] = corner1[1] - corner2[1];
+      m.invert();
+
+      const Point tmp{ -corner2[0], -corner2[1] };
+      m.mv(tmp, r);
+    }
+
+    bool containsPoint(const FieldVector<double, 2>& point) const
+    {
+      // Convert point to baricentric cooradinates and test
+      // for positivity.
+      FieldVector<double, 2> bc(r);
+      m.umv(point, bc);
+
+      return bc[0] > 0
+          && bc[1] > 0
+          && 1-bc[0]-bc[1] > 0;
+    }
+
+  private:
+    FieldMatrix<double, 2, 2> m;
+    FieldVector<double, 2> r;
+  };
+
   template<class Element, class CellData, class SubGridLocalView,
            class HostGridLocalView,
            typename std::enable_if<is_RefinedFiniteElement<typename
@@ -176,14 +214,16 @@ namespace detail {
     unsigned int subElementIndex = 0;
     for(const auto& subElement : elements(referenceGridView)) {
       const auto subGeometryInReferenceElement = subElement.geometry();
+      const PointInTriangleTest
+          subElementTriangle(subGeometryInReferenceElement);
 
       for(const auto& hostCellData : cellData) {
         const auto eHost = hostGrid.entity(hostCellData.first);
         const auto eHostGeometry = eHost.geometry();
-        // TODO: write specialization for hostInSubGridCellGeometry?
         const auto hostCellEmbedding = hostInSubGridCellGeometry<dim>(eHost, e);
-        // TODO: check if eHost lies in subElement.
-        if(!/* TODO */) continue;
+        // Check if eHost lies in subElement.
+        if(!subElementTriangle.containsPoint(hostCellEmbedding.center()))
+          continue;
 
         const std::vector<FieldVector<double, 1>>& hostCellCoefficients
             = hostCellData.second;
