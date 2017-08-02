@@ -623,7 +623,8 @@ public:
           currentData = gridData.erase(currentData);
         } else { // if(std::get<2>(*currentData).size() == 0) {
           // refined beyond hostGrid → interpolate cell data to children
-          const auto& localData = std::get<1>(*currentData);
+          using LocalData = std::vector<FieldVector<double, 1>>;
+          const LocalData& localData = std::get<1>(*currentData);
           for (const auto& child : descendantElements(e, subGrid.maxLevel()))
           {
             node.bind(child);
@@ -634,19 +635,137 @@ public:
             // and thus the same entity type.
             auto&& localFiniteElement = node.finiteElement();
             assert(child.father() == e);
-            auto oldGridFunction = detail::RestoreDataToRefinedGridFunction
-              <SubGridGlobalBasis, typename SubGridElement::LocalGeometry,
-              decltype(localData)>(
-                  localFiniteElement,
-                  child.geometryInFather(),
-                  localData);
-            std::vector<FieldVector<double, 1>> childLocalData;
-            localFiniteElement.localInterpolation().interpolate(oldGridFunction,
-                childLocalData);
 
-            gridData.insert(currentData,
-                std::make_tuple(child.seed(), std::move(childLocalData),
-                                CellData{}));
+            boost::hana::eval_if(
+              is_RefinedFiniteElement<SubGridGlobalBasis>{},
+              [&](auto _)
+              {
+                static_assert(is_DGRefinedFiniteElement<SubGridGlobalBasis>{},
+                  "Interpolation not implemented for continuously refined"
+                  " finite elements!");
+                // With refinement level > 1 the embeddings get a lot more
+                // complicated.
+                static_assert(levelOfFE<SubGridGlobalBasis>::value <= 1,
+                  "Interpolation only implemented for up to one level of"
+                  " local refinement!");
+                std::vector<FieldVector<double, 1>>
+                    childLocalData(localView.size());
+
+                const auto referenceGridView =
+                    localView.tree().refinedReferenceElement()
+                                           .leafGridView();
+
+                const unsigned int subElementStride =
+                    (is_DGRefinedFiniteElement<SubGridGlobalBasis>::value) ?
+                      localFiniteElement.localBasis().size() : 0;
+
+                using SubElement
+                    = typename SubGridGlobalBasis::LocalView::Tree
+                          ::RefinementGrid::template Codim<0>::Entity;
+                using SubGeometryInReferenceElement
+                    = typename SubElement::Geometry;
+
+                constexpr int dim = 2;
+
+                unsigned int sourceSubElementOffset = 0;
+                SubElement sourceSubElement;
+                for(const auto& sourceSubElement_
+                    : elements(referenceGridView)) {
+                  const SubGeometryInReferenceElement
+                    sourceSubGeometryInReferenceElement
+                      = sourceSubElement_.geometry();
+
+                  const detail::PointInTriangleTest
+                      subElementTriangle(sourceSubGeometryInReferenceElement);
+
+                  const auto childEmbedding
+                      = detail::hostInSubGridCellGeometry<dim>(child, e);
+                  // Check if child lies in sourceSubElement.
+                  if(subElementTriangle
+                        .containsPoint(childEmbedding.center()))
+                  {
+                    sourceSubElement = sourceSubElement_;
+                    break;
+                  }
+
+                  if(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
+                    sourceSubElementOffset += subElementStride;
+                }
+                assert(sourceSubElement != SubElement{});
+
+                const SubGeometryInReferenceElement
+                  sourceSubGeometryInReferenceElement
+                    = sourceSubElement.geometry();
+
+                unsigned int targetSubElementOffset = 0;
+                for(const auto& targetSubElement
+                    : elements(referenceGridView)) {
+                  const auto targetSubGeometryInReferenceElement
+                      = targetSubElement.geometry();
+
+                  // Compute a Geometry that transformes from the
+                  // target subElement to the source subElement.
+                  const auto& geometryInFather = child.geometryInFather();
+                  using SubGeometry = AffineGeometry<double, dim, dim>;
+                  const SubGeometry subGeometry
+                      ( child.type()
+                      , sourceSubGeometryInReferenceElement.local(
+                          geometryInFather.global(
+                          targetSubGeometryInReferenceElement
+                            .global(ReferenceElements<double, dim>
+                              ::general(child.type()).position(0,dim))))
+                      , sourceSubGeometryInReferenceElement
+                          .jacobianInverseTransposed({}).leftmultiply(
+                            geometryInFather
+                              .jacobianTransposed({}).leftmultiply(
+                                targetSubGeometryInReferenceElement
+                                  .jacobianTransposed({})))
+                      );
+
+                  auto oldGridFunction
+                    = detail::RestoreDataToRefinedGridFunction
+                        <SubGridGlobalBasis,
+                         SubGeometry,
+                         typename LocalData::const_iterator>(
+                            localFiniteElement,
+                            subGeometry,
+                            localData.cbegin() + sourceSubElementOffset);
+                  std::vector<FieldVector<double, 1>> interpolatedData;
+                  localFiniteElement.localInterpolation().interpolate(
+                      oldGridFunction,
+                      interpolatedData);
+
+                  std::copy(interpolatedData.cbegin(),
+                            interpolatedData.cend(),
+                            childLocalData.begin() + targetSubElementOffset);
+
+                  if(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
+                    targetSubElementOffset += subElementStride;
+                }
+
+                gridData.insert(currentData,
+                    std::make_tuple(child.seed(), std::move(childLocalData),
+                                    CellData{}));
+              },
+              [&](auto _)
+              {
+                auto oldGridFunction = detail::RestoreDataToRefinedGridFunction
+                  <SubGridGlobalBasis,
+                   typename SubGridElement::LocalGeometry,
+                   LocalData>(
+                      localFiniteElement,
+                      child.geometryInFather(),
+                      localData);
+                std::vector<FieldVector<double, 1>> childLocalData;
+                localFiniteElement.localInterpolation().interpolate(
+                    oldGridFunction,
+                    childLocalData);
+
+                gridData.insert(currentData,
+                    std::make_tuple(child.seed(), std::move(childLocalData),
+                                    CellData{}));
+              }
+            );
           }
           currentData = gridData.erase(currentData);
         }
