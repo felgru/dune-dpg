@@ -204,25 +204,29 @@ namespace detail {
           const FieldVector<double, dim>& quadPos = quad[pt].position();
           // Global position of the current quadrature point
           const FieldVector<double, dim>& subGridQuadPos
-                = hostCellEmbedding.global(quadPos);
-          // TODO: compare with this definition from integralterm_ru_impl.hh:
-          const FieldVector<double, dim>& globalQuadPos
-              = eHostGeometry.global(subGeometryInReferenceElement.global(quadPos));
+                = subGeometryInReferenceElement.local(
+                      hostCellEmbedding.global(quadPos));
 
           // The multiplicative factor in the integral transformation formula
           const double integrationWeight
-              = eHostGeometry.integrationElement(
-                  subGeometryInReferenceElement.global(quadPos))
-              * subGeometryInReferenceElement.integrationElement(quadPos)
+              = eHostGeometry.integrationElement(quadPos)
               * quad[pt].weight();
 
-          // TODO: The computation of subGridValues might need adaptation.
-          const auto& subGridLocalFiniteElement
-              = subGridLocalView.tree().finiteElement();
           std::vector<FieldVector<double, 1> > subGridValues;
-          subGridLocalFiniteElement.localBasis().evaluateFunction(
-                                                            subGridQuadPos,
-                                                            subGridValues);
+          boost::hana::eval_if(
+              is_ContinuouslyRefinedFiniteElement<SubGridSpace>{},
+              [&](auto _)
+              {
+                subGridLocalFiniteElement.localBasis()
+                    .evaluateFunction(subElementIndex,
+                                      subGridQuadPos,
+                                      subGridValues);
+              },
+              [&](auto _)
+              {
+                subGridLocalFiniteElement.localBasis()
+                    .evaluateFunction(subGridQuadPos, subGridValues);
+              });
 
           const auto& hostLocalFiniteElement
               = hostGridLocalView.tree().finiteElement();
