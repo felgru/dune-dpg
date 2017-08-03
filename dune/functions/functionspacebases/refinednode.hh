@@ -16,11 +16,13 @@ class RefinedNode
 
 public:
 
+  using RefinementGrid = GridType;
+
   RefinedNode() :
     element_(nullptr)
   {}
 
-  const GridType& refinedReferenceElement() const
+  const RefinementGrid& refinedReferenceElement() const
   {
     return refinementCache_.get(element_->type());
   }
