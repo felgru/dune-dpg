@@ -438,7 +438,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   typedef Functions::LagrangeDGBasis<LeafGridView, 1> FEBasisInterior; // u
   typedef Functions::HangingNodeP2NodalBasis<LeafGridView> FEBasisTrace; // u^
 
-  using FEBasisTest = Functions::LagrangeDGBasis<LeafGridView, 4>;
+  using FEBasisTest = Functions::PQkDGRefinedDGBasis<LeafGridView, 1, 3>;
   using FEBasisTestEnriched = FEBasisTest;
 
   /////////////////////////////////////////////////////////
@@ -664,7 +664,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               rhs,
               dirichletNodesInflow,
               rhsInflowContrib);
-#if 1
+#if 0
           systemAssembler.template defineCharacteristicFaces<1>(
               stiffnessMatrix,
               rhs, s);
