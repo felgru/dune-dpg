@@ -107,6 +107,7 @@ namespace detail {
 
 #include "applylocalfunctional_uu_impl.hh"
 #include "applylocalfunctional_ru_impl.hh"
+#include "applylocalfunctional_rr_impl.hh"
 
 namespace Dune {
 

@@ -3,7 +3,7 @@ namespace detail {
 
 template <class TestSpace,
           class SolutionSpace>
-struct ApplyLocalFunctional<TestSpace, SolutionSpace, true, false>
+struct ApplyLocalFunctional<TestSpace, SolutionSpace, true, true>
 {
 using TestLocalView = typename TestSpace::LocalView;
 using SolutionLocalView = typename SolutionSpace::LocalView;
@@ -21,6 +21,8 @@ inline static void interiorImpl(
     const Element& element,
     const FunctionalVector& functionalVector)
 {
+  static_assert(is_DGRefinedFiniteElement<SolutionSpace>::value,
+      "ApplyLocalFunctional only implemented for DG refined SolutionSpace.");
   const int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
@@ -88,11 +90,11 @@ inline static void interiorImpl(
                          {});
       std::vector<FieldVector<double,1>> shapeFunctionValues;
       solutionLocalFiniteElement.localBasis().
-          evaluateFunction(quadPosInReferenceElement, shapeFunctionValues);
+          evaluateFunction(quadPos, shapeFunctionValues);
 
       double functionalValue = 0;
       for (size_t j=0, j_max=shapeFunctionValues.size(); j<j_max; j++)
-        functionalValue += localFunctionalVector[j]
+        functionalValue += localFunctionalVector[j+subElementOffset]
                          * shapeFunctionValues[j];
       functionalValue *= integrationWeight;
       for (size_t i=0, i_max=testLocalFiniteElement.localBasis().size();

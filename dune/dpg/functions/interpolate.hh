@@ -7,6 +7,7 @@
 #include <dune/functions/common/functionfromcallable.hh>
 #include <dune/functions/functionspacebases/interpolate.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
+#include <dune/geometry/affinegeometry.hh>
 #include <dune/geometry/referenceelements.hh>
 
 namespace Dune {
@@ -71,14 +72,14 @@ VectorType interpolateToUniformlyRefinedGrid(
       auto globalSubGeometry = subE.geometry();
 
       // TODO: replace double with correct typedef
-      const auto& subGeometry = AffineGeometry<double, dim, dim>
+      const AffineGeometry<double, dim, dim> subGeometry
           (subE.type(),
            globalGeometry.local(
              globalSubGeometry.global(ReferenceElements<double, dim>
                ::general(subE.type()).position(0,dim))),
            globalSubGeometry.jacobianTransposed({})
              .leftmultiply(globalGeometry.jacobianTransposed({})));
-      auto localF = [subGeometry, &coarseLocalBasis, local_v_coarse]
+      auto localF = [&subGeometry, &coarseLocalBasis, local_v_coarse]
                     (const LocalDomain& x) {
         auto xCoarse = subGeometry.global(x);
 
