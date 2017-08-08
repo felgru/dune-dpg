@@ -783,6 +783,35 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           << "\na posteriori error:   " << aposterioriErr
           << "\nprescribed tolerance: " << kappa3*eta
           << '\n';
+
+      if(plotSolutions == PlotSolutions::plotOuterIterations) {
+        //////////////////////////////////////////////////////////////////////
+        //  Write result to VTK file
+        //  We need to subsample, because VTK cannot natively display
+        //  real second-order functions
+        //////////////////////////////////////////////////////////////////////
+
+        const FEBasisInterior& feBasisInterior
+            = std::get<FEBasisInterior>(*solutionSpaces[i]);
+        const FEBasisTrace& feBasisTrace
+            = std::get<FEBasisTrace>(*solutionSpaces[i]);
+
+        std::cout << "Plot solution for direction " << i << '\n';
+
+        std::string name = std::string("u_rad_trans_n")
+                        + std::to_string(n)
+                        + std::string("_s")
+                        + std::to_string(i);
+        FunctionPlotter uPlotter(name);
+        uPlotter.plot("u", x[i], feBasisInterior, 0, 0);
+        name = std::string("theta_rad_trans_n")
+                        + std::to_string(n)
+                        + std::string("_s")
+                        + std::to_string(i);
+        FunctionPlotter thetaPlotter(name);
+        thetaPlotter.plot("theta", x[i], feBasisTrace, 2,
+                          feBasisInterior.size());
+      }
     }
 
     accumulatedAPosterioriError
@@ -808,43 +837,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << accumulatedDoFs << " DoFs\n";
 
     eta /= rhobar;
-
-    if(plotSolutions == PlotSolutions::plotOuterIterations) {
-      ////////////////////////////////////////////////////////////////////////
-      //  Write result to VTK file
-      //  We need to subsample, because VTK cannot natively display
-      //  real second-order functions
-      ////////////////////////////////////////////////////////////////////////
-      std::cout << "Print solutions:\n";
-
-      for(unsigned int i = 0; i < numS; ++i)
-      {
-        grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
-                                                 hostGrid);
-        detail::updateSpaces(*solutionSpaces[i], grids[i]->leafGridView());
-
-        const FEBasisInterior& feBasisInterior
-            = std::get<FEBasisInterior>(*solutionSpaces[i]);
-        const FEBasisTrace& feBasisTrace
-            = std::get<FEBasisTrace>(*solutionSpaces[i]);
-
-        std::cout << "Direction " << i << '\n';
-
-        std::string name = std::string("u_rad_trans_n")
-                        + std::to_string(n)
-                        + std::string("_s")
-                        + std::to_string(i);
-        FunctionPlotter uPlotter(name);
-        uPlotter.plot("u", x[i], feBasisInterior, 0, 0);
-        name = std::string("theta_rad_trans_n")
-                        + std::to_string(n)
-                        + std::string("_s")
-                        + std::to_string(i);
-        FunctionPlotter thetaPlotter(name);
-        thetaPlotter.plot("theta", x[i], feBasisTrace, 2,
-                          feBasisInterior.size());
-      }
-    }
   }
 }
 
