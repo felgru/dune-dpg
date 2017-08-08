@@ -583,20 +583,7 @@ namespace ScatteringKernelApproximation {
         using Direction = FieldVector<double, dim>;
 
         // This is the number of quadrature points per interval.
-        const unsigned int numSperInterval =
-            []()
-            {
-              const int quadOrder = 2*wltOrder+1;
-              GeometryType type;
-              type.makeLine();
-              const size_t dim = 1;
-              const Dune::QuadratureRule<double, dim>& quad =
-                Dune::QuadratureRules<double, dim>::rule(
-                      type,
-                      quadOrder,
-                      QuadratureType::GaussLegendre);
-              return quad.size();
-            }();
+        const unsigned int numSperInterval = wltOrder+1;
 
         SVD() = delete;
         SVD(const SVD&) = delete;
@@ -605,10 +592,11 @@ namespace ScatteringKernelApproximation {
         SVD(const Function& kernelFunction,
             double accuracyKernel)
           : maxLevel(set_maxLevel(accuracyKernel)),
-            num_s((1u << maxLevel) * numSperInterval),
+            num_s((wltOrder+1) << maxLevel),
             kernelSVD(num_s, num_s, Eigen::ComputeThinU | Eigen::ComputeThinV),
             level(maxLevel),
-            rank(num_s) {
+            rank(num_s),
+            nQuadAngle(30) {
           // if((1u << maxLevel) != num_s)
           //   DUNE_THROW(MathError, "You are using " << num_s
           //       << " directions, but only powers of 2 are supported.");
@@ -616,10 +604,12 @@ namespace ScatteringKernelApproximation {
             << " with wlt order " << wltOrder
             << " requires level J = " << maxLevel
             << " and " << num_s << " directions." << std::endl;
+          int nd = (wltOrder+1) << maxLevel;
+          std::cout << nd << std::endl;
 
           Eigen::MatrixXd
             kernelMatrix(waveletKernelMatrix(kernelFunction,
-              wltOrder, maxLevel, numSperInterval));
+              wltOrder, maxLevel, nQuadAngle));
           /* initialize SVD of kernel (using Eigen) */
           kernelSVD.compute(kernelMatrix);
 
@@ -675,7 +665,7 @@ namespace ScatteringKernelApproximation {
         void applyToVector(Eigen::VectorXd& u) const {
           using namespace boost::math::constants;
           Eigen::VectorXd v = ProjectOntoVJ_bis(u, maxLevel, wltOrder);
-          size_t quadOrder = 2*numSperInterval-1;
+          size_t quadOrder = 2*nQuadAngle-1;
           auto wPair = DWT(v,wltOrder+1,maxLevel,quadOrder);
           Eigen::VectorXd w = PairToXd(wPair);
           // Approx with SVD up to level given by rank
@@ -706,7 +696,7 @@ namespace ScatteringKernelApproximation {
           // TODO: properly set level dependent on accuracy
           level = maxLevel;
 
-          std::vector<Direction> sVector((1 << level) * numSperInterval);
+          std::vector<Direction> sVector((wltOrder+1) << level);
           compute_sVector(sVector);
           rows = sVector.size();
           return sVector;
@@ -738,11 +728,11 @@ namespace ScatteringKernelApproximation {
         }
 
         size_t getNumS() {
-          return (1u << level) * numSperInterval;
+          return ((wltOrder+1) << level);
         }
 
         size_t maxNumS() const {
-          return (1u << maxLevel) * numSperInterval;
+          return ((wltOrder+1) << maxLevel);
         }
 
         std::string info() const {
@@ -772,6 +762,7 @@ namespace ScatteringKernelApproximation {
         size_t level;
         size_t rows;
         size_t rank;
+        size_t nQuadAngle;
       };
 
     template<unsigned int wltOrder>
@@ -782,20 +773,7 @@ namespace ScatteringKernelApproximation {
         using Direction = FieldVector<double, dim>;
 
         // This is the number of quadrature points per interval.
-        const unsigned int numSperInterval =
-            []()
-            {
-              const int quadOrder = 2*wltOrder+1;
-              GeometryType type;
-              type.makeLine();
-              const size_t dim = 1;
-              const Dune::QuadratureRule<double, dim>& quad =
-                Dune::QuadratureRules<double, dim>::rule(
-                      type,
-                      quadOrder,
-                      QuadratureType::GaussLegendre);
-              return quad.size();
-            }();
+        const unsigned int numSperInterval = (wltOrder+1);
 
         MatrixTH() = delete;
         MatrixTH(const MatrixTH&) = delete;
@@ -805,12 +783,13 @@ namespace ScatteringKernelApproximation {
             double accuracyKernel)
           : maxLevel(
               set_maxLevel(accuracyKernel)),
-            num_s((1u << maxLevel) * numSperInterval),
+            num_s((wltOrder+1) << maxLevel),
             level(maxLevel),
             rank(num_s),
+            nQuadAngle(30),
             kernelMatrix(
               waveletKernelMatrix(kernelFunction,
-              wltOrder, maxLevel, numSperInterval)),
+              wltOrder, maxLevel, nQuadAngle)),
             kernelMatrixTH(
               computeTHmatrix(maxLevel))
             {
@@ -870,7 +849,7 @@ namespace ScatteringKernelApproximation {
         void applyToVector(Eigen::VectorXd& u) const {
           using namespace boost::math::constants;
           Eigen::VectorXd v = ProjectOntoVJ_bis(u, maxLevel, wltOrder);
-          size_t quadOrder = 2*numSperInterval-1;
+          size_t quadOrder = 2*nQuadAngle-1;
           auto wPair = DWT(v,wltOrder+1,maxLevel,quadOrder);
           Eigen::VectorXd w = PairToXd(wPair);
           // Approx with trucated kernelMatrix
@@ -911,11 +890,11 @@ namespace ScatteringKernelApproximation {
         }
 
         size_t getNumS() const {
-          return (1u << level) * numSperInterval;
+          return ((wltOrder+1) << level);
         }
 
         size_t maxNumS() const {
-          return (1u << maxLevel) * numSperInterval;
+          return ((wltOrder+1) << maxLevel);
         }
 
         std::string info() const {
@@ -1035,6 +1014,7 @@ namespace ScatteringKernelApproximation {
         size_t num_s;
         size_t level;
         size_t rank;
+        size_t nQuadAngle;
         Eigen::MatrixXd kernelMatrix;
         Eigen::MatrixXd kernelMatrixTH;
       };
