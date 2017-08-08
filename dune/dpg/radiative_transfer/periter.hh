@@ -407,11 +407,10 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       << ", kappa3 = " << kappa3
       << '\n';
 
-  // TODO: The estimate for the accuracy might not be good enough.
-  //       It should depend on the last solution, but this is of course
-  //       not known at this time.
-  std::vector<Direction> sVector(kernelApproximation.setAccuracy(
-                                 kappa1 * eta));
+  // As the solution u we use for the initial scattering is 0, and the
+  // formula for the accuracy contains a 1/\|u\|, we set the initial
+  // accuracy to a large enough value.
+  std::vector<Direction> sVector(kernelApproximation.setAccuracy(1e5));
   unsigned int numS = sVector.size();
 
   std::vector<std::unique_ptr<Grid>> grids;
