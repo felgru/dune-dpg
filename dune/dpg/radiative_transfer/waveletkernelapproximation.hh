@@ -617,24 +617,24 @@ namespace ScatteringKernelApproximation {
         }
 
         Eigen::VectorXd
-        PairToXd(std::pair<Eigen::VectorXd,
+        PairToXd(const std::pair<Eigen::VectorXd,
                 std::vector<Eigen::VectorXd>>& wPair) const {
 
-          Eigen::VectorXd w0 = wPair.first;
-          std::vector<Eigen::VectorXd> w1 = wPair.second;
+          const Eigen::VectorXd w0 = wPair.first;
+          const std::vector<Eigen::VectorXd> w1 = wPair.second;
 
-          size_t L = w0.size();
-          size_t J = w1.size();
+          const size_t L = w0.size();
+          const size_t J = w1.size();
 
           Eigen::VectorXd w(L << J);
-          w.segment(0,L)=w0;
+          w.segment(0, L) = w0;
 
           size_t pos0 = L;
           size_t pos1 = L;
           for(size_t j=0; j < J; j++) {
             pos0 = pos1;
             pos1 = pos0+w1[j].size();
-            w.segment(pos0, w1[j].size())=w1[j];
+            w.segment(pos0, w1[j].size()) = w1[j];
           }
           return w;
         }
@@ -802,24 +802,24 @@ namespace ScatteringKernelApproximation {
         }
 
         Eigen::VectorXd
-        PairToXd(std::pair<Eigen::VectorXd,
+        PairToXd(const std::pair<Eigen::VectorXd,
                 std::vector<Eigen::VectorXd>>& wPair) const {
 
-          Eigen::VectorXd w0 = wPair.first;
-          std::vector<Eigen::VectorXd> w1 = wPair.second;
+          const Eigen::VectorXd w0 = wPair.first;
+          const std::vector<Eigen::VectorXd> w1 = wPair.second;
 
-          size_t L = w0.size();
-          size_t J = w1.size();
+          const size_t L = w0.size();
+          const size_t J = w1.size();
 
           Eigen::VectorXd w(L << J);
-          w.segment(0,L)=w0;
+          w.segment(0, L) = w0;
 
           size_t pos0 = L;
           size_t pos1 = L;
           for(size_t j=0; j < J; j++) {
             pos0 = pos1;
-            pos1 = pos0+w1[j].size();
-            w.segment(pos0, w1[j].size())=w1[j];
+            pos1 = pos0 + w1[j].size();
+            w.segment(pos0, w1[j].size()) = w1[j];
           }
           return w;
         }
