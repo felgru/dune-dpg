@@ -584,54 +584,59 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       detail::updateSpaces(*testSpaces[i], grids[i]->leafGridView());
       detail::updateSpaces(*testSpacesEnriched[i], grids[i]->leafGridView());
 
-      for(unsigned int j = i*kernelApproximation.numSperInterval,
-                      jmax = (i+1)*kernelApproximation.numSperInterval;
-          j < jmax; j++)
+      const unsigned int maxNumberOfInnerIterations = 16;
+      double aposterioriErr;
+      unsigned int nRefinement = 0;
+      // TODO: refine grid for all all directions in same interval at once.
+      for( ; ; )
+        // At the end of the loop, we will break if
+        // aposterioriErr < kapp3*eta (pointwise in s)
+        // or ++nRefinement >= maxNumberOfInnerIterations
+        // thus the inner loop terminates eventually.
       {
-        const Direction s = sVector[j];
+        aposterioriErr = 0.;
 
-        auto bilinearForm =
-          make_BilinearForm(testSpaces[i], solutionSpaces[i],
-              make_tuple(
-                  make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                        DomainOfIntegration::interior>(sigma),
-                  make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                        DomainOfIntegration::interior>(-1., s),
-                  make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                        DomainOfIntegration::face>(1., s)));
-        auto bilinearFormEnriched =
-            replaceTestSpaces(bilinearForm, testSpacesEnriched[i]);
-        auto innerProduct =
-          make_InnerProduct(testSpaces[i],
-              make_tuple(
-                  make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                        DomainOfIntegration::interior>(1., s),
-                  make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                        DomainOfIntegration::face>(1., s)));
-        auto innerProductEnriched =
-            replaceTestSpaces(innerProduct, testSpacesEnriched[i]);
-
-
-        using Geometry = typename LeafGridView::template Codim<0>::Geometry;
-        using GeometryBuffer_t = GeometryBuffer<Geometry>;
-
-        GeometryBuffer_t geometryBuffer;
-        auto systemAssembler =
-            make_DPGSystemAssembler(bilinearForm,
-                                    innerProduct,
-                                    geometryBuffer);
-
-        const unsigned int maxNumberOfInnerIterations = 16;
-        double aposterioriErr;
-        unsigned int nRefinement = 0;
-        for( ; ; )
-          // At the end of the loop, we will break if
-          // aposterioriErr < kapp3*eta
-          // or ++nRefinement >= maxNumberOfInnerIterations
-          // thus the inner loop terminates eventually.
+        for(unsigned int j = i*kernelApproximation.numSperInterval,
+                        jmax = (i+1)*kernelApproximation.numSperInterval;
+            j < jmax; j++)
         {
-          std::cout << "Direction " << i
+          std::cout << "Direction " << j
                     << ", inner iteration " << nRefinement << '\n';
+
+          const Direction s = sVector[j];
+
+          auto bilinearForm =
+            make_BilinearForm(testSpaces[i], solutionSpaces[i],
+                make_tuple(
+                    make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                          DomainOfIntegration::interior>(sigma),
+                    make_IntegralTerm<0,0,
+                                      IntegrationType::gradValue,
+                                      DomainOfIntegration::interior>(-1., s),
+                    make_IntegralTerm<0,1,IntegrationType::normalVector,
+                                          DomainOfIntegration::face>(1., s)));
+          auto bilinearFormEnriched =
+              replaceTestSpaces(bilinearForm, testSpacesEnriched[i]);
+          auto innerProduct =
+            make_InnerProduct(testSpaces[i],
+                make_tuple(
+                    make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                          DomainOfIntegration::interior>(1., s),
+                    make_IntegralTerm<0,0,
+                                      IntegrationType::travelDistanceWeighted,
+                                      DomainOfIntegration::face>(1., s)));
+          auto innerProductEnriched =
+              replaceTestSpaces(innerProduct, testSpacesEnriched[i]);
+
+
+          using Geometry = typename LeafGridView::template Codim<0>::Geometry;
+          using GeometryBuffer_t = GeometryBuffer<Geometry>;
+
+          GeometryBuffer_t geometryBuffer;
+          auto systemAssembler =
+              make_DPGSystemAssembler(bilinearForm,
+                                      innerProduct,
+                                      geometryBuffer);
 
           // Determine Dirichlet dofs for u^ (inflow boundary)
           std::vector<bool> dirichletNodesInflow;
@@ -740,11 +745,15 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                     innerProductEnriched,
                                     x[j], rhs);
           aposterioriErr = std::sqrt(std::accumulate(
-                errorEstimates.cbegin(), errorEstimates.cend(), 0.,
+                errorEstimates.cbegin(), errorEstimates.cend(),
+                aposterioriErr * aposterioriErr,
                 [](double acc, const std::tuple<EntitySeed, double>& t)
                 {
                   return acc + std::get<1>(t);
                 }));
+          const double ratio = .6;
+          ErrorTools::DoerflerMarking(*grids[i], ratio,
+                                      std::move(errorEstimates));
 
           static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
               "Functions::interpolate won't work for refined finite elements");
@@ -780,32 +789,33 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           std::cout << "\nStatistics at end of inner iteration:\n";
           std::cout << "Grid level: " << grids[i]->maxLevel() << '\n';
           std::cout << "A posteriori error: " << aposterioriErr << '\n';
-
-          if(++nRefinement >= maxNumberOfInnerIterations
-              || aposterioriErr <= kappa3*eta) {
-            gridIdSets[i] = saveSubGridToIdSet(*grids[i]);
-            break;
-          } else {
-            const double ratio = .6;
-            ErrorTools::DoerflerMarking(*grids[i], ratio,
-                                        std::move(errorEstimates));
-            grids[i]->preAdapt();
-            grids[i]->adapt();
-            grids[i]->postAdapt();
-            detail::updateSpaces(*solutionSpaces[i], grids[i]->leafGridView());
-            detail::updateSpaces(*testSpaces[i], grids[i]->leafGridView());
-            detail::updateSpaces(*testSpacesEnriched[i],
-                                 grids[i]->leafGridView());
-          }
         }
-        accumulatedAPosterioriError += aposterioriErr * aposterioriErr;
 
-        ofs << "after " << nRefinement << " transport solves, accuracy was "
-            << ((aposterioriErr <= kappa3*eta)?"reached.":"not reached.")
-            << "\na posteriori error:   " << aposterioriErr
-            << "\nprescribed tolerance: " << kappa3*eta
-            << '\n';
+        if(++nRefinement >= maxNumberOfInnerIterations
+            || aposterioriErr <= kappa3*eta
+                                 * kernelApproximation.numSperInterval) {
+          gridIdSets[i] = saveSubGridToIdSet(*grids[i]);
+          break;
+        } else {
+          grids[i]->preAdapt();
+          grids[i]->adapt();
+          grids[i]->postAdapt();
+          detail::updateSpaces(*solutionSpaces[i], grids[i]->leafGridView());
+          detail::updateSpaces(*testSpaces[i], grids[i]->leafGridView());
+          detail::updateSpaces(*testSpacesEnriched[i],
+                               grids[i]->leafGridView());
+        }
       }
+      accumulatedAPosterioriError += aposterioriErr * aposterioriErr;
+
+      ofs << "after " << nRefinement << " transport solves, accuracy was "
+          << ((aposterioriErr <=
+               kappa3 * eta * kernelApproximation.numSperInterval)
+              ?"reached.":"not reached.")
+          << "\na posteriori error:   " << aposterioriErr
+          << "\nprescribed tolerance: "
+          << kappa3 * eta * kernelApproximation.numSperInterval
+          << '\n';
     }
 
     accumulatedAPosterioriError
