@@ -662,9 +662,11 @@ namespace ScatteringKernelApproximation {
 
         void applyToVector(Eigen::VectorXd& u) const {
           using namespace boost::math::constants;
-          Eigen::VectorXd v = ProjectOntoVJ_bis(u, level, wltOrder);
-          size_t quadOrder = 2*nQuadAngle-1;
-          auto wPair = DWT(v,wltOrder+1,level,quadOrder);
+          const size_t uLevel = std::ilogb(u.size()/(wltOrder+1));
+          Eigen::VectorXd v = ProjectOntoVJ_bis(u, uLevel, wltOrder);
+          const size_t quadOrder = 2*nQuadAngle-1;
+          const auto wPair = DWT(v, wltOrder+1, uLevel, quadOrder);
+          // TODO: w is never used!
           Eigen::VectorXd w = PairToXd(wPair);
           // Approx with SVD up to level given by rank
           v = kernelSVD.matrixU().topLeftCorner(rows, rank)
@@ -672,7 +674,7 @@ namespace ScatteringKernelApproximation {
             * kernelSVD.matrixV().topLeftCorner(v.size(), rank).adjoint() * v;
           std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
             vPair = XdToPair(v);
-          u = IDWT(vPair,wltOrder+1,level,quadOrder);
+          u = IDWT(vPair, wltOrder+1, level, quadOrder);
         }
 
         std::vector<Direction> setAccuracy(double accuracy) {
