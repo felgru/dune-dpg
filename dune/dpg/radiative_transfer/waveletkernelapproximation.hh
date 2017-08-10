@@ -371,6 +371,42 @@ namespace ScatteringKernelApproximation {
       return data;
     }
 
+    Eigen::VectorXd
+    legendre_to_lagrange_VJ(Eigen::VectorXd& f, int maxLevel, int waveletOrder)
+    {
+      // Get Gauss-Legendre quadrature in [0,1]
+      int quadOrder=2*waveletOrder+1;
+      GeometryType type;
+      type.makeLine();
+      const size_t dim = 1;
+      const Dune::QuadratureRule<double, dim>& quad =
+        Dune::QuadratureRules<double, dim>::rule(type,
+          quadOrder, QuadratureType::GaussLegendre);
+
+      // Auxiliary variables
+      double xmin;
+      double xmax;
+      Eigen::VectorXd angle(waveletOrder+1);
+      Eigen::VectorXd data((waveletOrder+1) << maxLevel);
+      using namespace boost::math::constants;
+      double r = pi<double>();
+      for(int k = 0; k < (1<<maxLevel); ++k)
+      {
+        for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
+          // Angle in [-pi,pi]
+          angle(pt) = 2*r*(k+quad[pt].position())/(1<<maxLevel) - r;
+        }
+        xmin = r *   k   * std::exp2(-(double)maxLevel+1) - r;
+        xmax = r *  (k+1)* std::exp2(-(double)maxLevel+1) - r;
+        Eigen::MatrixXd A
+          = get_lagrange_to_legendre_matrix(angle,xmin,xmax,quadOrder);
+        Eigen::VectorXd datak =
+          A.fullPivLu().solve(f.segment((waveletOrder+1)*k,(waveletOrder+1)));
+        data.segment((waveletOrder+1)*k,waveletOrder+1)=datak;
+      }
+      return data;
+    }
+
     // Computes direct DWT of function vJ with coefs of scaling functions
     // expressed in an ONB basis of V_J. For us, the basis is built with
     // Legendre polynomials normalized in the intervals I_{J,k}
@@ -663,25 +699,34 @@ namespace ScatteringKernelApproximation {
           }
         }
 
+        // Given a vector of u(s_i), compute (Ku)(s_i) with SVD
         void applyToVector(Eigen::VectorXd& u) const {
+
           using namespace boost::math::constants;
+          // Express u in Legendre basis on each segment of [-pi,pi]
           const size_t uLevel = std::ilogb(u.size()/(wltOrder+1));
           Eigen::VectorXd uLegendre
             = lagrange_to_legendre_VJ(u, uLevel, wltOrder);
+          // Express u in wlt basis using DWT
           const size_t quadOrder = 2*nQuadAngle-1;
           const auto uWltPair = DWT(uLegendre, wltOrder+1, uLevel, quadOrder);
           Eigen::VectorXd uWlt = PairToXd(uWltPair);
-          // Approx with SVD up to level given by rank
-          Eigen::VectorXd collisionWlt
+          // Compute Ku with SVD up to level given by rank.
+          // The result is expressed in the wlt basis
+          Eigen::VectorXd KuWlt
             = kernelSVD.matrixU().topLeftCorner(rows, rank)
             * kernelSVD.singularValues().head(rank).asDiagonal()
             * kernelSVD.matrixV().topLeftCorner(uWlt.size(), rank).adjoint()
             * uWlt;
+          // Express Ku in Legendre basis on each segment of [-pi,pi]
+          // via an inverse wlt transform
           std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
-            collisionWltPair = XdToPair(collisionWlt);
-          Eigen::VectorXd collisionLegendre
-            = IDWT(collisionWltPair, wltOrder+1, level, quadOrder);
-          // u = legendre_to_lagrange_VJ(collisionLegendre);
+            KuWltPair = XdToPair(KuWlt);
+          Eigen::VectorXd KuLegendre
+            = IDWT(KuWltPair, wltOrder+1, level, quadOrder);
+          // Express Ku in Lagrange basis basis on each segment of [-pi,pi],
+          // i.e., in a vector of (Ku)(s_i)
+          u = legendre_to_lagrange_VJ(KuLegendre, level, wltOrder);
         }
 
         std::vector<Direction> setAccuracy(double accuracy) {
