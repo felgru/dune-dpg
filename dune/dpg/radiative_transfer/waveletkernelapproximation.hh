@@ -334,7 +334,7 @@ namespace ScatteringKernelApproximation {
     }
 
     Eigen::VectorXd
-    ProjectOntoVJ_bis(Eigen::VectorXd& f, int maxLevel, int waveletOrder)
+    lagrange_to_legendre_VJ(Eigen::VectorXd& f, int maxLevel, int waveletOrder)
     {
       // Get Gauss-Legendre quadrature in [0,1]
       int quadOrder=2*waveletOrder+1;
@@ -663,18 +663,22 @@ namespace ScatteringKernelApproximation {
         void applyToVector(Eigen::VectorXd& u) const {
           using namespace boost::math::constants;
           const size_t uLevel = std::ilogb(u.size()/(wltOrder+1));
-          Eigen::VectorXd v = ProjectOntoVJ_bis(u, uLevel, wltOrder);
+          Eigen::VectorXd uLegendre
+            = lagrange_to_legendre_VJ(u, uLevel, wltOrder);
           const size_t quadOrder = 2*nQuadAngle-1;
-          const auto wPair = DWT(v, wltOrder+1, uLevel, quadOrder);
-          // TODO: w is never used!
-          Eigen::VectorXd w = PairToXd(wPair);
+          const auto uWltPair = DWT(uLegendre, wltOrder+1, uLevel, quadOrder);
+          Eigen::VectorXd uWlt = PairToXd(uWltPair);
           // Approx with SVD up to level given by rank
-          v = kernelSVD.matrixU().topLeftCorner(rows, rank)
+          Eigen::VectorXd collisionWlt
+            = kernelSVD.matrixU().topLeftCorner(rows, rank)
             * kernelSVD.singularValues().head(rank).asDiagonal()
-            * kernelSVD.matrixV().topLeftCorner(v.size(), rank).adjoint() * v;
+            * kernelSVD.matrixV().topLeftCorner(v.size(), rank).adjoint()
+            * uWlt;
           std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
-            vPair = XdToPair(v);
-          u = IDWT(vPair, wltOrder+1, level, quadOrder);
+            collisionWltPair = XdToPair(collisionWlt);
+          Eigen::VectorXd collisionLegendre
+            = IDWT(collisionWltPair, wltOrder+1, level, quadOrder);
+          u = legendre_to_lagrange_VJ(collisionLegendre);
         }
 
         std::vector<Direction> setAccuracy(double accuracy) {
@@ -849,7 +853,7 @@ namespace ScatteringKernelApproximation {
 
         void applyToVector(Eigen::VectorXd& u) const {
           using namespace boost::math::constants;
-          Eigen::VectorXd v = ProjectOntoVJ_bis(u, maxLevel, wltOrder);
+          Eigen::VectorXd v = lagrange_to_legendre_VJ(u, maxLevel, wltOrder);
           size_t quadOrder = 2*nQuadAngle-1;
           auto wPair = DWT(v,wltOrder+1,maxLevel,quadOrder);
           Eigen::VectorXd w = PairToXd(wPair);
