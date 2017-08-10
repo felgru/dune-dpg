@@ -288,7 +288,8 @@ namespace ScatteringKernelApproximation {
       return {F1/std::sqrt(2.),F2/std::sqrt(2.),G1/std::sqrt(2.),G2/std::sqrt(2.)};
     }
 
-    Eigen::MatrixXd lagrangeToLegendre(const Eigen::VectorXd& xInterp,
+    Eigen::MatrixXd
+    get_lagrange_to_legendre_matrix(const Eigen::VectorXd& xInterp,
         double xmin, double xmax, double quadOrder)
     {
 
@@ -326,7 +327,8 @@ namespace ScatteringKernelApproximation {
         Eigen::VectorXd x=Eigen::VectorXd::LinSpaced(L,xmin,xmax);
         Eigen::VectorXd fx(L);
         for(int l=0; l<L; l++) fx(l)=f(x(l),xmin,xmax);
-        Eigen::MatrixXd A = lagrangeToLegendre(x,xmin,xmax,quadOrder);
+        Eigen::MatrixXd A
+          = get_lagrange_to_legendre_matrix(x,xmin,xmax,quadOrder);
         Eigen::VectorXd datak=A*fx;
         data.segment(L*k,L)=datak;
       }
@@ -360,7 +362,8 @@ namespace ScatteringKernelApproximation {
         }
         xmin = r *   k   * std::exp2(-(double)maxLevel+1) - r;
         xmax = r *  (k+1)* std::exp2(-(double)maxLevel+1) - r;
-        Eigen::MatrixXd A = lagrangeToLegendre(angle,xmin,xmax,quadOrder);
+        Eigen::MatrixXd A
+          = get_lagrange_to_legendre_matrix(angle,xmin,xmax,quadOrder);
         Eigen::VectorXd datak=
           A*(f.segment((waveletOrder+1)*k,(waveletOrder+1)));
         data.segment((waveletOrder+1)*k,waveletOrder+1)=datak;
@@ -672,13 +675,13 @@ namespace ScatteringKernelApproximation {
           Eigen::VectorXd collisionWlt
             = kernelSVD.matrixU().topLeftCorner(rows, rank)
             * kernelSVD.singularValues().head(rank).asDiagonal()
-            * kernelSVD.matrixV().topLeftCorner(v.size(), rank).adjoint()
+            * kernelSVD.matrixV().topLeftCorner(uWlt.size(), rank).adjoint()
             * uWlt;
           std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
             collisionWltPair = XdToPair(collisionWlt);
           Eigen::VectorXd collisionLegendre
             = IDWT(collisionWltPair, wltOrder+1, level, quadOrder);
-          u = legendre_to_lagrange_VJ(collisionLegendre);
+          // u = legendre_to_lagrange_VJ(collisionLegendre);
         }
 
         std::vector<Direction> setAccuracy(double accuracy) {
