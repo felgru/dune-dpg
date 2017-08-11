@@ -10,9 +10,7 @@ import matplotlib.pyplot as plt
 
 def readData(datafile):
     parametersPattern = re.compile(
-        r'^Periter with a priori accuracy( up to)? ([0-9]*\.?[0-9]*)'
-        r' for the kernel'
-        r', rho = ([0-9]*\.?[0-9]*)'
+        r'^Periter with( up to)? ([0-9]+) directions, rho = ([0-9]*\.?[0-9]*)'
         r', CT = ([0-9]*\.?[0-9]*)'
         r', kappa1 = ([0-9]*\.?[0-9]*)'
         r', kappa2 = ([0-9]*\.?[0-9]*)'
@@ -45,7 +43,7 @@ def readData(datafile):
         errors = errors.read()
         parametersMatch = parametersPattern.search(errors)
         parameters = { 'adaptiveInS': parametersMatch.group(1) != ''
-                     , 'kernelAccuracy': parametersMatch.group(2)
+                     , 'numS':   parametersMatch.group(2)
                      , 'rho':    parametersMatch.group(3)
                      , 'CT':     parametersMatch.group(4)
                      , 'kappa1': parametersMatch.group(5)
@@ -149,8 +147,8 @@ def print_table(data):
     print((r'convergence table for $\rho = {p[rho]}$'
            r', $C_T = {p[CT]}$, $\kappa_1 = {p[kappa1]}$'
            r', $\kappa_2 = {p[kappa2]}$, $\kappa_3 = {p[kappa3]}$'
-           r' with accuracy {up_to} {p[kernelAccuracy]} in the'
-           r' kernel approximation\n'
+           r' with {up_to} {p[numS]} directions'
+           '\n'
           ).format(p=data['parameters'], up_to=up_to))
     print(r'\begin{tabular}{r|rrrl}')
     print(r'& \multicolumn{2}{c}{kernel approximation} & & \\')
