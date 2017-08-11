@@ -336,20 +336,21 @@ namespace detail {
   {
     if(x[0]) { /* x[0] != 0 */
       if(x[1]) { /* x[1] != 0 */
-        double a = x[1] - x[0]*beta[1]/beta[0];
+        const double a = (beta[0]!=0.)?(x[1] - x[0]*beta[1]/beta[0])
+                                      :(-DBL_MAX);
         if(0 <= a && a <= 1)
           return -x[0]/beta[0];
         else
           return -x[1]/beta[1];
       } else { /* x[1] == 0 */
-        double a = -beta[1]/beta[0]*x[0];
+        const double a = (beta[0]!=0.)?(-beta[1]/beta[0]*x[0]):(-DBL_MAX);
         if(0 <= a && a <= 1)
           return -x[0]/beta[0];
         else
           return (1-x[0])/(beta[0]+beta[1]);
       }
     } else { /* x[0] == 0 */
-      double b = -beta[0]/beta[1]*x[1];
+      const double b = (beta[1]!=0.)?(-beta[0]/beta[1]*x[1]):(-DBL_MAX);
       if(0 <= b && b <= 1)
         return -x[1]/beta[1];
       else
