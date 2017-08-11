@@ -834,8 +834,7 @@ namespace ScatteringKernelApproximation {
         template<class Function>
         MatrixTH(const Function& kernelFunction,
             double accuracyKernel)
-          : maxLevel(
-              setLevel(accuracyKernel,100)),
+          : maxLevel(setLevel(accuracyKernel,100)),
             num_s((wltOrder+1) << maxLevel),
             level(maxLevel),
             rank(num_s),
@@ -843,8 +842,7 @@ namespace ScatteringKernelApproximation {
             kernelMatrix(
               waveletKernelMatrix(kernelFunction,
               wltOrder, maxLevel, nQuadAngle)),
-            kernelMatrixTH(
-              computeTHmatrix(maxLevel))
+            kernelMatrixTH(kernelMatrix/*computeTHmatrix(maxLevel)*/)
             {
           // if((1u << maxLevel) != num_s)
           //   DUNE_THROW(MathError, "You are using " << num_s
@@ -901,21 +899,37 @@ namespace ScatteringKernelApproximation {
 
         void applyToVector(Eigen::VectorXd& u) const {
           using namespace boost::math::constants;
-          Eigen::VectorXd v = lagrange_to_legendre_VJ(u, maxLevel, wltOrder);
-          size_t quadOrder = 2*nQuadAngle-1;
-          auto wPair = DWT(v,wltOrder+1,maxLevel,quadOrder);
-          Eigen::VectorXd w = PairToXd(wPair);
+          // Express u in Legendre basis on each segment of [-pi,pi]
+          const size_t uLevel = std::ilogb(u.size()/(wltOrder+1));
+          Eigen::VectorXd uLegendre
+            = lagrange_to_legendre_VJ(u, uLevel, wltOrder);
+          // Express u in wlt basis using DWT
+          const size_t quadOrder = 2*nQuadAngle-1;
+          const auto uWltPair = DWT(uLegendre, wltOrder+1, uLevel, quadOrder);
+          Eigen::VectorXd uWlt = PairToXd(uWltPair);
           // Approx with trucated kernelMatrix
-          v = kernelMatrixTH * v;
+          Eigen::VectorXd KuWlt = kernelMatrixTH * uWlt;
+          // Express Ku in Legendre basis on each segment of [-pi,pi]
+          // via an inverse wlt transform
           std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
-            vPair = XdToPair(v);
-          u = IDWT(vPair,wltOrder+1,maxLevel,quadOrder);
+            KuWltPair = XdToPair(KuWlt);
+          Eigen::VectorXd KuLegendre
+            = IDWT(KuWltPair, wltOrder+1, maxLevel, quadOrder);
+          // Express Ku in Lagrange basis basis on each segment of [-pi,pi],
+          // i.e., in a vector of (Ku)(s_i)
+          u = legendre_to_lagrange_VJ(KuLegendre, maxLevel, wltOrder);
         }
 
-        void setAccuracy(double accuracy) {
-          // In the version with thresholding, we do not need
-          // to do anything in this method
-          return;
+        std::vector<Direction> setAccuracy(double accuracy) {
+          level = setLevel(accuracy,maxLevel);
+
+          set_kernelMatrixTH(level);
+          // TODO: rows?
+
+          std::vector<Direction> sVector((wltOrder+1) << maxLevel /*level*/);
+          compute_sVector(sVector);
+
+          return sVector;
         }
 
         template<class Direction>
@@ -1042,27 +1056,44 @@ namespace ScatteringKernelApproximation {
           return std::make_pair(levelsVector*ones.transpose(),ones*levelsVector.transpose());
         }
 
-        // Remark: Something seems to be wrong.
-        // Followed p. 41 of CDD on wavelets, though.
-        Eigen::MatrixXd computeTHmatrix(
-          const size_t maxLevel) const {
+
+        void truncationInScale(
+          std::pair<Eigen::MatrixXd,Eigen::MatrixXd> levelsMatrix,
+          size_t targetLevel)
+        {
+          Eigen::MatrixXd filter = (levelsMatrix.first - levelsMatrix.second).cwiseAbs();
+
+          filter = filter.unaryExpr( [targetLevel] (double x)
+            { return x <= targetLevel ? 1. : 0.; } );
+
+          kernelMatrixTH = kernelMatrix.cwiseProduct(filter);
+        }
+
+        void truncationInSpace(
+          std::pair<Eigen::MatrixXd,Eigen::MatrixXd> levelsMatrix,
+          size_t targetLevel)
+        {
+          Eigen::MatrixXd lhsBound
+          = computeArcDistanceMatrix(targetLevel, levelsMatrix);
+
+          Eigen::MatrixXd rhsBound = (levelsMatrix.first - levelsMatrix.second).cwiseAbs();
+
+          rhsBound = rhsBound.unaryExpr( [targetLevel] (double x)
+            { return std::pow(2.,targetLevel-x)/((1.+x)*(1.+x)); });
+
+          Eigen::MatrixXd filter = (lhsBound.array() <= rhsBound.array()).cast<double>();
+
+          kernelMatrixTH = kernelMatrix.cwiseProduct(filter);
+        }
+
+        // Remark: Not sure this is correct now.
+        void set_kernelMatrixTH(size_t targetLevel) {
 
           std::pair<Eigen::MatrixXd,Eigen::MatrixXd> levelsMatrix
           = computeLevelsMatrix(maxLevel);
 
-          Eigen::MatrixXd lhsBound
-          = computeArcDistanceMatrix(maxLevel, levelsMatrix);
-
-          Eigen::MatrixXd rhsBound = (levelsMatrix.first - levelsMatrix.second).cwiseAbs();
-
-          rhsBound = rhsBound.unaryExpr( [maxLevel] (double x)
-            { return std::pow(2.,maxLevel-x)/((1+x)*(1+x)); });
-
-          Eigen::MatrixXd filter = (lhsBound.array() <= rhsBound.array()).cast<double>();
-
-          Eigen::MatrixXd matrixTH = kernelMatrix.cwiseProduct(filter);
-
-          return matrixTH;
+          truncationInScale(levelsMatrix,targetLevel);
+          truncationInSpace(levelsMatrix,targetLevel);
         }
 
         size_t maxLevel;
