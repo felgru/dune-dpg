@@ -509,6 +509,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       uNorm += uiNorm * uiNorm;
     }
     uNorm = std::sqrt(uNorm / numS);
+    // To prevent division by zero.
+    if(uNorm == 0.) uNorm = 1e-5;
 
     using FEBasisHostInterior
         = changeGridView_t<FEBasisInterior, HostGridView>;
