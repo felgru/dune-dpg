@@ -735,7 +735,7 @@ namespace ScatteringKernelApproximation {
           size_t i = singularValues.size() - 1;
           double err = 0,
                 rank_err = singularValues(i) * singularValues(i);
-          accuracy = accuracy * accuracy;
+          accuracy = (accuracy * accuracy) / 4.;
           while (err + rank_err < accuracy && i > 0) {
             err += rank_err;
             i -= 1;
@@ -802,7 +802,7 @@ namespace ScatteringKernelApproximation {
           size_t level=0;
 
           for(; level < maxLevel; ++level) {
-            if( 1./( 1 << ((wltOrder+1)*level)) <= accuracy /4. )
+            if( 1./( 1 << ((wltOrder+1)*level)) <= accuracy )
               break;
           }
 
