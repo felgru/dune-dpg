@@ -32,6 +32,9 @@ def readData(datafile):
     alpertWaveletSVDPattern = re.compile(
         r'Wavelet SVD approximation with Alpert wavelets of order ([0-9]+)'
         r', rank ([0-9]+) and level ([0-9]+)')
+    alpertWaveletMatrixTHPattern = re.compile(
+        r'Wavelet MatrixTH approximation with rank ([0-9]+)'
+        r' and level ([0-9]+)')
     iterationIndices = list()
     dofs = list()
     targetAccuracies = list()
@@ -73,6 +76,10 @@ def readData(datafile):
                         m = haarWaveletCompressionPattern.match(rest)
                         if m:
                             ranks.append('-')
+                        else:
+                            m = alpertWaveletMatrixTHPattern.match(rest)
+                            if m:
+                                ranks.append('-')
     return { 'parameters': parameters
            , 'datapoints': len(iterationIndices)
            , 'iterationIndices': iterationIndices
