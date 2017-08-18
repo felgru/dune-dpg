@@ -722,14 +722,18 @@ public:
                                   .jacobianTransposed({})))
                       );
 
+                  const LocalData localDataSegment(
+                      localData.cbegin() + sourceSubElementOffset,
+                      localData.cbegin() + sourceSubElementOffset
+                                         + localFiniteElement.size());
                   auto oldGridFunction
                     = detail::RestoreDataToRefinedGridFunction
                         <SubGridGlobalBasis,
                          SubGeometry,
-                         typename LocalData::const_iterator>(
+                         const LocalData>(
                             localFiniteElement,
                             subGeometry,
-                            localData.cbegin() + sourceSubElementOffset);
+                            localDataSegment);
                   std::vector<FieldVector<double, 1>> interpolatedData;
                   localFiniteElement.localInterpolation().interpolate(
                       oldGridFunction,
