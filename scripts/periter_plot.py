@@ -25,10 +25,16 @@ def readData(datafile):
         re.MULTILINE)
     svdPattern = re.compile(
         r'SVD approximation with rank ([0-9]+)')
-    waveletSVDPattern = re.compile(
+    haarWaveletSVDPattern = re.compile(
         r'Wavelet SVD approximation with rank ([0-9]+) and level ([0-9]+)')
-    waveletCompressionPattern = re.compile(
+    haarWaveletCompressionPattern = re.compile(
         r'MatrixCompression approximation with level ([0-9]+)')
+    alpertWaveletSVDPattern = re.compile(
+        r'Wavelet SVD approximation with Alpert wavelets of order ([0-9]+)'
+        r', rank ([0-9]+) and level ([0-9]+)')
+    alpertWaveletMatrixTHPattern = re.compile(
+        r'Wavelet MatrixTH approximation with rank ([0-9]+)'
+        r' and level ([0-9]+)')
     iterationIndices = list()
     dofs = list()
     targetAccuracies = list()
@@ -54,18 +60,26 @@ def readData(datafile):
             targetAccuracies.append(float(targetAccuracy))
             etas.append(float(eta))
             aposterioriErrors.append(float(aPostErr))
-            kernelTimings.append(int(time) / 1000000.);
+            kernelTimings.append(int(time) / 1000000.)
             m = svdPattern.match(rest)
             if m:
                 ranks.append(m.group(1))
             else:
-                m = waveletSVDPattern.match(rest)
+                m = haarWaveletSVDPattern.match(rest)
                 if m:
                     ranks.append(m.group(1))
                 else:
-                    m = waveletCompressionPattern.match(rest)
+                    m = alpertWaveletSVDPattern.match(rest)
                     if m:
-                        ranks.append('-')
+                        ranks.append(m.group(2))
+                    else:
+                        m = haarWaveletCompressionPattern.match(rest)
+                        if m:
+                            ranks.append('-')
+                        else:
+                            m = alpertWaveletMatrixTHPattern.match(rest)
+                            if m:
+                                ranks.append('-')
     return { 'parameters': parameters
            , 'datapoints': len(iterationIndices)
            , 'iterationIndices': iterationIndices

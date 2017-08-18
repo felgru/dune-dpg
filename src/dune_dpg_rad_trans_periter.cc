@@ -151,9 +151,11 @@ double gFunction(const Domain& x,
 }
 
 void printHelp(const char* name) {
-  std::cerr << "Usage: " << name << " [-p]"
+  std::cerr << "Usage: " << name
+            << " [-p] "
             << " <target accuracy>"
-            << " <max # of iterations>"
+            << " <gamma>"
+            << " <# of iterations>"
             << " <size of grid>\n"
             << " -p: plot solutions" << std::endl;
   std::exit(0);
@@ -169,8 +171,9 @@ int main(int argc, char** argv)
   ///////////////////////////////////
   // Get arguments
   // argv[1]: target accuracy
-  // argv[2]: maximal number of fixed-point iterations
-  // argv[3]: size of grid
+  // argv[2]: gamma
+  // argv[3]: maximal number of fixed-point iterations
+  // argv[4]: size of grid
   ///////////////////////////////////
 
   PlotSolutions plotSolutions = PlotSolutions::doNotPlot;
@@ -185,13 +188,15 @@ int main(int argc, char** argv)
       case 'h':
         printHelp(argv[0]);
     }
-  if(optind != argc-3) {
+  if(optind != argc-4) {
     printHelp(argv[0]);
   }
 
+  const unsigned int wltOrder = 4;
   const double targetAccuracy = atof(argv[optind]);
-  const int N = atoi(argv[optind+1]);
-  const unsigned int sizeGrid = atoi(argv[optind+2]);
+  const double gamma = atof(argv[optind+1]);
+  const int N = atoi(argv[optind+2]);
+  const unsigned int sizeGrid = atoi(argv[optind+3]);
 
   ///////////////////////////////////
   //   Generate the grid
@@ -231,9 +236,10 @@ int main(int argc, char** argv)
   // TODO: Estimate the constant C_T.
   const double CT = 1;
 
-  Periter<ScatteringKernelApproximation::HaarWavelet::SVD, FeRHSandBoundary>()
+  Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
+          FeRHSandBoundary>()
       .solve(*grid, f, g, gDeriv, sigma,
-             HenyeyGreensteinScattering<Direction>(0.5),
+             HenyeyGreensteinScattering(gamma),
              rho, CT, targetAccuracy, N, plotSolutions);
 
   return 0;
