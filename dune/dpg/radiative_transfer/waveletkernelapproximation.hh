@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include <fstream>
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/fvector.hh>
@@ -827,6 +828,7 @@ namespace ScatteringKernelApproximation {
         // This is the number of quadrature points per interval.
         const unsigned int numSperInterval = (wltOrder+1);
 
+
         MatrixTH() = delete;
         MatrixTH(const MatrixTH&) = delete;
 
@@ -841,7 +843,8 @@ namespace ScatteringKernelApproximation {
             kernelMatrix(
               waveletKernelMatrix(kernelFunction,
               wltOrder, maxLevel, nQuadAngle)),
-            kernelMatrixTH(kernelMatrix/*computeTHmatrix(maxLevel)*/)
+            kernelMatrixTH(kernelMatrix),
+            ofsTH("output_rad_trans_TH")
             {
           // if((1u << maxLevel) != num_s)
           //   DUNE_THROW(MathError, "You are using " << num_s
@@ -850,6 +853,17 @@ namespace ScatteringKernelApproximation {
             << " with wlt order " << wltOrder
             << " requires level J = " << maxLevel
             << " and " << num_s << " directions." << std::endl;
+
+          ofsTH << "Accuracy kernel " << accuracyKernel
+                << " with wlt order " << wltOrder
+                << " requires level J = " << maxLevel
+                << " and " << num_s << " directions."
+                << std::endl << std::endl;
+
+          ofsTH << "kernelMatrix has size: "
+                << kernelMatrix.rows() << " x " << kernelMatrix.cols()
+                << " . It has " << kernelMatrix.size() << " elements."
+                << std::endl << std::endl;
         }
 
         Eigen::VectorXd
@@ -924,8 +938,6 @@ namespace ScatteringKernelApproximation {
           // Compute the new wavelet level
           level = setLevel(accuracy/2.,maxLevel);
 
-          std::cout << "setAccuracy; level: " << level << std::endl;
-
           // Directions
           std::vector<Direction> sVector((wltOrder+1) << level);
           compute_sVector(sVector);
@@ -935,7 +947,19 @@ namespace ScatteringKernelApproximation {
           set_kernelMatrixTH(level);
           rows = sVector.size();  // number of rows for function applyToVector
 
-          std::cout << "setAccuracy; rows: " << rows << std::endl;
+          // Print statistics
+          Eigen::MatrixXd zerosFilter = kernelMatrixTH.unaryExpr( [] (double x)
+            { return abs(x) <= 1.e-18 ? 1. : 0.; } );
+
+          ofsTH << "level: " << level << std::endl
+                << "kernelMatrixTH has size: "
+                << kernelMatrixTH.rows() << " x " << kernelMatrixTH.cols()
+                << " . It has " << kernelMatrixTH.size() << " elements"
+                << " of which " << zerosFilter.sum() << " are zero."
+                << std::endl << std::endl;
+          ofsTH << kernelMatrixTH << std::endl << std::endl;
+
+          // Return vector of directions
           return sVector;
         }
 
@@ -1112,8 +1136,10 @@ namespace ScatteringKernelApproximation {
         size_t rows;
         Eigen::MatrixXd kernelMatrix;
         Eigen::MatrixXd kernelMatrixTH;
+        std::ofstream ofsTH;
       };
   } //End namespace AlpertWavelet
+
 
   namespace HaarWavelet {
       // Scaling function $\phi_{0,0}$ on the interval [-r,r)
