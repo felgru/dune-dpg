@@ -735,8 +735,7 @@ namespace ScatteringKernelApproximation {
           size_t i = singularValues.size() - 1;
           double err = 0,
                 rank_err = singularValues(i) * singularValues(i);
-          accuracy = (accuracy * accuracy) / 4.;
-          while (err + rank_err < accuracy && i > 0) {
+          while (err + rank_err < (accuracy * accuracy / 4.) && i > 0) {
             err += rank_err;
             i -= 1;
             rank_err = singularValues(i) * singularValues(i);
@@ -745,7 +744,7 @@ namespace ScatteringKernelApproximation {
           // TODO: If accuracy is low enough to allow rank = 0,
           //       this gives rank = 1.
 
-          level = setLevel(accuracy,maxLevel);
+          level = setLevel(accuracy/2.,maxLevel);
 
           std::vector<Direction> sVector((wltOrder+1) << level);
           compute_sVector(sVector);
@@ -802,7 +801,7 @@ namespace ScatteringKernelApproximation {
           size_t level=0;
 
           for(; level < maxLevel; ++level) {
-            if( 1./( 1 << ((wltOrder+1)*level)) <= accuracy )
+            if(1./((1.+level*level)*( 1 << ((wltOrder+1)*level))) <= accuracy)
               break;
           }
 
@@ -878,17 +877,17 @@ namespace ScatteringKernelApproximation {
 
         std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
         XdToPair(Eigen::VectorXd& v) const {
-          if(maxLevel==0) {
+          if(level==0) {
             return std::make_pair(v,std::vector<Eigen::VectorXd>());
           }
           else {
             Eigen::VectorXd sf = v.segment(0,wltOrder+1);
-            std::vector<Eigen::VectorXd> wlt(maxLevel);
+            std::vector<Eigen::VectorXd> wlt(level);
 
             size_t pos0 = wltOrder+1;
             size_t pos1 = pos0;
 
-            for(size_t j=0; j<maxLevel; j++) {
+            for(size_t j=0; j<level; j++) {
               pos0 = pos1;
               pos1 = pos0 + ((wltOrder+1)<<j);
               wlt[j] = v.segment(pos0, (wltOrder+1)<<j);
@@ -908,27 +907,35 @@ namespace ScatteringKernelApproximation {
           const auto uWltPair = DWT(uLegendre, wltOrder+1, uLevel, quadOrder);
           Eigen::VectorXd uWlt = PairToXd(uWltPair);
           // Approx with trucated kernelMatrix
-          Eigen::VectorXd KuWlt = kernelMatrixTH * uWlt;
+          Eigen::VectorXd KuWlt
+            = kernelMatrixTH.topLeftCorner(rows,uWlt.size()) * uWlt;
           // Express Ku in Legendre basis on each segment of [-pi,pi]
           // via an inverse wlt transform
           std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
             KuWltPair = XdToPair(KuWlt);
           Eigen::VectorXd KuLegendre
-            = IDWT(KuWltPair, wltOrder+1, maxLevel, quadOrder);
+            = IDWT(KuWltPair, wltOrder+1, level, quadOrder);
           // Express Ku in Lagrange basis basis on each segment of [-pi,pi],
           // i.e., in a vector of (Ku)(s_i)
-          u = legendre_to_lagrange_VJ(KuLegendre, maxLevel, wltOrder);
+          u = legendre_to_lagrange_VJ(KuLegendre, level, wltOrder);
         }
 
         std::vector<Direction> setAccuracy(double accuracy) {
-          level = setLevel(accuracy,maxLevel);
+          // Compute the new wavelet level
+          level = setLevel(accuracy/2.,maxLevel);
 
-          set_kernelMatrixTH(level);
-          // TODO: rows?
+          std::cout << "setAccuracy; level: " << level << std::endl;
 
-          std::vector<Direction> sVector((wltOrder+1) << maxLevel /*level*/);
+          // Directions
+          std::vector<Direction> sVector((wltOrder+1) << level);
           compute_sVector(sVector);
 
+          // Compute thresholded kernel matrix
+          // using matrix compression techniques
+          set_kernelMatrixTH(level);
+          rows = sVector.size();  // number of rows for function applyToVector
+
+          std::cout << "setAccuracy; rows: " << rows << std::endl;
           return sVector;
         }
 
@@ -936,7 +943,7 @@ namespace ScatteringKernelApproximation {
         void compute_sVector(std::vector< Direction >& sVector) {
 
           // Get Gauss-Legendre quadrature in [0,1]
-          int quadOrder=2*wltOrder+1;
+          const int quadOrder = 2*wltOrder+1;
           GeometryType type;
           type.makeLine();
           const size_t dim = 1;
@@ -946,10 +953,11 @@ namespace ScatteringKernelApproximation {
                                                     QuadratureType::GaussLegendre);
           using namespace boost::math::constants;
           size_t i=0;
-          for(int k = 0; k < (1<<maxLevel); ++k)
+          for(int k = 0; k < (1<<level); ++k)
           {
             for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
-              double angle = 2*pi<double>()*(k+quad[pt].position())/(1<<maxLevel) - pi<double>(); // Angle in [-pi,pi]
+              double angle = 2*pi<double>()*(k+quad[pt].position())
+                             / (1<<level) - pi<double>(); // Angle in [-pi,pi]
               sVector[i] = {cos(angle),sin(angle)};
               i++;
             }
@@ -978,7 +986,7 @@ namespace ScatteringKernelApproximation {
           size_t level=0;
 
           for(; level < maxLevel; ++level) {
-            if( 1./( 1 << ((wltOrder+1)*level)) <= accuracy /4. )
+            if(1./((1.+level*level)*( 1 << ((wltOrder+1)*level))) <= accuracy)
               break;
           }
 
@@ -986,7 +994,7 @@ namespace ScatteringKernelApproximation {
         }
 
         Eigen::MatrixXd computeArcDistanceMatrix (
-          const size_t maxLevel,
+          const size_t targetLevel,
           std::pair<Eigen::MatrixXd,Eigen::MatrixXd> levelsMatrix) const {
 
           using namespace boost::math::constants;
@@ -998,16 +1006,16 @@ namespace ScatteringKernelApproximation {
 
           // Matrix with dist(S_\lambda,S,{\lambda'})
           const double r = pi<double>();
-          const size_t num_s = (wltOrder+1) << maxLevel;
+          const size_t num_s = (wltOrder+1) << targetLevel;
           Eigen::MatrixXd dist = Eigen::MatrixXd::Zero(num_s, num_s);
           double d;
-          for(size_t jy = 0; jy < maxLevel; jy++) {
+          for(size_t jy = 0; jy < targetLevel; jy++) {
             for(size_t ky = 0, ky_max = 1 << jy; ky < ky_max; ky++) {
 
               double ymin = r *   ky   * std::exp2(-(double)jy+1) - r;
               double ymax = r * (ky+1) * std::exp2(-(double)jy+1) - r;
 
-              for(size_t jx = 0; jx < maxLevel; jx++) {
+              for(size_t jx = 0; jx < targetLevel; jx++) {
                 for(size_t kx = 0, kx_max = 1 << jx; kx < kx_max; kx++) {
 
                   double xmin = r *   kx   * std::exp2(-(double)jx+1) - r;
@@ -1035,10 +1043,10 @@ namespace ScatteringKernelApproximation {
         }
 
         static std::pair<Eigen::MatrixXd,Eigen::MatrixXd>
-        computeLevelsMatrix(size_t maxLevel) {
+        computeLevelsMatrix(size_t targetLevel) {
 
           Eigen::VectorXd ones
-            = Eigen::VectorXd::Ones((wltOrder+1) << maxLevel);
+            = Eigen::VectorXd::Ones((wltOrder+1) << targetLevel);
           Eigen::VectorXd levelsVector = ones;
 
           levelsVector.segment(0,wltOrder+1)
@@ -1047,7 +1055,7 @@ namespace ScatteringKernelApproximation {
           size_t pos0 = wltOrder+1;
           size_t pos1 = pos0;
 
-          for(size_t j=0; j < maxLevel; j++) {
+          for(size_t j=0; j < targetLevel; j++) {
             pos0 = pos1;
             pos1 = pos0 + ((wltOrder+1) << j);
             levelsVector.segment(pos0,(wltOrder+1)<<j) *= j;
@@ -1074,12 +1082,12 @@ namespace ScatteringKernelApproximation {
           size_t targetLevel)
         {
           Eigen::MatrixXd lhsBound
-          = computeArcDistanceMatrix(targetLevel, levelsMatrix);
+          = computeArcDistanceMatrix(maxLevel, levelsMatrix);
 
           Eigen::MatrixXd rhsBound = (levelsMatrix.first - levelsMatrix.second).cwiseAbs();
 
           rhsBound = rhsBound.unaryExpr( [targetLevel] (double x)
-            { return std::pow(2.,targetLevel-x)/((1.+x)*(1.+x)); });
+            { return std::pow(2.,targetLevel-x)/(1.+x*x); });
 
           Eigen::MatrixXd filter = (lhsBound.array() <= rhsBound.array()).cast<double>();
 
@@ -1101,6 +1109,7 @@ namespace ScatteringKernelApproximation {
         size_t level;
         size_t rank;
         size_t nQuadAngle;
+        size_t rows;
         Eigen::MatrixXd kernelMatrix;
         Eigen::MatrixXd kernelMatrixTH;
       };
