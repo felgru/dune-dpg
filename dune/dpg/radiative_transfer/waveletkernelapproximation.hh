@@ -957,7 +957,6 @@ namespace ScatteringKernelApproximation {
                 << " . It has " << kernelMatrixTH.size() << " elements"
                 << " of which " << zerosFilter.sum() << " are zero."
                 << std::endl << std::endl;
-          ofsTH << kernelMatrixTH << std::endl << std::endl;
 
           // Return vector of directions
           return sVector;
@@ -1045,9 +1044,11 @@ namespace ScatteringKernelApproximation {
                   double xmin = r *   kx   * std::exp2(-(double)jx+1) - r;
                   double xmax = r * (kx+1) * std::exp2(-(double)jx+1) - r;
 
-                  if(ymax < xmin) d = xmin-ymax;
+                  if(ymax < xmin)
+                    d = (xmin-ymax < 2*r+ymin-xmax) ? (xmin-ymax) : (2*r+ymin-xmax);
                   else{
-                    if(xmax < ymin) d = ymin-xmax;
+                    if(xmax < ymin)
+                      d = (ymin-xmax < 2*r+xmin-ymax) ? (ymin-xmax) : (2*r+xmin-ymax);
                     else d=0.; //( (xmax <= ymax and xmax>=ymin) || (xmin<=ymax and xmin>=ymin) )
                   }
 
@@ -1098,6 +1099,9 @@ namespace ScatteringKernelApproximation {
           filter = filter.unaryExpr( [targetLevel] (double x)
             { return x <= targetLevel ? 1. : 0.; } );
 
+          ofsTH << "Filter truncation in Scale:" << std::endl
+                << filter << std::endl << std::endl;
+
           kernelMatrixTH = kernelMatrix.cwiseProduct(filter);
         }
 
@@ -1115,11 +1119,15 @@ namespace ScatteringKernelApproximation {
 
           Eigen::MatrixXd filter = (lhsBound.array() <= rhsBound.array()).cast<double>();
 
-          kernelMatrixTH = kernelMatrix.cwiseProduct(filter);
+          ofsTH << "Filter truncation in Space:" << std::endl
+                << filter << std::endl << std::endl;
+
+          kernelMatrixTH = kernelMatrixTH.cwiseProduct(filter);
         }
 
-        // Remark: Not sure this is correct now.
         void set_kernelMatrixTH(size_t targetLevel) {
+
+          kernelMatrixTH = kernelMatrix;
 
           std::pair<Eigen::MatrixXd,Eigen::MatrixXd> levelsMatrix
           = computeLevelsMatrix(maxLevel);
