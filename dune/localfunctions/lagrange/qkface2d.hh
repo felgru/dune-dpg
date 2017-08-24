@@ -36,9 +36,8 @@ namespace Dune
     /** \todo Please doc me !
      */
     QkFace2DLocalFiniteElement ()
-    {
-      gt.makeCube(2);
-    }
+      : gt(GeometryTypes::quadrilateral)
+    { }
 
     /** \todo Please doc me !
      */

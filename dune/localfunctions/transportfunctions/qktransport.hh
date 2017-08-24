@@ -35,9 +35,12 @@ public:
 
     QkTransportLocalFiniteElement (const QkTransportLocalFiniteElement & o) = default;
 
-    QkTransportLocalFiniteElement (FieldVector<D,dim> transport): basis(transport),coefficients(transport),interpolation(transport)
+    QkTransportLocalFiniteElement (FieldVector<D,dim> transport)
+      : basis(transport)
+      , coefficients(transport)
+      , interpolation(transport)
+      , gt(GeometryTypes::cube(dim))
     {
-        gt.makeCube(dim);
         static_assert(dim==2, "QkTransportLocalFiniteElement is only implemented in 2D.");
     }
 

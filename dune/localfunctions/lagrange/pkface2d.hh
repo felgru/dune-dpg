@@ -31,16 +31,15 @@ namespace Dune
     /** \todo Please doc me !
      */
     PkFace2DLocalFiniteElement ()
-    {
-      gt.makeTriangle();
-    }
+      : gt(GeometryTypes::triangle)
+    { }
 
     /** \todo Please doc me !
      */
-    PkFace2DLocalFiniteElement (int variant) : coefficients(variant)
-    {
-      gt.makeTriangle();
-    }
+    PkFace2DLocalFiniteElement (int variant)
+      : coefficients(variant)
+      , gt(GeometryTypes::triangle)
+    { }
 
     /** Constructor for six variants with permuted vertices.
 
@@ -48,10 +47,10 @@ namespace Dune
         can for instance be generated from the global indices of
         the vertices by reducing those to the integers 0...2
      */
-    PkFace2DLocalFiniteElement (const unsigned int vertexmap[3]) : coefficients(vertexmap)
-    {
-      gt.makeTriangle();
-    }
+    PkFace2DLocalFiniteElement (const unsigned int vertexmap[3])
+      : coefficients(vertexmap)
+      , gt(GeometryTypes::triangle)
+    { }
 
     /** \todo Please doc me !
      */

@@ -92,26 +92,22 @@ public:
       }
       case 2:
       {
-        GeometryType triangle;
-        triangle.makeTriangle();
-        quadrilateralOffset_ = dofsPerTriangle * gridView_.size(triangle);
+        quadrilateralOffset_ = dofsPerTriangle
+                               * gridView_.size(GeometryTypes::triangle);
         break;
       }
       case 3:
       {
-        GeometryType tetrahedron;
-        tetrahedron.makeSimplex(3);
-        prismOffset_         = dofsPerTetrahedron * gridView_.size(tetrahedron);
+        prismOffset_         = dofsPerTetrahedron
+                               * gridView_.size(GeometryTypes::tetrahedron);
 
-        GeometryType prism;
-        prism.makePrism();
         hexahedronOffset_    = prismOffset_
-                             + dofsPerPrism * gridView_.size(prism);
+                               + dofsPerPrism
+                                 * gridView_.size(GeometryTypes::prism);
 
-        GeometryType hexahedron;
-        hexahedron.makeCube(3);
         pyramidOffset_       = hexahedronOffset_
-                             + dofsPerHexahedron * gridView_.size(hexahedron);
+                               + dofsPerHexahedron
+                                 * gridView_.size(GeometryTypes::hexahedron);
         break;
       }
     }
@@ -149,23 +145,15 @@ public:
         return dofsPerEdge*gridView_.size(0);
       case 2:
       {
-        GeometryType triangle, quad;
-        triangle.makeTriangle();
-        quad.makeQuadrilateral();
-        return dofsPerTriangle * gridView_.size(triangle)
-             + dofsPerQuad * gridView_.size(quad);
+        return dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
+             + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
       }
       case 3:
       {
-        GeometryType tetrahedron, pyramid, prism, hexahedron;
-        tetrahedron.makeTetrahedron();
-        pyramid.makePyramid();
-        prism.makePrism();
-        hexahedron.makeCube(3);
-        return dofsPerTetrahedron * gridView_.size(tetrahedron)
-             + dofsPerPyramid * gridView_.size(pyramid)
-             + dofsPerPrism * gridView_.size(prism)
-             + dofsPerHexahedron * gridView_.size(hexahedron);
+        return dofsPerTetrahedron * gridView_.size(GeometryTypes::tetrahedron)
+             + dofsPerPyramid * gridView_.size(GeometryTypes::pyramid)
+             + dofsPerPrism * gridView_.size(GeometryTypes::prism)
+             + dofsPerHexahedron * gridView_.size(GeometryTypes::hexahedron);
       }
 
     }

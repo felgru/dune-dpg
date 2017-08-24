@@ -88,9 +88,8 @@ public:
       }
       case 2:
       {
-        GeometryType triangle;
-        triangle.makeTriangle();
-        quadrilateralOffset_ = dofsPerTriangle * gridView_.size(triangle);
+        quadrilateralOffset_ = dofsPerTriangle
+                               * gridView_.size(GeometryTypes::triangle);
         break;
       }
     }
@@ -128,10 +127,8 @@ public:
         return dofsPerEdge*gridView_.size(0);
       case 2:
       {
-        GeometryType triangle, quad;
-        triangle.makeTriangle();
-        quad.makeQuadrilateral();
-        return dofsPerTriangle*gridView_.size(triangle) + dofsPerQuad*gridView_.size(quad);
+        return dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
+                + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
       }
     }
 

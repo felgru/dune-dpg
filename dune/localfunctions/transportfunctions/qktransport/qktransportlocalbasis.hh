@@ -97,11 +97,8 @@ public:
 
 
         bool triangleIsBottom;
-        GeometryType triangle;
-        GeometryType quad;
-
-        triangle.makeSimplex(dim);
-        quad.makeCube(dim);
+        const GeometryType triangle = GeometryTypes::triangle;
+        const GeometryType quad = GeometryTypes::quadrilateral;
 
         std::vector<Dune::FieldVector<D,dim>> cornerT(dim+1);
         std::vector<Dune::FieldVector<D,dim>> cornerQ(4*(dim-1));
@@ -242,11 +239,8 @@ public:
 
         bool triangleIsBottom;
 
-        GeometryType triangle;
-        GeometryType quad;
-
-        triangle.makeSimplex(dim);
-        quad.makeCube(dim);
+        const GeometryType triangle = GeometryTypes::triangle;
+        const GeometryType quad = GeometryTypes::quadrilateral;
 
         std::vector<Dune::FieldVector<D,dim>> cornerT(dim+1);
         std::vector<Dune::FieldVector<D,dim>> cornerQ(4*(dim-1));

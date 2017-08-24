@@ -42,17 +42,11 @@ private:
 
         void makeRule(FieldVector<ct,dim> beta) {
 
-                GeometryType triangle;
-                GeometryType quad;
-
-                triangle.makeSimplex(dim);
-                quad.makeCube(dim);
-
                 std::vector<Dune::FieldVector<ct,dim>> cornerT(dim+1);
                 std::vector<Dune::FieldVector<ct,dim>> cornerQ(4*(dim-1));
                 setCorners(cornerT,cornerQ,beta);
 
-                MultiLinearGeometry<ct,2,2> part_tria(triangle,cornerT);
+                MultiLinearGeometry<ct,2,2> part_tria(GeometryTypes::triangle, cornerT);
                 const QuadratureRule<ct,dim>& quadP = Dune::template QuadratureRules<ct,dim>::rule(part_tria.type(), this->delivered_order);
                 for (unsigned int pt=0; pt < quadP.size(); ++pt) {// loop over quadrature points
 
@@ -68,7 +62,7 @@ private:
 
 
 
-                MultiLinearGeometry<ct,2,2> part_quad(quad,cornerQ);
+                MultiLinearGeometry<ct,2,2> part_quad(GeometryTypes::quadrilateral, cornerQ);
                 const QuadratureRule<ct,dim>& quadQ = Dune::template QuadratureRules<ct,dim>::rule(part_quad.type(), this->delivered_order);
                 for (unsigned int pt=0; pt < quadQ.size(); ++pt) {// loop over quadrature points
 
