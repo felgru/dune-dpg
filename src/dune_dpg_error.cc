@@ -75,7 +75,7 @@ int main()
   typedef UGGrid<dim> GridType;
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
-  array<unsigned int,dim> elements = {1,1};
+  std::array<unsigned int,dim> elements = {1,1};
 
   // Square mesh
   //std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
