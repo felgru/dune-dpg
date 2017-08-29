@@ -160,6 +160,14 @@ class Periter {
       double accuracy);
 
   /**
+   * create grids for new directions created in apply_scattering
+   */
+  template<class Grid>
+  static void create_new_grids(
+      std::vector<std::unique_ptr<Grid>>& grids,
+      size_t numNewGrids);
+
+  /**
    * insert new gridIdSets after apply_scattering added new grids
    */
   template<class GridIdSet, class Grid>
@@ -920,25 +928,33 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
   std::vector<VectorType> rhsFunctional(numS);
   scatteringAssembler.precomputeScattering(rhsFunctional, xHost);
 
-  {
-    std::vector<std::unique_ptr<Grid>> newGrids;
-    newGrids.reserve(numS/kernelApproximation.numSperInterval);
-    {
-      const size_t numOldGrids = grids.size();
-      const size_t numNewGrids = numS/kernelApproximation.numSperInterval;
-      const size_t numCopies = numNewGrids / numOldGrids;
-      for(size_t i = 0; i < numOldGrids; i++) {
-        newGrids.push_back(std::move(grids[i]));
-        const Grid& grid = *newGrids.back();
-        for(size_t copies = 1; copies < numCopies; ++copies) {
-          newGrids.push_back(copySubGrid(grid));
-        }
-      }
-    }
-    std::swap(grids, newGrids);
-  }
+  create_new_grids(grids, numS/kernelApproximation.numSperInterval);
 
   return rhsFunctional;
+}
+
+template<class ScatteringKernelApproximation, class RHSApproximation>
+template<class Grid>
+void
+Periter<ScatteringKernelApproximation, RHSApproximation>::
+create_new_grids(
+      std::vector<std::unique_ptr<Grid>>& grids,
+      size_t numNewGrids)
+{
+  std::vector<std::unique_ptr<Grid>> newGrids;
+  newGrids.reserve(numNewGrids);
+  {
+    const size_t numOldGrids = grids.size();
+    const size_t numCopies = numNewGrids / numOldGrids;
+    for(size_t i = 0; i < numOldGrids; i++) {
+      newGrids.push_back(std::move(grids[i]));
+      const Grid& grid = *newGrids.back();
+      for(size_t copies = 1; copies < numCopies; ++copies) {
+        newGrids.push_back(copySubGrid(grid));
+      }
+    }
+  }
+  std::swap(grids, newGrids);
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
