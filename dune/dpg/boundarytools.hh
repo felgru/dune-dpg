@@ -123,9 +123,9 @@ namespace Dune {
       localIndexSet.bind(localView);
 
       const unsigned int nFace
-          = ReferenceElements<double, dim>::general(e.type()).size(dim-1);
+          = referenceElement<double, dim>(e.type()).size(dim-1);
       const unsigned int nVertex
-          = ReferenceElements<double, dim>::general(e.type()).size(dim);
+          = referenceElement<double, dim>(e.type()).size(dim);
 
       // For every vertex, we have to see whether it is on the inflow boundary.
       // If vertex i is on the inflow boundary, we will have vertexOnInflowBoundary[i] >0.
@@ -269,9 +269,9 @@ namespace Dune {
       localIndexSet.bind(localView);
 
       const unsigned int nFace
-          = ReferenceElements<double, dim>::general(e.type()).size(dim-1);
+          = referenceElement<double, dim>(e.type()).size(dim-1);
       const unsigned int nVertex
-          = ReferenceElements<double, dim>::general(e.type()).size(dim);
+          = referenceElement<double, dim>(e.type()).size(dim);
 
       // For every vertex, we have to see whether it is on the boundary.
       // If vertex i is on the boundary, we will have vertexOnBoundary[i] > 0.

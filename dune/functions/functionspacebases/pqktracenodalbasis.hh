@@ -289,8 +289,8 @@ public:
       }
       else
       {
-        const Dune::ReferenceElement<double,dim>& refElement
-            = Dune::ReferenceElements<double,dim>::general(element.type());
+        const auto refElement
+            = Dune::referenceElement<double,dim>(element.type());
 
         // we have to reverse the numbering if the local triangle edge is
         // not aligned with the global edge
@@ -310,8 +310,8 @@ public:
         DUNE_THROW(Dune::NotImplemented, "traces have no elements of codimension 0");
       } else
       {
-        const Dune::ReferenceElement<double,dim>& refElement
-            = Dune::ReferenceElements<double,dim>::general(element.type());
+        const auto refElement
+            = Dune::referenceElement<double,dim>(element.type());
 
         if (! refElement.type(localKey.subEntity(), localKey.codim()).isTriangle()
             or k>3)

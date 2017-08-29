@@ -28,9 +28,8 @@ namespace Functions {
     //! create finite element for given GeometryType
     static std::unique_ptr<GridType> create(const GeometryType& gt)
     {
-      const auto& referenceElement
-        = ReferenceElements<D, dim>::general(gt);
-      auto referenceGeometry = referenceElement.template geometry<0>(0);
+      const auto referenceGeometry
+          = referenceElement<D, dim>(gt).template geometry<0>(0);
 
       const unsigned int numVertices = referenceGeometry.corners();
       std::vector<unsigned int> vertices(numVertices);

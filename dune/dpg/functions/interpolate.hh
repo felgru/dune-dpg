@@ -75,8 +75,8 @@ VectorType interpolateToUniformlyRefinedGrid(
       const AffineGeometry<double, dim, dim> subGeometry
           (subE.type(),
            globalGeometry.local(
-             globalSubGeometry.global(ReferenceElements<double, dim>
-               ::general(subE.type()).position(0,dim))),
+             globalSubGeometry.global(referenceElement<double, dim>
+               (subE.type()).position(0,dim))),
            globalSubGeometry.jacobianTransposed({})
              .leftmultiply(globalGeometry.jacobianTransposed({})));
       auto localF = [&subGeometry, &coarseLocalBasis, local_v_coarse]

@@ -42,8 +42,8 @@ namespace detail {
 
     static typename SubGridIntersection::GlobalCoordinate
     from(const SubGridIntersection& intersection) {
-      return intersection.unitOuterNormal(ReferenceElements<ctype, dim-1>::
-                    general(intersection.type()).position(0,0));
+      return intersection.unitOuterNormal(referenceElement<ctype, dim-1>
+                    (intersection.type()).position(0,0));
     }
   };
 
@@ -70,10 +70,9 @@ namespace detail {
 
     static LocalGeometry
     from(const SubGridIntersection& intersection) {
-      auto geometry = intersection.geometry();
-      auto innerGeometry = intersection.inside().geometry();
-      const auto& referenceElement
-          = ReferenceElements<ctype, dim-1>::general(intersection.type());
+      const auto geometry = intersection.geometry();
+      const auto innerGeometry = intersection.inside().geometry();
+      const auto referenceElement = Dune::referenceElement(intersection);
       const size_t numVertices = referenceElement.size(dim-1);
       std::vector<FieldVector<ctype, dim>> vertices(numVertices);
       for(size_t i = 0; i < numVertices; i++) {

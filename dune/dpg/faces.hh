@@ -57,10 +57,10 @@ struct FaceComputations {
 private:
   static GeometryInElement
   getGeometryInElement(const Face& face, const Element& element) {
-    auto geometry = face.geometry();
-    auto innerGeometry = element.geometry();
-    const auto& referenceElement
-        = ReferenceElements<ctype, facedim>::general(face.type());
+    const auto geometry = face.geometry();
+    const auto innerGeometry = element.geometry();
+    const auto referenceElement
+        = Dune::referenceElement<ctype, facedim>(face.type());
     const size_t numVertices = referenceElement.size(facedim);
     std::vector<GlobalCoordinate> vertices(numVertices);
     for(size_t i = 0; i < numVertices; i++) {

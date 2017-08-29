@@ -139,16 +139,15 @@ void checkWeights(const QuadratureRule &quad)
   {
     volume += qp->weight();
   }
-  if (std::abs(volume -
-               Dune::ReferenceElements<ctype, dim>::general(t).volume())
+  if (std::abs(volume - Dune::referenceElement<ctype, dim>(t).volume())
       > quad.size()*std::numeric_limits<double>::epsilon())
   {
     std::cerr << "Error: Quadrature for " << t << " and order=" << p
               << " does not sum to volume of RefElem" << std::endl;
     std::cerr << "\tSums to " << volume << "( RefElem.volume() = "
-              << Dune::ReferenceElements<ctype, dim>::general(t).volume()
+              << Dune::referenceElement<ctype, dim>(t).volume()
               << ")" << "(difference " << volume -
-    Dune::ReferenceElements<ctype, dim>::general(t).volume()
+                          Dune::referenceElement<ctype, dim>(t).volume()
               << ")" << std::endl;
     success = false;
   }
