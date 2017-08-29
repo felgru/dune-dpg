@@ -75,7 +75,7 @@ restoreSubGridFromIdSet(
 template<class SubGrid>
 std::unique_ptr<SubGrid>
 restoreSubGridFromIdSet(
-    std::set<typename SubGrid::HostGridType::GlobalIdSet::IdType>& idSet,
+    const std::set<typename SubGrid::HostGridType::GlobalIdSet::IdType>& idSet,
     typename SubGrid::HostGridType& hostGrid)
 {
   std::set<typename SubGrid::HostGridType::GlobalIdSet::IdType>
@@ -171,7 +171,7 @@ class Periter {
    * insert new gridIdSets after apply_scattering added new grids
    */
   template<class GridIdSet, class Grid>
-  static void add_missing_gridIdSets(
+  static void create_new_gridIdSets(
       std::vector<GridIdSet>& gridIdSets,
       const std::vector<std::unique_ptr<Grid>>& grids);
 
@@ -179,7 +179,7 @@ class Periter {
    * insert new spaces after apply_scattering added new grids
    */
   template<class Grid, class... Spaces>
-  static void add_missing_spaces(
+  static void create_new_spaces(
       std::vector<std::shared_ptr<std::tuple<Spaces...>>>& spaces,
       const std::vector<std::unique_ptr<Grid>>& grids);
 };
@@ -544,10 +544,10 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             kernelApproximation, x, solutionSpaces, hostGridGlobalBasis,
             sVector, grids,
             kappa1 * eta / (kappaNorm * uNorm));
-      add_missing_gridIdSets(gridIdSets, grids);
-      add_missing_spaces(solutionSpaces, grids);
-      add_missing_spaces(testSpaces, grids);
-      add_missing_spaces(testSpacesEnriched, grids);
+      create_new_gridIdSets(gridIdSets, grids);
+      create_new_spaces(solutionSpaces, grids);
+      create_new_spaces(testSpaces, grids);
+      create_new_spaces(testSpacesEnriched, grids);
 
       numS = sVector.size();
       x.resize(numS);
@@ -978,19 +978,17 @@ create_new_grids(
   const size_t numCopies = numNewGrids / numOldGrids;
   const size_t lastOldGrid = numOldGrids-1;
   for(size_t i = 0; i < lastOldGrid; i++) {
-    newGrids.push_back(std::move(grids[i]));
-    newGrids.push_back(intersectSubGrids(*newGrids.back(), *grids[i+1]));
+    newGrids.push_back(intersectSubGrids(*grids[i], *grids[i+1]));
     const Grid& intersectionGrid = *newGrids.back();
-    for(size_t copies = 2; copies < numCopies; ++copies) {
+    for(size_t copies = 1; copies < numCopies; ++copies) {
       newGrids.push_back(copySubGrid(intersectionGrid));
     }
   }
   // last one needs to be handled extra, as one of the neighboring grids is
   // the first one (since the direction parameter lives on the unit sphere).
-  newGrids.push_back(std::move(grids[lastOldGrid]));
-  newGrids.push_back(intersectSubGrids(*newGrids.back(), *newGrids[0]));
+  newGrids.push_back(intersectSubGrids(*grids[lastOldGrid], *grids[0]));
   const Grid& intersectionGrid = *newGrids.back();
-  for(size_t copies = 2; copies < numCopies; ++copies) {
+  for(size_t copies = 1; copies < numCopies; ++copies) {
     newGrids.push_back(copySubGrid(intersectionGrid));
   }
 
@@ -1001,49 +999,33 @@ template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class GridIdSet, class Grid>
 void
 Periter<ScatteringKernelApproximation, RHSApproximation>::
-add_missing_gridIdSets(
+create_new_gridIdSets(
       std::vector<GridIdSet>& gridIdSets,
       const std::vector<std::unique_ptr<Grid>>& grids)
 {
-  std::vector<GridIdSet> newGridIdSets;
-  newGridIdSets.reserve(grids.size());
-  const size_t numOldGridIdSets = gridIdSets.size();
-  const size_t numNewGridIdSets = grids.size();
-  const size_t numCopies = numNewGridIdSets / numOldGridIdSets;
-  auto grid = grids.begin();
-  for(size_t i = 0; i < numOldGridIdSets; i++) {
-    newGridIdSets.push_back(std::move(gridIdSets[i]));
-    ++grid;
-    for(size_t copies = 1; copies < numCopies; ++copies) {
-      newGridIdSets.push_back(saveSubGridToIdSet(**grid));
-      ++grid;
+  if(gridIdSets.size() != grids.size()) {
+    gridIdSets.clear();
+    gridIdSets.reserve(grids.size());
+    for(auto grid = grids.cbegin(), end = grids.cend(); grid != end; ++grid) {
+      gridIdSets.push_back(saveSubGridToIdSet(**grid));
     }
   }
-  std::swap(gridIdSets, newGridIdSets);
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class Grid, class... Spaces>
 void
-Periter<ScatteringKernelApproximation, RHSApproximation>::add_missing_spaces(
+Periter<ScatteringKernelApproximation, RHSApproximation>::create_new_spaces(
       std::vector<std::shared_ptr<std::tuple<Spaces...>>>& spaces,
       const std::vector<std::unique_ptr<Grid>>& grids)
 {
-  std::vector<std::shared_ptr<std::tuple<Spaces...>>> newSpaces;
-  newSpaces.reserve(grids.size());
-  const size_t numOldSpaces = spaces.size();
-  const size_t numNewSpaces = grids.size();
-  const size_t numCopies = numNewSpaces / numOldSpaces;
-  auto grid = grids.begin();
-  for(size_t i = 0; i < numOldSpaces; i++) {
-    newSpaces.push_back(std::move(spaces[i]));
-    ++grid;
-    for(size_t copies = 1; copies < numCopies; ++copies) {
-      newSpaces.push_back(make_space_tuple<Spaces...>((*grid)->leafGridView()));
-      ++grid;
+  if(spaces.size() != grids.size()) {
+    spaces.clear();
+    spaces.reserve(grids.size());
+    for(auto grid = grids.cbegin(), end = grids.cend(); grid != end; ++grid) {
+      spaces.push_back(make_space_tuple<Spaces...>((*grid)->leafGridView()));
     }
   }
-  std::swap(spaces, newSpaces);
 }
 
 } // end namespace Dune
