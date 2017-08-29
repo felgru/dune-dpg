@@ -6,6 +6,7 @@
 #include <cstdlib> // for std::abort()
 #include <unistd.h>
 
+#include <array>
 #include <vector>
 
 #include <dune/common/exceptions.hh> // We use exceptions
@@ -210,7 +211,7 @@ int main(int argc, char** argv)
 
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
-  array<unsigned int,dim> elements = {sizeGrid,sizeGrid};
+  std::array<unsigned int,dim> elements = {sizeGrid,sizeGrid};
 
   //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
