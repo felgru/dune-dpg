@@ -100,8 +100,8 @@ namespace detail {
   hostInSubGridCellGeometry(const HostGridElement& hostGridElement,
       const SubGridElement& subGridElement)
   {
-    const auto& referenceElement
-        = ReferenceElements<double, dim>::general(hostGridElement.type());
+    const auto referenceElement
+        = Dune::referenceElement<double, dim>(hostGridElement.type());
     const auto hostGridCellGeometry = hostGridElement.geometry();
     const auto subGridCellGeometry = subGridElement.geometry();
     const size_t numVertices = referenceElement.size(dim);
@@ -712,8 +712,8 @@ public:
                       , sourceSubGeometryInReferenceElement.local(
                           geometryInFather.global(
                           targetSubGeometryInReferenceElement
-                            .global(ReferenceElements<double, dim>
-                              ::general(child.type()).position(0,dim))))
+                            .global(referenceElement<double, dim>
+                              (child.type()).position(0,dim))))
                       , sourceSubGeometryInReferenceElement
                           .jacobianInverseTransposed({}).leftmultiply(
                             geometryInFather
