@@ -3,8 +3,10 @@
 #ifndef DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
 #define DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
 
+#include <ctime>
 #include <chrono>
 #include <set>
+#include <sstream>
 #include <vector>
 
 #include <dune/istl/matrix.hh>
@@ -378,10 +380,26 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   using Direction = FieldVector<double, dim>;
   using GridIdSet = std::set<typename HostGrid::GlobalIdSet::IdType>;
 
-  ///////////////////////////////////
-  // To print information
-  ///////////////////////////////////
-  std::ofstream ofs("output_rad_trans");
+  /////////////////////////////////////////////
+  // To print information in dune-dpg/results/
+  /////////////////////////////////////////////
+
+  std::string foldername;
+  {
+    std::chrono::system_clock::time_point
+    now = std::chrono::system_clock::now();
+    std::time_t cnow = std::chrono::system_clock::to_time_t(now);
+    std::stringstream folderstream;
+    folderstream << "../results/"
+                 << std::put_time(std::localtime(&cnow), "%F-time%H%M%S");
+    foldername = folderstream.str();
+  }
+
+  std::cout << foldername << std::endl;
+  // system("mkdir \"../results/date\"");
+  system(("mkdir -p  "+foldername).data());
+  // std::string outputfile = foldername+"/output";
+  std::ofstream ofs(foldername+"/output");
 
   ///////////////////////////////////
   // Parameters for adaptivity
@@ -613,7 +631,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << kernelApproximation.getNumS()  << std::endl
         << "Directions are:"              << std::endl;
     for(size_t i = 0; i<numS; i++){
-      ofs << sVector[i][0] << "; " << sVector[i][1] << std::endl;
+      ofs << sVector[i] << std::endl;
     }
     ofs << "\n---------------------"       << std::endl
         << "Kernel approximation:"       << std::endl
@@ -639,7 +657,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     for(unsigned int i = 0; i < grids.size(); ++i)
     {
       ofs << "\nAngular subinterval " << i << std::endl
-        << "--------------------------" << std::endl;
+        << "----------------------" << std::endl;
 
       grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
                                                hostGrid);
