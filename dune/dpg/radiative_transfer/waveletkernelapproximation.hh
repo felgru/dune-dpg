@@ -778,6 +778,14 @@ namespace ScatteringKernelApproximation {
           }
         }
 
+        size_t getLevel() {
+          return level;
+        }
+
+        size_t getMaxLevel() {
+          return maxLevel;
+        }
+
         size_t getNumS() {
           return ((wltOrder+1) << level);
         }
@@ -786,14 +794,16 @@ namespace ScatteringKernelApproximation {
           return ((wltOrder+1) << maxLevel);
         }
 
+        size_t getWltOrder() const {
+          return wltOrder;
+        }
+
+        std::string typeApprox() const {
+          return "Kernel approximation with: SVD";
+        }
+
         std::string info() const {
-          std::string s = "Wavelet SVD approximation with "
-                          "Alpert wavelets of order "
-                          + std::to_string(wltOrder) + ", rank "
-                          + std::to_string(rank)
-                          + " and level "
-                          + std::to_string(level);
-          return s;
+          return "SVD rank: "+std::to_string(rank);
         }
 
       private:
@@ -947,17 +957,6 @@ namespace ScatteringKernelApproximation {
           set_kernelMatrixTH(level);
           rows = sVector.size();  // number of rows for function applyToVector
 
-          // Print statistics
-          Eigen::MatrixXd zerosFilter = kernelMatrixTH.unaryExpr( [] (double x)
-            { return abs(x) <= 1.e-18 ? 1. : 0.; } );
-
-          ofsTH << "level: " << level << std::endl
-                << "kernelMatrixTH has size: "
-                << kernelMatrixTH.rows() << " x " << kernelMatrixTH.cols()
-                << " . It has " << kernelMatrixTH.size() << " elements"
-                << " of which " << zerosFilter.sum() << " are zero."
-                << std::endl << std::endl;
-
           // Return vector of directions
           return sVector;
         }
@@ -987,6 +986,14 @@ namespace ScatteringKernelApproximation {
           }
         }
 
+        size_t getLevel() {
+          return level;
+        }
+
+        size_t getMaxLevel() {
+          return maxLevel;
+        }
+
         size_t getNumS() const {
           return ((wltOrder+1) << level);
         }
@@ -995,11 +1002,26 @@ namespace ScatteringKernelApproximation {
           return ((wltOrder+1) << maxLevel);
         }
 
+        size_t getWltOrder() const {
+          return wltOrder;
+        }
+
+        std::string typeApprox() const {
+          return "Kernel approximation with: Matrix compression";
+        }
+
         std::string info() const {
-          std::string s = "Wavelet MatrixTH approximation with rank "
-                          + std::to_string(rank)
-                          + " and level "
-                          + std::to_string(level);
+          Eigen::MatrixXd zerosFilter = kernelMatrixTH.unaryExpr( [] (double x)
+            { return abs(x) <= 1.e-18 ? 1. : 0.; } );
+
+          std::string s = "Kernel matrix is of size "
+                + std::to_string(kernelMatrixTH.rows())
+                +"x"
+                +std::to_string(kernelMatrixTH.cols())
+                +". It has "+std::to_string(kernelMatrixTH.size())
+                + " elements of which " + std::to_string((int)zerosFilter.sum())
+                +" are zero.";
+
           return s;
         }
 
