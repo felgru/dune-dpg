@@ -927,14 +927,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         {
           std::cout << "Plot solution for direction " << j << '\n';
 
-          std::string name = std::string("u_rad_trans_n")
+          std::string name = foldername+std::string("/u_rad_trans_n")
                             + std::to_string(n)
                             + std::string("_s")
                             // + std::to_string(j*stride);
                             + std::to_string(j);
           FunctionPlotter uPlotter(name);
           uPlotter.plot("u", x[j], feBasisInterior, 0, 0);
-          name = std::string("theta_rad_trans_n")
+          name = foldername+std::string("/theta_rad_trans_n")
                             + std::to_string(n)
                             + std::string("_s")
                             // + std::to_string(j*stride);
