@@ -1028,7 +1028,7 @@ std::unique_ptr<SubGrid> intersectSubGrids(const SubGrid& subGrid1,
   std::unique_ptr<SubGrid> gr
       = std::make_unique<SubGrid>(subGrid1.getHostGrid());
   gr->createBegin();
-  for(unsigned int level=0; level <= subGrid1.maxLevel(); ++level)
+  for(int level=0; level <= subGrid1.maxLevel(); ++level)
   {
     for (auto&& e : elements(subGrid1.levelGridView(level)))
     {
