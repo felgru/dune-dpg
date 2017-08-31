@@ -224,8 +224,19 @@ int main(int argc, char** argv)
   // disable it here.
   grid->setClosureType(GridType::NONE);
 
-  auto f = [](const Domain& x, const Direction& s)
-           { return 1.; };
+  // auto f_constant
+  //   = [](const Domain& x, const Direction& s)
+  //     { return 1.; };
+  auto f_checkerboard
+    = [](const Domain& x, const Direction& s)
+      {
+        int n=3;
+        double v1 = 1.;
+        double v2 = 3.;
+        return
+         (((int)std::floor(n*x[0])+(int)std::floor(n*x[1]))%2 ==0) ?
+         v1 : v2;
+      };
   auto g = [](const Domain& x, const Direction& s)
            { return x[0] + x[1]; };
   auto gDeriv = [](const Domain& x, const Direction& s)
@@ -239,7 +250,7 @@ int main(int argc, char** argv)
 
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
           FeRHSandBoundary>()
-      .solve(*grid, f, g, gDeriv, sigma,
+      .solve(*grid, f_checkerboard, g, gDeriv, sigma,
              HenyeyGreensteinScattering(gamma),
              rho, CT, targetAccuracy, N, plotSolutions);
 
