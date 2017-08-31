@@ -25,19 +25,18 @@ bool sameVector(const Eigen::VectorXd& x, const Eigen::VectorXd& y) {
 
 int main() try
 {
-  static const size_t dim = 2;
-  using Direction = Dune::FieldVector<double, dim>;
-
   bool success = true;
 
   std::cout << "Testing if SVD and wavelet approximation of"
             << " HenyeyGreenstein kernel are identical" << std::endl;
-  auto kernel = Dune::HenyeyGreensteinScattering<Direction>(0.9);
-  const size_t num_s = 16;
+  auto kernel = Dune::HenyeyGreensteinScattering(0.9);
+  const double accuracy = 0.01;
 
   using namespace Dune::ScatteringKernelApproximation;
-  HaarWavelet::MatrixCompression matrixCompressionApproximation(kernel, num_s);
-  HaarWavelet::SVD waveletSVDApproximation(kernel, num_s);
+  HaarWavelet::MatrixCompression
+      matrixCompressionApproximation(kernel, accuracy);
+  HaarWavelet::SVD waveletSVDApproximation(kernel, accuracy);
+  const size_t num_s = waveletSVDApproximation.maxNumS();
   SVD svdApproximation(kernel, num_s);
 
   Eigen::VectorXd x(num_s);
