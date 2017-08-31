@@ -33,6 +33,10 @@ def readData(datafile):
         r'kappa3 = ([0-9]*\.?[0-9]*)\n'
         r'CT = ([0-9]*\.?[0-9]*)\n'
         , re.MULTILINE)
+    singularValuesPattern = re.compile(
+        r'Singular values of kernel matrix:\n'
+        r'(([0-9]+\.?[0-9]*e?-?[0-9]*)\n)*'
+        , re.MULTILINE)
     iterationIndicesPattern = re.compile(r'Iteration n=([0-9]*\.?[0-9]*)\n')
     etaPattern = re.compile(r'eta_n = rhobar\^{-n}: ([0-9]*\.?[0-9]*)\n')
     wltLevelPattern = re.compile(r'Current wavelet level: ([0-9]*\.?[0-9]*)\n')
@@ -74,6 +78,10 @@ def readData(datafile):
                      , 'kappa3': parametersMatch.group(11)
                      , 'CT': parametersMatch.group(12)
                      }
+        singularValues = []
+        if(parameters['kernelApproxType']=='SVD'):
+            svPat = re.compile(r'([0-9]+\.?[0-9]*e?-?[0-9]*)\n', re.MULTILINE)
+            singularValues = svPat.findall(singularValuesPattern.search(errors).group())
         iterationIndices = iterationIndicesPattern.findall(errors)
         eta = etaPattern.findall(errors)
         wltLevel = wltLevelPattern.findall(errors)
@@ -88,6 +96,7 @@ def readData(datafile):
         dofs = dofsPattern.findall(errors)
 
     return { 'params': parameters
+           , 'singularValues': singularValues
            , 'iterationIndices': iterationIndices
            , 'eta': eta
            , 'wltLevel': wltLevel
@@ -232,11 +241,64 @@ def plot_directions(data,
 
     plt.clf()
 
+def plot_svd(data,
+         outputfile='periter_error.pdf',
+         title=None,
+         xlabel='Outer Iteration',
+         ylabel=(''),
+         xlim=None,
+         ylim=None,
+         xscale='linear',
+         yscale='log',
+         legendlocation='best',
+         colorPalette=['#0054AF','#612158','#33cc33','#cc3300','#cc9900']):
+    fig, ax1 = plt.subplots()
+    # ax2 = ax1.twinx()
+    if title != None:
+        plt.title(title)
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(ylabel)
+    # ax2.set_ylabel(ylabel[1])
+    ax1.ticklabel_format(style='sci', scilimits=(0,0))
+    # ax2.ticklabel_format(style='sci', scilimits=(0,0))
+
+    line1 = ax1.plot(data['singularValues'],
+                     label='Singular values of kernel matrix')
+
+    # plot in RWTH blue
+    plt.setp(line1, linewidth=2.0,
+             marker='o', markersize=4.0,
+             color=colorPalette[0])
+
+    # line2 = ax2.plot(iterationIndices, data['numS'], label='# directions')
+    # # plot in RWTH purple
+    # plt.setp(line2, linewidth=2.0,
+    #          marker='x', markersize=3.0,
+    #          color='#612158')
+
+    ax1.set_xscale(xscale)
+    # ax2.set_xscale(xscale)
+    ax1.set_yscale(yscale)
+    # ax2.set_yscale(yscale)
+    if legendlocation != None:
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        # lines2, labels2 = ax2.get_legend_handles_labels()
+        plt.legend(lines1, labels1,
+                   loc=legendlocation, shadow=True)
+    if xlim != None:
+        plt.xlim(xlim)
+    if ylim != None:
+        plt.ylim(ylim)
+    plt.savefig(outputfile)
+
+    plt.clf()
+
 def plot_kernel_acc_VS_time(data,
          outputfile='periter_error.pdf',
          title=None,
          xlabel='outer iteration',
-         ylabel=('Accuracy kernel','Computing time kernel eval'),
+         ylabel=('Error Kernel approx',
+            'Computing time kernel eval (in $\mu$s)'),
          xlim=None,
          ylim=None,
          xscale='linear',
@@ -262,7 +324,7 @@ def plot_kernel_acc_VS_time(data,
              color=colorPalette[0])
 
     line2 = ax2.plot(iterationIndices, data['timeEvalKernel'],
-                      label='Computing time for kernel evaluation')
+                      label='Computing time for kernel evaluation (in $\mu$s)')
     # plot in RWTH purple
     plt.setp(line2, linewidth=2.0,
              marker='x', markersize=4.0,
@@ -289,7 +351,8 @@ def plot_kernel_matrix_info(data,
          outputfile='periter_error.pdf',
          title=None,
          xlabel='outer iteration',
-         ylabel=('Accuracy kernel','Computing time kernel eval (in $\mu$s)'),
+         ylabel=(('SVD rank','# zeros entries / # entries in kernel matrix'),
+            'Computing time kernel eval (in $\mu$s)'),
          xlim=None,
          ylim=None,
          xscale='linear',
@@ -301,17 +364,18 @@ def plot_kernel_matrix_info(data,
     if title != None:
         plt.title(title)
     ax1.set_xlabel(xlabel)
-    ax1.set_ylabel(ylabel[0])
     ax2.set_ylabel(ylabel[1])
     ax1.ticklabel_format(style='sci', scilimits=(0,0))
     ax2.ticklabel_format(style='sci', scilimits=(0,0))
 
     iterationIndices = data['iterationIndices']
     if(data['params']['kernelApproxType'] == 'SVD'):
+        ax1.set_ylabel(ylabel[0][0])
         line1 = ax1.plot(iterationIndices, data['svdRank'],
                       label='SVD rank')
     else:
         if(data['params']['kernelApproxType'] == 'Matrix compression'):
+            ax1.set_ylabel(ylabel[0][1])
             totalentriesKernelMatrix \
                 = np.asarray([c[2] for c in data['matrixTH']], dtype=float)
             zerosKernelMatrix = np.asarray([c[3] for c in data['matrixTH']], dtype=float)
@@ -432,5 +496,11 @@ plot_kernel_acc_VS_time(data,
 
 plot_kernel_matrix_info(data,
      outputfile=args.prefixOutputFile+"-kernel-matrix-info.pdf",
+     # title='a posteriori errors of Periter',
+    )
+
+if(data['params']['kernelApproxType'] == 'SVD'):
+    plot_svd(data,
+     outputfile=args.prefixOutputFile+"-svd.pdf",
      # title='a posteriori errors of Periter',
     )

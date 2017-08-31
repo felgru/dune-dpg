@@ -651,9 +651,6 @@ namespace ScatteringKernelApproximation {
           /* initialize SVD of kernel (using Eigen) */
           kernelSVD.compute(kernelMatrix);
 
-          // Print eigenvalues:
-          std::cout << "Eigenvalues of kernel SVD:" << std::endl
-                    << kernelSVD.singularValues() <<std::endl;
         }
 
         Eigen::VectorXd
@@ -804,6 +801,13 @@ namespace ScatteringKernelApproximation {
 
         std::string info() const {
           return "SVD rank: "+std::to_string(rank);
+        }
+
+        std::vector<double> getSingularValues() const {
+          std::vector<double> vec(kernelSVD.singularValues().data(),
+            kernelSVD.singularValues().data()
+            +kernelSVD.singularValues().size());
+          return vec;
         }
 
       private:

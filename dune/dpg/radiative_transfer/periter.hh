@@ -446,12 +446,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       << "kappa3 = " << kappa3 << std::endl
       << "CT = "     << CT <<std::endl;
 
-  // ofs << "Periter with up to " << kernelApproximation.maxNumS()
-  //     << " directions rho = " << rho << ", CT = " << CT
-  //     << ", kappa1 = " << kappa1
-  //     << ", kappa2 = " << kappa2
-  //     << ", kappa3 = " << kappa3
-  //     << '\n';
+  if(kernelApproximation.typeApprox() == "Kernel approximation with: SVD"){
+    std::vector<double> singularValues
+      = kernelApproximation.getSingularValues();
+    ofs << "Singular values of kernel matrix:" << std::endl;
+    for(size_t i=0; i<singularValues.size(); i++){
+      ofs << singularValues[i] << std::endl;
+    }
+  }
 
   // As the solution u we use for the initial scattering is 0, and the
   // formula for the accuracy contains a 1/\|u\|, we set the initial
