@@ -124,8 +124,8 @@ class Periter {
    * \param plotSolutions  specifies when to create .vtu files for plotting
    *                       the solution
    */
-  template<class Grid, class F, class G, class GDeriv, class Kernel>
-  void solve(Grid& hostGrid,
+  template<class HostGrid, class F, class G, class GDeriv, class Kernel>
+  void solve(HostGrid& hostGrid,
              const F& f,
              const G& g,
              const GDeriv& gDeriv,
