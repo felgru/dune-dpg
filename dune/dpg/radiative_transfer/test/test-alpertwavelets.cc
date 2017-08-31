@@ -38,9 +38,9 @@ int main() try
   // Input data
   // Given a function f in [-r,r], we project it to the space V_J of
   // piecewise polynomials of degree L-1 in each interval I_{j,k}.
-  // This will be our input data for FWT.
+  // This will be our input data for DWT.
   auto flambda = [](auto a,auto xmin,auto xmax) { return a; };
-  Eigen::VectorXd data=AlpertToolbox::ProjectOntoVJ(flambda,r,J,L,quadOrder);
+  Eigen::VectorXd data=AlpertWavelet::ProjectOntoVJ(flambda,r,J,L,quadOrder);
   // // Other trivial input data
   // // First option
   // Eigen::VectorXd data(static_cast<int>(L*pow(2,J)));
@@ -49,16 +49,16 @@ int main() try
   // Eigen::VectorXd data(16);
   // for(size_t i=0, imax=data.size(); i < imax; i++) data(i) = 1.;
 
-  // Compute FWT
+  // Compute DWT
   std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
-  y=AlpertToolbox::FWT(data,L,J,quadOrder);
-  // Compute IFWT
-  Eigen::VectorXd dataIFWT = AlpertToolbox::IFWT(y,L,J,quadOrder);
-  success = sameVector(dataIFWT,data);
+  y=AlpertWavelet::DWT(data,L,J,quadOrder);
+  // Compute IDWT
+  Eigen::VectorXd dataIDWT = AlpertWavelet::IDWT(y,L,J,quadOrder);
+  success = sameVector(dataIDWT,data);
   if(success)
-    std::cout << "IFWT(FWT(data)) successful." << std::endl;
+    std::cout << "IDWT(DWT(data)) successful." << std::endl;
   else
-    std::cout << "IFWT(FWT(data)) not successful." << std::endl;
+    std::cout << "IDWT(DWT(data)) not successful." << std::endl;
 
 
   // //****** Felix *********************
