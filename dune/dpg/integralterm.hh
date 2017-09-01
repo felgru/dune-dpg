@@ -392,11 +392,7 @@ namespace detail {
     if(fabs(splitPoint)< tol)         splitPoint = 0.;
     else if(fabs(splitPoint-1.)< tol) splitPoint = 1.;
 
-    if(!(splitPoint >= 0 && splitPoint <= 1)) {
-      std::cout << "splitPoint " << splitPoint << " is wrong!\n";
-      std::cout << "referenceBeta was " << referenceBeta << '\n';
-      std::abort();
-    }
+    assert(splitPoint >= 0 && splitPoint <= 1));
     return splitPoint;
   }
 
