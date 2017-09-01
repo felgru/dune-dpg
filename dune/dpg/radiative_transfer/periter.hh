@@ -652,7 +652,15 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     ofs << "\n-----------------------------------" << std::endl
         << "Inner iterations (transport solves)" << std::endl
         << "-----------------------------------" << std::endl;
-    double accumulatedAPosterioriError = 0.;
+    double aposterioriGlobal = 0.;
+
+    // Loop over the spatial grids.
+    // Directions in the same angular subinterval share the same spatial grid.
+    // The subintervals in the directions are given by the wavelet level.
+        // For example:
+        //  - wlt level 0 --> one subinterval: [-pi,pi]
+        //  - wlt level 1 --> two subintervals: [-pi,0] and [0,pi]
+        //  - wlt level k --> 2^k subintervals
     for(unsigned int i = 0; i < grids.size(); ++i)
     {
       ofs << "\nAngular subinterval " << i << std::endl
@@ -665,17 +673,18 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       detail::updateSpaces(*testSpacesEnriched[i], grids[i]->leafGridView());
 
       const unsigned int maxNumberOfInnerIterations = 16;
-      double aposterioriErr;
+      double aposterioriSubinterval;
       unsigned int nRefinement = 0;
       // TODO: refine grid for all all directions in same interval at once.
       for( ; ; )
         // At the end of the loop, we will break if
-        // aposterioriErr < kapp3*eta (pointwise in s)
+        // aposterioriSubinterval < kapp3*eta (pointwise in s)
         // or ++nRefinement >= maxNumberOfInnerIterations
         // thus the inner loop terminates eventually.
       {
-        aposterioriErr = 0.;
+        aposterioriSubinterval = 0.;
 
+        // Loop over directions in the same angular subinterval.
         for(unsigned int j = i*kernelApproximation.numSperInterval,
                         jmax = (i+1)*kernelApproximation.numSperInterval;
             j < jmax; j++)
@@ -818,22 +827,23 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
           }
           // - Computation of the a posteriori error
+          // OLGA: add here the quadrature points
           using EntitySeed
               = typename Grid::template Codim<0>::Entity::EntitySeed;
-          std::vector<std::tuple<EntitySeed, double>> errorEstimates
+          std::vector<std::tuple<EntitySeed, double>> aposterioriCellwise
               = ErrorTools::residual(bilinearFormEnriched,
                                     innerProductEnriched,
                                     x[j], rhs);
-          aposterioriErr = std::sqrt(std::accumulate(
-                errorEstimates.cbegin(), errorEstimates.cend(),
-                aposterioriErr * aposterioriErr,
+          aposterioriSubinterval = std::sqrt(std::accumulate(
+                aposterioriCellwise.cbegin(), aposterioriCellwise.cend(),
+                aposterioriSubinterval * aposterioriSubinterval,
                 [](double acc, const std::tuple<EntitySeed, double>& t)
                 {
                   return acc + std::get<1>(t);
                 }));
           const double ratio = .6;
           ErrorTools::DoerflerMarking(*grids[i], ratio,
-                                      std::move(errorEstimates));
+                                      std::move(aposterioriCellwise));
 
           static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
               "Functions::interpolate won't work for refined finite elements");
@@ -857,13 +867,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << " for direction " << j << ": " << std::endl
               << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
               << std::sqrt(std::accumulate(
-                errorEstimates.cbegin(), errorEstimates.cend(),
+                aposterioriCellwise.cbegin(), aposterioriCellwise.cend(),
                 0.,
                 [](double acc, const std::tuple<EntitySeed, double>& t)
                 {
                   return acc + std::get<1>(t);
                 })) << std::endl
-              // << aposterioriErr << std::endl
               << "  - Grid level: " << grids[i]->maxLevel() << std::endl
               << "  - Number of DOFs: " << x[j].size()
               << '\n';
@@ -871,17 +880,17 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
           std::cout << "\nStatistics at end of inner iteration:\n";
           std::cout << "Grid level: " << grids[i]->maxLevel() << '\n';
-          std::cout << "A posteriori error: " << aposterioriErr << '\n';
-        }
+          std::cout << "A posteriori error: " << aposterioriSubinterval << '\n';
+        } // End loop over directions in the same angular subinterval.
 
         if(++nRefinement >= maxNumberOfInnerIterations
-            || aposterioriErr <= kappa3*eta
+            || aposterioriSubinterval <= kappa3*eta
                                  * kernelApproximation.numSperInterval) {
           gridIdSets[i] = saveSubGridToIdSet(*grids[i]);
 
           ofs << "\nCumulated a posteriori error in current angular subinterval: "
-              << aposterioriErr
-              << ((aposterioriErr <=
+              << aposterioriSubinterval
+              << ((aposterioriSubinterval <=
                   kappa3 * eta * kernelApproximation.numSperInterval)
                   ? " (enough)" : (" (not enough, required "+std::to_string(kappa3 * eta * kernelApproximation.numSperInterval)+")"))
               << std::endl << std::endl;
@@ -897,14 +906,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                grids[i]->leafGridView());
 
           ofs << "\nCumulated a posteriori error in current angular subinterval: "
-              << aposterioriErr
-              << ((aposterioriErr <=
+              << aposterioriSubinterval
+              << ((aposterioriSubinterval <=
                   kappa3 * eta * kernelApproximation.numSperInterval)
                   ? " (enough)" : (" (not enough, required "+std::to_string(kappa3 * eta * kernelApproximation.numSperInterval)+")"))
               << std::endl << std::endl;
         }
       } // end of spatial refinements in angular subintervals
-      accumulatedAPosterioriError += aposterioriErr * aposterioriErr;
+      aposterioriGlobal += aposterioriSubinterval * aposterioriSubinterval;
 
       if(plotSolutions == PlotSolutions::plotOuterIterations) {
         //////////////////////////////////////////////////////////////////////
@@ -943,8 +952,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       }
     }
 
-    accumulatedAPosterioriError
-        = std::sqrt(accumulatedAPosterioriError / static_cast<double>(numS));
+    aposterioriGlobal
+        = std::sqrt(aposterioriGlobal / static_cast<double>(numS));
     const size_t accumulatedDoFs = std::accumulate(x.cbegin(), x.cend(),
         static_cast<size_t>(0),
         [](size_t acc, auto vec) { return acc + vec.size(); });
@@ -955,10 +964,10 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << "End inner iterations " << std::endl
         << "---------------------" << std::endl
         << "Total a posteriori error: "
-        << accumulatedAPosterioriError                   << std::endl
+        << aposterioriGlobal                   << std::endl
         << "Accuracy kernel: " << kappa1 * eta           << std::endl
         << "Global accuracy (a posteriori): "
-          << accumulatedAPosterioriError+kappa1 * eta    << std::endl
+          << aposterioriGlobal+kappa1 * eta    << std::endl
         << "Global accuracy (a priori): "
           << accuracy << " (rho^n * CT * ||f|| + 2*eta_n)" << std::endl
         << "Total number of DoFs: "
@@ -966,7 +975,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           << '\n';
 
     std::cout << "Error at end of Iteration " << n << ": "
-              << accumulatedAPosterioriError << ", using "
+              << aposterioriGlobal << ", using "
               << accumulatedDoFs << " DoFs\n";
 
     eta /= rhobar;
