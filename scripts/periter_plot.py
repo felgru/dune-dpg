@@ -144,6 +144,9 @@ def plot_convergence(data,
 
     line1__ = ax1.plot(iterationIndices, data['eta'], label='$\eta_n$')
 
+    line1__ = ax1.plot(iterationIndices, data['globalAccApriori'],
+        label='$C_T \\rho^n ||f||_{V\'}+2\eta_n$')
+
     # plot in RWTH blue
     plt.setp(line1, linewidth=2.0,
              marker='o', markersize=4.0,
