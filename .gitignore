@@ -1,2 +1,4 @@
 # CMake generated files
 build-*/
+# Results file
+results/
