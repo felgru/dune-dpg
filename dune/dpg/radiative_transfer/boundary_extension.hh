@@ -43,6 +43,7 @@
 #include <dune/common/fmatrix.hh>
 
 #include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/functions/localindexsetiteration.hh>
 
 #include <dune/geometry/quadraturerules.hh>
 
@@ -131,18 +132,36 @@ void getOccupationPattern(const FEBasis& feBasis, MatrixIndexSet& nb)
     localView.bind(e);
     localIndexSet.bind(localView);
 
-    for (size_t i=0; i<localView.tree().size(); i++) {
+    using MultiIndex = typename decltype(localIndexSet)::MultiIndex;
 
-      for (size_t j=0; j<localView.tree().size(); j++) {
-
-        auto iIdx = localIndexSet.index(i);
-        auto jIdx = localIndexSet.index(j);
-
-        // Add a nonzero entry to the matrix
-        nb.add(iIdx, jIdx);
-
-      }
-    }
+    auto fillOccupationPattern = [&](size_t /* i */, MultiIndex gi)
+        {
+          auto fillOccupationPatternInner
+            = [&](size_t /* j */, MultiIndex gj)
+              {
+                // Add a nonzero entry to the matrix
+                nb.add(gi[0],
+                       gj[0]);
+              };
+          iterateOverLocalIndexSet(
+              localIndexSet,
+              fillOccupationPatternInner,
+              [](size_t j){},
+              [&](size_t j, MultiIndex gj, double /* wj */)
+              {
+                fillOccupationPatternInner(j, gj);
+              }
+          );
+        };
+    iterateOverLocalIndexSet(
+        localIndexSet,
+        fillOccupationPattern,
+        [](size_t i){},
+        [&](size_t i, MultiIndex gi, double /* wi */)
+        {
+          fillOccupationPattern(i, gi);
+        }
+    );
   }
 }
 
@@ -186,16 +205,16 @@ void assembleLaplaceSystem(const FEBasis& feBasis,
     getLocalMatrix(localView, elementMatrix);
 
     // Add element stiffness matrix onto the global stiffness matrix
-    for (size_t i=0; i<elementMatrix.N(); i++) {
-
-      const auto row = localIndexSet.index(i);
-
-      for (size_t j=0; j<elementMatrix.M(); j++ ) {
-
-        const auto col = localIndexSet.index(j);
-        matrix[row][col] += elementMatrix[i][j];
-      }
-    }
+    addToGlobalMatrix(
+        localIndexSet,
+        localIndexSet,
+        [&elementMatrix](size_t i, size_t j) -> auto {
+          return elementMatrix[i][j];
+        },
+        [&](auto gi, auto gj) -> auto& {
+          return matrix[gi[0]][gj[0]];
+        }
+    );
   }
 
   ////////////////////////////////////////////
