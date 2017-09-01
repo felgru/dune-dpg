@@ -727,21 +727,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                       innerProduct,
                                       geometryBuffer);
 
-          // Determine Dirichlet dofs for u^ (inflow boundary)
+          // Determine Dirichlet dofs for theta (inflow boundary)
           std::vector<bool> dirichletNodesInflow;
-          // Contribution of inflow boundary for the rhs
-          std::vector<double> rhsInflowContrib;
-          {
-            BoundaryTools::getInflowBoundaryMask(
-                        std::get<1>(*solutionSpaces[i]),
-                        dirichletNodesInflow,
-                        s);
-
-            auto gSfixed = [s](const Domain& x){ return 0.;};
-            BoundaryTools::getBoundaryValue(std::get<1>(*solutionSpaces[i]),
-                                            rhsInflowContrib,
-                                            gSfixed);
-          }
+          BoundaryTools::getInflowBoundaryMask(
+                      std::get<1>(*solutionSpaces[i]),
+                      dirichletNodesInflow,
+                      s);
 
           VectorType rhsFunctional;
           {
@@ -775,7 +766,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                 (stiffnessMatrix,
                 rhs,
                 dirichletNodesInflow,
-                rhsInflowContrib);
+                0.);
 #if 0
             systemAssembler.template defineCharacteristicFaces<1>(
                 stiffnessMatrix,
