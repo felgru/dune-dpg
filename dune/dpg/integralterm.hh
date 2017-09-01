@@ -365,7 +365,7 @@ namespace detail {
   {
     // This gets a bit ugly as we have to check the orientation of the face
     double splitPoint;
-    const double tol = 1e-10;
+    const double tol = 1e-8;
     if(fabs(referenceBeta[0]) < tol) referenceBeta[0] = 0.;
     if(fabs(referenceBeta[1]) < tol) referenceBeta[1] = 0.;
 
