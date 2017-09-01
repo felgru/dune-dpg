@@ -375,8 +375,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   using Grid = SubGrid<dim, HostGrid, false>;
   using LeafGridView = typename Grid::LeafGridView;
   using HostGridView = typename HostGrid::LeafGridView;
-  using Geometry = typename LeafGridView::template Codim<0>::Geometry;
-  using Domain = typename Geometry::GlobalCoordinate;
   using Direction = FieldVector<double, dim>;
   using GridIdSet = std::set<typename HostGrid::GlobalIdSet::IdType>;
 
