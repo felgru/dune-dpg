@@ -575,7 +575,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               std::declval<FEBasisHostInterior>(),
               std::declval<VectorType>()))>;
     std::vector<RHSData> rhsData;
-    double accuKernel = kappa1 * eta / (kappaNorm * uNorm);
+    const double accuKernel = kappa1 * eta / (kappaNorm * uNorm);
     {
       FEBasisHostInterior hostGridGlobalBasis(hostGrid.leafGridView());
       std::vector<VectorType> rhsFunctional =
@@ -653,6 +653,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << "Inner iterations (transport solves)" << std::endl
         << "-----------------------------------" << std::endl;
     double aposterioriGlobal = 0.;
+    std::vector<double> quadWeight
+      = kernelApproximation.getQuadWeightSubinterval();
 
     // Loop over the spatial grids.
     // Directions in the same angular subinterval share the same spatial grid.
@@ -818,20 +820,27 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
           }
           // - Computation of the a posteriori error
-          // OLGA: add here the quadrature points
           using EntitySeed
               = typename Grid::template Codim<0>::Entity::EntitySeed;
           std::vector<std::tuple<EntitySeed, double>> aposterioriCellwise
               = ErrorTools::residual(bilinearFormEnriched,
                                     innerProductEnriched,
                                     x[j], rhs);
-          aposterioriSubinterval = std::sqrt(std::accumulate(
+          double aposteriori_s
+            = std::accumulate(
                 aposterioriCellwise.cbegin(), aposterioriCellwise.cend(),
-                aposterioriSubinterval * aposterioriSubinterval,
+                0.,
                 [](double acc, const std::tuple<EntitySeed, double>& t)
                 {
                   return acc + std::get<1>(t);
-                }));
+                });
+          aposterioriSubinterval
+            += 2.*boost::math::constants::pi<double>()
+              / (1 << kernelApproximation.getLevel())
+              * quadWeight[j-i*kernelApproximation.numSperInterval]
+              * aposteriori_s;
+
+          //  - Doerfler marking
           const double ratio = .6;
           ErrorTools::DoerflerMarking(*grids[i], ratio,
                                       std::move(aposterioriCellwise));
@@ -857,33 +866,31 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           ofs << "Iteration " << n << '.' << nRefinement
               << " for direction " << j << ": " << std::endl
               << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
-              << std::sqrt(std::accumulate(
-                aposterioriCellwise.cbegin(), aposterioriCellwise.cend(),
-                0.,
-                [](double acc, const std::tuple<EntitySeed, double>& t)
-                {
-                  return acc + std::get<1>(t);
-                })) << std::endl
+              << std::sqrt(aposteriori_s) << std::endl
               << "  - Grid level: " << grids[i]->maxLevel() << std::endl
               << "  - Number of DOFs: " << x[j].size()
               << '\n';
-          std::cout << '\n';
 
-          std::cout << "\nStatistics at end of inner iteration:\n";
-          std::cout << "Grid level: " << grids[i]->maxLevel() << '\n';
-          std::cout << "A posteriori error: " << aposterioriSubinterval << '\n';
+          std::cout << '\n';
+          std::cout << "Iteration " << n << '.' << nRefinement
+              << " for direction " << j << ": " << std::endl
+              << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
+              << std::sqrt(aposteriori_s) << std::endl
+              << "  - Grid level: " << grids[i]->maxLevel() << std::endl
+              << "  - Number of DOFs: " << x[j].size()
+              << '\n';
         } // End loop over directions in the same angular subinterval.
 
         if(++nRefinement >= maxNumberOfInnerIterations
-            || aposterioriSubinterval <= kappa3*eta
-                                 * kernelApproximation.numSperInterval) {
+            || std::sqrt(aposterioriSubinterval) <= kappa3*eta
+                                 / (1 << kernelApproximation.getLevel())) {
           gridIdSets[i] = saveSubGridToIdSet(*grids[i]);
 
           ofs << "\nCumulated a posteriori error in current angular subinterval: "
-              << aposterioriSubinterval
-              << ((aposterioriSubinterval <=
-                  kappa3 * eta * kernelApproximation.numSperInterval)
-                  ? " (enough)" : (" (not enough, required "+std::to_string(kappa3 * eta * kernelApproximation.numSperInterval)+")"))
+              << std::sqrt(aposterioriSubinterval)
+              << ((std::sqrt(aposterioriSubinterval) <=
+                  kappa3 * eta / (1 << kernelApproximation.getLevel()))
+                  ? " (enough)" : (" (not enough, required "+std::to_string(kappa3 * eta / (1 << kernelApproximation.getLevel()))+")"))
               << std::endl << std::endl;
 
           break;
@@ -897,14 +904,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                grids[i]->leafGridView());
 
           ofs << "\nCumulated a posteriori error in current angular subinterval: "
-              << aposterioriSubinterval
-              << ((aposterioriSubinterval <=
-                  kappa3 * eta * kernelApproximation.numSperInterval)
-                  ? " (enough)" : (" (not enough, required "+std::to_string(kappa3 * eta * kernelApproximation.numSperInterval)+")"))
+              << std::sqrt(aposterioriSubinterval)
+              << ((std::sqrt(aposterioriSubinterval) <=
+                  kappa3 * eta / (1 << kernelApproximation.getLevel()))
+                  ? " (enough)" : (" (not enough, required "+std::to_string(kappa3 * eta / (1 << kernelApproximation.getLevel()))+")"))
               << std::endl << std::endl;
         }
       } // end of spatial refinements in angular subintervals
-      aposterioriGlobal += aposterioriSubinterval * aposterioriSubinterval;
+      aposterioriGlobal += aposterioriSubinterval;
 
       if(plotSolutions == PlotSolutions::plotOuterIterations) {
         //////////////////////////////////////////////////////////////////////
@@ -944,7 +951,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     }
 
     aposterioriGlobal
-        = std::sqrt(aposterioriGlobal / static_cast<double>(numS));
+      = std::sqrt(aposterioriGlobal/2*boost::math::constants::pi<double>());
     const size_t accumulatedDoFs = std::accumulate(x.cbegin(), x.cend(),
         static_cast<size_t>(0),
         [](size_t acc, auto vec) { return acc + vec.size(); });
