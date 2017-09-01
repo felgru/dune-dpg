@@ -120,7 +120,7 @@ def plot_convergence(data,
          ylim=None,
          xscale='linear',
          yscale='log',
-         legendlocation='best',
+         legendlocation='upper center',
          colorPalette=['#0054AF','#612158','#33cc33','#cc3300','#cc9900']):
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
@@ -144,7 +144,7 @@ def plot_convergence(data,
 
     line1__ = ax1.plot(iterationIndices, data['eta'], label='$\eta_n$')
 
-    line1__ = ax1.plot(iterationIndices, data['globalAccApriori'],
+    line1___ = ax1.plot(iterationIndices, data['globalAccApriori'],
         label='$C_T \\rho^n ||f||_{V\'}+2\eta_n$')
 
     # plot in RWTH blue
@@ -171,11 +171,18 @@ def plot_convergence(data,
     ax2.set_xscale(xscale)
     ax1.set_yscale(yscale)
     ax2.set_yscale(yscale)
+    # Shrink current axis by 20%
+    box1 = ax1.get_position()
+    ax1.set_position([box1.x0, box1.y0,
+        box1.width, box1.height * 0.7])
+    ax2.set_position([box1.x0, box1.y0,
+        box1.width, box1.height * 0.7])
     if legendlocation != None:
         lines1, labels1 = ax1.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
         plt.legend(lines1 + lines2, labels1 + labels2,
-                   loc=legendlocation, shadow=True)
+                   loc=legendlocation, shadow=True, bbox_to_anchor=(0.5, 1.5),
+          ncol=1, fancybox=True)
     if xlim != None:
         plt.xlim(xlim)
     if ylim != None:
