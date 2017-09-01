@@ -365,7 +365,7 @@ namespace detail {
   {
     // This gets a bit ugly as we have to check the orientation of the face
     double splitPoint;
-    const double tol = 1e-10;
+    const double tol = 1e-8;
     if(fabs(referenceBeta[0]) < tol) referenceBeta[0] = 0.;
     if(fabs(referenceBeta[1]) < tol) referenceBeta[1] = 0.;
 
@@ -392,7 +392,11 @@ namespace detail {
     if(fabs(splitPoint)< tol)         splitPoint = 0.;
     else if(fabs(splitPoint-1.)< tol) splitPoint = 1.;
 
-    assert(splitPoint >= 0 && splitPoint <= 1);
+    if(!(splitPoint >= 0 && splitPoint <= 1)) {
+      std::cout << "splitPoint " << splitPoint << " is wrong!\n";
+      std::cout << "referenceBeta was " << referenceBeta << '\n';
+      std::abort();
+    }
     return splitPoint;
   }
 
