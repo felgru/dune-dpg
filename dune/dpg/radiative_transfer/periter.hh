@@ -407,7 +407,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   // η_n:
   double eta = 1;
-  // TODO: estimate norm of rhs f
+  // TODO: estimate norm of rhs f in V'
+  // Remark: Here, V=H_{0,+}(D\times S)
   const double fnorm = 1;
   // ρ̄:
   const double rhobar = (1./rho > 2*rho)? (1./rho) : (2*rho);

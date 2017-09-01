@@ -242,11 +242,16 @@ int main(int argc, char** argv)
   auto gDeriv = [](const Domain& x, const Direction& s)
                 { return s[0] + s[1]; };
   const double sigma = 5.;
-  // TODO: Estimate ρ from the paper.
-  const double rho = 1./sigma;
+  const double domainDiameter = std::sqrt(2.);
+  // TODO: Adapt CT when sigma varies
+  // Formula from Lemma 2.8 paper [DGM]
+  const double CT
+    = std::min(domainDiameter,std::sqrt(domainDiameter/(2*sigma)));
+  // TODO: Adapt rho when sigma varies
+  // Formula from Lemma 2.13 paper [DGM]
+  const double rho
+    = std::min(1./sigma,std::sqrt(domainDiameter/(2*sigma)));
   assert(rho < 1.);
-  // TODO: Estimate the constant C_T.
-  const double CT = 1;
 
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
           FeRHSandBoundary>()
