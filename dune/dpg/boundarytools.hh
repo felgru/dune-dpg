@@ -258,6 +258,7 @@ namespace Dune {
 
     auto localView = feBasis.localView();
     auto localIndexSet = feBasis.localIndexSet();
+    using LocalIndexSet = decltype(localIndexSet);
 
 
     for(const auto& e : elements(gridView))
@@ -266,9 +267,6 @@ namespace Dune {
       const auto& localFE = localView.tree().finiteElement();
 
       localIndexSet.bind(localView);
-
-      // dofs in the current finite element
-      const unsigned int dofsLocal = localFE.localCoefficients().size();
 
       const unsigned int nFace
           = ReferenceElements<double, dim>::general(e.type()).size(dim-1);
@@ -307,30 +305,56 @@ namespace Dune {
       }
 
       // For each dof, we check whether it belongs to the boundary
-      for(unsigned int i=0; i<dofsLocal; i++)
-      {
-        unsigned int dofOnBoundary = 0;
-
-        // localkey of dof i
-        const auto& dofLocalKey = localFE.localCoefficients().localKey(i);
-
-        // Codimension and subentity index of the current dof
-        const unsigned int dofCodim = dofLocalKey.codim();
-        const unsigned int dofIndex = dofLocalKey.subEntity();
-
-        if(dofCodim == 1) //the dof belongs to a face
+      using size_type = typename LocalIndexSet::size_type;
+      using MultiIndex = typename LocalIndexSet::MultiIndex;
+      iterateOverLocalIndexSet(localIndexSet,
+        [&](size_type i, MultiIndex gi)
         {
-           dofOnBoundary = faceOnBoundary[dofIndex];
-        }
-        if(dofCodim == 2) //the dof belongs to a vertex
-        {
-          dofOnBoundary = vertexOnBoundary[dofIndex];
-        }
+          unsigned int dofOnBoundary = 0;
 
-        dirichletNodesInt[ localIndexSet.index(i)[0] ] += dofOnBoundary;
+          // localkey of dof i
+          const auto& dofLocalKey = localFE.localCoefficients().localKey(i);
 
-      } // end dof
+          // Codimension and subentity index of the current dof
+          const unsigned int dofCodim = dofLocalKey.codim();
+          const unsigned int dofIndex = dofLocalKey.subEntity();
 
+          if(dofCodim == 1) //the dof belongs to a face
+          {
+             dofOnBoundary = faceOnBoundary[dofIndex];
+          }
+          if(dofCodim == 2) //the dof belongs to a vertex
+          {
+            dofOnBoundary = vertexOnBoundary[dofIndex];
+          }
+
+          dirichletNodesInt[ gi[0] ] += dofOnBoundary;
+        },
+        [&](size_type i) {
+          unsigned int dofOnBoundary = 0;
+
+          // localkey of dof i
+          const auto& dofLocalKey = localFE.localCoefficients().localKey(i);
+
+          // Codimension and subentity index of the current dof
+          const unsigned int dofCodim = dofLocalKey.codim();
+          const unsigned int dofIndex = dofLocalKey.subEntity();
+
+          if(dofCodim == 1) //the dof belongs to a face
+          {
+             dofOnBoundary = faceOnBoundary[dofIndex];
+          }
+          if(dofCodim == 2) //the dof belongs to a vertex
+          {
+            dofOnBoundary = vertexOnBoundary[dofIndex];
+          }
+
+          if(dofOnBoundary) {
+            DUNE_THROW(InvalidStateException,
+                "The boundary should not contain constrained DoFs!");
+          }
+        },
+        [](size_type, MultiIndex, double) {});
 
     } // end element e
 
