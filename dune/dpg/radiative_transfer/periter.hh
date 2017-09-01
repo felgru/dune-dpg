@@ -394,11 +394,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                  << std::put_time(std::localtime(&cnow), "%F-time%H%M%S");
     foldername = folderstream.str();
   }
-
-  std::cout << foldername << std::endl;
-  // system("mkdir \"../results/date\"");
   system(("mkdir -p  "+foldername).data());
-  // std::string outputfile = foldername+"/output";
   std::ofstream ofs(foldername+"/output");
 
   ///////////////////////////////////
