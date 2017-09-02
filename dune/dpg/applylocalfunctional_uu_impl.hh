@@ -72,8 +72,9 @@ inline static void interiorImpl(
       functionalValue += localFunctionalVector[j]
                        * shapeFunctionValues[j];
     functionalValue *= quad[pt].weight() * integrationElement;
-    for (size_t i=0, i_max=elementVector.size(); i<i_max; i++) {
-      elementVector[i+spaceOffset] += functionalValue * testShapeFunctionValues[i];
+    for (size_t i=0, i_max=testShapeFunctionValues.size(); i<i_max; i++) {
+      elementVector[i+spaceOffset] += functionalValue
+                                      * testShapeFunctionValues[i];
     }
   }
 }
