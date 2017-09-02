@@ -392,7 +392,7 @@ namespace detail {
     if(fabs(splitPoint)< tol)         splitPoint = 0.;
     else if(fabs(splitPoint-1.)< tol) splitPoint = 1.;
 
-    assert(splitPoint >= 0 && splitPoint <= 1));
+    assert(splitPoint >= 0 && splitPoint <= 1);
     return splitPoint;
   }
 
