@@ -21,8 +21,8 @@ namespace Dune {
    * This is the essential building block from which BilinearForm and
    * InnerProduct are built.
    *
-   * \tparam integrationType  the form of the integrand
-   * \tparam domainOfIntegration
+   * \tparam integrationType  the form of the integrand, see #IntegrationType
+   * \tparam domainOfIntegration  see #DomainOfIntegration
    * \tparam FactorType     the type of the factor with which
    *                        we multiply the integrand
    * \tparam DirectionType  the type of the transport directions
@@ -133,8 +133,8 @@ namespace detail {
  * \param c  the factor with which we multiply the integrand
  * \tparam lhsSpaceIndex the index of the left space
  * \tparam rhsSpaceIndex the index of the right space
- * \tparam integrationType  the form of the integrand
- * \tparam domainOfIntegration
+ * \tparam integrationType  the form of the integrand, see #IntegrationType
+ * \tparam domainOfIntegration  see #DomainOfIntegration
  * \tparam FactorType  the type of the factor \p c
  */
 template<size_t lhsSpaceIndex,
@@ -169,8 +169,8 @@ auto make_IntegralTerm(FactorType c)
  * \param beta  the transport direction
  * \tparam lhsSpaceIndex the index of the left space
  * \tparam rhsSpaceIndex the index of the right space
- * \tparam integrationType  the form of the integrand
- * \tparam domainOfIntegration
+ * \tparam integrationType  the form of the integrand, see #IntegrationType
+ * \tparam domainOfIntegration  see #DomainOfIntegration
  * \tparam FactorType     the type of the factor \p c
  * \tparam DirectionType  the type of the transport direction \p beta
  */
@@ -212,8 +212,8 @@ auto make_IntegralTerm(FactorType c, DirectionType beta)
  * \param rhsBeta  the transport direction for the right space
  * \tparam lhsSpaceIndex the index of the left space
  * \tparam rhsSpaceIndex the index of the right space
- * \tparam integrationType  the form of the integrand
- * \tparam domainOfIntegration
+ * \tparam integrationType  the form of the integrand, see #IntegrationType
+ * \tparam domainOfIntegration  see #DomainOfIntegration
  * \tparam FactorType     the type of the factor \p c
  * \tparam DirectionType  the type of the transport directions
  */

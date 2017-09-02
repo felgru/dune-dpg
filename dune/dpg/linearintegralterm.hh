@@ -19,8 +19,8 @@ namespace Dune {
    *
    * This is the essential building block from which each LinearForm is built.
    *
-   * \tparam integrationType  the form of the integrand
-   * \tparam domainOfIntegration
+   * \tparam integrationType  the form of the integrand, see #IntegrationType
+   * \tparam domainOfIntegration  see #DomainOfIntegration
    * \tparam FactorType     the type of the factor with which
    *                        we multiply the integrand
    * \tparam DirectionType  the type of the transport directions
@@ -75,6 +75,9 @@ namespace Dune {
  *
  * \param c  the factor with which we multiply the integrand
  * \tparam spaceIndex the index of the test space
+ * \tparam integrationType  the form of the integrand,
+ *         see #LinearIntegrationType
+ * \tparam domainOfIntegration  see #DomainOfIntegration
  * \tparam FactorType  the type of the factor \p c
  */
 template<size_t spaceIndex,
@@ -101,6 +104,9 @@ auto make_LinearIntegralTerm(FactorType c)
  * \param c     the factor with which we multiply the integrand
  * \param beta  the transport direction
  * \tparam spaceIndex     the index of the test space
+ * \tparam integrationType  the form of the integrand,
+ *         see #LinearIntegrationType
+ * \tparam domainOfIntegration  see #DomainOfIntegration
  * \tparam FactorType     the type of the factor \p c
  * \tparam DirectionType  the type of the transport direction \p beta
  */

@@ -18,6 +18,19 @@
 
 namespace Dune {
 
+  /**
+   * \brief This class describes an integration of a test function against
+   *        a function given as an FE coefficient vector.
+   *
+   * This is one of the essential building blocks from which a LinearForm
+   * is built.
+   *
+   * \tparam domainOfIntegration  see #DomainOfIntegration
+   * \tparam SolutionSpace  the GlobalBasis for the function against which
+   *                        the test functions get integrated
+   * \tparam FunctionalVector  the coefficient vector for aforementioned
+   *                           function
+   */
   template <DomainOfIntegration domain_of_integration,
             class SolutionSpace,
             class FunctionalVector>
@@ -73,7 +86,7 @@ namespace Dune {
  *                          the given solutionSpace basis
  * \param solutionSpace  the space in which the functional is defined
  * \tparam spaceIndex the index of the test space
- * \tparam domainOfIntegration
+ * \tparam domainOfIntegration  see #DomainOfIntegration
  */
 template<size_t spaceIndex,
          DomainOfIntegration domainOfIntegration,
