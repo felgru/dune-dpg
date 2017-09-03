@@ -58,12 +58,15 @@ inline static void interiorImpl(
       testLocalView.tree().refinedReferenceElement().leafGridView();
 
   assert(element.type().isTriangle() || element.type().isQuadrilateral());
-  const size_t subElementStride =
-    (element.type().isTriangle())
-    ? testLocalView.globalBasis().nodeFactory().dofsPerSubTriangle
-    : testLocalView.globalBasis().nodeFactory().dofsPerSubQuad;
+  const unsigned int testSubElementStride =
+      (is_DGRefinedFiniteElement<TestSpace>::value) ?
+        testLocalFiniteElement.localBasis().size() : 0;
+  const unsigned int solutionSubElementStride =
+      (is_DGRefinedFiniteElement<SolutionSpace>::value) ?
+        solutionLocalFiniteElement.localBasis().size() : 0;
 
-  unsigned int subElementOffset = 0;
+  unsigned int testSubElementOffset = 0;
+  unsigned int solutionSubElementOffset = 0;
   unsigned int subElementIndex = 0;
   for(const auto& subElement : elements(referenceGridView)) {
     const auto subGeometryInReferenceElement = subElement.geometry();
@@ -97,16 +100,18 @@ inline static void interiorImpl(
       const double functionalValue =
           std::inner_product(
             shapeFunctionValues.begin(), shapeFunctionValues.end(),
-            localFunctionalVector.begin() + subElementOffset, 0.)
+            localFunctionalVector.begin() + solutionSubElementOffset, 0.)
           * integrationWeight;
       for (size_t i=0, i_max=testLocalFiniteElement.localBasis().size();
            i<i_max; i++) {
-        elementVector[i+spaceOffset+subElementOffset]
+        elementVector[i+spaceOffset+testSubElementOffset]
             += functionalValue * testShapeFunctionValues[i];
       }
     }
     if(is_DGRefinedFiniteElement<TestSpace>::value)
-      subElementOffset += subElementStride;
+      testSubElementOffset += testSubElementStride;
+    if(is_DGRefinedFiniteElement<SolutionSpace>::value)
+      solutionSubElementOffset += solutionSubElementStride;
     subElementIndex++;
   }
 }
