@@ -1,11 +1,15 @@
 #include <numeric>
+#include <dune/geometry/quadraturerules/splitquadraturerule.hh>
+#include "faces.hh"
+#include "traveldistancenorm.hh"
 
 namespace Dune {
 namespace detail {
 
-template <class TestSpace,
+template <IntegrationType type,
+          class TestSpace,
           class SolutionSpace>
-struct ApplyLocalFunctional<TestSpace, SolutionSpace, false, false>
+struct ApplyLocalFunctional<type, TestSpace, SolutionSpace, false, false>
 {
 using TestLocalView = typename TestSpace::LocalView;
 using SolutionLocalView = typename SolutionSpace::LocalView;
@@ -28,7 +32,8 @@ inline static void interiorImpl(
 
   // Get set of shape functions for this element
   const auto& testLocalFiniteElement = testLocalView.tree().finiteElement();
-  const auto& solutionLocalFiniteElement = solutionLocalView.tree().finiteElement();
+  const auto& solutionLocalFiniteElement
+      = solutionLocalView.tree().finiteElement();
 
   BlockVector<FieldVector<double,1>>
       localFunctionalVector(solutionLocalView.size());
@@ -82,6 +87,179 @@ inline static void interiorImpl(
   }
 }
 
+
+template <class VectorType,
+          class Element,
+          class FunctionalVector,
+          class FactorType,
+          class DirectionType>
+inline static void
+faceImpl(const TestLocalView& testLocalView,
+         const SolutionLocalView& solutionLocalView,
+         VectorType& elementVector,
+         size_t spaceOffset,
+         const SolutionLocalIndexSet& solutionLocalIndexSet,
+         const Element& element,
+         const FunctionalVector& functionalVector,
+         const FactorType& factor,
+         const DirectionType& beta)
+{
+  const int dim = Element::mydimension;
+
+  // Get set of shape functions for this element
+  const auto& testLocalFiniteElement = testLocalView.tree().finiteElement();
+  const auto& solutionLocalFiniteElement
+      = solutionLocalView.tree().finiteElement();
+
+  unsigned int nOutflowFaces = 0;
+  for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
+  {
+    auto face = element.template subEntity<1>(f);
+    const double prod = beta
+        * FaceComputations<Element>(face, element).unitOuterNormal();
+    if(prod > 0)
+      ++nOutflowFaces;
+  }
+
+  FieldVector<double,dim> referenceBeta;
+  {
+    const auto& jacobianInverse = element.geometry().jacobianInverseTransposed({0., 0.});
+    jacobianInverse.mtv(beta, referenceBeta);
+  }
+
+  BlockVector<FieldVector<double,1>>
+      localFunctionalVector(solutionLocalView.size());
+
+  iterateOverLocalIndexSet(
+    solutionLocalIndexSet,
+    [&](size_t j, auto gj) {
+      localFunctionalVector[j] = functionalVector[gj[0]];
+    },
+    [&](size_t j) { localFunctionalVector[j] = 0; },
+    [&](size_t j, auto gj, double wj) {
+      localFunctionalVector[j] += wj * functionalVector[gj[0]];
+    }
+  );
+
+  for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
+  {
+    auto face = element.template subEntity<1>(f);
+    auto faceComputations = FaceComputations<Element>(face, element);
+    if(type == IntegrationType::travelDistanceWeighted &&
+       beta * faceComputations.unitOuterNormal() >= 0) {
+      /* Only integrate over inflow boundaries. */
+      continue;
+    }
+
+    const unsigned int quadratureOrder
+        = solutionLocalFiniteElement.localBasis().order()
+          + testLocalFiniteElement.localBasis().order();
+
+    using Face = std::decay_t<decltype(face)>;
+    // TODO: Do we really want to have a transport quadrature rule
+    //       on the faces, if one of the FE spaces is a transport space?
+    QuadratureRule<double, 1> quadFace
+      = detail::ChooseQuadrature<TestSpace, SolutionSpace, Face>
+        ::Quadrature(face, quadratureOrder, beta);
+    if (type == IntegrationType::travelDistanceWeighted &&
+        nOutflowFaces > 1) {
+      quadFace = SplitQuadratureRule<double>(
+          quadFace,
+          detail::splitPointOfInflowFaceInTriangle(
+              faceComputations.geometryInElement(), referenceBeta));
+    }
+
+    for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
+
+      // Position of the current quadrature point in the reference element (face!)
+      const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
+
+      // The multiplicative factor in the integral transformation formula multiplied with outer normal
+      const FieldVector<double,dim> integrationOuterNormal =
+              faceComputations.integrationOuterNormal();
+
+      // The multiplicative factor in the integral transformation formula -
+
+      double integrationWeight;
+      if(type == IntegrationType::normalVector ||
+         type == IntegrationType::travelDistanceWeighted) {
+                          // TODO: needs global geometry
+        integrationWeight = detail::evaluateFactor(factor, quadFacePos)
+                          * quadFace[pt].weight();
+        if(type == IntegrationType::travelDistanceWeighted)
+        {
+          // |beta * n|*integrationweight
+          integrationWeight *= fabs(beta*integrationOuterNormal);
+        }
+        else
+          integrationWeight *= (beta*integrationOuterNormal);
+      } else if(type == IntegrationType::normalSign) {
+        const double integrationElement =
+            face.geometry().integrationElement(quadFacePos);
+
+        const FieldVector<double,dim>& centerOuterNormal =
+               faceComputations.unitOuterNormal();
+
+        int sign = 1;
+        bool signfound = false;
+        for (unsigned int i=0;
+           i<centerOuterNormal.size() and signfound == false;
+           i++)
+        {
+          if (centerOuterNormal[i]<(-1e-10))
+          {
+            sign = -1;
+            signfound = true;
+          }
+          else if (centerOuterNormal[i]>(1e-10))
+          {
+            sign = 1;
+            signfound = true;
+          }
+        }
+
+        // TODO: needs global geometry
+        integrationWeight = sign * detail::evaluateFactor(factor, quadFacePos)
+                          * quadFace[pt].weight() * integrationElement;
+      }
+
+      // position of the quadrature point within the element
+      const FieldVector<double,dim> elementQuadPos =
+              faceComputations.faceToElementPosition(quadFacePos);
+
+      if(type == IntegrationType::travelDistanceWeighted) {
+        // factor r_K(s)/|beta|
+        integrationWeight *= detail::travelDistance(
+            elementQuadPos,
+            referenceBeta);
+      }
+
+      ////////////////////////////////////
+      // Left Hand Side Shape Functions //
+      ////////////////////////////////////
+      std::vector<FieldVector<double,1> > testValues;
+      testLocalFiniteElement.localBasis()
+          .evaluateFunction(elementQuadPos, testValues);
+
+      /////////////////////////////////////
+      // Right Hand Side Shape Functions //
+      /////////////////////////////////////
+      std::vector<FieldVector<double,1> > solutionValues;
+      solutionLocalFiniteElement.localBasis()
+          .evaluateFunction(elementQuadPos, solutionValues);
+
+      const double functionalValue =
+          std::inner_product(
+            localFunctionalVector.begin(), localFunctionalVector.end(),
+            solutionValues.begin(), 0.)
+          * integrationWeight;
+      for (size_t i=0, i_max=testValues.size(); i<i_max; i++)
+      {
+        elementVector[i+spaceOffset] += functionalValue * testValues[i];
+      }
+    }
+  }
+}
 };
 
 }} // end namespace Dune::detail
