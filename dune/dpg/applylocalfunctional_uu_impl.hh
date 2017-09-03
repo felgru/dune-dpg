@@ -1,3 +1,5 @@
+#include <numeric>
+
 namespace Dune {
 namespace detail {
 
@@ -56,8 +58,9 @@ inline static void interiorImpl(
     // Position of the current quadrature point in the reference element
     const FieldVector<double,dim>& quadPos = quad[pt].position();
 
-    // The multiplicative factor in the integral transformation formula
-    const double integrationElement = geometry.integrationElement(quadPos);
+    // The transformed quadrature weight
+    const double integrationWeight
+        = quad[pt].weight() * geometry.integrationElement(quadPos);
 
     // Evaluate all shape function values at this quadrature point
     std::vector<FieldVector<double,1>> testShapeFunctionValues;
@@ -67,11 +70,11 @@ inline static void interiorImpl(
     solutionLocalFiniteElement.localBasis().
         evaluateFunction(quadPos, shapeFunctionValues);
 
-    double functionalValue = 0;
-    for (size_t j=0, j_max=shapeFunctionValues.size(); j<j_max; j++)
-      functionalValue += localFunctionalVector[j]
-                       * shapeFunctionValues[j];
-    functionalValue *= quad[pt].weight() * integrationElement;
+    const double functionalValue =
+        std::inner_product(
+          localFunctionalVector.begin(), localFunctionalVector.end(),
+          shapeFunctionValues.begin(), 0.)
+        * integrationWeight;
     for (size_t i=0, i_max=testShapeFunctionValues.size(); i<i_max; i++) {
       elementVector[i+spaceOffset] += functionalValue
                                       * testShapeFunctionValues[i];

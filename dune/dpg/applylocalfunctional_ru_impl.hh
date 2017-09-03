@@ -1,3 +1,5 @@
+#include <numeric>
+
 namespace Dune {
 namespace detail {
 
@@ -90,11 +92,11 @@ inline static void interiorImpl(
       solutionLocalFiniteElement.localBasis().
           evaluateFunction(quadPosInReferenceElement, shapeFunctionValues);
 
-      double functionalValue = 0;
-      for (size_t j=0, j_max=shapeFunctionValues.size(); j<j_max; j++)
-        functionalValue += localFunctionalVector[j]
-                         * shapeFunctionValues[j];
-      functionalValue *= integrationWeight;
+      const double functionalValue =
+          std::inner_product(
+            localFunctionalVector.begin(), localFunctionalVector.end(),
+            shapeFunctionValues.begin(), 0.)
+          * integrationWeight;
       for (size_t i=0, i_max=testLocalFiniteElement.localBasis().size();
            i<i_max; i++) {
         elementVector[i+spaceOffset+subElementOffset]
