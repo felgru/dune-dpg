@@ -124,7 +124,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
   {
     auto face = element.template subEntity<1>(f);
-    double prod = lhsBeta
+    const double prod = lhsBeta
       * FaceComputations<Element>(face, element).unitOuterNormal();
     if(prod > 0)
       ++nOutflowFaces;
