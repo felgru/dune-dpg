@@ -156,7 +156,6 @@ faceImpl(const LhsLocalView& lhsLocalView,
     using SubElement = std::decay_t<decltype(subElement)>;
     const auto subGeometryInReferenceElement = subElement.geometry();
 
-    unsigned int nInflowFaces = 0;
     unsigned int nOutflowFaces = 0;
     for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
     {
@@ -168,8 +167,6 @@ faceImpl(const LhsLocalView& lhsLocalView,
       const double prod = lhsBeta * unitOuterNormal;
       if(prod > 0)
         ++nOutflowFaces;
-      else if (prod < 0)
-        ++nInflowFaces;
     }
 
     FieldVector<double,dim> referenceBeta
