@@ -120,17 +120,14 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
   const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-  unsigned int nInflowFaces = 0;
   unsigned int nOutflowFaces = 0;
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
   {
     auto face = element.template subEntity<1>(f);
-    double prod = lhsBeta
+    const double prod = lhsBeta
       * FaceComputations<Element>(face, element).unitOuterNormal();
     if(prod > 0)
       ++nOutflowFaces;
-    else if (prod < 0)
-      ++nInflowFaces;
   }
 
   FieldVector<double,dim> referenceBeta;
