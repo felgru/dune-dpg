@@ -759,7 +759,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             auto rhsFunction = make_LinearForm(
                   systemAssembler.getTestSearchSpaces(),
                   std::make_tuple(
-                    make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
+                    make_LinearFunctionalTerm<0>
                       (rhsFunctional, std::get<0>(*testSpaces[i]))));
             systemAssembler.assembleSystem(
                 stiffnessMatrix, rhs,
@@ -814,7 +814,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             auto rhsFunction = make_LinearForm(
                   rhsAssemblerEnriched.getTestSpaces(),
                   std::make_tuple(
-                    make_LinearFunctionalTerm<0, DomainOfIntegration::interior>
+                    make_LinearFunctionalTerm<0>
                       (rhsFunctional,
                       std::get<0>(*systemAssembler.getTestSearchSpaces()))));
             rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
