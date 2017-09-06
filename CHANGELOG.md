@@ -30,6 +30,12 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   This works like `BoundaryTools::getInflowBoundaryMask` but marks the
   complete boundary instead of only the inflow boundary and might be
   useful to define the boundary of an elliptical problem.
+* New `SkeletalLinearFunctionalTerm` that can be used to implement
+  the second alternative for handling boundary values as given in
+  Broersen, Dahmen, Stevenson Remark 3.6.
+* `plot_solution.cc` now implements adaptive grid refinements. The old
+  version on a fixed grid from v0.2.1 has been moved to
+  `plot_solution_simple.cc`.
 
 ### Changed
 * We now require version 2.5 of the DUNE core modules and a fully C++14
@@ -59,12 +65,27 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   `DoerflerMarking(grid, ratio, errorEstimates)` where `errorEstimates`
   is a `std::vector<std::tuple<EntitySeed, double>>&&` so that you can use
   Dörfler marking with your own error estimators.
+* `LinearFunctionalTerm` now also works with a refined solution space.
+* We now check in a static_assert that `defineCharacteristicFaces` is
+  not called with refined spaces.
 * README, INSTALL: Mention dune-uggrid instead of ug.
-* Remove some noise from the API documentation.
+* Remove some noise from the API documentation and add some more
+  documentation for previously undocumented things.
+* `ReferenceRefinementCache` now gets shared between refined spaces.
 
 ### Fixed
 * `BoundaryTools::getBoundaryValue` was mixing up local and global functions,
   thus giving wrong results. This has now been fixed.
+* The computation of `unitOuterNormal` on faces of refined finite elements
+  was wrong and has been fixed.
+* Fix wrong indices when using `LinearFunctionalTerm` with more than one
+  test space.
+* Fix indices in `IntegralTerm` and `LinearFunctionalTerm` when both spaces
+  are refined.
+* Fix a bug in the computation of `splitPoint` used in the travel distance
+  weighted inner product. This bug might have manifested in your code by
+  throwing an error from the Cholesky solver that said that the matrix is
+  not symmetrical positive definite.
 
 ### Deprecated
 * The old `ErrorTools::DoerflerMarking` function which could choose between
