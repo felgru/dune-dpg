@@ -49,8 +49,17 @@ namespace detail {
     // This gets a bit ugly as we have to check the orientation of the face
     double splitPoint;
     const double tol = 1e-8;
-    if(fabs(referenceBeta[0]) < tol) referenceBeta[0] = 0.;
-    if(fabs(referenceBeta[1]) < tol) referenceBeta[1] = 0.;
+    // Take the 1-norm as it is cheaper to compute.
+    const double referenceBetaNorm = fabs(referenceBeta[0])
+                                   + fabs(referenceBeta[1]);
+    // We use the relative error w.r.t. the norm of referenceBeta as
+    // the numerical errors in the computation of referenceBeta seem
+    // to scale with decreasing diameter of the element which is
+    // proportional to an increase in the norm of referenceBeta.
+    // When using an absolute error instead, we observed that tol was
+    // always too small for later iterations in the grid refinement.
+    if(fabs(referenceBeta[0]) < tol * referenceBetaNorm) referenceBeta[0] = 0.;
+    if(fabs(referenceBeta[1]) < tol * referenceBetaNorm) referenceBeta[1] = 0.;
 
     auto corner = faceGeometryInElement.global({0});
     if(referenceBeta[0] > 0) {
