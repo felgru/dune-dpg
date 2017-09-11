@@ -956,7 +956,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         static_cast<size_t>(0),
         [](size_t acc, auto vec) { return acc + vec.size(); });
 
-    accuracy = std::pow(rho, n) * CT * fnorm + 2*eta;
+    // accuracy = std::pow(rho, n) * CT * fnorm + 2*eta;
+    accuracy = aposterioriGlobal+CT*kappa1 * eta;
 
     ofs << "---------------------" << std::endl
         << "End inner iterations " << std::endl
@@ -967,7 +968,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << "Global accuracy (a posteriori): "
           << aposterioriGlobal+kappa1 * eta    << std::endl
         << "Global accuracy (a priori): "
-          << accuracy << " (rho^n * CT * ||f|| + 2*eta_n)" << std::endl
+          << std::pow(rho, n) * CT * fnorm + 2*eta << " (rho^n * CT * ||f|| + 2*eta_n)" << std::endl
         << "Total number of DoFs: "
           << accumulatedDoFs << std::endl
           << '\n';
