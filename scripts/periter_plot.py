@@ -121,7 +121,7 @@ def plot_convergence(data,
          xscale='linear',
          yscale='log',
          legendlocation='upper center',
-         colorPalette=['#0054AF','#612158','#33cc33','#cc3300','#cc9900']):
+         colorPalette=['#0054AF','#612158','#33cc33','#cc3300','#cc9900','#806000','#b3c6ff']):
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
     if title != None:
@@ -132,40 +132,58 @@ def plot_convergence(data,
     ax1.ticklabel_format(style='sci', scilimits=(0,0))
     ax2.ticklabel_format(style='sci', scilimits=(0,0))
 
+    sumTransportKernel = np.asarray(map(float, data['aPost']))+float(data['params']['CT'])*np.asarray(map(float, data['accKernel']))
+    rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(sumTransportKernel)) ]
+    errIdealIteration = []
+    for n in range(len(rhoN)):
+        t = ((np.asarray(map(float, data['eta'])))[0:n+1])[::-1]
+        errIdealIteration.append(np.sum(rhoN[0:n+1]*t))
+
     iterationIndices = data['iterationIndices']
-    line1 = ax1.plot(iterationIndices, data['aPost'],
-                     label='Error Transport (a posteriori estimation)')
 
-    line1_ = ax1.plot(iterationIndices, data['accKernel'],
-                      label='Error Kernel approx')
+    line1 = ax1.plot(iterationIndices, data['accKernel'],
+                      label='$k_n$: err kernel approx')
 
-    line1_ = ax1.plot(iterationIndices, data['globalAccApost'],
-                      label='Global Error (Transport+Kernel)')
+    line1_ = ax1.plot(iterationIndices, data['aPost'],
+                     label='$t_n$: err transport solves (a posteriori estimation)')
 
-    line1__ = ax1.plot(iterationIndices, data['eta'], label='$\eta_n$')
+    line1__ = ax1.plot(iterationIndices
+                    , sumTransportKernel
+                    , label='$e_n = t_n+C_T k_n$ ($||\\bar u_n -T^{-1}K \\bar u_{n-1}||\leq e_n)$')
 
-    line1___ = ax1.plot(iterationIndices, data['globalAccApriori'],
-        label='$C_T \\rho^n ||f||_{V\'}+2\eta_n$')
+    line1___ = ax1.plot(iterationIndices, data['eta'], label='$\eta_n (e_n\leq\eta_n)$')
+
+    line1____ = ax1.plot(iterationIndices, errIdealIteration,
+        label='$\sum_{j=0}^{n-1} \\rho^j \eta_{n-j}$ (a posteriori bound for $||u_n - \\bar u_n||$)')
+
+    line1_____ = ax1.plot(iterationIndices, 2*np.asarray(rhoN),
+        label='$2\\rho^n$: $(\sum_{j=0}^{n-1} \\rho^j \eta_{n-j}\leq 2\\rho^n$)')
 
     # plot in RWTH blue
     plt.setp(line1, linewidth=2.0,
              marker='o', markersize=4.0,
              color=colorPalette[0])
-    plt.setp(line1, linewidth=2.0,
+    plt.setp(line1_, linewidth=2.0,
              marker='o', markersize=4.0,
              color=colorPalette[1])
-    plt.setp(line1, linewidth=2.0,
+    plt.setp(line1__, linewidth=2.0,
              marker='o', markersize=4.0,
              color=colorPalette[2])
-    plt.setp(line1, linewidth=2.0,
+    plt.setp(line1___, linewidth=2.0,
              marker='o', markersize=4.0,
              color=colorPalette[3])
+    plt.setp(line1____, linewidth=2.0,
+             marker='o', markersize=4.0,
+             color=colorPalette[4])
+    plt.setp(line1_____, linewidth=2.0,
+             marker='o', markersize=4.0,
+             color=colorPalette[5])
 
     line2 = ax2.plot(iterationIndices, data['dofs'], label='# of DoFs')
     # plot in RWTH purple
     plt.setp(line2, linewidth=2.0,
-             marker='x', markersize=4.0,
-             color=colorPalette[4])
+             marker='o', markersize=4.0,
+             color=colorPalette[6])
 
     ax1.set_xscale(xscale)
     ax2.set_xscale(xscale)
@@ -174,14 +192,14 @@ def plot_convergence(data,
     # Shrink current axis by 20%
     box1 = ax1.get_position()
     ax1.set_position([box1.x0, box1.y0,
-        box1.width, box1.height * 0.7])
+        box1.width, box1.height * 0.6])
     ax2.set_position([box1.x0, box1.y0,
-        box1.width, box1.height * 0.7])
+        box1.width, box1.height * 0.6])
     if legendlocation != None:
         lines1, labels1 = ax1.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
         plt.legend(lines1 + lines2, labels1 + labels2,
-                   loc=legendlocation, shadow=True, bbox_to_anchor=(0.5, 1.5),
+                   loc=legendlocation, shadow=True, bbox_to_anchor=(0.5, 1.9),
           ncol=1, fancybox=True)
     if xlim != None:
         plt.xlim(xlim)
