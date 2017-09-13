@@ -48,12 +48,13 @@ def readData(datafile):
         r' of which ([0-9]*\.?[0-9]*) are zero.\n'
         , re.MULTILINE)
     timeEvalKernelPattern = re.compile(r'Computing time: ([0-9]*\.?[0-9]*)us')
-    aPostPattern = re.compile(r'Total a posteriori error: ([0-9]*\.?[0-9]*)\n')
+    aPostPattern = re.compile(r'Error transport solves \(a posteriori estimation\): ([0-9]*\.?[0-9]*)\n')
     accKernelPattern = re.compile(r'Accuracy kernel: ([0-9]*\.?[0-9]*)\n')
-    globalAccApostPattern = re.compile(
-        r'Global accuracy \(a posteriori\): ([0-9]*\.?[0-9]*)\n')
+    globalAccIterationApostPattern = re.compile(
+        r'Error bound \|\|bar u_n -T\^{-1}K bar u_{n-1}\|\| \(a posteriori\): ([0-9]*\.?[0-9]*)\n')
+    globalAccApostPattern = re.compile(r'Error bound \|\|u_n - bar u_n\|\| \(a posteriori\): ([0-9]*\.?[0-9]*)\n')
     globalAccAprioriPattern = re.compile(
-        r'Global accuracy \(a priori\): ([0-9]*\.?[0-9]*)')
+        r'Bound global accuracy \|\|u - bar u_n\|\| \(a priori \+ a posteriori\): ([0-9]*\.?[0-9]*)')
     dofsPattern = re.compile(r'Total number of DoFs: ([0-9]*\.?[0-9]*)\n')
     iterationIndices = list()
     dofs = list()
@@ -91,6 +92,7 @@ def readData(datafile):
         timeEvalKernel = timeEvalKernelPattern.findall(errors)
         aPost = aPostPattern.findall(errors)
         accKernel = accKernelPattern.findall(errors)
+        globalAccIterationApost = globalAccIterationApostPattern.findall(errors)
         globalAccApost = globalAccApostPattern.findall(errors)
         globalAccApriori = globalAccAprioriPattern.findall(errors)
         dofs = dofsPattern.findall(errors)
@@ -106,7 +108,8 @@ def readData(datafile):
            , 'timeEvalKernel': timeEvalKernel
            , 'aPost': aPost
            , 'accKernel': accKernel
-           , 'globalAccApost': globalAccApost
+           , 'globalAccIterationApost': globalAccIterationApost
+           , 'globalAccApost' : globalAccApost
            , 'globalAccApriori': globalAccApriori
            , 'dofs': dofs
            }
@@ -121,7 +124,13 @@ def plot_convergence(data,
          xscale='linear',
          yscale='log',
          legendlocation='upper center',
-         colorPalette=['#0054AF','#612158','#33cc33','#cc3300','#cc9900','#806000','#b3c6ff']):
+         colorPalette=[
+         '#0063cc', '#80bdff',  # blue
+         '#33cc33', '#99e699',  # green
+         '#cc0000', '#ff5c33',  # red
+         '#b800e6', '#e580ff',  # purple
+         '#cc9900', '#ffd24d'  # yellow
+         ]):
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
     if title != None:
@@ -132,8 +141,8 @@ def plot_convergence(data,
     ax1.ticklabel_format(style='sci', scilimits=(0,0))
     ax2.ticklabel_format(style='sci', scilimits=(0,0))
 
-    sumTransportKernel = np.asarray(map(float, data['aPost']))+float(data['params']['CT'])*np.asarray(map(float, data['accKernel']))
-    rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(sumTransportKernel)) ]
+
+    rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(data['globalAccIterationApost'])) ]
     errIdealIteration = []
     for n in range(len(rhoN)):
         t = ((np.asarray(map(float, data['eta'])))[0:n+1])[::-1]
@@ -148,16 +157,19 @@ def plot_convergence(data,
                      label='$t_n$: err transport solves (a posteriori estimation)')
 
     line1__ = ax1.plot(iterationIndices
-                    , sumTransportKernel
+                    , data['globalAccIterationApost']
                     , label='$e_n = t_n+C_T k_n$ ($||\\bar u_n -T^{-1}K \\bar u_{n-1}||\leq e_n)$')
 
     line1___ = ax1.plot(iterationIndices, data['eta'], label='$\eta_n (e_n\leq\eta_n)$')
 
-    line1____ = ax1.plot(iterationIndices, errIdealIteration,
-        label='$\sum_{j=0}^{n-1} \\rho^j \eta_{n-j}$ (a posteriori bound for $||u_n - \\bar u_n||$)')
+    line1____ = ax1.plot(iterationIndices, data['globalAccApost'],
+        label='$\sum_{j=0}^{n} \\rho^j e_{n-j}$ (a posteriori bound for $||u_n - \\bar u_n||$)')
 
-    line1_____ = ax1.plot(iterationIndices, 2*np.asarray(rhoN),
-        label='$2\\rho^n$: $(\sum_{j=0}^{n-1} \\rho^j \eta_{n-j}\leq 2\\rho^n$)')
+    line1_____ = ax1.plot(iterationIndices, errIdealIteration,
+        label='$\sum_{j=0}^{n} \\rho^j \eta_{n-j}$ ($\sum_{j=0}^{n} \\rho^j e_{n-j} \leq \sum_{j=0}^{n} \\rho^j \eta_{n-j}$)')
+
+    line1______ = ax1.plot(iterationIndices, (1.+np.pi*np.pi/6.)*np.asarray(rhoN),
+        label='$(1+\pi^2/6)\\rho^n$ ($\sum_{j=0}^{n} \\rho^j \eta_{n-j} \leq (1+\pi^2/6)\\rho^n$)')
 
     # plot in RWTH blue
     plt.setp(line1, linewidth=2.0,
@@ -178,12 +190,15 @@ def plot_convergence(data,
     plt.setp(line1_____, linewidth=2.0,
              marker='o', markersize=4.0,
              color=colorPalette[5])
+    plt.setp(line1______, linewidth=2.0,
+             marker='o', markersize=4.0,
+             color=colorPalette[6])
 
     line2 = ax2.plot(iterationIndices, data['dofs'], label='# of DoFs')
     # plot in RWTH purple
     plt.setp(line2, linewidth=2.0,
              marker='o', markersize=4.0,
-             color=colorPalette[6])
+             color=colorPalette[8])
 
     ax1.set_xscale(xscale)
     ax2.set_xscale(xscale)
@@ -200,7 +215,7 @@ def plot_convergence(data,
         lines2, labels2 = ax2.get_legend_handles_labels()
         plt.legend(lines1 + lines2, labels1 + labels2,
                    loc=legendlocation, shadow=True, bbox_to_anchor=(0.5, 1.9),
-          ncol=1, fancybox=True)
+          ncol=1, fancybox=True,fontsize=12)
     if xlim != None:
         plt.xlim(xlim)
     if ylim != None:
@@ -219,7 +234,13 @@ def plot_directions(data,
          xscale='linear',
          yscale='linear',
          legendlocation='best',
-         colorPalette=['#0054AF','#612158','#33cc33','#cc3300','#cc9900']):
+         colorPalette=[
+         '#0063cc', '#80bdff',  # blue
+         '#33cc33', '#99e699',  # green
+         '#cc0000', '#ff5c33',  # red
+         '#b800e6', '#e580ff',  # purple
+         '#cc9900', '#ffd24d'  # yellow
+         ]):
     fig, ax1 = plt.subplots()
     # ax2 = ax1.twinx()
     if title != None:
@@ -279,7 +300,13 @@ def plot_svd(data,
          xscale='linear',
          yscale='log',
          legendlocation='best',
-         colorPalette=['#0054AF','#612158','#33cc33','#cc3300','#cc9900']):
+         colorPalette=[
+         '#0063cc', '#80bdff',  # blue
+         '#33cc33', '#99e699',  # green
+         '#cc0000', '#ff5c33',  # red
+         '#b800e6', '#e580ff',  # purple
+         '#cc9900', '#ffd24d'  # yellow
+         ]):
     fig, ax1 = plt.subplots()
     # ax2 = ax1.twinx()
     if title != None:
@@ -332,7 +359,13 @@ def plot_kernel_acc_VS_time(data,
          xscale='linear',
          yscale='log',
          legendlocation='best',
-         colorPalette=['#0054AF','#612158','#33cc33','#cc3300','#cc9900']):
+         colorPalette=[
+         '#0063cc', '#80bdff',  # blue
+         '#33cc33', '#99e699',  # green
+         '#cc0000', '#ff5c33',  # red
+         '#b800e6', '#e580ff',  # purple
+         '#cc9900', '#ffd24d'  # yellow
+         ]):
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
     if title != None:
@@ -386,7 +419,13 @@ def plot_kernel_matrix_info(data,
          xscale='linear',
          yscale='log',
          legendlocation='best',
-         colorPalette=['#0054AF','#612158','#33cc33','#cc3300','#cc9900']):
+         colorPalette=[
+         '#0063cc', '#80bdff',  # blue
+         '#33cc33', '#99e699',  # green
+         '#cc0000', '#ff5c33',  # red
+         '#b800e6', '#e580ff',  # purple
+         '#cc9900', '#ffd24d'  # yellow
+         ]):
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
     if title != None:
@@ -413,14 +452,12 @@ def plot_kernel_matrix_info(data,
         else:
             print('Function plot_kernel_matrix_info: unsupported kernelApproxType')
 
-    # plot in RWTH blue
     plt.setp(line1, linewidth=2.0,
              marker='o', markersize=4.0,
              color=colorPalette[0])
 
     line2 = ax2.plot(iterationIndices, data['timeEvalKernel'],
                     label='Computing time kernel evaluation (in $\mu$s)')
-    # plot in RWTH purple
     plt.setp(line2, linewidth=2.0,
              marker='x', markersize=4.0,
              color=colorPalette[1])

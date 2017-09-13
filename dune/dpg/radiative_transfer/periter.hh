@@ -401,6 +401,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   // η_n:
   double eta = 1;
+  std::vector<double> etaList(maxNumberOfIterations,0.);
+  etaList[0] = eta;
   // TODO: estimate norm of rhs f in V'
   // Remark: Here, V=H_{0,+}(D\times S)
   const double fnorm = 1;
@@ -532,6 +534,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // TODO: A priori estimate for the accuracy of our solution:
   double accuracy = 1.;
 
+  std::vector<double> aposterioriIter(maxNumberOfIterations,0.);
+
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
   {
@@ -650,7 +654,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     ofs << "\n-----------------------------------" << std::endl
         << "Inner iterations (transport solves)" << std::endl
         << "-----------------------------------" << std::endl;
-    double aposterioriGlobal = 0.;
+    double aposterioriTransportGlobal = 0.;
     std::vector<double> quadWeight
       = kernelApproximation.getQuadWeightSubinterval();
 
@@ -909,7 +913,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << std::endl << std::endl;
         }
       } // end of spatial refinements in angular subintervals
-      aposterioriGlobal += aposterioriSubinterval;
+      aposterioriTransportGlobal += aposterioriSubinterval;
 
       if(plotSolutions == PlotSolutions::plotOuterIterations) {
         //////////////////////////////////////////////////////////////////////
@@ -948,34 +952,48 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       }
     }
 
-    aposterioriGlobal
-      = std::sqrt(aposterioriGlobal/2*boost::math::constants::pi<double>());
+    // A posteriori estimation transport solve
+    aposterioriTransportGlobal
+      = std::sqrt(aposterioriTransportGlobal/2*boost::math::constants::pi<double>());
     const size_t accumulatedDoFs = std::accumulate(x.cbegin(), x.cend(),
         static_cast<size_t>(0),
         [](size_t acc, auto vec) { return acc + vec.size(); });
 
-    // accuracy = std::pow(rho, n) * CT * fnorm + 2*eta;
-    accuracy = aposterioriGlobal+CT*kappa1 * eta;
+    // A posteriori estimation of error ||bar u_n -T^{-1}K bar u_{n-1}||
+    aposterioriIter[n] = aposterioriTransportGlobal + CT * kappa1 * eta;
+
+    // Error bound for || u_n - \bar u_n || based on a posteriori errors
+    accuracy = 0.;
+    for(size_t j=0; j < n+1; j++){
+      accuracy += std::pow(rho,j)*aposterioriIter[n-j];
+    }
+    // accuracy = (1.+boost::math::constants::pi<double>()
+    //         * boost::math::constants::pi<double>()/6)
+    //         * std::pow(rho,(n));
 
     ofs << "---------------------" << std::endl
         << "End inner iterations " << std::endl
         << "---------------------" << std::endl
-        << "Total a posteriori error: "
-        << aposterioriGlobal                   << std::endl
+        << "Error transport solves (a posteriori estimation): "
+        << aposterioriTransportGlobal                   << std::endl
         << "Accuracy kernel: " << kappa1 * eta           << std::endl
-        << "Global accuracy (a posteriori): "
-          << aposterioriGlobal+kappa1 * eta    << std::endl
-        << "Global accuracy (a priori): "
-          << std::pow(rho, n) * CT * fnorm + 2*eta << " (rho^n * CT * ||f|| + 2*eta_n)" << std::endl
+        << "Error bound ||bar u_n -T^{-1}K bar u_{n-1}|| (a posteriori): "
+          << aposterioriIter[n]   << std::endl
+        << "Error bound ||u_n - bar u_n|| (a posteriori): "
+          << accuracy << std::endl
+        << "Bound global accuracy ||u - bar u_n|| (a priori + a posteriori): "
+          << std::pow(rho, n) * CT * fnorm + accuracy
+          << " (rho^n * CT * ||f|| + (1+pi^2/6)rho^n)" << std::endl
         << "Total number of DoFs: "
           << accumulatedDoFs << std::endl
           << '\n';
 
     std::cout << "Error at end of Iteration " << n << ": "
-              << aposterioriGlobal << ", using "
+              << aposterioriTransportGlobal << ", using "
               << accumulatedDoFs << " DoFs\n";
 
-    eta /= rhobar;
+    eta = std::pow(rho,(n+1))/(1+(n+1)*(n+1));
+    etaList[n+1] = eta;
   }
 }
 
