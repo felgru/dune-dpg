@@ -193,7 +193,7 @@ int main(int argc, char** argv)
     printHelp(argv[0]);
   }
 
-  const unsigned int wltOrder = 4;
+  const unsigned int wltOrder = 2;
   const double targetAccuracy = atof(argv[optind]);
   const double gamma = atof(argv[optind+1]);
   const int N = atoi(argv[optind+2]);
