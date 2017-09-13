@@ -17,6 +17,8 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
+#include <dune/functions/common/optional.hh>
+
 #include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
@@ -575,7 +577,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               std::declval<FEBasisTest>(),
               std::declval<FEBasisHostTrace>(),
               std::declval<VectorType>()))>;
-    std::vector<BVData> bvData;
+    std::vector<Functions::Optional<BVData>> bvData;
     const double accuKernel = kappa1 * eta / (kappaNorm * uNorm);
     {
       FEBasisHostInterior hostGridGlobalBasis(hostGrid.leafGridView());
@@ -609,7 +611,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             = std::get<FEBasisTest>(*testSpace);
         for(size_t imax = i + kernelApproximation.numSperInterval;
             i < imax; i++) {
-          rhsData.push_back(
+          rhsData.emplace_back(
             attachDataToSubGrid(
               subGridGlobalBasis,
               hostGridGlobalBasis,
@@ -617,20 +619,39 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         }
       }
     }
+    std::vector<bool> boundary_is_homogeneous(numS, false);
     {
+      size_t i = 0;
+      for(auto& testSpace : testSpaces) {
+        for(size_t imax = i + kernelApproximation.numSperInterval;
+            i < imax; i++) {
+          if(!(sVector[i][0] > 0.)) boundary_is_homogeneous[i] = true;
+          // TODO: write a generic test for homogeneous inflow boundary
+        }
+      }
       // get bv contribution to rhs
       FEBasisHostTrace hostGridGlobalBasis(hostGrid.leafGridView());
       const VectorType boundaryExtension
           = harmonic_extension_of_boundary_values(g, hostGridGlobalBasis);
       bvData.reserve(numS);
+      i = 0;
       for(auto& testSpace : testSpaces) {
-        const FEBasisTest& subGridGlobalBasis
-            = std::get<FEBasisTest>(*testSpace);
-        bvData.push_back(
-          attachDataToSubGrid(
-            subGridGlobalBasis,
-            hostGridGlobalBasis,
-            boundaryExtension));
+        bool only_homogeneous_bv = true;
+        for(size_t imax = i + kernelApproximation.numSperInterval;
+            i < imax; i++) {
+          only_homogeneous_bv &= boundary_is_homogeneous[i];
+        }
+        if(only_homogeneous_bv) {
+          bvData.emplace_back();
+        } else {
+          const FEBasisTest& subGridGlobalBasis
+              = std::get<FEBasisTest>(*testSpace);
+          bvData.emplace_back(
+            attachDataToSubGrid(
+              subGridGlobalBasis,
+              hostGridGlobalBasis,
+              boundaryExtension));
+        }
       }
     }
 
@@ -705,13 +726,22 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
         VectorType bvExtension;
         {
-          FEBasisTest& feBasisTest = std::get<FEBasisTest>(*testSpaces[i]);
-          auto newGridData
-              = bvData[i].restoreDataToRefinedSubGrid(feBasisTest);
-          bvExtension.resize(newGridData.size(),
-                               false /* don't copy old values */);
-          for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
-            bvExtension[k] = newGridData[k];
+          bool only_homogeneous_bv = true;
+          for(unsigned int j = i*kernelApproximation.numSperInterval,
+                          jmax = (i+1)*kernelApproximation.numSperInterval;
+              j < jmax; j++)
+          {
+            only_homogeneous_bv &= boundary_is_homogeneous[j];
+          }
+          if(!only_homogeneous_bv) {
+            FEBasisTest& feBasisTest = std::get<FEBasisTest>(*testSpaces[i]);
+            auto newGridData
+                = bvData[i].value().restoreDataToRefinedSubGrid(feBasisTest);
+            bvExtension.resize(newGridData.size(),
+                                 false /* don't copy old values */);
+            for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
+              bvExtension[k] = newGridData[k];
+            }
           }
         }
 
@@ -784,7 +814,17 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           //  Assemble the systems
           /////////////////////////////////////////////////////////
           // loop of the discrete ordinates
-          {
+          if(boundary_is_homogeneous[j]) {
+            auto rhsFunction = make_LinearForm(
+                  systemAssembler.getTestSearchSpaces(),
+                  std::make_tuple(
+                    make_LinearFunctionalTerm<0>
+                      (rhsFunctional, std::get<0>(*testSpaces[i]))));
+            systemAssembler.assembleSystem(
+                stiffnessMatrix, rhs,
+                rhsFunction);
+          } else {
+            assert(bvExtension.size() > 0);
             auto rhsFunction = make_LinearForm(
                   systemAssembler.getTestSearchSpaces(),
                   std::make_tuple(
@@ -796,17 +836,17 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             systemAssembler.assembleSystem(
                 stiffnessMatrix, rhs,
                 rhsFunction);
-            systemAssembler.template applyDirichletBoundary<1>
-                (stiffnessMatrix,
-                rhs,
-                dirichletNodesInflow,
-                0.);
-#if 0
-            systemAssembler.template defineCharacteristicFaces<1>(
-                stiffnessMatrix,
-                rhs, s);
-#endif
           }
+          systemAssembler.template applyDirichletBoundary<1>
+              (stiffnessMatrix,
+              rhs,
+              dirichletNodesInflow,
+              0.);
+#if 0
+          systemAssembler.template defineCharacteristicFaces<1>(
+              stiffnessMatrix,
+              rhs, s);
+#endif
 
           ////////////////////////////////////
           //   Initialize solution vector
@@ -840,7 +880,17 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           // -- Contribution of the source term f that has an
           //    analytic expression
           // -- Contribution of the scattering term
-          {
+          if(boundary_is_homogeneous[j]) {
+            auto rhsAssemblerEnriched
+              = make_RhsAssembler(testSpacesEnriched[i]);
+            auto rhsFunction = make_LinearForm(
+                  rhsAssemblerEnriched.getTestSpaces(),
+                  std::make_tuple(
+                    make_LinearFunctionalTerm<0>
+                      (rhsFunctional,
+                       std::get<0>(*systemAssembler.getTestSearchSpaces()))));
+            rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
+          } else {
             auto rhsAssemblerEnriched
               = make_RhsAssembler(testSpacesEnriched[i]);
             auto rhsFunction = make_LinearForm(
