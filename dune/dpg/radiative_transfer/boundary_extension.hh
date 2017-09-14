@@ -53,7 +53,6 @@
 #include <dune/istl/preconditioners.hh>
 #include <dune/istl/solvers.hh>
 #include <dune/istl/io.hh>
-#include <dune/istl/umfpack.hh>
 
 namespace Dune {
 namespace detail {
@@ -266,7 +265,7 @@ BlockVector<FieldVector<double,1>> harmonic_extension_of_boundary_values(
                       ilu0, // preconditioner
                       1e-4, // desired residual reduction factor
                       50,   // maximum number of iterations
-                      2);   // verbosity of the solver
+                      0);   // verbosity of the solver
 
   // Object storing some statistics about the solving process
   InverseOperatorResult statistics;
