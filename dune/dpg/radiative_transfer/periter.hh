@@ -423,32 +423,32 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   ScatteringKernelApproximation kernelApproximation(kernel,
                                                     kappa1*targetAccuracy/4.);
 
-  ofs << "PERITER algorithm" << std::endl
-      << "=================" << std::endl
+  ofs << "PERITER algorithm\n"
+      << "=================\n"
       << "Prescribed final accuracy: "
-      << targetAccuracy      << std::endl
-      << kernel.info()  << std::endl
+      << targetAccuracy << '\n'
+      << kernel.info()  << '\n'
       << "Wavelet order: "
-      << kernelApproximation.getWltOrder() << std::endl
-      << kernelApproximation.typeApprox()  << std::endl
+      << kernelApproximation.getWltOrder() << '\n'
+      << kernelApproximation.typeApprox()  << '\n'
       << "Maximum wavelet level: "
-      << kernelApproximation.getMaxLevel() << std::endl
+      << kernelApproximation.getMaxLevel() << '\n'
       << "Maximum number of directions: "
-      << kernelApproximation.maxNumS()     << std::endl
-      << "Periter parameters:" << std::endl
-      << "rho = "    << rho    << std::endl
-      << "rhobar = " << rhobar << std::endl
-      << "kappa1 = " << kappa1 << std::endl
-      << "kappa2 = " << kappa2 << std::endl
-      << "kappa3 = " << kappa3 << std::endl
-      << "CT = "     << CT <<std::endl;
+      << kernelApproximation.maxNumS()     << '\n'
+      << "Periter parameters:" << '\n'
+      << "rho = "    << rho    << '\n'
+      << "rhobar = " << rhobar << '\n'
+      << "kappa1 = " << kappa1 << '\n'
+      << "kappa2 = " << kappa2 << '\n'
+      << "kappa3 = " << kappa3 << '\n'
+      << "CT = "     << CT     << '\n';
 
   if(kernelApproximation.typeApprox() == "Kernel approximation with: SVD"){
     std::vector<double> singularValues
       = kernelApproximation.getSingularValues();
-    ofs << "Singular values of kernel matrix:" << std::endl;
+    ofs << "Singular values of kernel matrix:\n";
     for(size_t i=0; i<singularValues.size(); i++){
-      ofs << singularValues[i] << std::endl;
+      ofs << singularValues[i] << '\n';
     }
   }
 
@@ -539,9 +539,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
   {
-    ofs << "\nIteration n=" << n << std::endl
-        << "================"<< std::endl;
-    std::cout << "\nIteration " << n << std::endl << std::endl;
+    ofs << "\nIteration n=" << n << '\n'
+        << "================\n";
+    std::cout << "\nIteration " << n << "\n\n";
 
     for(size_t i = 0; i < grids.size(); ++i) {
       grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
@@ -622,38 +622,38 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     std::chrono::steady_clock::time_point endScatteringApproximation
         = std::chrono::steady_clock::now();
 
-    ofs << "eta_n = rhobar^{-n}: " << eta << std::endl
-        << "\n--------------------"       << std::endl
-        << "Info angular approx:"       << std::endl
-        << "--------------------"       << std::endl
+    ofs << "eta_n = rhobar^{-n}: " << eta << '\n'
+        << "\n--------------------\n"
+        << "Info angular approx:\n"
+        << "--------------------\n"
         << "Current wavelet level: "
-        << kernelApproximation.getLevel() << std::endl
+        << kernelApproximation.getLevel() << '\n'
         << "Number of directions: "
-        << kernelApproximation.getNumS()  << std::endl
-        << "Directions are:"              << std::endl;
+        << kernelApproximation.getNumS()  << '\n'
+        << "Directions are:\n";
     for(size_t i = 0; i<numS; i++){
-      ofs << sVector[i] << std::endl;
+      ofs << sVector[i] << '\n';
     }
-    ofs << "\n---------------------"       << std::endl
-        << "Kernel approximation:"       << std::endl
-        << "---------------------"       << std::endl
+    ofs << "\n---------------------\n"
+        << "Kernel approximation:\n"
+        << "---------------------\n"
         << "Accuracy required: "
-          << kappa1 * eta << " (kappa1 * eta)" << std::endl
+          << kappa1 * eta << " (kappa1 * eta)\n"
         << "Accuracy introduced in code: "
-        << accuKernel << " (kappa1 * eta / (kappaNorm * uNorm))" << std::endl
-        << kernelApproximation.info()      << std::endl
+        << accuKernel << " (kappa1 * eta / (kappaNorm * uNorm))\n"
+        << kernelApproximation.info()      << '\n'
         << "Computing time: "
           << std::chrono::duration_cast<std::chrono::microseconds>
           (endScatteringApproximation - startScatteringApproximation).count()
-          << "us" << std::endl;
+          << "us\n";
 
 
     ////////////////////////////////////////////////////
     // Inner loop
     ////////////////////////////////////////////////////
-    ofs << "\n-----------------------------------" << std::endl
-        << "Inner iterations (transport solves)" << std::endl
-        << "-----------------------------------" << std::endl;
+    ofs << "\n-----------------------------------\n"
+        << "Inner iterations (transport solves)\n"
+        << "-----------------------------------\n";
     double aposterioriTransportGlobal = 0.;
     std::vector<double> quadWeight
       = kernelApproximation.getQuadWeightSubinterval();
@@ -667,8 +667,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         //  - wlt level k --> 2^k subintervals
     for(unsigned int i = 0; i < grids.size(); ++i)
     {
-      ofs << "\nAngular subinterval " << i << std::endl
-        << "----------------------" << std::endl;
+      ofs << "\nAngular subinterval " << i
+        << "\n----------------------\n";
 
       grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
                                                hostGrid);
@@ -792,7 +792,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           std::cout << "rhs size = " << rhs.size()
                     << " matrix size = " << stiffnessMatrix.N()
                                 << " x " << stiffnessMatrix.M()
-                    << " solution size = " << x[j].size() << std::endl;
+                    << " solution size = " << x[j].size() << '\n';
 
 
           const int verbosity = 0; // 0: not verbose; >0: verbose
@@ -866,20 +866,19 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           }
 
           ofs << "Iteration " << n << '.' << nRefinement
-              << " for direction " << j << ": " << std::endl
+              << " for direction " << j << ": \n"
               << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
-              << std::sqrt(aposteriori_s) << std::endl
-              << "  - Grid level: " << grids[i]->maxLevel() << std::endl
-              << "  - Number of DOFs: " << x[j].size()
+              << std::sqrt(aposteriori_s)
+              << "\n  - Grid level: "     << grids[i]->maxLevel()
+              << "\n  - Number of DOFs: " << x[j].size()
               << '\n';
 
-          std::cout << '\n';
-          std::cout << "Iteration " << n << '.' << nRefinement
-              << " for direction " << j << ": " << std::endl
+          std::cout << "\nIteration " << n << '.' << nRefinement
+              << " for direction " << j << ": \n"
               << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
-              << std::sqrt(aposteriori_s) << std::endl
-              << "  - Grid level: " << grids[i]->maxLevel() << std::endl
-              << "  - Number of DOFs: " << x[j].size()
+              << std::sqrt(aposteriori_s)
+              << "\n  - Grid level: " << grids[i]->maxLevel()
+              << "\n  - Number of DOFs: " << x[j].size()
               << '\n';
         } // End loop over directions in the same angular subinterval.
 
@@ -893,7 +892,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << ((std::sqrt(aposterioriSubinterval) <=
                   kappa3 * eta / (1 << kernelApproximation.getLevel()))
                   ? " (enough)" : (" (not enough, required "+std::to_string(kappa3 * eta / (1 << kernelApproximation.getLevel()))+")"))
-              << std::endl << std::endl;
+              << "\n\n";
 
           break;
         } else {
@@ -910,7 +909,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << ((std::sqrt(aposterioriSubinterval) <=
                   kappa3 * eta / (1 << kernelApproximation.getLevel()))
                   ? " (enough)" : (" (not enough, required "+std::to_string(kappa3 * eta / (1 << kernelApproximation.getLevel()))+")"))
-              << std::endl << std::endl;
+              << "\n\n";
         }
       } // end of spatial refinements in angular subintervals
       aposterioriTransportGlobal += aposterioriSubinterval;
@@ -971,22 +970,22 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     //         * boost::math::constants::pi<double>()/6)
     //         * std::pow(rho,(n));
 
-    ofs << "---------------------" << std::endl
-        << "End inner iterations " << std::endl
-        << "---------------------" << std::endl
+    ofs << "---------------------\n"
+        << "End inner iterations \n"
+        << "---------------------\n"
         << "Error transport solves (a posteriori estimation): "
-        << aposterioriTransportGlobal                   << std::endl
-        << "Accuracy kernel: " << kappa1 * eta           << std::endl
+          << aposterioriTransportGlobal                  << '\n'
+        << "Accuracy kernel: " << kappa1 * eta           << '\n'
         << "Error bound ||bar u_n -T^{-1}K bar u_{n-1}|| (a posteriori): "
-          << aposterioriIter[n]   << std::endl
+          << aposterioriIter[n]   << '\n'
         << "Error bound ||u_n - bar u_n|| (a posteriori): "
-          << accuracy << std::endl
+          << accuracy << '\n'
         << "Bound global accuracy ||u - bar u_n|| (a priori + a posteriori): "
           << std::pow(rho, n) * CT * fnorm + accuracy
-          << " (rho^n * CT * ||f|| + (1+pi^2/6)rho^n)" << std::endl
+          << " (rho^n * CT * ||f|| + (1+pi^2/6)rho^n)\n"
         << "Total number of DoFs: "
-          << accumulatedDoFs << std::endl
-          << '\n';
+          << accumulatedDoFs
+        << "\n\n";
 
     std::cout << "Error at end of Iteration " << n << ": "
               << aposterioriTransportGlobal << ", using "
