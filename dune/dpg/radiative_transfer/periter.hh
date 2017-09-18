@@ -115,6 +115,8 @@ class Periter {
    * \param hostGrid
    * \param f  right hand side function
    * \param g  lifting of the boundary values
+   * \param is_inflow_boundary_homogeneous
+   *            checks if g is 0 on the inflow boundary
    * \param sigma   absorbtion coefficient
    * \param kernel  the scattering kernel, e.g. a Henyey–Greenstein kernel
    * \param rho  the contraction parameter ρ
@@ -125,10 +127,11 @@ class Periter {
    * \param plotSolutions  specifies when to create .vtu files for plotting
    *                       the solution
    */
-  template<class HostGrid, class F, class G, class Kernel>
+  template<class HostGrid, class F, class G, class HB, class Kernel>
   void solve(HostGrid& hostGrid,
              const F& f,
              const G& g,
+             const HB& is_inflow_boundary_homogeneous,
              double sigma,
              const Kernel& kernel,
              double rho,
@@ -341,11 +344,12 @@ namespace detail {
 #endif
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class HostGrid, class F, class G, class Kernel>
+template<class HostGrid, class F, class G, class HB, class Kernel>
 void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            HostGrid& hostGrid,
            const F& f,
            const G& g,
+           const HB& is_inflow_boundary_homogeneous,
            double sigma,
            const Kernel& kernel,
            double rho,
@@ -625,7 +629,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       for(auto& testSpace : testSpaces) {
         for(size_t imax = i + kernelApproximation.numSperInterval;
             i < imax; i++) {
-          if(!(sVector[i][0] > 0.)) boundary_is_homogeneous[i] = true;
+          boundary_is_homogeneous[i]
+              = is_inflow_boundary_homogeneous(sVector[i]);
           // TODO: write a generic test for homogeneous inflow boundary
         }
       }

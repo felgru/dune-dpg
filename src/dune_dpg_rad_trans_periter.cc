@@ -254,6 +254,8 @@ int main(int argc, char** argv)
           return 0.;
         }
       };
+  auto homogeneous_inflow_boundary =
+    [](const Direction& s) { return !(s[0] > 0.); };
   const double sigma = 5.;
   const double domainDiameter = std::sqrt(2.);
   // TODO: Adapt CT when sigma varies
@@ -268,7 +270,7 @@ int main(int argc, char** argv)
 
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
           FeRHS>()
-      .solve(*grid, f_constant, g, sigma,
+      .solve(*grid, f_constant, g, homogeneous_inflow_boundary, sigma,
              HenyeyGreensteinScattering(gamma),
              rho, CT, targetAccuracy, N, plotSolutions);
 
