@@ -193,7 +193,7 @@ int main(int argc, char** argv)
     printHelp(argv[0]);
   }
 
-  const unsigned int wltOrder = 4;
+  const unsigned int wltOrder = 2;
   const double targetAccuracy = atof(argv[optind]);
   const double gamma = atof(argv[optind+1]);
   const int N = atoi(argv[optind+2]);
@@ -224,9 +224,10 @@ int main(int argc, char** argv)
   // disable it here.
   grid->setClosureType(GridType::NONE);
 
-  // auto f_constant
-  //   = [](const Domain& x, const Direction& s)
-  //     { return 1.; };
+  auto f_constant
+    = [](const Domain& x, const Direction& s)
+      { return 1.; };
+#if 0
   auto f_checkerboard
     = [](const Domain& x, const Direction& s)
       {
@@ -237,10 +238,24 @@ int main(int argc, char** argv)
          (((int)std::floor(n*x[0])+(int)std::floor(n*x[1]))%2 ==0) ?
          v1 : v2;
       };
-  auto g = [](const Domain& x, const Direction& s)
-           { return x[0] + x[1]; };
-  auto gDeriv = [](const Domain& x, const Direction& s)
-                { return s[0] + s[1]; };
+#endif
+  auto g = [](const Domain& x)
+      {
+        if(x[0] < .1) {
+          const double xProj = x[1];
+          if(xProj>=.5+.125 || xProj<=.5-.125) {
+            return 0.;
+          } else if(xProj<=.5) {
+            return 8*(xProj-(.5-.125));
+          } else {
+            return 1-8*(xProj-.5);
+          }
+        } else {
+          return 0.;
+        }
+      };
+  auto homogeneous_inflow_boundary =
+    [](const Direction& s) { return !(s[0] > 0.); };
   const double sigma = 5.;
   const double domainDiameter = std::sqrt(2.);
   // TODO: Adapt CT when sigma varies
@@ -254,8 +269,8 @@ int main(int argc, char** argv)
   assert(rho < 1.);
 
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
-          FeRHSandBoundary>()
-      .solve(*grid, f_checkerboard, g, gDeriv, sigma,
+          FeRHS>()
+      .solve(*grid, f_constant, g, homogeneous_inflow_boundary, sigma,
              HenyeyGreensteinScattering(gamma),
              rho, CT, targetAccuracy, N, plotSolutions);
 

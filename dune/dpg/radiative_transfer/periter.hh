@@ -17,6 +17,8 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
+#include <dune/functions/common/optional.hh>
+
 #include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
@@ -33,6 +35,7 @@
 #include <dune/dpg/functions/refinementinterpolation.hh>
 #include <dune/dpg/linearfunctionalterm.hh>
 #include <dune/dpg/radiative_transfer/approximate_scattering.hh>
+#include <dune/dpg/radiative_transfer/boundary_extension.hh>
 #include <dune/dpg/radiative_transfer/subgridprojection.hh>
 #include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
@@ -98,8 +101,7 @@ enum class PlotSolutions {
  *         specifies the method used to approximate the scattering kernel
  * \tparam RHSApproximation  if right hand side and lifting of boundary
  *                           values are finite element functions, set this
- *                           to FeRHSandBoundary, otherwise set this to
- *                           ApproximateRHSandBoundary
+ *                           to FeRHS, otherwise set this to ApproximateRHS
  */
 template<class ScatteringKernelApproximation, class RHSApproximation>
 class Periter {
@@ -113,7 +115,8 @@ class Periter {
    * \param hostGrid
    * \param f  right hand side function
    * \param g  lifting of the boundary values
-   * \param gDeriv  derivative of g in direction s
+   * \param is_inflow_boundary_homogeneous
+   *            checks if g is 0 on the inflow boundary
    * \param sigma   absorbtion coefficient
    * \param kernel  the scattering kernel, e.g. a Henyey–Greenstein kernel
    * \param rho  the contraction parameter ρ
@@ -124,11 +127,11 @@ class Periter {
    * \param plotSolutions  specifies when to create .vtu files for plotting
    *                       the solution
    */
-  template<class HostGrid, class F, class G, class GDeriv, class Kernel>
+  template<class HostGrid, class F, class G, class HB, class Kernel>
   void solve(HostGrid& hostGrid,
              const F& f,
              const G& g,
-             const GDeriv& gDeriv,
+             const HB& is_inflow_boundary_homogeneous,
              double sigma,
              const Kernel& kernel,
              double rho,
@@ -186,8 +189,8 @@ class Periter {
       const std::vector<std::unique_ptr<Grid>>& grids);
 };
 
-struct FeRHSandBoundary {};
-struct ApproximateRHSandBoundary {};
+struct FeRHS {};
+struct ApproximateRHS {};
 
 #ifndef DOXYGEN
 namespace detail {
@@ -195,16 +198,15 @@ namespace detail {
   using VectorType = BlockVector<FieldVector<double,1>>;
   using Direction = FieldVector<double, dim>;
 
-  template<class FEHostBasis, class Grids,
-           class F, class G, class GDeriv>
-  inline void approximate_rhs_and_bv (
+  template<class FEHostBasis, class Grids, class F>
+  inline void approximate_rhs (
       std::vector<VectorType>& rhsFunctional,
       Grids&,
       double,
       const FEHostBasis& hostGridBasis,
       const std::vector<Direction>& sVector,
-      F& f, G& g, GDeriv& gDeriv, double sigma,
-      FeRHSandBoundary) {
+      F& f,
+      FeRHS) {
     static_assert(!is_RefinedFiniteElement<FEHostBasis>::value,
         "Functions::interpolate won't work for refined finite elements");
     const size_t numS = sVector.size();
@@ -213,8 +215,7 @@ namespace detail {
       VectorType gInterpolation(hostGridBasis.size());
       const Direction s = sVector[i];
       Functions::interpolate(hostGridBasis, gInterpolation,
-          [s,&f,&g,&gDeriv,sigma](const Direction& x)
-          { return f(x,s) + gDeriv(x,s) - sigma*g(x,s); });
+          [s,&f](const Direction& x) { return f(x,s); });
 
       // Add gInterpolate to first hostGridBasis.size() entries of
       // rhsFunctional[i].
@@ -229,19 +230,18 @@ namespace detail {
 
 
   // Refine grid until accuracy kappa2*eta is reached for
-  // approximation of rhs and boundary values.
-  template<class FEBases, class Grids,
-           class F, class G, class GDeriv>
-  inline void approximate_rhs_and_bv (
+  // approximation of rhs.
+  template<class FEBases, class Grids, class F>
+  inline void approximate_rhs (
       std::vector<VectorType>& rhsFunctional,
       Grids& grids,
       double accuracy,
       const std::vector<std::shared_ptr<FEBases>>& solutionSpaces,
       const std::vector<Direction>& sVector,
-      F& f, G& g, GDeriv& gDeriv, double sigma,
-      ApproximateRHSandBoundary) {
+      F& f,
+      ApproximateRHS) {
     DUNE_THROW(Dune::NotImplemented,
-        "Implementation of approximate_rhs_and_bv for non-FE right hand side "
+        "Implementation of approximate_rhs for non-FE right hand side "
         "functions currently broken.");
     using Grid = typename Grids::value_type::element_type;
     using EntitySeed = typename Grid::template Codim<0>::Entity::EntitySeed;
@@ -262,15 +262,13 @@ namespace detail {
           VectorType gInterpolation(feBasisInterior.size());
           const Direction s = sVector[i];
           Functions::interpolate(feBasisInterior, gInterpolation,
-              [s,&f,&g,&gDeriv,sigma](const Direction& x)
-              { return f(x,s) + gDeriv(x,s) - sigma*g(x,s); });
+              [s,&f](const Direction& x) { return f(x,s); });
 
           std::swap(boundaryValues[i], gInterpolation);
         }
         const Direction s = sVector[i];
         auto gExact = Functions::makeGridViewFunction(
-              [s,&f,&g,&gDeriv,sigma](const Direction& x)
-              { return f(x,s) + gDeriv(x,s) - sigma*g(x,s); },
+              [s,&f](const Direction& x) { return f(x,s); },
               grids[i]->leafGridView());
         auto gApprox = Functions::makeDiscreteGlobalBasisFunction<double>(
               feBasisInterior, boundaryValues[i]);
@@ -346,12 +344,12 @@ namespace detail {
 #endif
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class HostGrid, class F, class G, class GDeriv, class Kernel>
+template<class HostGrid, class F, class G, class HB, class Kernel>
 void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            HostGrid& hostGrid,
            const F& f,
            const G& g,
-           const GDeriv& gDeriv,
+           const HB& is_inflow_boundary_homogeneous,
            double sigma,
            const Kernel& kernel,
            double rho,
@@ -364,12 +362,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << "Plotting of only the last iteration is not implemented yet!\n";
     std::abort();
   }
-  static_assert(std::is_same<RHSApproximation, FeRHSandBoundary>::value
-      || std::is_same<RHSApproximation, ApproximateRHSandBoundary>::value,
+  static_assert(std::is_same<RHSApproximation, FeRHS>::value
+      || std::is_same<RHSApproximation, ApproximateRHS>::value,
       "Unknown type provided for RHSApproximation!\n"
-      "Should be either FeRHSandBoundary or ApproximateRHSandBoundary.");
+      "Should be either FeRHS or ApproximateRHS.");
   constexpr bool rhsIsFeFunction
-      = std::is_same<RHSApproximation, FeRHSandBoundary>::value;
+      = std::is_same<RHSApproximation, FeRHS>::value;
 
   const unsigned int dim = HostGrid::dimension;
   using Grid = SubGrid<dim, HostGrid, false>;
@@ -577,9 +575,17 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               std::declval<FEBasisHostInterior>(),
               std::declval<VectorType>()))>;
     std::vector<RHSData> rhsData;
+    using FEBasisHostTrace
+        = changeGridView_t<FEBasisTrace, HostGridView>;
+    using BVData = std::decay_t<decltype(attachDataToSubGrid(
+              std::declval<FEBasisTest>(),
+              std::declval<FEBasisHostTrace>(),
+              std::declval<VectorType>()))>;
+    std::vector<Functions::Optional<BVData>> bvData;
     const double accuKernel = kappa1 * eta / (kappaNorm * uNorm);
     {
       FEBasisHostInterior hostGridGlobalBasis(hostGrid.leafGridView());
+
       std::vector<VectorType> rhsFunctional =
           apply_scattering (
             kernelApproximation, x, solutionSpaces, hostGridGlobalBasis,
@@ -595,26 +601,61 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       rhsData.reserve(numS);
 
       // TODO: restore grids from gridIdSets and update spaces
-      //       shouldn't be necessary, as long as RHSApproximation ==
-      //       FERHSandBoundary
-      detail::approximate_rhs_and_bv (
+      //       shouldn't be necessary, as long as RHSApproximation == FeRHS
+      detail::approximate_rhs (
           rhsFunctional,
           grids,
           kappa2*eta,
           hostGridGlobalBasis,
           sVector,
-          f, g, gDeriv, sigma, RHSApproximation{});
+          f, RHSApproximation{});
       size_t i = 0;
       for(auto& testSpace : testSpaces) {
         const FEBasisTest& subGridGlobalBasis
             = std::get<FEBasisTest>(*testSpace);
         for(size_t imax = i + kernelApproximation.numSperInterval;
             i < imax; i++) {
-          rhsData.push_back(
+          rhsData.emplace_back(
             attachDataToSubGrid(
               subGridGlobalBasis,
               hostGridGlobalBasis,
               rhsFunctional[i]));
+        }
+      }
+    }
+    std::vector<bool> boundary_is_homogeneous(numS, false);
+    {
+      size_t i = 0;
+      for(auto& testSpace : testSpaces) {
+        for(size_t imax = i + kernelApproximation.numSperInterval;
+            i < imax; i++) {
+          boundary_is_homogeneous[i]
+              = is_inflow_boundary_homogeneous(sVector[i]);
+          // TODO: write a generic test for homogeneous inflow boundary
+        }
+      }
+      // get bv contribution to rhs
+      FEBasisHostTrace hostGridGlobalBasis(hostGrid.leafGridView());
+      const VectorType boundaryExtension
+          = harmonic_extension_of_boundary_values(g, hostGridGlobalBasis);
+      bvData.reserve(numS);
+      i = 0;
+      for(auto& testSpace : testSpaces) {
+        bool only_homogeneous_bv = true;
+        for(size_t imax = i + kernelApproximation.numSperInterval;
+            i < imax; i++) {
+          only_homogeneous_bv &= boundary_is_homogeneous[i];
+        }
+        if(only_homogeneous_bv) {
+          bvData.emplace_back();
+        } else {
+          const FEBasisTest& subGridGlobalBasis
+              = std::get<FEBasisTest>(*testSpace);
+          bvData.emplace_back(
+            attachDataToSubGrid(
+              subGridGlobalBasis,
+              hostGridGlobalBasis,
+              boundaryExtension));
         }
       }
     }
@@ -688,6 +729,27 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       {
         aposterioriSubinterval = 0.;
 
+        VectorType bvExtension;
+        {
+          bool only_homogeneous_bv = true;
+          for(unsigned int j = i*kernelApproximation.numSperInterval,
+                          jmax = (i+1)*kernelApproximation.numSperInterval;
+              j < jmax; j++)
+          {
+            only_homogeneous_bv &= boundary_is_homogeneous[j];
+          }
+          if(!only_homogeneous_bv) {
+            FEBasisTest& feBasisTest = std::get<FEBasisTest>(*testSpaces[i]);
+            auto newGridData
+                = bvData[i].value().restoreDataToRefinedSubGrid(feBasisTest);
+            bvExtension.resize(newGridData.size(),
+                                 false /* don't copy old values */);
+            for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
+              bvExtension[k] = newGridData[k];
+            }
+          }
+        }
+
         // Loop over directions in the same angular subinterval.
         for(unsigned int j = i*kernelApproximation.numSperInterval,
                         jmax = (i+1)*kernelApproximation.numSperInterval;
@@ -757,7 +819,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           //  Assemble the systems
           /////////////////////////////////////////////////////////
           // loop of the discrete ordinates
-          {
+          if(boundary_is_homogeneous[j]) {
             auto rhsFunction = make_LinearForm(
                   systemAssembler.getTestSearchSpaces(),
                   std::make_tuple(
@@ -766,17 +828,30 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             systemAssembler.assembleSystem(
                 stiffnessMatrix, rhs,
                 rhsFunction);
-            systemAssembler.template applyDirichletBoundary<1>
-                (stiffnessMatrix,
-                rhs,
-                dirichletNodesInflow,
-                0.);
-#if 0
-            systemAssembler.template defineCharacteristicFaces<1>(
-                stiffnessMatrix,
-                rhs, s);
-#endif
+          } else {
+            assert(bvExtension.size() > 0);
+            auto rhsFunction = make_LinearForm(
+                  systemAssembler.getTestSearchSpaces(),
+                  std::make_tuple(
+                    make_LinearFunctionalTerm<0>
+                      (rhsFunctional, std::get<0>(*testSpaces[i])),
+                    make_SkeletalLinearFunctionalTerm
+                      <0, IntegrationType::normalVector>
+                      (bvExtension, std::get<0>(*testSpaces[i]), -1, s)));
+            systemAssembler.assembleSystem(
+                stiffnessMatrix, rhs,
+                rhsFunction);
           }
+          systemAssembler.template applyDirichletBoundary<1>
+              (stiffnessMatrix,
+              rhs,
+              dirichletNodesInflow,
+              0.);
+#if 0
+          systemAssembler.template defineCharacteristicFaces<1>(
+              stiffnessMatrix,
+              rhs, s);
+#endif
 
           ////////////////////////////////////
           //   Initialize solution vector
@@ -810,7 +885,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           // -- Contribution of the source term f that has an
           //    analytic expression
           // -- Contribution of the scattering term
-          {
+          if(boundary_is_homogeneous[j]) {
             auto rhsAssemblerEnriched
               = make_RhsAssembler(testSpacesEnriched[i]);
             auto rhsFunction = make_LinearForm(
@@ -818,7 +893,22 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                   std::make_tuple(
                     make_LinearFunctionalTerm<0>
                       (rhsFunctional,
-                      std::get<0>(*systemAssembler.getTestSearchSpaces()))));
+                       std::get<0>(*systemAssembler.getTestSearchSpaces()))));
+            rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
+          } else {
+            auto rhsAssemblerEnriched
+              = make_RhsAssembler(testSpacesEnriched[i]);
+            auto rhsFunction = make_LinearForm(
+                  rhsAssemblerEnriched.getTestSpaces(),
+                  std::make_tuple(
+                    make_LinearFunctionalTerm<0>
+                      (rhsFunctional,
+                       std::get<0>(*systemAssembler.getTestSearchSpaces())),
+                    make_SkeletalLinearFunctionalTerm
+                      <0, IntegrationType::normalVector>
+                      (bvExtension,
+                       std::get<0>(*systemAssembler.getTestSearchSpaces()),
+                       -1, s)));
             rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
           }
           // - Computation of the a posteriori error
@@ -847,23 +937,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           ErrorTools::DoerflerMarking(*grids[i], ratio,
                                       std::move(aposterioriCellwise));
 
-          static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
-              "Functions::interpolate won't work for refined finite elements");
-          {
-            auto& feBasisInterior = std::get<0>(*solutionSpaces[i]);
-            VectorType gInterpolation(feBasisInterior.size());
-            Functions::interpolate(feBasisInterior, gInterpolation,
-                [&g,s](const Direction& x) { return g(x,s); });
-
-            // Add gInterpolation to first feBasisInterior.size() entries of x.
-            using Iterator = std::decay_t<decltype(x[j].begin())>;
-            for(Iterator xIt=x[j].begin(),
-                        xEnd=x[j].begin()+feBasisInterior.size(),
-                        gIt=gInterpolation.begin(); xIt!=xEnd; ++xIt, ++gIt) {
-              *xIt += *gIt;
-            }
-            // TODO: Add (interpolation of) g to theta part of x[j]?
-          }
+          // TODO: Add (interpolation of) g to theta part of x[j]?
 
           ofs << "Iteration " << n << '.' << nRefinement
               << " for direction " << j << ": \n"

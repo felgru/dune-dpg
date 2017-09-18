@@ -1,6 +1,3 @@
-* Implement harmonical extension of boundary values to obtain a
-  smooth lifting that can be used for all transport directions.
-
 known bugs:
 
 * src/kernel_svds.cc has to be adapted to changes in the scattering kernel
