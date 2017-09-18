@@ -143,6 +143,31 @@ class Periter {
   private:
   using VectorType = BlockVector<FieldVector<double,1>>;
 
+  /**
+   * Compute the solution of a transport problem
+   *
+   * This solves a transport problem for a given direction s on a fixed
+   * grid. Afterwards it computes a posteriori error estimates and does
+   * Dörfler marking.
+   *
+   * This computes the modified problem from Broersen, Dahmen, Stevenson,
+   * Remark 3.6, alternative 2 for non-homogeneous problems. In particular
+   * that means that the trace part of the solution will not fit the
+   * non-homogeneous boundary values while the inner part does.
+   *
+   * \param[out] x the solution of the transport problem
+   * \param grid the grid needed for Döfler marking
+   * \param testSpaces
+   * \param solutionSpaces
+   * \param testSpacesEnriched
+   * \param s the transport direction
+   * \param sigma the absorbtion coefficient
+   * \param rhsData the data for the unmodified rhs
+   * \param boundary_is_homogeneous
+   * \param bvExtension a lifting of the boundary values
+   *
+   * \return the squared a posteriori error of the solution
+   */
   template<class TestSpaces, class SolutionSpaces, class TestSpacesEnriched,
            class Grid, class RHSData>
   static double compute_transport_solution(
