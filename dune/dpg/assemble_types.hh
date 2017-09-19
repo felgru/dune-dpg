@@ -3,11 +3,13 @@
 
 namespace Dune {
 
+//! The domain over which we integrate
 enum class DomainOfIntegration {
     interior, //!< integration over the interior of a cell
     face      //!< integration over the faces of a cell
 };
 
+//! The type of the integrand in a term of BilinearForm or InnerProduct
 enum class IntegrationType {
     valueValue,   //!< v u
     gradValue,    //!< ∇v ·  u
@@ -18,12 +20,14 @@ enum class IntegrationType {
     travelDistanceWeighted
 };
 
+//! The type of the integrand in a linear integral term
 enum class LinearIntegrationType {
     valueFunction,           //!< v f where f is an explicit function known at every point of the domain
     gradFunction,            //!< ∇v · f where f is an explicit function known at every point of the domain
     normalVectorFunction     //!< v f n · β, where n is the outer unit normal vector and f is an explicit function known at every point of the domain
 };
 
+//! How a given function should be evaluated
 enum class EvaluationType {
     value,   //!< v
     grad,    //!< ∇v

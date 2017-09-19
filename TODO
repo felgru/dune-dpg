@@ -1,19 +1,7 @@
-* Implement harmonical extension of boundary values to obtain a
-  smooth lifting that can be used for all transport directions.
-* Integrate the Alpert wavelets into Periter.
-  Use one sub grid per interval (i.e. for higher order Alpert wavelets
-  several directions will be sharing one grid to save some memory).
-* Start on a small wavelet level for the kernel application and increase
-  it in the outer iteration to guarantee given error for the kernel
-  application (see paper).
-  The grids for the transport solver in the next outer iteration can be
-  created from a union of grids from neighboring transport directions.
-  It might be a good idea to sort all data structures that are indexed
-  by transport direction level-wise. This would make it easier to add
-  another wavelet level during kernel application.
-
 known bugs:
 
+* src/kernel_svds.cc has to be adapted to changes in the scattering kernel
+  functions.
 * src/dune_dpg_saddlepoint.cc currently does not compile.
   The concatenation of solution and test spaces in SaddlepointSystemAssembler
   cannot be done properly with the new shared_ptr-to-space-tuple interface.

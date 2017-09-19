@@ -9,9 +9,10 @@
 #include <dune/istl/matrix.hh>
 
 #include "assemble_types.hh"
-#include "type_traits.hh"
-#include "quadrature.hh"
 #include "localevaluation.hh"
+#include "quadrature.hh"
+#include "traveldistancenorm.hh"
+#include "type_traits.hh"
 
 namespace Dune {
 
@@ -21,8 +22,8 @@ namespace Dune {
    * This is the essential building block from which BilinearForm and
    * InnerProduct are built.
    *
-   * \tparam integrationType  the form of the integrand
-   * \tparam domainOfIntegration
+   * \tparam integrationType  the form of the integrand, see #IntegrationType
+   * \tparam domainOfIntegration  see #DomainOfIntegration
    * \tparam FactorType     the type of the factor with which
    *                        we multiply the integrand
    * \tparam DirectionType  the type of the transport directions
@@ -133,8 +134,8 @@ namespace detail {
  * \param c  the factor with which we multiply the integrand
  * \tparam lhsSpaceIndex the index of the left space
  * \tparam rhsSpaceIndex the index of the right space
- * \tparam integrationType  the form of the integrand
- * \tparam domainOfIntegration
+ * \tparam integrationType  the form of the integrand, see #IntegrationType
+ * \tparam domainOfIntegration  see #DomainOfIntegration
  * \tparam FactorType  the type of the factor \p c
  */
 template<size_t lhsSpaceIndex,
@@ -169,8 +170,8 @@ auto make_IntegralTerm(FactorType c)
  * \param beta  the transport direction
  * \tparam lhsSpaceIndex the index of the left space
  * \tparam rhsSpaceIndex the index of the right space
- * \tparam integrationType  the form of the integrand
- * \tparam domainOfIntegration
+ * \tparam integrationType  the form of the integrand, see #IntegrationType
+ * \tparam domainOfIntegration  see #DomainOfIntegration
  * \tparam FactorType     the type of the factor \p c
  * \tparam DirectionType  the type of the transport direction \p beta
  */
@@ -212,8 +213,8 @@ auto make_IntegralTerm(FactorType c, DirectionType beta)
  * \param rhsBeta  the transport direction for the right space
  * \tparam lhsSpaceIndex the index of the left space
  * \tparam rhsSpaceIndex the index of the right space
- * \tparam integrationType  the form of the integrand
- * \tparam domainOfIntegration
+ * \tparam integrationType  the form of the integrand, see #IntegrationType
+ * \tparam domainOfIntegration  see #DomainOfIntegration
  * \tparam FactorType     the type of the factor \p c
  * \tparam DirectionType  the type of the transport directions
  */
@@ -324,98 +325,6 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 
   }
 }
-
-namespace detail {
-  // This function expects data transformed to the reference triangle:
-  // A point in the inflow boundary of the reference cell and the
-  // transport direction transformed under the global-to-local mapping.
-  template<class ReferenceCellCoordinate, class ReferenceCellDirection>
-  double travelDistance(
-      const ReferenceCellCoordinate& x,
-      const ReferenceCellDirection& beta)
-  {
-    if(x[0]) { /* x[0] != 0 */
-      if(x[1]) { /* x[1] != 0 */
-        double a = x[1] - x[0]*beta[1]/beta[0];
-        if(0 <= a && a <= 1)
-          return -x[0]/beta[0];
-        else
-          return -x[1]/beta[1];
-      } else { /* x[1] == 0 */
-        double a = -beta[1]/beta[0]*x[0];
-        if(0 <= a && a <= 1)
-          return -x[0]/beta[0];
-        else
-          return (1-x[0])/(beta[0]+beta[1]);
-      }
-    } else { /* x[0] == 0 */
-      double b = -beta[0]/beta[1]*x[1];
-      if(0 <= b && b <= 1)
-        return -x[1]/beta[1];
-      else
-        return (1-x[1])/(beta[0]+beta[1]);
-    }
-  }
-
-  template<class FaceGeometryInElement, class ReferenceCellDirection>
-  double splitPointOfInflowFaceInTriangle(
-      const FaceGeometryInElement& faceGeometryInElement,
-      ReferenceCellDirection& referenceBeta)
-  {
-    // This gets a bit ugly as we have to check the orientation of the face
-    double splitPoint;
-    const double tol = 1e-10;
-    if(fabs(referenceBeta[0]) < tol) referenceBeta[0] = 0.;
-    if(fabs(referenceBeta[1]) < tol) referenceBeta[1] = 0.;
-
-    auto corner = faceGeometryInElement.global({0});
-    if(referenceBeta[0] > 0) {
-      if((corner
-          - FieldVector<double,2>{0.,0.}).two_norm() < tol)
-        splitPoint = -referenceBeta[1]/referenceBeta[0];
-      else
-        splitPoint = 1.+referenceBeta[1]/referenceBeta[0];
-    } else if(referenceBeta[1] > 0) {
-      if((corner
-          - FieldVector<double,2>{0.,0.}).two_norm() < tol)
-        splitPoint = -referenceBeta[0]/referenceBeta[1];
-      else
-        splitPoint = 1.+referenceBeta[0]/referenceBeta[1];
-    } else {
-      if((corner
-          - FieldVector<double,2>{0.,1.}).two_norm() < tol)
-        splitPoint = referenceBeta[0]/(referenceBeta[0]+referenceBeta[1]);
-      else
-        splitPoint = 1.-referenceBeta[0]/(referenceBeta[0]+referenceBeta[1]);
-    }
-    if(fabs(splitPoint)< tol)         splitPoint = 0.;
-    else if(fabs(splitPoint-1.)< tol) splitPoint = 1.;
-
-    assert(splitPoint >= 0 && splitPoint <= 1);
-    return splitPoint;
-  }
-
-  template <class Geometry, class SubGeometry, int dim>
-  FieldVector<double,dim> referenceBeta(
-      const Geometry& geometry,
-      const SubGeometry& subGeometryInReferenceElement,
-      const FieldVector<double, dim>& beta)
-  {
-    static_assert(dim==2, "Computation of transport direction on reference"
-                          " cell only implemented in 2d!");
-    /* This won't work for curvilinear elements, but they don't seem
-     * to be supported by UG anyway. */
-    const auto& jacobianSubInverse
-        = subGeometryInReferenceElement.jacobianInverseTransposed({0., 0.});
-    const auto& jacobianInverse = geometry.jacobianInverseTransposed({0., 0.});
-    FieldVector<double,dim> referenceBetaSub, referenceBeta;
-    jacobianInverse.mtv(beta, referenceBeta);
-    jacobianSubInverse.mtv(referenceBeta, referenceBetaSub);
-
-    return referenceBetaSub;
-  }
-}
-
 
 } // end namespace Dune
 

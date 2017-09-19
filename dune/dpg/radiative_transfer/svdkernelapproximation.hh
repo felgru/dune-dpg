@@ -31,13 +31,11 @@ namespace ScatteringKernelApproximation {
         using namespace boost::math::constants;
         MatrixXd kernelMatrix(num_s, num_s);
         for(size_t j = 0; j < num_s; ++j) {
-          Direction s_j = {cos(2*pi<double>()*j/num_s),
-                           sin(2*pi<double>()*j/num_s)};
+          const double angle_j = 2*pi<double>()*j/num_s;
           for(size_t i = 0; i < num_s; ++i) {
-            Direction s_i = {cos(2*pi<double>()*i/num_s),
-                             sin(2*pi<double>()*i/num_s)};
+            const double angle_i = 2*pi<double>()*i/num_s;
             // TODO: maybe use a higher order quadrature
-            kernelMatrix(i,j) = kernel(s_i, s_j)/num_s;
+            kernelMatrix(i,j) = kernel(angle_i - angle_j)/num_s;
           }
         }
         /* initialize SVD of kernel (using Eigen) */

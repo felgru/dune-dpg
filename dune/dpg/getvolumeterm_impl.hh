@@ -61,7 +61,7 @@ struct GetVolumeTerm_Impl<integrationType, Space, false>
     const Element& element = localViewTest.element();
 
     const int dim = Element::mydimension;
-    auto geometry = element.geometry();
+    const auto geometry = element.geometry();
 
     // Get set of shape functions for this element
     const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
@@ -136,7 +136,7 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
     const Element& element = localViewTest.element();
 
     const int dim = Element::mydimension;
-    auto geometry = element.geometry();
+    const auto geometry = element.geometry();
 
     // Get set of shape functions for this element
     const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
@@ -148,9 +148,8 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
         ::Quadrature(element, quadratureOrder, nullptr);
 
 
-    const auto& referenceGrid
-      = localViewTest.tree().refinedReferenceElement();
-    auto referenceGridView = referenceGrid.leafGridView();
+    const auto referenceGridView =
+        localViewTest.tree().refinedReferenceElement().leafGridView();
 
     const unsigned int subElementStride =
         (is_DGRefinedFiniteElement<Space>::value) ?
@@ -159,7 +158,7 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
     unsigned int subElementOffset = 0;
     unsigned int subElementIndex = 0;
     for(const auto& subElement : elements(referenceGridView)) {
-      auto subGeometryInReferenceElement = subElement.geometry();
+      const auto subGeometryInReferenceElement = subElement.geometry();
       for ( size_t pt=0, qsize=quad.size(); pt < qsize; pt++ ) {
 
         // Position of the current quadrature point in the reference element

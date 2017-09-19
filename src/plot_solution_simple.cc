@@ -1,13 +1,11 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-
-#include <algorithm>
-#include <array>
-#include <chrono>
-#include <cstdlib> // for std::abort()
-#include <functional>
 #include <iostream>
+#include <cstdlib> // for std::abort()
+
+#include <array>
+#include <functional>
 #include <tuple>
 #include <vector>
 
@@ -31,8 +29,11 @@
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
-#include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/dpg_system_assembler.hh>
+#include <dune/dpg/errortools.hh>
+#include <dune/dpg/functionplotter.hh>
+#include <dune/dpg/rhs_assembler.hh>
 
 
 using namespace Dune;
@@ -93,7 +94,7 @@ int main(int argc, char** argv)
                   sin(boost::math::constants::pi<double>()/8)};
 
   if(argc==5) {
-  // coefficient c
+    // coefficient c
     c = atof(argv[2]);
 
     // direction beta
@@ -110,28 +111,28 @@ int main(int argc, char** argv)
     beta = {betaX, betaY};
   }
 
+  std::cout << "Computing solution of the transport problem" << std::endl
+            << "  β.∇ϕ + c ϕ = 1 in [0,1]x[0,1]" << std::endl
+            << "           ϕ = 0 on boundary," << std::endl
+            << "with β=(" << beta[0] << ", " << beta[1] << ")"
+            << " and c=" << c << "."<< std::endl
+            << "Mesh size H=1/n=" << 1./nelements << std::endl;
+
   ////////////////////////////////////////////////////////////////////
   //   Choose finite element spaces and weak formulation of problem
   ////////////////////////////////////////////////////////////////////
 
-  // phi
   using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
-  using Phi = FEBasisInterior;
+  FEBasisInterior spacePhi(gridView);
 
-  // w
   using FEBasisTraceLifting = Functions::PQkNodalBasis<GridView, 2>;
-  using W = FEBasisTraceLifting;
+  FEBasisTraceLifting spaceW(gridView);
 
   auto solutionSpaces
-    = make_space_tuple<FEBasisInterior, FEBasisTraceLifting>(gridView);
+      = make_space_tuple<FEBasisInterior, FEBasisTraceLifting>(gridView);
 
-#if LEVEL_SEARCH>0
   using FEBasisTest
-      = Functions::PQkDGRefinedDGBasis<GridView, LEVEL_SEARCH, K_SEARCH>;
-#else
-  using FEBasisTest
-      = Functions::LagrangeDGBasis<GridView, K_SEARCH>;
-#endif
+      = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
   auto testSearchSpaces = make_space_tuple<FEBasisTest>(gridView);
 
   auto bilinearForm = make_BilinearForm(testSearchSpaces, solutionSpaces,
@@ -152,11 +153,8 @@ int main(int argc, char** argv)
   typedef GeometryBuffer<GridView::template Codim<0>::Geometry> GeometryBuffer;
   GeometryBuffer geometryBuffer;
 
-  auto bufferedSystemAssembler
+  auto systemAssembler
       = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
-
-  auto unbufferedSystemAssembler
-      = make_DPGSystemAssembler(bilinearForm, innerProduct);
 
   /////////////////////////////////////////////////////////
   //  Assemble the system
@@ -165,91 +163,56 @@ int main(int argc, char** argv)
   typedef BlockVector<FieldVector<double,1> > VectorType;
   typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
 
+  VectorType rhsVector;
+  MatrixType stiffnessMatrix;
+
   auto rhsFunctions
     = make_LinearForm(testSearchSpaces,
           std::make_tuple(make_LinearIntegralTerm<0,
                                 LinearIntegrationType::valueFunction,
                                 DomainOfIntegration::interior>(f(beta))));
+  systemAssembler.assembleSystem(stiffnessMatrix, rhsVector, rhsFunctions);
 
+  // Determine Dirichlet dofs for w (inflow boundary)
   {
-    std::chrono::steady_clock::time_point startsystemassembler
-      = std::chrono::steady_clock::now();
-
-    VectorType rhsVector;
-    MatrixType stiffnessMatrix;
-
-    bufferedSystemAssembler
-      .assembleSystem(stiffnessMatrix, rhsVector, rhsFunctions);
-
-    std::chrono::steady_clock::time_point endsystemassembler
-      = std::chrono::steady_clock::now();
-    std::cout << "The   buffered system assembler took "
-              << std::chrono::duration_cast<std::chrono::microseconds>
-                    (endsystemassembler - startsystemassembler).count()
-              << "us.\n";
+    std::vector<bool> dirichletNodesInflow;
+    BoundaryTools boundaryTools = BoundaryTools();
+    boundaryTools.getInflowBoundaryMask(std::get<1>(*solutionSpaces),
+                                        dirichletNodesInflow,
+                                        beta);
+    systemAssembler.applyDirichletBoundary<1>
+        (stiffnessMatrix,
+         rhsVector,
+         dirichletNodesInflow,
+         0.);
   }
 
-  {
-    std::chrono::steady_clock::time_point startsystemassembler
-      = std::chrono::steady_clock::now();
+  ////////////////////////////
+  //   Compute solution
+  ////////////////////////////
 
-    VectorType rhsVector;
-    MatrixType stiffnessMatrix;
+  VectorType x(spaceW.size()
+               +spacePhi.size());
+  x = 0;
 
-    unbufferedSystemAssembler
-      .assembleSystem(stiffnessMatrix, rhsVector, rhsFunctions);
+  std::cout << "rhs size = " << rhsVector.size()
+            << " matrix size = " << stiffnessMatrix.N()
+                        << " x " << stiffnessMatrix.M()
+            << " solution size = " << x.size() << std::endl;
 
-    std::chrono::steady_clock::time_point endsystemassembler
-      = std::chrono::steady_clock::now();
-    std::cout << "The unbuffered system assembler took "
-              << std::chrono::duration_cast<std::chrono::microseconds>
-                    (endsystemassembler - startsystemassembler).count()
-              << "us.\n";
 
-#if LEVEL_SEARCH==0
-    double delta = 1e-8;
-    unbufferedSystemAssembler.defineCharacteristicFaces<1>
-                      (stiffnessMatrix,
-                       rhsVector,
-                       beta,
-                       delta);
-#endif
+  UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
+  InverseOperatorResult statistics;
+  umfPack.apply(x, rhsVector, statistics);
 
-    // Determine Dirichlet dofs for w (inflow boundary)
-    {
-      std::vector<bool> dirichletNodesInflow;
-      BoundaryTools::getInflowBoundaryMask(std::get<1>(*solutionSpaces),
-                                           dirichletNodesInflow,
-                                           beta);
-      unbufferedSystemAssembler.applyDirichletBoundary<1>
-          (stiffnessMatrix,
-           rhsVector,
-           dirichletNodesInflow,
-           0.);
-    }
 
-    ////////////////////////////
-    //   Compute solution
-    ////////////////////////////
-
-    VectorType x(std::get<W>(*solutionSpaces).size()
-                 + std::get<Phi>(*solutionSpaces).size());
-    x = 0;
-
-    std::chrono::steady_clock::time_point startsolver
-      = std::chrono::steady_clock::now();
-
-    UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
-    InverseOperatorResult statistics;
-    umfPack.apply(x, rhsVector, statistics);
-
-    std::chrono::steady_clock::time_point endsolver
-      = std::chrono::steady_clock::now();
-    std::cout << "Solving the system with UMFPACK took "
-              << std::chrono::duration_cast<std::chrono::microseconds>
-                    (endsolver - startsolver).count()
-              << "us.\n";
-  }
+  //////////////////////////////////////////////////////////////////
+  //  Write result to VTK files
+  //////////////////////////////////////////////////////////////////
+  FunctionPlotter phiPlotter("transport_solution");
+  FunctionPlotter wPlotter("transport_solution_trace");
+  phiPlotter.plot("phi", x, spacePhi, 0, 0);
+  wPlotter.plot("w", x, spaceW, 2, spacePhi.size());
 
 
   return 0;

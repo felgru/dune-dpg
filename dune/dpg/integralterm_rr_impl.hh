@@ -27,7 +27,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                                 const DirectionType& rhsBeta)
 {
   const int dim = Element::mydimension;
-  auto geometry = element.geometry();
+  const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
@@ -40,18 +40,21 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
     = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
       ::Quadrature(element, quadratureOrder, lhsBeta);
 
-  const auto& referenceGrid
-    = lhsLocalView.tree().refinedReferenceElement();
-  auto referenceGridView = referenceGrid.leafGridView();
+  const auto referenceGridView =
+      lhsLocalView.tree().refinedReferenceElement().leafGridView();
 
-  const unsigned int subElementStride =
+  const unsigned int lhsSubElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?
         lhsLocalFiniteElement.localBasis().size() : 0;
+  const unsigned int rhsSubElementStride =
+      (is_DGRefinedFiniteElement<RhsSpace>::value) ?
+        rhsLocalFiniteElement.localBasis().size() : 0;
 
-  unsigned int subElementOffset = 0;
+  unsigned int lhsSubElementOffset = 0;
+  unsigned int rhsSubElementOffset = 0;
   unsigned int subElementIndex = 0;
   for(const auto& subElement : elements(referenceGridView)) {
-    auto subGeometryInReferenceElement = subElement.geometry();
+    const auto subGeometryInReferenceElement = subElement.geometry();
     for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
 
       // Position of the current quadrature point in the reference element
@@ -108,14 +111,16 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
       {
         for (unsigned int j=0; j<nRhs; j++)
         {
-          elementMatrix[i+lhsSpaceOffset+subElementOffset]
-                       [j+rhsSpaceOffset+subElementOffset]
+          elementMatrix[i+lhsSpaceOffset+lhsSubElementOffset]
+                       [j+rhsSpaceOffset+rhsSubElementOffset]
                   += (lhsValues[i] * rhsValues[j]) * integrationWeight;
         }
       }
     }
     if(is_DGRefinedFiniteElement<LhsSpace>::value)
-      subElementOffset += subElementStride;
+      lhsSubElementOffset += lhsSubElementStride;
+    if(is_DGRefinedFiniteElement<RhsSpace>::value)
+      rhsSubElementOffset += rhsSubElementStride;
     subElementIndex++;
   }
 }
@@ -138,7 +143,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
          const DirectionType& rhsBeta)
 {
   const int dim = Element::mydimension;
-  auto geometry = element.geometry();
+  const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
@@ -147,22 +152,24 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
   const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-  const auto& referenceGrid
-    = lhsLocalView.tree().refinedReferenceElement();
-  auto referenceGridView = referenceGrid.leafGridView();
+  const auto referenceGridView =
+      lhsLocalView.tree().refinedReferenceElement().leafGridView();
 
-  const unsigned int subElementStride =
+  const unsigned int lhsSubElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?
         lhsLocalFiniteElement.localBasis().size() : 0;
+  const unsigned int rhsSubElementStride =
+      (is_DGRefinedFiniteElement<RhsSpace>::value) ?
+        rhsLocalFiniteElement.localBasis().size() : 0;
 
-  unsigned int subElementOffset = 0;
+  unsigned int lhsSubElementOffset = 0;
+  unsigned int rhsSubElementOffset = 0;
   unsigned int subElementIndex = 0;
   for(const auto& subElement : elements(referenceGridView))
   {
     using SubElement = std::decay_t<decltype(subElement)>;
-    auto subGeometryInReferenceElement = subElement.geometry();
+    const auto subGeometryInReferenceElement = subElement.geometry();
 
-    unsigned int nInflowFaces = 0;
     unsigned int nOutflowFaces = 0;
     for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
     {
@@ -176,8 +183,6 @@ faceImpl(const LhsLocalView& lhsLocalView,
       const double prod = lhsBeta * unitOuterNormal;
       if(prod > 0)
         ++nOutflowFaces;
-      else if (prod < 0)
-        ++nInflowFaces;
     }
 
     FieldVector<double,dim> referenceBeta
@@ -302,15 +307,17 @@ faceImpl(const LhsLocalView& lhsLocalView,
         {
           for (size_t j=0; j<nRhs; j++)
           {
-            elementMatrix[i+lhsSpaceOffset+subElementOffset]
-                         [j+rhsSpaceOffset+subElementOffset]
+            elementMatrix[i+lhsSpaceOffset+lhsSubElementOffset]
+                         [j+rhsSpaceOffset+rhsSubElementOffset]
                     += (lhsValues[i] * rhsValues[j]) * integrationWeight;
           }
         }
       }
     }
     if(is_DGRefinedFiniteElement<LhsSpace>::value)
-      subElementOffset += subElementStride;
+      lhsSubElementOffset += lhsSubElementStride;
+    if(is_DGRefinedFiniteElement<RhsSpace>::value)
+      rhsSubElementOffset += rhsSubElementStride;
     subElementIndex++;
   }
 }

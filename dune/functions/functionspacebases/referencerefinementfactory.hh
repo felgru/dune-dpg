@@ -5,6 +5,7 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
 #include <utility>
 
 #include <dune/geometry/referenceelements.hh>
@@ -69,18 +70,10 @@ namespace Functions {
     /** \brief Type of the grid stored in this cache */
     typedef Grid GridType;
 
-    /** \brief Default constructor */
-    ReferenceRefinementCache() {}
-
-    /** \brief Copy constructor does nothing as we cannot copy the grids
-     *         used for the refinements */
-    ReferenceRefinementCache(const ReferenceRefinementCache& other)
-      : cache_{}
-    {};
-
     //! Get refined reference cell for given GeometryType
     const GridType& get(const GeometryType& gt) const
     {
+      std::lock_guard<std::mutex> guard(m_);
       typename RefinementMap::const_iterator it = cache_.find(gt);
       if (it==cache_.end())
       {
@@ -98,6 +91,7 @@ namespace Functions {
     }
 
   protected:
+    mutable std::mutex m_;
     mutable RefinementMap cache_;
 
   };

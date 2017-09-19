@@ -67,7 +67,7 @@ int main(int argc, char** argv)
 
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
-  array<unsigned int,dim> elements = {nelements,nelements};
+  std::array<unsigned int,dim> elements = {nelements,nelements};
 
   // shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
@@ -102,7 +102,7 @@ int main(int argc, char** argv)
 
     // v search space
     using FEBasisTest
-#if 0
+#if 1
         = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
 #else
         = Functions::LagrangeDGBasis<GridView, 3>;
@@ -197,7 +197,7 @@ int main(int argc, char** argv)
     std::chrono::steady_clock::time_point startsystemassembler = std::chrono::steady_clock::now();
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
-#if 1
+#if 0
     auto minInnerProduct = make_InnerProduct(solutionSpaces,
           make_tuple(
               make_IntegralTerm<1,1,IntegrationType::valueValue,              // (u^,u^)
@@ -208,7 +208,7 @@ int main(int argc, char** argv)
     using MinInnerProduct = decltype(minInnerProduct);
 
     double delta = 1e-5;
-    systemAssembler.applyMinimization<1, MinInnerProduct, 2>
+    systemAssembler.applyMinimization<1, MinInnerProduct>
                     (stiffnessMatrix,
                      minInnerProduct,
                      beta,
@@ -217,7 +217,7 @@ int main(int argc, char** argv)
 #endif
 #if 0
     double delta = 1e-5;
-    systemAssembler.defineCharacteristicFaces<1,2>
+    systemAssembler.defineCharacteristicFaces<1>
                       (stiffnessMatrix,
                        rhs,
                        beta,
@@ -300,11 +300,12 @@ int main(int argc, char** argv)
     std::chrono::steady_clock::time_point starterror = std::chrono::steady_clock::now();
     const double ratio = .2;
     err = ErrorTools::DoerflerMarking(*grid, ratio,
+                              ErrorTools::residual(
                                      bilinearForm_aposteriori,
                                      innerProduct_aposteriori,
                                      aPosterioriInnerProduct,
                                      aPosterioriLinearForm, f(beta),
-                                     x, rhs, 1);    // the last parameter is in [0,1] and
+                                     x, rhs, 1));   // the last parameter is in [0,1] and
                                                     // determines which error indicator
                                                     // is used
                                                     // 1 = residuum

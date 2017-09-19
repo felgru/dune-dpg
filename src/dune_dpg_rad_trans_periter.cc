@@ -6,6 +6,7 @@
 #include <cstdlib> // for std::abort()
 #include <unistd.h>
 
+#include <array>
 #include <vector>
 
 #include <dune/common/exceptions.hh> // We use exceptions
@@ -155,7 +156,10 @@ double gFunction(const Domain& x,
 }
 
 void printHelp(const char* name) {
-  std::cerr << "Usage: " << name << " [-p] <# of ordinates>"
+  std::cerr << "Usage: " << name
+            << " [-p] "
+            << " <target accuracy>"
+            << " <gamma>"
             << " <# of iterations>"
             << " <size of grid>\n"
             << " -p: plot solutions" << std::endl;
@@ -171,9 +175,10 @@ int main(int argc, char** argv)
 
   ///////////////////////////////////
   // Get arguments
-  // argv[1]: number of discrete ordinates
-  // argv[2]: number of fixed-point iterations
-  // argv[3]: size of grid
+  // argv[1]: target accuracy
+  // argv[2]: gamma
+  // argv[3]: maximal number of fixed-point iterations
+  // argv[4]: size of grid
   ///////////////////////////////////
 
   PlotSolutions plotSolutions = PlotSolutions::doNotPlot;
@@ -188,13 +193,15 @@ int main(int argc, char** argv)
       case 'h':
         printHelp(argv[0]);
     }
-  if(optind != argc-3) {
+  if(optind != argc-4) {
     printHelp(argv[0]);
   }
 
-  const unsigned int numS = atoi(argv[optind]);
-  const int N = atoi(argv[optind+1]);
-  const unsigned int sizeGrid = atoi(argv[optind+2]);
+  const unsigned int wltOrder = 2;
+  const double targetAccuracy = atof(argv[optind]);
+  const double gamma = atof(argv[optind+1]);
+  const int N = atoi(argv[optind+2]);
+  const unsigned int sizeGrid = atoi(argv[optind+3]);
 
   ///////////////////////////////////
   //   Generate the grid
@@ -208,7 +215,7 @@ int main(int argc, char** argv)
 
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
-  array<unsigned int,dim> elements = {sizeGrid,sizeGrid};
+  std::array<unsigned int,dim> elements = {sizeGrid,sizeGrid};
 
   //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
@@ -223,22 +230,55 @@ int main(int argc, char** argv)
   grid->setClosureType(GridType::NONE);
 #endif
 
-  auto f = [](const Domain& x, const Direction& s)
-           { return 1.; };
-  auto g = [](const Domain& x, const Direction& s)
-           { return x[0] + x[1]; };
-  auto gDeriv = [](const Domain& x, const Direction& s)
-                { return s[0] + s[1]; };
+  auto f_constant
+    = [](const Domain& x, const Direction& s)
+      { return 1.; };
+#if 0
+  auto f_checkerboard
+    = [](const Domain& x, const Direction& s)
+      {
+        int n=3;
+        double v1 = 1.;
+        double v2 = 3.;
+        return
+         (((int)std::floor(n*x[0])+(int)std::floor(n*x[1]))%2 ==0) ?
+         v1 : v2;
+      };
+#endif
+  auto g = [](const Domain& x)
+      {
+        if(x[0] < .1) {
+          const double xProj = x[1];
+          if(xProj>=.5+.125 || xProj<=.5-.125) {
+            return 0.;
+          } else if(xProj<=.5) {
+            return 8*(xProj-(.5-.125));
+          } else {
+            return 1-8*(xProj-.5);
+          }
+        } else {
+          return 0.;
+        }
+      };
+  auto homogeneous_inflow_boundary =
+    [](const Direction& s) { return !(s[0] > 0.); };
   const double sigma = 5.;
-  // TODO: Estimate ρ from the paper.
-  const double rho = .5;
-  // TODO: Estimate the constant C_T.
-  const double CT = 1;
+  const double domainDiameter = std::sqrt(2.);
+  // TODO: Adapt CT when sigma varies
+  // Formula from Lemma 2.8 paper [DGM]
+  const double CT
+    = std::min(domainDiameter,std::sqrt(domainDiameter/(2*sigma)));
+  // TODO: Adapt rho when sigma varies
+  // Formula from Lemma 2.13 paper [DGM]
+  const double rho
+    = std::min(1./sigma,std::sqrt(domainDiameter/(2*sigma)));
+  assert(rho < 1.);
 
-  Periter<ScatteringKernelApproximation::HaarWavelet::SVD, FeRHSandBoundary>()
-      .solve(*grid, f, g, gDeriv, sigma,
-             HenyeyGreensteinScattering<Direction>(0.5),
-             numS, rho, CT, 1e-2, N, plotSolutions);
+  Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
+          FeRHS>()
+      .solve(*grid, f_constant, g, homogeneous_inflow_boundary, sigma,
+             HenyeyGreensteinScattering(gamma),
+             rho, CT, targetAccuracy, N, plotSolutions);
 
   return 0;
   }

@@ -60,7 +60,7 @@ int main(int argc, char** argv)
 
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
-  array<unsigned int,dim> elements = {nelements,nelements};
+  std::array<unsigned int,dim> elements = {nelements,nelements};
 
   //shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
@@ -150,7 +150,7 @@ int main(int argc, char** argv)
 
 #if 0
   double delta = 1e-8;
-  systemAssembler.defineCharacteristicFaces<1,2>
+  systemAssembler.defineCharacteristicFaces<1>
                     (stiffnessMatrix,
                      rhs,
                      beta,

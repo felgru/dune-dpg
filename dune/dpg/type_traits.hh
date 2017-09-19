@@ -93,7 +93,7 @@ struct tuple_size<Dune::FieldVector<T, size>>
  * Traits for finite elements
  ****************************/
 
-template <typename FiniteElement>
+template <typename GlobalBasis>
 struct is_OptimalTestSpace : std::false_type {};
 
 #ifndef DOXYGEN
@@ -105,10 +105,10 @@ struct is_OptimalTestSpace<Functions::DefaultGlobalBasis<
   : std::true_type {};
 #endif
 
-template <typename FiniteElement>
+template <typename GlobalBasis>
 struct is_RefinedFiniteElement;
 
-template <typename FiniteElement>
+template <typename GlobalBasis>
 struct is_DGRefinedFiniteElement : std::false_type {};
 
 #ifndef DOXYGEN
@@ -119,7 +119,7 @@ struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
        : std::true_type {};
 #endif
 
-template <typename FiniteElement>
+template <typename GlobalBasis>
 struct is_ContinuouslyRefinedFiniteElement : std::false_type {};
 
 #ifndef DOXYGEN
@@ -133,13 +133,13 @@ struct is_ContinuouslyRefinedFiniteElement<Functions::DefaultGlobalBasis<
                             >::type> {};
 #endif
 
-template <typename FiniteElement>
+template <typename GlobalBasis>
 struct is_RefinedFiniteElement
   : std::integral_constant<bool,
-         is_DGRefinedFiniteElement<FiniteElement>::value
-      || is_ContinuouslyRefinedFiniteElement<FiniteElement>::value> {};
+         is_DGRefinedFiniteElement<GlobalBasis>::value
+      || is_ContinuouslyRefinedFiniteElement<GlobalBasis>::value> {};
 
-template <typename FiniteElement>
+template <typename GlobalBasis>
 struct levelOfFE : std::integral_constant<int, 0> {};
 
 #ifndef DOXYGEN
@@ -159,7 +159,7 @@ struct levelOfFE<Functions::DefaultGlobalBasis<
               >::type> {};
 #endif
 
-template <typename FiniteElement>
+template <typename GlobalBasis>
 struct is_SubsampledFiniteElement : std::false_type {};
 
 #ifndef DOXYGEN
@@ -185,7 +185,7 @@ struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
                                >::type> {};
 #endif
 
-template <typename FiniteElement>
+template <typename GlobalBasis>
 struct numberOfSamples : std::integral_constant<int, 1> {};
 
 #ifndef DOXYGEN
@@ -211,7 +211,7 @@ struct numberOfSamples<Functions::DefaultGlobalBasis<
                     >::type> {};
 #endif
 
-template<typename FiniteElement>
+template<typename GlobalBasis>
 struct is_TransportFiniteElement : std::false_type {};
 
 #ifndef DOXYGEN

@@ -20,6 +20,15 @@
 #add_dune_ug_flags(plot_solution)
 #target_link_dune_default_libraries("plot_solution")
 
+#add_executable("plot_solution_simple" plot_solution_simple.cc)
+#add_dune_suitesparse_flags(plot_solution_simple)
+#add_dune_ug_flags(plot_solution_simple)
+#target_link_dune_default_libraries("plot_solution_simple")
+
+add_executable("plot_extension" plot_extension.cc)
+add_dune_ug_flags(plot_extension)
+target_link_dune_default_libraries("plot_extension")
+
 #foreach(level 0 1 2)
 #  set(degree 3)
 #  set(profile_executable

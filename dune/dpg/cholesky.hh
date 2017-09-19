@@ -30,6 +30,9 @@ public:
       }
       if (summe<1e-20)
       {
+        std::cout << "summe = " << summe << std::endl;
+        std::ofstream ofs("matrix");
+        printmatrix(ofs, matrix, "Problematic Matrix in Cholesky", "--");
         DUNE_THROW(Dune::Exception, "Matrix for Cholesky not positive semidefinite");
       }
       matrix[k][k]=summe;

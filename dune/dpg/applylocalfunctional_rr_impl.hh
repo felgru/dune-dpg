@@ -9,7 +9,7 @@ namespace detail {
 template <IntegrationType type,
           class TestSpace,
           class SolutionSpace>
-struct ApplyLocalFunctional<type, TestSpace, SolutionSpace, true, false>
+struct ApplyLocalFunctional<type, TestSpace, SolutionSpace, true, true>
 {
 using TestLocalView = typename TestSpace::LocalView;
 using SolutionLocalView = typename SolutionSpace::LocalView;
@@ -27,6 +27,8 @@ inline static void interiorImpl(
     const Element& element,
     const FunctionalVector& functionalVector)
 {
+  static_assert(is_DGRefinedFiniteElement<SolutionSpace>::value,
+      "ApplyLocalFunctional only implemented for DG refined SolutionSpace.");
   const int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
@@ -60,12 +62,15 @@ inline static void interiorImpl(
       testLocalView.tree().refinedReferenceElement().leafGridView();
 
   assert(element.type().isTriangle() || element.type().isQuadrilateral());
-  const size_t subElementStride =
-    (element.type().isTriangle())
-    ? testLocalView.globalBasis().nodeFactory().dofsPerSubTriangle
-    : testLocalView.globalBasis().nodeFactory().dofsPerSubQuad;
+  const unsigned int testSubElementStride =
+      (is_DGRefinedFiniteElement<TestSpace>::value) ?
+        testLocalFiniteElement.localBasis().size() : 0;
+  const unsigned int solutionSubElementStride =
+      (is_DGRefinedFiniteElement<SolutionSpace>::value) ?
+        solutionLocalFiniteElement.localBasis().size() : 0;
 
-  unsigned int subElementOffset = 0;
+  unsigned int testSubElementOffset = 0;
+  unsigned int solutionSubElementOffset = 0;
   unsigned int subElementIndex = 0;
   for(const auto& subElement : elements(referenceGridView)) {
     const auto subGeometryInReferenceElement = subElement.geometry();
@@ -94,21 +99,23 @@ inline static void interiorImpl(
                          {});
       std::vector<FieldVector<double,1>> shapeFunctionValues;
       solutionLocalFiniteElement.localBasis().
-          evaluateFunction(quadPosInReferenceElement, shapeFunctionValues);
+          evaluateFunction(quadPos, shapeFunctionValues);
 
       const double functionalValue =
           std::inner_product(
-            localFunctionalVector.begin(), localFunctionalVector.end(),
-            shapeFunctionValues.begin(), 0.)
+            shapeFunctionValues.begin(), shapeFunctionValues.end(),
+            localFunctionalVector.begin() + solutionSubElementOffset, 0.)
           * integrationWeight;
       for (size_t i=0, i_max=testLocalFiniteElement.localBasis().size();
            i<i_max; i++) {
-        elementVector[i+spaceOffset+subElementOffset]
+        elementVector[i+spaceOffset+testSubElementOffset]
             += functionalValue * testShapeFunctionValues[i];
       }
     }
     if(is_DGRefinedFiniteElement<TestSpace>::value)
-      subElementOffset += subElementStride;
+      testSubElementOffset += testSubElementStride;
+    if(is_DGRefinedFiniteElement<SolutionSpace>::value)
+      solutionSubElementOffset += solutionSubElementStride;
     subElementIndex++;
   }
 }
@@ -133,33 +140,39 @@ faceImpl(const TestLocalView& testLocalView,
   const int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
-  // Get set of shape functions for this element
-  const auto& testLocalFiniteElement = testLocalView.tree().finiteElement();
-  const auto& solutionLocalFiniteElement
-      = solutionLocalView.tree().finiteElement();
-
   BlockVector<FieldVector<double,1>>
       localFunctionalVector(solutionLocalView.size());
 
   iterateOverLocalIndexSet(
     solutionLocalIndexSet,
     [&](size_t j, auto gj) {
-      localFunctionalVector[j] = functionalVector[gj[0]];
+      localFunctionalVector[j]
+          = functionalVector[gj[0]];
     },
     [&](size_t j) { localFunctionalVector[j] = 0; },
     [&](size_t j, auto gj, double wj) {
-      localFunctionalVector[j] += wj * functionalVector[gj[0]];
+      localFunctionalVector[j]
+          += wj * functionalVector[gj[0]];
     }
   );
+
+  // Get set of shape functions for this element
+  const auto& testLocalFiniteElement = testLocalView.tree().finiteElement();
+  const auto& solutionLocalFiniteElement
+      = solutionLocalView.tree().finiteElement();
 
   const auto referenceGridView =
       testLocalView.tree().refinedReferenceElement().leafGridView();
 
-  const unsigned int subElementStride =
+  const unsigned int testSubElementStride =
       (is_DGRefinedFiniteElement<TestSpace>::value) ?
         testLocalFiniteElement.localBasis().size() : 0;
+  const unsigned int solutionSubElementStride =
+      (is_DGRefinedFiniteElement<SolutionSpace>::value) ?
+        solutionLocalFiniteElement.localBasis().size() : 0;
 
-  unsigned int subElementOffset = 0;
+  unsigned int testSubElementOffset = 0;
+  unsigned int solutionSubElementOffset = 0;
   unsigned int subElementIndex = 0;
   for(const auto& subElement : elements(referenceGridView))
   {
@@ -170,6 +183,8 @@ faceImpl(const TestLocalView& testLocalView,
     for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
     {
       const auto face = subElement.template subEntity<1>(f);
+      /* This won't work for curvilinear elements, but they don't seem
+       * to be supported by UG anyway. */
       const FieldVector<double,dim> unitOuterNormal
           = RefinedFaceComputations<SubElement>(face, subElement, element)
               .unitOuterNormal();
@@ -266,10 +281,6 @@ faceImpl(const TestLocalView& testLocalView,
         const FieldVector<double,dim> elementQuadPosSubCell =
                 faceComputations.faceToElementPosition(quadFacePos);
 
-        // position of the quadrature point within the reference element
-        const FieldVector<double,dim> elementQuadPos =
-                subGeometryInReferenceElement.global(elementQuadPosSubCell);
-
         if(type == IntegrationType::travelDistanceWeighted) {
           integrationWeight *= detail::travelDistance(
               elementQuadPosSubCell,
@@ -279,7 +290,7 @@ faceImpl(const TestLocalView& testLocalView,
         ////////////////////////////////////
         // Left Hand Side Shape Functions //
         ////////////////////////////////////
-        const std::vector<FieldVector<double,1> > testValues =
+        std::vector<FieldVector<double,1> > testValues =
           detail::LocalRefinedFunctionEvaluation
                   <dim, EvaluationType::value,
                    is_ContinuouslyRefinedFiniteElement<TestSpace>::value>()
@@ -293,24 +304,33 @@ faceImpl(const TestLocalView& testLocalView,
         /////////////////////////////////////
         // Right Hand Side Shape Functions //
         /////////////////////////////////////
-        std::vector<FieldVector<double,1> > solutionValues;
-        solutionLocalFiniteElement.localBasis()
-            .evaluateFunction(elementQuadPos, solutionValues);
+        std::vector<FieldVector<double,1> > solutionValues =
+          detail::LocalRefinedFunctionEvaluation
+                  <dim, EvaluationType::value,
+                   is_ContinuouslyRefinedFiniteElement<SolutionSpace>::value>()
+                        (solutionLocalFiniteElement,
+                         subElementIndex,
+                         elementQuadPosSubCell,
+                         geometry,
+                         subGeometryInReferenceElement,
+                         beta);
 
         const double functionalValue =
             std::inner_product(
-              localFunctionalVector.begin(), localFunctionalVector.end(),
-              solutionValues.begin(), 0.)
+              solutionValues.begin(), solutionValues.end(),
+              localFunctionalVector.begin() + solutionSubElementOffset, 0.)
             * integrationWeight;
         for (size_t i=0, i_max=testValues.size(); i<i_max; i++)
         {
-          elementVector[i+testSpaceOffset+subElementOffset]
+          elementVector[i+testSpaceOffset+testSubElementOffset]
                   += functionalValue * testValues[i];
         }
       }
     }
     if(is_DGRefinedFiniteElement<TestSpace>::value)
-      subElementOffset += subElementStride;
+      testSubElementOffset += testSubElementStride;
+    if(is_DGRefinedFiniteElement<SolutionSpace>::value)
+      solutionSubElementOffset += solutionSubElementStride;
     subElementIndex++;
   }
 }

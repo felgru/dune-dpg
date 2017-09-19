@@ -75,7 +75,7 @@ int main()
   typedef UGGrid<dim> GridType;
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
-  array<unsigned int,dim> elements = {1,1};
+  std::array<unsigned int,dim> elements = {1,1};
 
   // Square mesh
   //std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
@@ -297,11 +297,12 @@ int main()
     ////////////////
     const double ratio = .2;
     ErrorTools::DoerflerMarking(*grid, ratio,
+                            ErrorTools::residual(
                                bilinearForm_aposteriori,
                                innerProduct_aposteriori,
                                aPosterioriInnerProduct,
                                aPosterioriLinearForm, fieldRHS,
-                               x, rhs, 0);    // the last parameter is in [0,1] and
+                               x, rhs, 0));   // the last parameter is in [0,1] and
                                               // determines which error indicator
                                               // is used
                                               // 1 = residuum
