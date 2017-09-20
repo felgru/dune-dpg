@@ -155,8 +155,8 @@ for jy in range(J):
 # mpl.rc('text',usetex=True)
 MS = plt.matshow(result, cmap=plt.cm.autumn)
 cbar = plt.colorbar(MS)
-titleStr='Wlt analysis with $0\leq j\leq$'+str(J)+' for \n' \
-    + r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))$"+r'$,\ \gamma=$'+str(g)
+titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
+    + r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))$"+r'$,\ \gamma='+str(g)+'$'
 plt.title(titleStr)
 plt.xlabel('$(j,k)$')
 plt.ylabel('$(j\',k\')$')
@@ -173,8 +173,8 @@ for row in result:
     log_result.append(log_row)
 MS = plt.matshow(log_result, norm=mpl.colors.LogNorm(), cmap=plt.cm.autumn)
 cbar = plt.colorbar(MS)
-titleStr='Wlt analysis with $0\leq j\leq$'+str(J)+' for \n' \
-    + r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))$"+r'$,\ \gamma=$'+str(g)
+titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
+    + r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))$"+r'$,\ \gamma='+str(g)+'$'
 plt.title(titleStr)
 plt.xlabel('$(j,k)$')
 plt.ylabel('$(j\',k\')$')
@@ -197,7 +197,7 @@ PHI=phi(x, 0, g)
 plt.plot(x, PHI)
 plt.xlim(-r, r)
 
-titleStr=r"$\phi(\theta,0)=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta))$"+r'$,\ \gamma=$'+str(g)
+titleStr=r"$\phi(\theta,0)=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta))$"+r'$,\ \gamma='+str(g)+'$'
 plt.title(titleStr)
 plt.xlabel(r"$\theta$")
 plt.ylabel(r"$\phi(\theta,0)$")
