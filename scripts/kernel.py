@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 from __future__ import (absolute_import, print_function)
+import argparse
 import numpy as np
 from scipy.linalg import norm # to compute norm of an array
 import matplotlib as mpl
@@ -42,14 +43,23 @@ def quadpoints(jx, kx, r):
 # ============
 # Main program
 # ============
-if len(sys.argv) != 2:
-    print('Usage: {} gamma'.format(sys.argv[0]))
-    print('  where gamma is the parameter of the Henyey-Greenstein kernel')
-    sys.exit(1)
-ngrid = 100 # Size mesh
-J = 7
+aparser = argparse.ArgumentParser(
+        description='plot Henyey–Greenstein kernel in Haar wavelet basis')
+aparser.add_argument('--no-title', dest='plot_title',
+                     action='store_false', default=True,
+                     help='plot without title text')
+aparser.add_argument('--level', action='store', type=int, default=7,
+                     help='maximal wavelet level')
+aparser.add_argument('--ngrid', dest='ngrid',
+                     action='store', type=int, default=100,
+                     help='number of quadrature points')
+aparser.add_argument('gamma', action='store', type=float,
+                     help='parameter of the Henyey–Greenstein kernel')
+args = aparser.parse_args()
+ngrid = args.ngrid # Size mesh
+J = args.level
 r = np.pi
-g = float(sys.argv[1]) # forward peak coef
+g = args.gamma # forward peak coef
 
 mpl.rc('text', usetex=True)
 
@@ -155,9 +165,12 @@ for jy in range(J):
 # mpl.rc('text',usetex=True)
 MS = plt.matshow(result, cmap=plt.cm.autumn)
 cbar = plt.colorbar(MS)
-titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
-    + r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))$"+r'$,\ \gamma='+str(g)+'$'
-plt.title(titleStr)
+if(args.plot_title):
+    titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
+        + r"$\phi(\theta,\theta')=(1-\gamma^2)/" \
+        + r"(1+\gamma^2-2\gamma\cos(\theta-\theta'))$" \
+        + r'$,\ \gamma=' + str(g) + '$'
+    plt.title(titleStr)
 plt.xlabel('$(j,k)$')
 plt.ylabel('$(j\',k\')$')
 # plt.show()
@@ -173,9 +186,12 @@ for row in result:
     log_result.append(log_row)
 MS = plt.matshow(log_result, norm=mpl.colors.LogNorm(), cmap=plt.cm.autumn)
 cbar = plt.colorbar(MS)
-titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
-    + r"$\phi(\theta,\theta')=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta-\theta'))$"+r'$,\ \gamma='+str(g)+'$'
-plt.title(titleStr)
+if(args.plot_title):
+    titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
+        + r"$\phi(\theta,\theta')=(1-\gamma^2)/" \
+        + r"(1+\gamma^2-2\gamma\cos(\theta-\theta'))$" \
+        + r'$,\ \gamma='+str(g) + '$'
+    plt.title(titleStr)
 plt.xlabel('$(j,k)$')
 plt.ylabel('$(j\',k\')$')
 # plt.show()
@@ -197,8 +213,11 @@ PHI=phi(x, 0, g)
 plt.plot(x, PHI)
 plt.xlim(-r, r)
 
-titleStr=r"$\phi(\theta,0)=(1-\gamma^2)/(1+\gamma^2-2\gamma\cos(\theta))$"+r'$,\ \gamma='+str(g)+'$'
-plt.title(titleStr)
+if(args.plot_title):
+    titleStr=r"$\phi(\theta,0)=(1-\gamma^2)/" \
+        + r"(1+\gamma^2-2\gamma\cos(\theta))$" \
+        + r'$,\ \gamma=' + str(g) + '$'
+    plt.title(titleStr)
 plt.xlabel(r"$\theta$")
 plt.ylabel(r"$\phi(\theta,0)$")
 # plt.show()
