@@ -1,9 +1,3 @@
-# import numpy as np
-# import matplotlib.pyplot as plt
-# import scipy as sp
-# import pylab as pl
-# import math
-
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 from __future__ import (absolute_import, print_function)
