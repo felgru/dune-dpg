@@ -218,8 +218,8 @@ if(args.plot_title):
         + r"(1+\gamma^2-2\gamma\cos(\theta))$" \
         + r'$,\ \gamma=' + str(g) + '$'
     plt.title(titleStr)
+    plt.ylabel(r"$\phi(\theta,0)$")
 plt.xlabel(r"$\theta$")
-plt.ylabel(r"$\phi(\theta,0)$")
 # plt.show()
 
 titleSave="phi"+"-gamma_"+str(g)+".pdf"
