@@ -334,10 +334,23 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   const unsigned int dim = LeafGridView::dimension;
 
-  ///////////////////////////////////
-  // To print information
-  ///////////////////////////////////
-  std::ofstream ofs("output_rad_trans_uniform");
+  /////////////////////////////////////////////
+  // To print information in dune-dpg/results/
+  /////////////////////////////////////////////
+
+  std::string foldername;
+  {
+    std::chrono::system_clock::time_point
+    now = std::chrono::system_clock::now();
+    std::time_t cnow = std::chrono::system_clock::to_time_t(now);
+    std::stringstream folderstream;
+    folderstream << "../results/"
+                 << std::put_time(std::localtime(&cnow), "%F-time%H%M%S")
+                 << "-uniform";
+    foldername = folderstream.str();
+  }
+  system(("mkdir -p  "+foldername).data());
+  std::ofstream ofs(foldername+"/output");
 
   // TODO: estimate norm of rhs f
   const double fnorm = 1;
@@ -635,13 +648,15 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       {
         std::cout << "Direction " << i << '\n';
 
-        std::string name = std::string("u_rad_trans_n")
+        std::string name = foldername
+                        + std::string("/u_rad_trans_n")
                         + std::to_string(n)
                         + std::string("_s")
                         + std::to_string(i);
         FunctionPlotter uPlotter(name);
         uPlotter.plot("u", x[i], feBasisInterior, 0, 0);
-        name = std::string("theta_rad_trans_n")
+        name = foldername
+                        + std::string("/theta_rad_trans_n")
                         + std::to_string(n)
                         + std::string("_s")
                         + std::to_string(i);
