@@ -8,6 +8,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 ### Added
 
 ### Changed
+* dune-dpg now requires Version 2.6 of the Dune core modules.
+  This allowed us to remove a lot of fallback code, making our code
+  more readable and easier to maintain.
 * The `interpolate` method of all localfunctions can now be called with
   a function object f that implements `f(x)` instead of the
   `f.evaluate(x,y)` interface. This is in accordance with changes in
