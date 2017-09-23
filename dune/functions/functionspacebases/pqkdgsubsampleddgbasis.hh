@@ -262,42 +262,52 @@ public:
    */
   size_type size() const
   {
+    assert(node_ != nullptr);
     return node_->finiteElement().size();
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-  MultiIndex index(size_type i) const
+  template<typename It>
+  It indices(It it) const
   {
+    assert(node_ != nullptr);
     const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
     const auto& element = node_->element();
 
-    switch (dim)
+    for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
     {
-      case 1:
+      switch (dim)
       {
-        return {nodeFactory_->dofsPerEdge
-                * gridIndexSet.subIndex(element,0,0) + i};
-      }
-      case 2:
-      {
-        if (element.type().isTriangle())
+        case 1:
         {
-          return {nodeFactory_->dofsPerTriangle
-                  * gridIndexSet.subIndex(element,0,0) + i};
+          *it = {{ nodeFactory_->dofsPerEdge
+                   * gridIndexSet.subIndex(element,0,0) + i }};
+          continue;
         }
-        else if (element.type().isQuadrilateral())
+        case 2:
         {
-          return {nodeFactory_->quadrilateralOffset_
-                  + nodeFactory_->dofsPerQuad
-                    * gridIndexSet.subIndex(element,0,0) + i};
+          if (element.type().isTriangle())
+          {
+            *it = {{ nodeFactory_->dofsPerTriangle
+                     * gridIndexSet.subIndex(element,0,0) + i }};
+            continue;
+          }
+          else if (element.type().isQuadrilateral())
+          {
+            *it = {{ nodeFactory_->quadrilateralOffset_
+                     + nodeFactory_->dofsPerQuad
+                       * gridIndexSet.subIndex(element,0,0) + i }};
+            continue;
+          }
+          else
+            DUNE_THROW(Dune::NotImplemented,
+                       "2d elements have to be triangles or quadrilaterals");
         }
-        else
-          DUNE_THROW(Dune::NotImplemented,
-                     "2d elements have to be triangles or quadrilaterals");
       }
+      DUNE_THROW(Dune::NotImplemented,
+                 "No index method for " << dim << "d grids available yet!");
     }
-    DUNE_THROW(Dune::NotImplemented,
-               "No index method for " << dim << "d grids available yet!");
+    return it;
   }
 
 protected:

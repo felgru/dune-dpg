@@ -427,22 +427,27 @@ public:
    */
   size_type size() const
   {
+    assert(node_ != nullptr);
     return node_->finiteElement().size();
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-  MultiIndex index(size_type i) const
+  template<typename It>
+  It indices(It it) const
   {
-    size_t space_index=0;
-    size_t index_result=i;
-    bool index_found=false;
+    assert(node_ != nullptr);
+    for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
+    {
+      size_t space_index = 0;
+      size_t index_result = i;
+      bool index_found=false;
 
-    Hybrid::forEach(solutionLocalIndexSets_,
-                    computeIndex(space_index, index_result, index_found));
+      Hybrid::forEach(solutionLocalIndexSets_,
+                      computeIndex(space_index, index_result, index_found));
 
-    MultiIndex result;
-    result[0]=(nodeFactory_->globalOffsets[space_index]+index_result);
-    return result;
+      *it = {{ nodeFactory_->globalOffsets[space_index] + index_result }};
+    }
+    return it;
   }
 
 protected:

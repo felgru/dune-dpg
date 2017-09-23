@@ -263,58 +263,73 @@ public:
    */
   size_type size() const
   {
+    assert(node_ != nullptr);
     return node_->finiteElement().size();
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-  const MultiIndex index(size_type i) const
+  template<typename It>
+  It indices(It it) const
   {
-    Dune::LocalKey localKey = node_->finiteElement().localCoefficients().localKey(i);
+    assert(node_ != nullptr);
     const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
     const auto& element = node_->element();
 
-    // The dimension of the entity that the current dof is related to
-    size_t dofDim = dim - localKey.codim();
-    if (dofDim==0) {  // vertex dof
-      return { gridIndexSet.subIndex(element,localKey.subEntity(),dim) };
-    }
-
-    if (dofDim==1)
-    {  // edge dof
-      if (dim==1)   // element dof -- any local numbering is fine
-      {
-        DUNE_THROW(Dune::NotImplemented, "faces have no elements of codimension 0");
-      }
-      else
-      {
-        const Dune::ReferenceElement<double,dim> refElement
-            = Dune::referenceElement<double,dim>(element.type());
-
-        // we have to reverse the numbering if the local triangle edge is
-        // not aligned with the global edge
-        size_t v0 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),0,dim),dim);
-        size_t v1 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
-        bool flip = (v0 > v1);
-        return { (flip)
-          ? nodeFactory_->edgeOffset_ + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + k-localKey.index()
-              : nodeFactory_->edgeOffset_ + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + localKey.index() };
-      }
-    }
-
-    if (dofDim==2)
+    for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
     {
-      if (dim==2)   // element dof -- any local numbering is fine
-      {
-        DUNE_THROW(Dune::NotImplemented,
-                   "faces have no elements of codimension 0");
-      } else
-      {
-        DUNE_THROW(Dune::NotImplemented,
-                   "PQkFaceNodalBasis for 3D grids is not implemented");
+      const Dune::LocalKey localKey
+          = node_->finiteElement().localCoefficients().localKey(i);
+      // The dimension of the entity that the current dof is related to
+      const size_t dofDim = dim - localKey.codim();
+      if (dofDim==0) {  // vertex dof
+        *it = {{ gridIndexSet.subIndex(element,localKey.subEntity(),dim) }};
+        continue;
       }
+
+      if (dofDim==1)
+      {  // edge dof
+        if (dim==1)   // element dof -- any local numbering is fine
+        {
+          DUNE_THROW(Dune::NotImplemented,
+              "faces have no elements of codimension 0");
+        }
+        else
+        {
+          const Dune::ReferenceElement<double,dim> refElement
+              = Dune::referenceElement<double,dim>(element.type());
+
+          // we have to reverse the numbering if the local triangle edge is
+          // not aligned with the global edge
+          size_t v0 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),0,dim),dim);
+          size_t v1 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
+          bool flip = (v0 > v1);
+          *it = {{ (flip)
+                   ? nodeFactory_->edgeOffset_
+                     + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())
+                     + k-localKey.index()
+                   : nodeFactory_->edgeOffset_
+                     + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())
+                     + localKey.index() }};
+          continue;
+        }
+      }
+
+      if (dofDim==2)
+      {
+        if (dim==2)   // element dof -- any local numbering is fine
+        {
+          DUNE_THROW(Dune::NotImplemented,
+                     "faces have no elements of codimension 0");
+        } else
+        {
+          DUNE_THROW(Dune::NotImplemented,
+                     "PQkFaceNodalBasis for 3D grids is not implemented");
+        }
+      }
+      DUNE_THROW(Dune::NotImplemented,
+          "Grid contains elements not supported for the PQkFaceNodalBasis");
     }
-    DUNE_THROW(Dune::NotImplemented,
-        "Grid contains elements not supported for the PQkFaceNodalBasis");
+    return it;
   }
 
 protected:

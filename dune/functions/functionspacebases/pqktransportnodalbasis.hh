@@ -278,12 +278,15 @@ public:
    */
   size_type size() const
   {
+    assert(node_ != nullptr);
     return node_->finiteElement().size();
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-  MultiIndex index(size_type i) const
+  template<typename It>
+  It indices(It it) const
   {
+    assert(node_ != nullptr);
     const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
     const auto& element = node_->element();
 
@@ -294,12 +297,15 @@ public:
        || beta[1] == 0
        || beta[0] == beta[1]
       )
-      return {nodeFactory_->sizeQ*gridIndexSet.subIndex(element,0,0) + i};
-    else
-      return {nodeFactory_->dofsPerQuad*gridIndexSet.subIndex(element,0,0) + i};
-    //DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");
-
-    //DUNE_THROW(Dune::NotImplemented, "No index method for " << dim << "d grids available yet!");
+    {
+      for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
+        *it = {{ nodeFactory_->sizeQ*gridIndexSet.subIndex(element,0,0) + i }};
+    } else {
+      for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
+        *it = {{ nodeFactory_->dofsPerQuad*gridIndexSet.subIndex(element,0,0)
+                 + i }};
+    }
+    return it;
   }
 
 protected:
