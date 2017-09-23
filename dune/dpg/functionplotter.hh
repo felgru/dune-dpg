@@ -66,7 +66,7 @@ public:
     //////////////////////////////////////////////////////////////////////////
 
     SubsamplingVTKWriter<typename FEBasis::GridView>
-        vtkWriter(feBasis.gridView(), subsampling);
+        vtkWriter(feBasis.gridView(), Dune::refinementLevels(subsampling));
     vtkWriter.addVertexData(localUFunction,
                             VTK::FieldInfo(functionname,
                                            VTK::FieldInfo::Type::scalar,
