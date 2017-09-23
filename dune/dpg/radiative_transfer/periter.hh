@@ -664,7 +664,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     std::vector<bool> boundary_is_homogeneous(numS, false);
     {
       size_t i = 0;
-      for(auto& testSpace : testSpaces) {
+      for([[maybe_unused]] auto& testSpace : testSpaces) {
         for(size_t imax = i + kernelApproximation.numSperInterval;
             i < imax; i++) {
           boundary_is_homogeneous[i]
