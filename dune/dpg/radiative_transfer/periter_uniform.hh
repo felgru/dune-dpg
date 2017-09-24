@@ -330,7 +330,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   typedef typename Grid::LeafGridView  LeafGridView;
   typedef typename Grid::LevelGridView LevelGridView;
-  typedef typename LeafGridView::template Codim<0>::Geometry Geometry;
   LeafGridView gridView = grid.leafGridView();
 
   const unsigned int dim = LeafGridView::dimension;
@@ -353,7 +352,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
   ////////////////////////////////////////////
-  using Domain = typename Geometry::GlobalCoordinate;
   using Direction = FieldVector<double, dim>;
 
   /////////////////////////////////////////////////////////
