@@ -42,6 +42,9 @@ namespace Functions {
   class PQkSubsampledDGNodeFactory;
 
   template<typename GV, int k, class MI>
+  class PQkTraceNodeFactory;
+
+  template<typename GV, int k, class MI>
   class PQkTransportFactory;
 
   template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
@@ -290,6 +293,13 @@ struct changeGridView<Functions::PQkSubsampledDGNodeFactory<GV, s, k, MI>,
                       GridView>
 {
   typedef Functions::PQkSubsampledDGNodeFactory<GridView, s, k, MI> type;
+};
+
+template<typename GV, int k, class MI, class GridView>
+struct changeGridView<Functions::PQkTraceNodeFactory<GV, k, MI>,
+                      GridView>
+{
+  typedef Functions::PQkTraceNodeFactory<GridView, k, MI> type;
 };
 
 template<typename GV, int k, class MI, class GridView>
