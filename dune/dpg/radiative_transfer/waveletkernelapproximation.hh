@@ -785,8 +785,8 @@ namespace ScatteringKernelApproximation {
             Dune::QuadratureRules<double, dim>::rule(type,
                                                     quadOrder,
                                                     QuadratureType::GaussLegendre);
-          std::vector<double> weight;
-          weight.resize(quad.size());
+          assert(quad.size() == numSperInterval);
+          std::vector<double> weight(quad.size());
           for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
             weight[pt] = quad[pt].weight();
           }
@@ -1019,8 +1019,8 @@ namespace ScatteringKernelApproximation {
             Dune::QuadratureRules<double, dim>::rule(type,
                                                     quadOrder,
                                                     QuadratureType::GaussLegendre);
-          std::vector<double> weight;
-          weight.resize(quad.size());
+          assert(quad.size() == numSperInterval);
+          std::vector<double> weight(quad.size());
           for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
             weight[pt] = quad[pt].weight();
           }
