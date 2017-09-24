@@ -141,8 +141,7 @@ def plot_convergence(data,
     ax1.ticklabel_format(style='sci', scilimits=(0,0))
     ax2.ticklabel_format(style='sci', scilimits=(0,0))
 
-
-    rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(data['globalAccIterationApost'])) ]
+    rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(data['globalAccIterationApost']))]
     errIdealIteration = []
     for n in range(len(rhoN)):
         t = ((np.asarray(map(float, data['eta'])))[0:n+1])[::-1]
