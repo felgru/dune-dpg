@@ -19,7 +19,6 @@
 
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqksubsampleddgbasis.hh>
 
@@ -167,7 +166,7 @@ namespace detail {
   template<class FEBasisInterior, class Grid, class F>
   inline void approximate_rhs (
       std::vector<VectorType>& rhsFunctional,
-      Grid& grid,
+      Grid&,
       double,
       FEBasisInterior& feBasisInterior,
       const std::vector<Direction>& sVector,
@@ -362,8 +361,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   /////////////////////////////////////////////////////////
 
   using FEBasisInterior = Functions::LagrangeDGBasis<LeafGridView, 1>;
-  using FEBasisTrace = Functions::PQkTraceNodalBasis<LeafGridView, 2>;
-  using FEBasisTest = Functions::LagrangeDGBasis<LeafGridView, 4>;
+  using FEBasisTrace = Functions::PQkNodalBasis<LeafGridView, 2>;
+  using FEBasisTest = Functions::PQkDGRefinedDGBasis<LeafGridView, 1, 3>;
   using FEBasisTestEnriched = FEBasisTest;
 
   auto solutionSpaces
@@ -474,13 +473,13 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         = std::chrono::steady_clock::now();
 
     {
-      FEBasisTest feBasisTest = std::get<0>(*testSpaces);
+      FEBasisInterior& feBasisInterior = std::get<0>(*solutionSpaces);
 
       detail::approximate_rhs (
           rhsFunctional,
           grid,
           kappa2*eta,
-          feBasisTest,
+          feBasisInterior,
           sVector,
           f,
           RHSApproximation{});
@@ -589,10 +588,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             = grid.levelGridView(grid.maxLevel()-1);
 
         {
-          using FEBasisCoarseTest = changeGridView_t<FEBasisTest, LevelGridView>;
+          using FEBasisCoarseInterior = changeGridView_t<FEBasisInterior,
+                                                         LevelGridView>;
 
-          FEBasisCoarseTest coarseTestBasis(levelGridView);
-          const FEBasisTest& feBasisTest = std::get<0>(*testSpaces);
+          FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
+          const FEBasisInterior& feBasisInterior
+              = std::get<0>(*solutionSpaces);
 
           std::vector<VectorType> rhsFunctionalCoarse(numS);
           std::swap(rhsFunctional, rhsFunctionalCoarse);
@@ -600,7 +601,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           for(unsigned int i = 0; i < numS; ++i)
           {
             rhsFunctional[i] = interpolateToUniformlyRefinedGrid(
-                coarseTestBasis, feBasisTest,
+                coarseInteriorBasis, feBasisInterior,
                 rhsFunctionalCoarse[i]);
           }
         }
@@ -768,7 +769,7 @@ compute_transport_solution(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
             make_LinearFunctionalTerm<0>
-              (rhsFunctional, std::get<0>(*testSpaces))));
+              (rhsFunctional, std::get<0>(*solutionSpaces))));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -778,10 +779,10 @@ compute_transport_solution(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
             make_LinearFunctionalTerm<0>
-              (rhsFunctional, std::get<0>(*testSpaces)),
+              (rhsFunctional, std::get<0>(*solutionSpaces)),
             make_SkeletalLinearFunctionalTerm
               <0, IntegrationType::normalVector>
-              (bvExtension, std::get<0>(*testSpaces), -1, s)));
+              (bvExtension, std::get<1>(*solutionSpaces), -1, s)));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -837,7 +838,7 @@ compute_transport_solution(
           std::make_tuple(
             make_LinearFunctionalTerm<0>
               (rhsFunctional,
-               std::get<0>(*systemAssembler.getTestSearchSpaces()))));
+               std::get<0>(*systemAssembler.getSolutionSpaces()))));
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   } else {
     auto rhsAssemblerEnriched
@@ -847,11 +848,11 @@ compute_transport_solution(
           std::make_tuple(
             make_LinearFunctionalTerm<0>
               (rhsFunctional,
-               std::get<0>(*systemAssembler.getTestSearchSpaces())),
+               std::get<0>(*systemAssembler.getSolutionSpaces())),
             make_SkeletalLinearFunctionalTerm
               <0, IntegrationType::normalVector>
               (bvExtension,
-               std::get<0>(*systemAssembler.getTestSearchSpaces()),
+               std::get<1>(*systemAssembler.getSolutionSpaces()),
                -1, s)));
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   }
