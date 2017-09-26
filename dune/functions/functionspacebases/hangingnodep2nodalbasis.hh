@@ -5,12 +5,12 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
+#include <dune/common/std/optional.hh>
 
 #include <dune/localfunctions/lagrange/pqkfactory.hh>
 
 #include <dune/typetree/leafnode.hh>
 
-#include <dune/functions/common/optional.hh>
 #include <dune/functions/functionspacebases/constrainedglobalbasis.hh>
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
 #include <dune/functions/functionspacebases/nodes.hh>
@@ -105,7 +105,7 @@ public:
   {
     const auto& gridIndexSet = gridView_.indexSet();
     std::vector<size_t> edgeDofs(gridView_.size(1), SIZE_MAX);
-    std::vector<Optional<std::array<size_t,3>>>
+    std::vector<Dune::Std::optional<std::array<size_t,3>>>
         edgeConstraints(edgeDofs.size());
     size_t nextEdgeDof = gridView_.size(dim); // edges start after vertices
     for(const auto& e : elements(gridView_)) {
@@ -216,7 +216,7 @@ public:
           if(edgeConstraints[subIndex]) {
             constraintOffsets.push_back(preceedingUnconstrainedIndices);
             preceedingUnconstrainedIndices = 0;
-            for(size_type idx : edgeConstraints[subIndex].value()) {
+            for(size_type idx : *edgeConstraints[subIndex]) {
               localToGlobal.emplace_back(MultiIndex{idx});
             }
           } else {
