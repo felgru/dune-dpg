@@ -837,11 +837,16 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           gridIdSets[i] = saveSubGridToIdSet(*grids[i]);
 
           ofs << "\nCumulated a posteriori error in current angular subinterval: "
-              << std::sqrt(aposterioriSubinterval)
-              << ((std::sqrt(aposterioriSubinterval) <=
+              << std::sqrt(aposterioriSubinterval);
+          if (std::sqrt(aposterioriSubinterval) <=
                   kappa3 * eta / (1 << kernelApproximation.getLevel()))
-                  ? " (enough)" : (" (not enough, required "+std::to_string(kappa3 * eta / (1 << kernelApproximation.getLevel()))+")"))
-              << "\n\n" << std::flush;
+          {
+            ofs << " (enough";
+          } else {
+            ofs << " (not enough, required "
+                << kappa3 * eta / (1 << kernelApproximation.getLevel());
+          }
+          ofs << ")\n\n" << std::flush;
 
           break;
         } else {
@@ -855,10 +860,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
           ofs << "\nCumulated a posteriori error in current angular subinterval: "
               << std::sqrt(aposterioriSubinterval)
-              << ((std::sqrt(aposterioriSubinterval) <=
-                  kappa3 * eta / (1 << kernelApproximation.getLevel()))
-                  ? " (enough)" : (" (not enough, required "+std::to_string(kappa3 * eta / (1 << kernelApproximation.getLevel()))+")"))
-              << "\n\n" << std::flush;
+              << "(required "
+              << kappa3 * eta / (1 << kernelApproximation.getLevel())
+              << ")\n\n" << std::flush;
         }
       } // end of spatial refinements in angular subintervals
       aposterioriTransportGlobal += aposterioriSubinterval;
