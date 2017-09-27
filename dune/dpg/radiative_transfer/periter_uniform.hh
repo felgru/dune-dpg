@@ -461,14 +461,19 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     std::chrono::steady_clock::time_point startScatteringApproximation
         = std::chrono::steady_clock::now();
 
+    const std::vector<double> quadWeight
+      = kernelApproximation.getQuadWeightSubinterval();
+
     double kappaNorm = 1.;
     double uNorm = 0.;
     for(size_t i=0; i<numS; ++i) {
-      const double ujNorm =
+      const double uiNorm =
         ErrorTools::l2norm(std::get<FEBasisInterior>(*solutionSpaces), x[i]);
-      uNorm += ujNorm * ujNorm;
+      uNorm += uiNorm * uiNorm
+                / (1 << kernelApproximation.getLevel())
+                * quadWeight[i % kernelApproximation.numSperInterval];
     }
-    uNorm = std::sqrt(uNorm / numS);
+    uNorm = std::sqrt(uNorm);
     // To prevent division by zero.
     if(uNorm == 0.) uNorm = 1e-5;
 
@@ -539,8 +544,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << "Inner iterations (transport solves)\n"
         << "-----------------------------------\n";
     double aposterioriTransportGlobal = 0.;
-    std::vector<double> quadWeight
-      = kernelApproximation.getQuadWeightSubinterval();
 
     const unsigned int maxNumberOfInnerIterations = 3;
     for(unsigned int nRefinement = 0; ; )
