@@ -535,7 +535,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << "Computing time: "
           << std::chrono::duration_cast<std::chrono::microseconds>
           (endScatteringApproximation - startScatteringApproximation).count()
-          << "us\n";
+          << "us\n" << std::flush;
 
     ////////////////////////////////////////////////////
     // Inner loop
@@ -577,7 +577,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             << std::sqrt(aposteriori_s)
             << "\n  - Grid level: "     << grid.maxLevel()
             << "\n  - Number of DOFs: " << x[i].size()
-            << '\n';
+            << std::endl;
 
         std::cout << "\nIteration " << n << '.' << nRefinement
             << " for direction " << i << ": \n"
@@ -585,7 +585,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             << std::sqrt(aposteriori_s)
             << "\n  - Grid level: " << grid.maxLevel()
             << "\n  - Number of DOFs: " << x[i].size()
-            << '\n';
+            << std::endl;
       }
       aposterioriTransportGlobal = std::sqrt(aposterioriTransportGlobal);
 
@@ -704,7 +704,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           << " (rho^n * CT * ||f|| + (1+pi^2/6)rho^n)\n"
         << "Total number of DoFs: "
           << accumulatedDoFs
-        << "\n\n";
+        << "\n\n" << std::flush;
 
     std::cout << "Error at end of Iteration " << n << ": "
               << aposterioriTransportGlobal << ", using "

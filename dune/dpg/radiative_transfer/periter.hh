@@ -729,7 +729,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << "Computing time: "
           << std::chrono::duration_cast<std::chrono::microseconds>
           (endScatteringApproximation - startScatteringApproximation).count()
-          << "us\n";
+          << "us\n" << std::flush;
 
 
     ////////////////////////////////////////////////////
@@ -819,7 +819,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << std::sqrt(aposteriori_s)
               << "\n  - Grid level: "     << grids[i]->maxLevel()
               << "\n  - Number of DOFs: " << x[j].size()
-              << '\n';
+              << std::endl;
 
           std::cout << "\nIteration " << n << '.' << nRefinement
               << " for direction " << j << ": \n"
@@ -827,7 +827,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << std::sqrt(aposteriori_s)
               << "\n  - Grid level: " << grids[i]->maxLevel()
               << "\n  - Number of DOFs: " << x[j].size()
-              << '\n';
+              << std::endl;
         } // End loop over directions in the same angular subinterval.
 
 
@@ -841,7 +841,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << ((std::sqrt(aposterioriSubinterval) <=
                   kappa3 * eta / (1 << kernelApproximation.getLevel()))
                   ? " (enough)" : (" (not enough, required "+std::to_string(kappa3 * eta / (1 << kernelApproximation.getLevel()))+")"))
-              << "\n\n";
+              << "\n\n" << std::flush;
 
           break;
         } else {
@@ -858,7 +858,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << ((std::sqrt(aposterioriSubinterval) <=
                   kappa3 * eta / (1 << kernelApproximation.getLevel()))
                   ? " (enough)" : (" (not enough, required "+std::to_string(kappa3 * eta / (1 << kernelApproximation.getLevel()))+")"))
-              << "\n\n";
+              << "\n\n" << std::flush;
         }
       } // end of spatial refinements in angular subintervals
       aposterioriTransportGlobal += aposterioriSubinterval;
@@ -934,7 +934,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           << " (rho^n * CT * ||f|| + (1+pi^2/6)rho^n)\n"
         << "Total number of DoFs: "
           << accumulatedDoFs
-        << "\n\n";
+        << "\n\n" << std::flush;
 
     std::cout << "Error at end of Iteration " << n << ": "
               << aposterioriTransportGlobal << ", using "
