@@ -34,6 +34,25 @@ UMFPACK installation:
     brew tap hombrew/science
     brew install hombrew/science/suite-sparse
 
+3rd party libraries in non-standard paths
+-----------------------------------------
+
+If you have 3rd party libraries in non-standard search paths you have
+to tell CMake about it by setting special variables. This can be most
+easily done in a dune.opts file so that `dunecontrol` will use the
+variables set there when called with the `--opts=$DUNEDIR/dune.opts`
+option. To this end create a file dune.opts in `$DUNEDIR` and add
+whatever is needed of the following lines:
+
+* To search Boost in `$BOOSTDIR`
+  ```
+  CMAKE_FLAGS+=" -DBOOST_INCLUDEDIR=$BOOSTDIR"
+  ```
+* To search SuiteSparse in `$SUITESPARSEDIR`
+  ```
+  CMAKE_FLAGS+=" -DSuiteSparse_ROOT=$SUITESPARSEDIR"
+  ```
+
 Installation and compilation of dune and dune-dpg
 =================================================
 
@@ -72,10 +91,10 @@ Installation of Dune on Debian GNU/Linux
 
     CMAKE_FLAGS+=" -DBOOST_INCLUDEDIR=$BOOSTDIR"
 
-Installation of Dune on MacOS
------------------------------
+Installation of Dune on other Linux distributions and MacOS
+-----------------------------------------------------------
 
-2) Download the following dune sources in `$DUNEDIR`:
+2) Download and extract the following dune sources to `$DUNEDIR`:
 
   - Version >= 2.5 of the following Dune source modules:
     dune-common, dune-geometry, dune-grid, dune-istl,
@@ -99,7 +118,7 @@ CMAKE_FLAGS+=" -DCMAKE_CXX_FLAGS='-pedantic -Wall'"
 ```
 
 Remarks:
- - In MacOS, the C compiler is set to clang by default so the previous
+ - On MacOS, the C compiler is set to clang by default so the previous
    configuration option cannot be omitted.
    Additionally g++ is a symlink to clang on MacOS, so one has to use
    the versioned compiler name g++-6. The same goes for gcc.
