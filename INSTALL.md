@@ -48,6 +48,10 @@ whatever is needed of the following lines:
   ```
   CMAKE_FLAGS+=" -DBOOST_INCLUDEDIR=$BOOSTDIR"
   ```
+* To search Eigen in `$EIGENDIR`
+  ```
+  CMAKE_FLAGS+=" -DEIGEN3_INCLUDE_DIR=$EIGENDIR"
+  ```
 * To search SuiteSparse in `$SUITESPARSEDIR`
   ```
   CMAKE_FLAGS+=" -DSuiteSparse_ROOT=$SUITESPARSEDIR"
