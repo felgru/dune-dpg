@@ -439,7 +439,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // η_n:
   double eta = 1;
   std::vector<double> etaList(maxNumberOfIterations,0.);
-  etaList[0] = eta;
   // TODO: estimate norm of rhs f in V'
   // Remark: Here, V=H_{0,+}(D\times S)
   const double fnorm = 1;
@@ -575,6 +574,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
   {
+    etaList[n] = eta;
     ofs << "\nIteration n=" << n << '\n'
         << "================\n";
     std::cout << "\nIteration " << n << "\n\n";
@@ -945,7 +945,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << accumulatedDoFs << " DoFs\n";
 
     eta = std::pow(rho,(n+1))/(1+(n+1)*(n+1));
-    etaList[n+1] = eta;
   }
 }
 
