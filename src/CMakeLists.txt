@@ -1,7 +1,9 @@
-#add_executable("dune_dpg_error" dune_dpg_error.cc)
-#add_dune_suitesparse_flags(dune_dpg_error)
-#target_link_dune_default_libraries("dune_dpg_error")
-#add_dune_ug_flags(dune_dpg_error)
+#if(dune-subgrid_FOUND)
+#  add_executable("dune_dpg_error" dune_dpg_error.cc)
+#  add_dune_suitesparse_flags(dune_dpg_error)
+#  target_link_dune_default_libraries("dune_dpg_error")
+#  add_dune_ug_flags(dune_dpg_error)
+#endif()
 
 #add_executable("dune_dpg_saddlepoint" dune_dpg_saddlepoint.cc)
 #add_dune_suitesparse_flags(dune_dpg_saddlepoint)
@@ -15,10 +17,12 @@
 #add_dune_ug_flags(dune_dpg_opt_testspace)
 #target_link_dune_default_libraries("dune_dpg_opt_testspace")
 
-#add_executable("plot_solution" plot_solution.cc)
-#add_dune_suitesparse_flags(plot_solution)
-#add_dune_ug_flags(plot_solution)
-#target_link_dune_default_libraries("plot_solution")
+#if(dune-subgrid_FOUND)
+#  add_executable("plot_solution" plot_solution.cc)
+#  add_dune_suitesparse_flags(plot_solution)
+#  add_dune_ug_flags(plot_solution)
+#  target_link_dune_default_libraries("plot_solution")
+#endif()
 
 #add_executable("plot_solution_simple" plot_solution_simple.cc)
 #add_dune_suitesparse_flags(plot_solution_simple)
@@ -60,18 +64,20 @@ target_link_dune_default_libraries("plot_extension")
 #                                    K_APOSTERIORI=${adegree})
 #endforeach()
 
-add_executable("dune_dpg_rad_trans_periter" dune_dpg_rad_trans_periter.cc)
-add_dune_suitesparse_flags(dune_dpg_rad_trans_periter)
-add_dune_ug_flags(dune_dpg_rad_trans_periter)
-target_link_dune_default_libraries("dune_dpg_rad_trans_periter")
+if(dune-subgrid_FOUND)
+  add_executable("dune_dpg_rad_trans_periter" dune_dpg_rad_trans_periter.cc)
+  add_dune_suitesparse_flags(dune_dpg_rad_trans_periter)
+  add_dune_ug_flags(dune_dpg_rad_trans_periter)
+  target_link_dune_default_libraries("dune_dpg_rad_trans_periter")
 
-add_executable("dune_dpg_rad_trans_periter_uniform"
-               dune_dpg_rad_trans_periter.cc)
-add_dune_suitesparse_flags(dune_dpg_rad_trans_periter_uniform)
-add_dune_ug_flags(dune_dpg_rad_trans_periter_uniform)
-target_link_dune_default_libraries("dune_dpg_rad_trans_periter_uniform")
-target_compile_definitions(dune_dpg_rad_trans_periter_uniform
-                           PUBLIC PERITER_USE_UNIFORM_GRID=1)
+  add_executable("dune_dpg_rad_trans_periter_uniform"
+                 dune_dpg_rad_trans_periter.cc)
+  add_dune_suitesparse_flags(dune_dpg_rad_trans_periter_uniform)
+  add_dune_ug_flags(dune_dpg_rad_trans_periter_uniform)
+  target_link_dune_default_libraries("dune_dpg_rad_trans_periter_uniform")
+  target_compile_definitions(dune_dpg_rad_trans_periter_uniform
+                             PUBLIC PERITER_USE_UNIFORM_GRID=1)
+endif()
 
 add_executable("kernel_svds" kernel_svds.cc)
 target_link_dune_default_libraries("kernel_svds")

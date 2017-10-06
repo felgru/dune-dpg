@@ -5,6 +5,7 @@
 #include <cstdlib> // for std::abort()
 
 #include <array>
+#include <chrono>
 #include <functional>
 #include <tuple>
 #include <vector>
@@ -25,8 +26,7 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
+#include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
@@ -36,7 +36,10 @@
 #include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/functionplotter.hh>
 
-#include <chrono>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#include <dune/subgrid/subgrid.hh>
+#pragma GCC diagnostic pop
 
 using namespace Dune;
 
@@ -61,7 +64,8 @@ int main(int argc, char** argv)
   ///////////////////////////////////
 
   const int dim = 2;
-  typedef UGGrid<dim> GridType;
+  using HostGrid = UGGrid<dim>;
+  using Grid = SubGrid<dim, HostGrid, false>;
 
   unsigned int nelements = atoi(argv[1]);
 
@@ -69,20 +73,36 @@ int main(int argc, char** argv)
   FieldVector<double,dim> upper = {1,1};
   std::array<unsigned int,dim> elements = {nelements,nelements};
 
-  // shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+  // shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
+  //                                 ::createCubeGrid(lower, upper, elements);
 
-  shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+  shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
+                                  ::createSimplexGrid(lower, upper, elements);
+  hostGrid->setClosureType(HostGrid::NONE);
 
-  typedef GridType::LeafGridView GridView;
+  // We use a SubGrid as it will automatically make sure that we do
+  // not have more than difference 1 in the levels of neighboring
+  // elements. This is necessary since HangingNodeP2NodalBasis does
+  // not implement higher order hanging nodes constraints.
+  std::unique_ptr<Grid> grid = std::make_unique<Grid>(*hostGrid);
+  {
+    grid->createBegin();
+    grid->insertLevel(hostGrid->maxLevel());
+    grid->createEnd();
+    grid->setMaxLevelDifference(1);
+  }
+
+  using GridView = Grid::LeafGridView;
   //TODO how to define this without GridView?
-  typedef GeometryBuffer<GridView::template Codim<0>::Geometry> GeometryBuffer;
+  using GeometryBuffer = GeometryBuffer<GridView::template Codim<0>::Geometry>;
   GeometryBuffer geometryBuffer;
 
   double err = 1.;
   const double tol = 1e-10;
   for(unsigned int i = 0; err > tol && i < 200; ++i)
   {
-    std::chrono::steady_clock::time_point startiteration = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point startiteration
+        = std::chrono::steady_clock::now();
     GridView gridView = grid->leafGridView();
 
     /////////////////////////////////////////////////////////
@@ -91,31 +111,20 @@ int main(int argc, char** argv)
 
     // u
     using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
-    FEBasisInterior feBasisInterior(gridView);
 
     // bulk term corresponding to theta
-    using FEBasisTrace = Functions::PQkNodalBasis<GridView, 2>;
-    FEBasisTrace feBasisTrace(gridView);
+    using FEBasisTrace = Functions::HangingNodeP2NodalBasis<GridView>;
 
     auto solutionSpaces
       = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
     // v search space
-    using FEBasisTest
-#if 1
-        = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
-#else
-        = Functions::LagrangeDGBasis<GridView, 3>;
-#endif
+    using FEBasisTest = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
     auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
-#if 0
         = Functions::PQkDGRefinedDGBasis<GridView, 1, 4>;
-#else
-        = Functions::LagrangeDGBasis<GridView, 4>;
-#endif
     auto testSpaces_aposteriori
         = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
@@ -197,33 +206,6 @@ int main(int argc, char** argv)
     std::chrono::steady_clock::time_point startsystemassembler = std::chrono::steady_clock::now();
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
-#if 0
-    auto minInnerProduct = make_InnerProduct(solutionSpaces,
-          make_tuple(
-              make_IntegralTerm<1,1,IntegrationType::valueValue,              // (u^,u^)
-                                    DomainOfIntegration::interior>(1),
-              make_IntegralTerm<1,1,IntegrationType::gradGrad,                // (beta grad u^,beta grad u^)
-                                    DomainOfIntegration::interior>(1, beta)
-          ));
-    using MinInnerProduct = decltype(minInnerProduct);
-
-    double delta = 1e-5;
-    systemAssembler.applyMinimization<1, MinInnerProduct>
-                    (stiffnessMatrix,
-                     minInnerProduct,
-                     beta,
-                     delta,
-                     1);
-#endif
-#if 0
-    double delta = 1e-5;
-    systemAssembler.defineCharacteristicFaces<1>
-                      (stiffnessMatrix,
-                       rhs,
-                       beta,
-                       delta);
-#endif
-
     // Determine Dirichlet dofs for theta (inflow boundary)
     {
       std::vector<bool> dirichletNodesInflow;
@@ -245,8 +227,8 @@ int main(int argc, char** argv)
     /////////////////////////////////////////////////
     //   Choose an initial iterate
     /////////////////////////////////////////////////
-    VectorType x(feBasisTrace.size()
-                 +feBasisInterior.size());
+    VectorType x(std::get<FEBasisTrace>(*solutionSpaces).size()
+                 + std::get<FEBasisInterior>(*solutionSpaces).size());
     x = 0;
     ////////////////////////////
     //   Compute solution
@@ -278,9 +260,9 @@ int main(int argc, char** argv)
     FunctionPlotter thetaPlotter("transport_solution_trace_"
                                 + std::to_string(nelements)
                                 + "_" + std::to_string(i));
-    uPlotter.plot("u", x, feBasisInterior, 0, 0);
-    thetaPlotter.plot("theta", x, feBasisTrace, 2,
-                      feBasisInterior.size());
+    uPlotter.plot("u", x, std::get<FEBasisInterior>(*solutionSpaces), 0, 0);
+    thetaPlotter.plot("theta", x, std::get<FEBasisTrace>(*solutionSpaces),
+                      2, std::get<FEBasisInterior>(*solutionSpaces).size());
 
     std::chrono::steady_clock::time_point endresults = std::chrono::steady_clock::now();
     std::cout << "Saving the results took "
