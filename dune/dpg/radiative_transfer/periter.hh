@@ -10,7 +10,12 @@
 #include <sstream>
 #include <vector>
 
+#include <dune/common/version.hh>
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
 #include <dune/common/std/optional.hh>
+#else
+#include <dune/functions/common/optional.hh>
+#endif
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -625,7 +630,11 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               std::declval<FEBasisTest>(),
               std::declval<FEBasisHostTrace>(),
               std::declval<VectorType>()))>;
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
     std::vector<Std::optional<BVData>> bvData;
+#else
+    std::vector<Functions::Optional<BVData>> bvData;
+#endif
     const double accuKernel = kappa1 * eta / (kappaNorm * uNorm);
     {
       FEBasisHostInterior hostGridGlobalBasis(hostGrid.leafGridView());
@@ -783,7 +792,11 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           if(!only_homogeneous_bv) {
             FEBasisTest& feBasisTest = std::get<FEBasisTest>(*testSpaces[i]);
             auto newGridData
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
                 = bvData[i]->restoreDataToRefinedSubGrid(feBasisTest);
+#else
+                = bvData[i].value().restoreDataToRefinedSubGrid(feBasisTest);
+#endif
             bvExtension.resize(newGridData.size(),
                                  false /* don't copy old values */);
             for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
