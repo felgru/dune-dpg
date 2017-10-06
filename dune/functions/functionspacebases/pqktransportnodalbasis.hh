@@ -5,6 +5,7 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pk2d.hh>
 #include <dune/localfunctions/lagrange/qk.hh>
@@ -283,6 +284,7 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
   template<typename It>
   It indices(It it) const
   {
@@ -307,6 +309,27 @@ public:
     }
     return it;
   }
+#else
+  MultiIndex index(size_type i) const
+  {
+    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& element = node_->element();
+
+    const auto& beta = nodeFactory_->transportDirection();
+
+
+    if(   beta[0] == 0
+       || beta[1] == 0
+       || beta[0] == beta[1]
+      )
+      return {nodeFactory_->sizeQ*gridIndexSet.subIndex(element,0,0) + i};
+    else
+      return {nodeFactory_->dofsPerQuad*gridIndexSet.subIndex(element,0,0) + i};
+    //DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");
+
+    //DUNE_THROW(Dune::NotImplemented, "No index method for " << dim << "d grids available yet!");
+  }
+#endif
 
 protected:
   const NodeFactory* nodeFactory_;
