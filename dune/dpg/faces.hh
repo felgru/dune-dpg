@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_FACES_HH
 #define DUNE_DPG_FACES_HH
 
+#include <dune/common/version.hh>
 #include <dune/dpg/type_traits.hh>
 #include <dune/geometry/affinegeometry.hh>
 #include <dune/geometry/referenceelements.hh>
@@ -59,8 +60,13 @@ private:
   getGeometryInElement(const Face& face, const Element& element) {
     const auto geometry = face.geometry();
     const auto innerGeometry = element.geometry();
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
     const auto referenceElement
         = Dune::referenceElement<ctype, facedim>(face.type());
+#else
+    const auto& referenceElement
+        = ReferenceElements<ctype, facedim>::general(face.type());
+#endif
     const size_t numVertices = referenceElement.size(facedim);
     std::vector<GlobalCoordinate> vertices(numVertices);
     for(size_t i = 0; i < numVertices; i++) {
