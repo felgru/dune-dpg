@@ -3,6 +3,8 @@
 #ifndef DUNE_DPG_FUNCTIONPLOTTER_HH
 #define DUNE_DPG_FUNCTIONPLOTTER_HH
 
+#include <dune/common/version.hh>
+
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk.hh>
 
@@ -66,7 +68,11 @@ public:
     //////////////////////////////////////////////////////////////////////////
 
     SubsamplingVTKWriter<typename FEBasis::GridView>
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
         vtkWriter(feBasis.gridView(), Dune::refinementLevels(subsampling));
+#else
+        vtkWriter(feBasis.gridView(), subsampling);
+#endif
     vtkWriter.addVertexData(localUFunction,
                             VTK::FieldInfo(functionname,
                                            VTK::FieldInfo::Type::scalar,
