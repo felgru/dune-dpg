@@ -23,16 +23,20 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
+#include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
+#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/functionplotter.hh>
 #include <dune/dpg/rhs_assembler.hh>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#include <dune/subgrid/subgrid.hh>
+#pragma GCC diagnostic pop
 
 
 using namespace Dune;
@@ -72,42 +76,56 @@ int main()
 
   const int dim = 2;
 
-  typedef UGGrid<dim> GridType;
+  using HostGrid = UGGrid<dim>;
+  using Grid = SubGrid<dim, HostGrid, false>;
   FieldVector<double,dim> lower = {0,0};
   FieldVector<double,dim> upper = {1,1};
   std::array<unsigned int,dim> elements = {1,1};
 
   // Square mesh
-  //std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+  //std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>::createCubeGrid(lower, upper, elements);
   // Triangular mesh
-  std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+  std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>::createSimplexGrid(lower, upper, elements);
   // Read mesh from an input file
-  // std::shared_ptr<GridType> grid(GmshReader<GridType>::read("irregular-square.msh")); // for an irregular mesh square
-  // std::shared_ptr<GridType> grid(GmshReader<GridType>::read("circle.msh")); // for a circle-shaped mesh
+  // std::shared_ptr<HostGrid> hostGrid(GmshReader<HostGrid>::read("irregular-square.msh")); // for an irregular mesh square
+  // std::shared_ptr<HostGrid> hostGrid(GmshReader<HostGrid>::read("circle.msh")); // for a circle-shaped mesh
+  hostGrid->setClosureType(HostGrid::NONE);
+
+  // We use a SubGrid as it will automatically make sure that we do
+  // not have more than difference 1 in the levels of neighboring
+  // elements. This is necessary since HangingNodeP2NodalBasis does
+  // not implement higher order hanging nodes constraints.
+  std::unique_ptr<Grid> grid = std::make_unique<Grid>(*hostGrid);
+  {
+    grid->createBegin();
+    grid->insertLevel(hostGrid->maxLevel());
+    grid->createEnd();
+    grid->setMaxLevelDifference(1);
+  }
 
   double err = 1.;
   const double tol = 1e-10;
   for(unsigned int i = 0; err > tol && i < 20; ++i)
   {
-    typedef GridType::LeafGridView GridView;
-    GridView gridView = grid->leafGridView();
+    using GridView = Grid::LeafGridView;
+    const GridView gridView = grid->leafGridView();
 
 
     /////////////////////////////////////////////////////////
     //   Choose finite element spaces
     /////////////////////////////////////////////////////////
 
-    typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
-    typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
+    using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
+    using FEBasisTrace = Functions::HangingNodeP2NodalBasis<GridView>;
     auto solutionSpaces
       = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
-    typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;     // v
+    using FEBasisTest = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
     auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
-        = Functions::LagrangeDGBasis<GridView, 4>;
+        = Functions::PQkDGRefinedDGBasis<GridView, 1, 4>;
     auto testSpaces_aposteriori
         = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 

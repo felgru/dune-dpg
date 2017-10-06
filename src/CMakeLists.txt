@@ -1,7 +1,9 @@
-add_executable("dune_dpg_error" dune_dpg_error.cc)
-add_dune_suitesparse_flags(dune_dpg_error)
-target_link_dune_default_libraries("dune_dpg_error")
-add_dune_ug_flags(dune_dpg_error)
+if(dune-subgrid_FOUND)
+  add_executable("dune_dpg_error" dune_dpg_error.cc)
+  add_dune_suitesparse_flags(dune_dpg_error)
+  target_link_dune_default_libraries("dune_dpg_error")
+  add_dune_ug_flags(dune_dpg_error)
+endif()
 
 #add_executable("dune_dpg_saddlepoint" dune_dpg_saddlepoint.cc)
 #add_dune_suitesparse_flags(dune_dpg_saddlepoint)
