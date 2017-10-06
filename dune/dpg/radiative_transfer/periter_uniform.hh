@@ -669,10 +669,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       }
     }
 
-    // A posteriori estimation transport solve
-    aposterioriTransportGlobal
-      = std::sqrt(aposterioriTransportGlobal
-                  / 2*boost::math::constants::pi<double>());
     const size_t accumulatedDoFs = std::accumulate(x.cbegin(), x.cend(),
         static_cast<size_t>(0),
         [](size_t acc, auto vec) { return acc + vec.size(); });
