@@ -4,10 +4,10 @@
 #define DUNE_DPG_RADIATIVE_TRANSFER_PERITER_UNIFORM_HH
 
 #include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 #include <vector>
-
-#include <dune/grid/io/file/vtk.hh>
-#include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -20,7 +20,6 @@
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqksubsampleddgbasis.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
@@ -70,7 +69,7 @@ class Periter {
    * \param g  lifting of the boundary values
    * \param is_inflow_boundary_homogeneous
    *            checks if g is 0 on the inflow boundary
-   * \param sigma
+   * \param sigma   absorbtion coefficient
    * \param kernel  the scattering kernel, e.g. a Henyey–Greenstein kernel
    * \param rho  the contraction parameter ρ
    * \param CT  the constant C_T from the paper
@@ -340,9 +339,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   std::string foldername;
   {
-    std::chrono::system_clock::time_point
-    now = std::chrono::system_clock::now();
-    std::time_t cnow = std::chrono::system_clock::to_time_t(now);
+    const std::chrono::system_clock::time_point now
+        = std::chrono::system_clock::now();
+    const std::time_t cnow = std::chrono::system_clock::to_time_t(now);
     std::stringstream folderstream;
     folderstream << "../results/"
                  << std::put_time(std::localtime(&cnow), "%F-time%H%M%S")
@@ -384,6 +383,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   auto testSpacesEnriched
     = make_space_tuple<FEBasisTestEnriched>(gridView);
 
+  // TODO: The accuracy also depends on the kappa from K = κG and on \|u\|.
+  //       Adding a factor 1/4. to compensate for that.
   ScatteringKernelApproximation kernelApproximation(kernel,
                                                     kappa1*targetAccuracy/4.);
 

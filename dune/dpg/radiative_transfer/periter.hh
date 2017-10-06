@@ -3,8 +3,9 @@
 #ifndef DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
 #define DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
 
-#include <ctime>
 #include <chrono>
+#include <ctime>
+#include <iomanip>
 #include <set>
 #include <sstream>
 #include <vector>
@@ -421,9 +422,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   std::string foldername;
   {
-    std::chrono::system_clock::time_point
-    now = std::chrono::system_clock::now();
-    std::time_t cnow = std::chrono::system_clock::to_time_t(now);
+    const std::chrono::system_clock::time_point now
+        = std::chrono::system_clock::now();
+    const std::time_t cnow = std::chrono::system_clock::to_time_t(now);
     std::stringstream folderstream;
     folderstream << "../results/"
                  << std::put_time(std::localtime(&cnow), "%F-time%H%M%S");
