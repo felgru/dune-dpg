@@ -546,7 +546,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << "-----------------------------------\n";
     double aposterioriTransportGlobal = 0.;
 
-    const unsigned int maxNumberOfInnerIterations = 3;
+    const unsigned int maxNumberOfInnerIterations = 16;
     for(unsigned int nRefinement = 0; ; )
         // At the end of the loop, we will break if
         // aposterioriTransportGlobal < kapp3*eta
