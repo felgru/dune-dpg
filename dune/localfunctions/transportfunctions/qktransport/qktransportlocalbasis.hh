@@ -6,6 +6,7 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/power.hh>
 #include <dune/common/function.hh>
+#include <dune/common/version.hh>
 
 #include <dune/geometry/type.hh>
 #include <dune/geometry/multilineargeometry.hh>
@@ -97,8 +98,16 @@ public:
 
 
         bool triangleIsBottom;
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
         const GeometryType triangle = GeometryTypes::triangle;
         const GeometryType quad = GeometryTypes::quadrilateral;
+#else
+        GeometryType triangle;
+        GeometryType quad;
+
+        triangle.makeSimplex(dim);
+        quad.makeCube(dim);
+#endif
 
         std::vector<Dune::FieldVector<D,dim>> cornerT(dim+1);
         std::vector<Dune::FieldVector<D,dim>> cornerQ(4*(dim-1));
@@ -239,8 +248,16 @@ public:
 
         bool triangleIsBottom;
 
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
         const GeometryType triangle = GeometryTypes::triangle;
         const GeometryType quad = GeometryTypes::quadrilateral;
+#else
+        GeometryType triangle;
+        GeometryType quad;
+
+        triangle.makeSimplex(dim);
+        quad.makeCube(dim);
+#endif
 
         std::vector<Dune::FieldVector<D,dim>> cornerT(dim+1);
         std::vector<Dune::FieldVector<D,dim>> cornerQ(4*(dim-1));

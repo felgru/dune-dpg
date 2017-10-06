@@ -5,6 +5,8 @@
 
 #include <cstddef>
 
+#include <dune/common/version.hh>
+
 #include <dune/geometry/type.hh>
 
 #include <dune/localfunctions/common/localfiniteelementtraits.hh>
@@ -36,15 +38,28 @@ namespace Dune
 
     /** \todo Please doc me !
      */
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
     PkDGSubsampled2DLocalFiniteElement () : gt(GeometryTypes::triangle)
     { }
+#else
+    PkDGSubsampled2DLocalFiniteElement ()
+    {
+      gt.makeTriangle();
+    }
+#endif
 
     /** \todo Please doc me !
      */
     PkDGSubsampled2DLocalFiniteElement (int variant)
       : coefficients(variant)
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
       , gt(GeometryTypes::triangle)
     { }
+#else
+    {
+      gt.makeTriangle();
+    }
+#endif
 
     /** Constructor for six variants with permuted vertices.
 
@@ -54,8 +69,14 @@ namespace Dune
      */
     PkDGSubsampled2DLocalFiniteElement (const unsigned int vertexmap[3])
       : coefficients(vertexmap)
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
       , gt(GeometryTypes::triangle)
     { }
+#else
+    {
+      gt.makeTriangle();
+    }
+#endif
 
     /** \todo Please doc me !
      */

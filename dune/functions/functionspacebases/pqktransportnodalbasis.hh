@@ -107,7 +107,12 @@ public:
 
   size_type size() const
   {
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
     const GeometryType quad = GeometryTypes::quadrilateral;
+#else
+    GeometryType quad;
+    quad.makeQuadrilateral();
+#endif
     if(   beta_[0] == 0
        || beta_[1] == 0
        || beta_[0] == beta_[1]

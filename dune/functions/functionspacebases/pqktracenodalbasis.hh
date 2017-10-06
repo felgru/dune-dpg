@@ -88,9 +88,16 @@ public:
       triangleOffset_      = edgeOffset_
                            + dofsPerEdge * gridView_.size(dim-1);
 
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
       quadrilateralOffset_ = triangleOffset_
                              + dofsPerTriangle
                                * gridView_.size(GeometryTypes::triangle);
+#else
+      GeometryType triangle;
+      triangle.makeTriangle();
+      quadrilateralOffset_ = triangleOffset_
+                           + dofsPerTriangle * gridView_.size(triangle);
+#endif
     }
   }
 
@@ -128,9 +135,18 @@ public:
         return gridView_.size(dim) + dofsPerEdge * gridView_.size(1);
       case 3:
       {
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
         return gridView_.size(dim) + dofsPerEdge * gridView_.size(2)
              + dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
              + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
+#else
+        GeometryType triangle, quad;
+        triangle.makeTriangle();
+        quad.makeQuadrilateral();
+        return gridView_.size(dim) + dofsPerEdge * gridView_.size(2)
+             + dofsPerTriangle * gridView_.size(triangle)
+             + dofsPerQuad * gridView_.size(quad);
+#endif
       }
     }
     DUNE_THROW(Dune::NotImplemented,

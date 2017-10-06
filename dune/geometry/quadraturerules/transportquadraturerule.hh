@@ -3,6 +3,7 @@
 #ifndef DUNE_GEOMETRY_TRANSPORTQUADRATURERULE_HH_
 #define DUNE_GEOMETRY_TRANSPORTQUADRATURERULE_HH_
 
+#include <dune/common/version.hh>
 #include <dune/geometry/quadraturerules.hh>
 #include <dune/geometry/multilineargeometry.hh>
 #include <dune/geometry/type.hh>
@@ -46,7 +47,13 @@ private:
                 std::vector<Dune::FieldVector<ct,dim>> cornerQ(4*(dim-1));
                 setCorners(cornerT,cornerQ,beta);
 
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
                 MultiLinearGeometry<ct,2,2> part_tria(GeometryTypes::triangle, cornerT);
+#else
+                GeometryType triangle;
+                triangle.makeSimplex(dim);
+                MultiLinearGeometry<ct,2,2> part_tria(triangle,cornerT);
+#endif
                 const QuadratureRule<ct,dim>& quadP = Dune::template QuadratureRules<ct,dim>::rule(part_tria.type(), this->delivered_order);
                 for (unsigned int pt=0; pt < quadP.size(); ++pt) {// loop over quadrature points
 
@@ -62,7 +69,13 @@ private:
 
 
 
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
                 MultiLinearGeometry<ct,2,2> part_quad(GeometryTypes::quadrilateral, cornerQ);
+#else
+                GeometryType quad;
+                quad.makeCube(dim);
+                MultiLinearGeometry<ct,2,2> part_quad(quad,cornerQ);
+#endif
                 const QuadratureRule<ct,dim>& quadQ = Dune::template QuadratureRules<ct,dim>::rule(part_quad.type(), this->delivered_order);
                 for (unsigned int pt=0; pt < quadQ.size(); ++pt) {// loop over quadrature points
 
