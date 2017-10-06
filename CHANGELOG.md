@@ -46,6 +46,8 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   spaces possible, the interfaces of those classes now take `shared_ptr`s
   to tuples of spaces. To create such `shared_ptr`s to tuples, you can use
   the new function `make_space_tuple`.
+* plot_solution now requires dune-subgrid to compile as it uses
+  `HangingNodeP2NodalBasis` for the trace variables now.
 * `BoundaryTools::getInflowBoundaryValue` has been renamed to
   `BoundaryTools::getBoundaryValue` as it also works for other boundary
   values. Additionaly, it now takes a single boundary value function

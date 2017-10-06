@@ -39,6 +39,9 @@ libraries installed on your system:
       (https://dune-project.org/releases/2.5.0/)
       but one could also use other managers, e.g., ALBERTA or YASPgrid.
       (https://dune-project.org/groups/grid/)
+    - for the plot_solution test program, you will also need the
+      dune-subgrid module
+      (https://git.imp.fu-berlin.de/agnumpde/dune-subgrid)
 
 Instructions on how to build dune-dpg can be found in [INSTALL.md](INSTALL.md).
 
