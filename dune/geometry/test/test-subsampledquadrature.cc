@@ -8,7 +8,6 @@
 #include <config.h>
 
 #include <dune/common/exceptions.hh>
-#include <dune/common/version.hh>
 
 #include <dune/geometry/referenceelements.hh>
 #include <dune/geometry/quadraturerules.hh>
@@ -139,27 +138,15 @@ void checkWeights(const QuadratureRule &quad)
   {
     volume += qp.weight();
   }
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
   if (std::abs(volume - Dune::referenceElement<ctype, dim>(t).volume())
       > quad.size()*std::numeric_limits<double>::epsilon())
-#else
-  if (std::abs(volume -
-               Dune::ReferenceElements<ctype, dim>::general(t).volume())
-      > quad.size()*std::numeric_limits<double>::epsilon())
-#endif
   {
     std::cerr << "Error: Quadrature for " << t << " and order=" << p
               << " does not sum to volume of RefElem" << std::endl;
     std::cerr << "\tSums to " << volume << "( RefElem.volume() = "
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
               << Dune::referenceElement<ctype, dim>(t).volume()
               << ")" << "(difference "
               << volume - Dune::referenceElement<ctype, dim>(t).volume()
-#else
-              << Dune::ReferenceElements<ctype, dim>::general(t).volume()
-              << ")" << "(difference " << volume -
-                  Dune::ReferenceElements<ctype, dim>::general(t).volume()
-#endif
               << ")" << std::endl;
     success = false;
   }
