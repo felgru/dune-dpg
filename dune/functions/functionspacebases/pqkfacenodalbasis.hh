@@ -86,16 +86,9 @@ public:
     {
       DUNE_THROW(Dune::NotImplemented, "PQkFaceNodalBasis for 3D grids is not implemented");
       triangleOffset_      = 0;
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       quadrilateralOffset_ = triangleOffset_
                            + dofsPerTriangle
                              * gridView_.size(GeometryTypes::triangle);
-#else
-      GeometryType triangle;
-      triangle.makeTriangle();
-      quadrilateralOffset_ = triangleOffset_
-                           + dofsPerTriangle * gridView_.size(triangle);
-#endif
     }
   }
 
@@ -137,16 +130,8 @@ public:
       {
         DUNE_THROW(Dune::NotImplemented,
                    "PQkFaceNodalBasis for 3D grids is not implemented");
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         return dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
              + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
-#else
-        GeometryType triangle, quad;
-        triangle.makeTriangle();
-        quad.makeQuadrilateral();
-        return dofsPerTriangle * gridView_.size(triangle)
-             + dofsPerQuad * gridView_.size(quad);
-#endif
       }
     }
     DUNE_THROW(Dune::NotImplemented,

@@ -97,14 +97,8 @@ public:
       }
       case 2:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         quadrilateralOffset_ = dofsPerTriangle
                                * gridView_.size(GeometryTypes::triangle);
-#else
-        GeometryType triangle;
-        triangle.makeTriangle();
-        quadrilateralOffset_ = dofsPerTriangle * gridView_.size(triangle);
-#endif
         break;
       }
       case 3:
@@ -147,16 +141,8 @@ public:
         return dofsPerEdge * gridView_.size(0);
       case 2:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         return dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
              + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
-#else
-        GeometryType triangle, quad;
-        triangle.makeTriangle();
-        quad.makeQuadrilateral();
-        return dofsPerTriangle * gridView_.size(triangle)
-             + dofsPerQuad * gridView_.size(quad);
-#endif
       }
     }
     DUNE_THROW(Dune::NotImplemented, "No size method for " << dim
