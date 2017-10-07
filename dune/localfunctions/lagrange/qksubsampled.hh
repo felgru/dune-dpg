@@ -4,6 +4,10 @@
 #ifndef DUNE_LOCALFUNCTIONS_QK_SUBSAMPLED_LOCALFINITEELEMENT_HH
 #define DUNE_LOCALFUNCTIONS_QK_SUBSAMPLED_LOCALFINITEELEMENT_HH
 
+#include <dune/geometry/type.hh>
+
+#include <dune/localfunctions/common/localfiniteelementtraits.hh>
+#include <dune/localfunctions/common/localtoglobaladaptors.hh>
 #include "qksubsampled/qksubsampledlocalinterpolation.hh"
 #include "qksubsampled/qksubsampledlocalbasis.hh"
 #include "qksubsampled/qksubsampledlocalcoefficients.hh"

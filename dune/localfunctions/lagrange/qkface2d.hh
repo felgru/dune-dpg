@@ -4,6 +4,10 @@
 #ifndef DUNE_LOCALFUNCTIONS_QKFACE2D_LOCALFINITEELEMENT_HH
 #define DUNE_LOCALFUNCTIONS_QKFACE2D_LOCALFINITEELEMENT_HH
 
+#include <dune/geometry/type.hh>
+
+#include <dune/localfunctions/common/localfiniteelementtraits.hh>
+#include <dune/localfunctions/common/localtoglobaladaptors.hh>
 #include "qkface2d/qkface2dlocalinterpolation.hh"
 #include "qkface2d/qkface2dlocalbasis.hh"
 #include "qkface2d/qkface2dlocalcoefficients.hh"

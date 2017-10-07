@@ -4,6 +4,10 @@
 #ifndef DUNE_LOCALFUNCTIONS_QKTRACE_LOCALFINITEELEMENT_HH
 #define DUNE_LOCALFUNCTIONS_QKTRACE_LOCALFINITEELEMENT_HH
 
+#include <dune/geometry/type.hh>
+
+#include <dune/localfunctions/common/localfiniteelementtraits.hh>
+#include <dune/localfunctions/common/localtoglobaladaptors.hh>
 #include "qktrace/qktracelocalinterpolation.hh"
 #include "qktrace/qktracelocalbasis.hh"
 #include "qktrace/qktracelocalcoefficients.hh"
