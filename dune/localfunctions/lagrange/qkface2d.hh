@@ -4,6 +4,8 @@
 #ifndef DUNE_LOCALFUNCTIONS_QKFACE2D_LOCALFINITEELEMENT_HH
 #define DUNE_LOCALFUNCTIONS_QKFACE2D_LOCALFINITEELEMENT_HH
 
+#include <dune/common/version.hh>
+
 #include <dune/geometry/type.hh>
 
 #include <dune/localfunctions/common/localfiniteelementtraits.hh>
@@ -36,9 +38,14 @@ namespace Dune
     /** \todo Please doc me !
      */
     QkFace2DLocalFiniteElement ()
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+      : gt(GeometryTypes::quadrilateral)
+    { }
+#else
     {
       gt.makeCube(2);
     }
+#endif
 
     /** \todo Please doc me !
      */

@@ -4,6 +4,7 @@
 #define DUNE_DPG_FUNCTIONS_INTERPOLATE_HH
 
 #include <algorithm>
+#include <dune/common/version.hh>
 #include <dune/functions/common/functionfromcallable.hh>
 #include <dune/functions/functionspacebases/interpolate.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
@@ -75,8 +76,13 @@ VectorType interpolateToUniformlyRefinedGrid(
       const AffineGeometry<double, dim, dim> subGeometry
           (subE.type(),
            globalGeometry.local(
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+             globalSubGeometry.global(referenceElement<double, dim>
+               (subE.type()).position(0,dim))),
+#else
              globalSubGeometry.global(ReferenceElements<double, dim>
                ::general(subE.type()).position(0,dim))),
+#endif
            globalSubGeometry.jacobianTransposed({})
              .leftmultiply(globalGeometry.jacobianTransposed({})));
       auto localF = [&subGeometry, &coarseLocalBasis, local_v_coarse]

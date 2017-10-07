@@ -5,6 +5,7 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pk2d.hh>
 #include <dune/localfunctions/lagrange/qk.hh>
@@ -106,8 +107,12 @@ public:
 
   size_type size() const
   {
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+    const GeometryType quad = GeometryTypes::quadrilateral;
+#else
     GeometryType quad;
     quad.makeQuadrilateral();
+#endif
     if(   beta_[0] == 0
        || beta_[1] == 0
        || beta_[0] == beta_[1]
@@ -279,10 +284,37 @@ public:
    */
   size_type size() const
   {
+    assert(node_ != nullptr);
     return node_->finiteElement().size();
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+  template<typename It>
+  It indices(It it) const
+  {
+    assert(node_ != nullptr);
+    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& element = node_->element();
+
+    const auto& beta = nodeFactory_->transportDirection();
+
+
+    if(   beta[0] == 0
+       || beta[1] == 0
+       || beta[0] == beta[1]
+      )
+    {
+      for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
+        *it = {{ nodeFactory_->sizeQ*gridIndexSet.subIndex(element,0,0) + i }};
+    } else {
+      for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
+        *it = {{ nodeFactory_->dofsPerQuad*gridIndexSet.subIndex(element,0,0)
+                 + i }};
+    }
+    return it;
+  }
+#else
   MultiIndex index(size_type i) const
   {
     const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
@@ -302,6 +334,7 @@ public:
 
     //DUNE_THROW(Dune::NotImplemented, "No index method for " << dim << "d grids available yet!");
   }
+#endif
 
 protected:
   const NodeFactory* nodeFactory_;

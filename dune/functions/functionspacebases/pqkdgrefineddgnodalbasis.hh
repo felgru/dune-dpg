@@ -5,6 +5,7 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqkfactory.hh>
 
@@ -92,9 +93,14 @@ public:
       }
       case 2:
       {
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+        quadrilateralOffset_ = dofsPerTriangle
+                               * gridView_.size(GeometryTypes::triangle);
+#else
         GeometryType triangle;
         triangle.makeTriangle();
         quadrilateralOffset_ = dofsPerTriangle * gridView_.size(triangle);
+#endif
         break;
       }
       case 3:
@@ -137,11 +143,16 @@ public:
         return dofsPerEdge * gridView_.size(0);
       case 2:
       {
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+        return dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
+             + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
+#else
         GeometryType triangle, quad;
         triangle.makeTriangle();
         quad.makeQuadrilateral();
         return dofsPerTriangle * gridView_.size(triangle)
              + dofsPerQuad * gridView_.size(quad);
+#endif
       }
     }
     DUNE_THROW(Dune::NotImplemented, "No size method for " << dim
@@ -286,10 +297,54 @@ public:
    */
   size_type size() const
   {
+    assert(node_ != nullptr);
     return node_->size();
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+  template<typename It>
+  It indices(It it) const
+  {
+    assert(node_ != nullptr);
+    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& element = node_->element();
+
+    for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
+    {
+      switch (dim)
+      {
+        case 1:
+        {
+          *it = {{ nodeFactory_->dofsPerEdge
+                   * gridIndexSet.subIndex(element,0,0) + i }};
+          continue;
+        }
+        case 2:
+        {
+          if (element.type().isTriangle())
+          {
+            *it = {{ nodeFactory_->dofsPerTriangle
+                     * gridIndexSet.subIndex(element,0,0) + i }};
+            continue;
+          }
+          else if (element.type().isQuadrilateral())
+          {
+            *it = {{ nodeFactory_->quadrilateralOffset_
+                     + nodeFactory_->dofsPerQuad
+                       * gridIndexSet.subIndex(element,0,0) + i }};
+            continue;
+          }
+          else
+            DUNE_THROW(Dune::NotImplemented,
+                "2d elements have to be triangles or quadrilaterals");
+        }
+      }
+      DUNE_THROW(Dune::NotImplemented, "No index method for " << dim << "d grids available yet!");
+    }
+    return it;
+  }
+#else
   MultiIndex index(size_type i) const
   {
     const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
@@ -317,6 +372,7 @@ public:
     }
     DUNE_THROW(Dune::NotImplemented, "No index method for " << dim << "d grids available yet!");
   }
+#endif
 
 protected:
   const NodeFactory* nodeFactory_;
