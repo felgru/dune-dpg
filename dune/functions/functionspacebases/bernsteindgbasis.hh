@@ -223,7 +223,6 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It>
   It indices(It it) const
   {
@@ -284,56 +283,6 @@ public:
       }
     return it;
   }
-#else
-  MultiIndex index(size_type i) const
-  {
-    const auto& gridIndexSet = preBasis_->gridView().indexSet();
-    const auto& element = node_->element();
-
-    switch (dim)
-    {
-      case 1:
-      {
-        return {preBasis_->dofsPerEdge*gridIndexSet.subIndex(element,0,0) + i};
-      }
-      case 2:
-      {
-        if (element.type().isTriangle())
-        {
-          return {preBasis_->dofsPerTriangle*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else if (element.type().isQuadrilateral())
-        {
-          return { preBasis_->quadrilateralOffset_ + preBasis_->dofsPerQuad*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else
-          DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");
-      }
-      case 3:
-      {
-        if (element.type().isTetrahedron())
-        {
-          return {preBasis_->dofsPerTetrahedron*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else if (element.type().isPrism())
-        {
-          return { preBasis_->prismOffset_ + preBasis_->dofsPerPrism*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else if (element.type().isHexahedron())
-        {
-          return { preBasis_->hexahedronOffset_ + preBasis_->dofsPerHexahedron*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else if (element.type().isPyramid())
-        {
-          return { preBasis_->pyramidOffset_ + preBasis_->dofsPerPyramid*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else
-          DUNE_THROW(Dune::NotImplemented, "3d elements have to be tetrahedrons, prisms, hexahedrons or pyramids");
-      }
-    }
-    DUNE_THROW(Dune::NotImplemented, "No index method for " << dim << "d grids available yet!");
-  }
-#endif
 
 protected:
   const PreBasis* preBasis_;

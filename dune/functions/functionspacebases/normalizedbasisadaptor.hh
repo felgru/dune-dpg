@@ -5,7 +5,6 @@
 
 #include <array>
 #include <cmath>
-#include <dune/common/version.hh>
 
 #include <dune/dpg/assemble_helper.hh>
 
@@ -268,18 +267,11 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
   template<typename It>
   It indices(It it) const
   {
     return wrappedIndexSet_.indices(it);
   }
-#else
-  MultiIndex index(size_type i) const
-  {
-    return wrappedIndexSet_.index(i);
-  }
-#endif
 
 protected:
   WrappedIndexSet wrappedIndexSet_;
