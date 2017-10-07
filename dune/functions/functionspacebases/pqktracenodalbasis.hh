@@ -5,6 +5,7 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqktracefactory.hh>
 
@@ -87,10 +88,16 @@ public:
       triangleOffset_      = edgeOffset_
                            + dofsPerEdge * gridView_.size(dim-1);
 
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+      quadrilateralOffset_ = triangleOffset_
+                             + dofsPerTriangle
+                               * gridView_.size(GeometryTypes::triangle);
+#else
       GeometryType triangle;
       triangle.makeTriangle();
       quadrilateralOffset_ = triangleOffset_
                            + dofsPerTriangle * gridView_.size(triangle);
+#endif
     }
   }
 
@@ -128,12 +135,18 @@ public:
         return gridView_.size(dim) + dofsPerEdge * gridView_.size(1);
       case 3:
       {
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+        return gridView_.size(dim) + dofsPerEdge * gridView_.size(2)
+             + dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
+             + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
+#else
         GeometryType triangle, quad;
         triangle.makeTriangle();
         quad.makeQuadrilateral();
         return gridView_.size(dim) + dofsPerEdge * gridView_.size(2)
              + dofsPerTriangle * gridView_.size(triangle)
              + dofsPerQuad * gridView_.size(quad);
+#endif
       }
     }
     DUNE_THROW(Dune::NotImplemented,
@@ -269,11 +282,95 @@ public:
    */
   size_type size() const
   {
+    assert(node_ != nullptr);
     return node_->finiteElement().size();
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-  const MultiIndex index(size_type i) const
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+  template<typename It>
+  It indices(It it) const
+  {
+    assert(node_ != nullptr);
+    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& element = node_->element();
+
+    for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
+    {
+      const Dune::LocalKey localKey
+          = node_->finiteElement().localCoefficients().localKey(i);
+      // The dimension of the entity that the current dof is related to
+      const size_t dofDim = dim - localKey.codim();
+      if (dofDim==0) {  // vertex dof
+        *it = {{ gridIndexSet.subIndex(element,localKey.subEntity(),dim) }};
+        continue;
+      }
+
+      if (dofDim==1)
+      {  // edge dof
+        if (dim==1)   // element dof -- any local numbering is fine
+        {
+          DUNE_THROW(Dune::NotImplemented,
+              "traces have no elements of codimension 0");
+        }
+        else
+        {
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+          const auto refElement
+              = Dune::referenceElement<double,dim>(element.type());
+#else
+          const Dune::ReferenceElement<double,dim>& refElement
+              = Dune::ReferenceElements<double,dim>::general(element.type());
+#endif
+
+          // we have to reverse the numbering if the local triangle edge is
+          // not aligned with the global edge
+          size_t v0 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),0,dim),dim);
+          size_t v1 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
+          bool flip = (v0 > v1);
+          *it = {{ (flip)
+                   ? nodeFactory_->edgeOffset_
+                     + (k-1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())
+                     + (k-2)-localKey.index()
+                   : nodeFactory_->edgeOffset_
+                     + (k-1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())
+                     + localKey.index() }};
+          continue;
+        }
+      }
+
+      if (dofDim==2)
+      {
+        if (dim==2)   // element dof -- any local numbering is fine
+        {
+          DUNE_THROW(Dune::NotImplemented,
+              "traces have no elements of codimension 0");
+        } else
+        {
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+          const auto refElement
+              = Dune::referenceElement<double,dim>(element.type());
+#else
+          const Dune::ReferenceElement<double,dim>& refElement
+              = Dune::ReferenceElements<double,dim>::general(element.type());
+#endif
+
+          if (! refElement.type(localKey.subEntity(), localKey.codim()).isTriangle()
+              or k>3)
+            DUNE_THROW(Dune::NotImplemented, "PQkTraceNodalBasis for 3D grids is only implemented if k<=3 and if the grid is a simplex grid");
+
+          *it = {{ nodeFactory_->triangleOffset_
+                   + gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) }};
+          continue;
+        }
+      }
+      DUNE_THROW(Dune::NotImplemented,
+          "Grid contains elements not supported for the PQkTraceNodalBasis");
+    }
+    return it;
+  }
+#else
+  MultiIndex index(size_type i) const
   {
     Dune::LocalKey localKey = node_->finiteElement().localCoefficients().localKey(i);
     const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
@@ -326,6 +423,7 @@ public:
     }
     DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the PQkTraceNodalBasis");
   }
+#endif
 
 protected:
   const NodeFactory* nodeFactory_;

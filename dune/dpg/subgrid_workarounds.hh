@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <type_traits>
+#include <dune/common/version.hh>
 #include <dune/geometry/affinegeometry.hh>
 #include <dune/geometry/referenceelements.hh>
 
@@ -43,8 +44,13 @@ namespace detail {
 
     static typename SubGridIntersection::GlobalCoordinate
     from(const SubGridIntersection& intersection) {
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+      return intersection.unitOuterNormal(referenceElement<ctype, dim-1>
+                    (intersection.type()).position(0,0));
+#else
       return intersection.unitOuterNormal(ReferenceElements<ctype, dim-1>::
                     general(intersection.type()).position(0,0));
+#endif
     }
   };
 
@@ -71,10 +77,14 @@ namespace detail {
 
     static LocalGeometry
     from(const SubGridIntersection& intersection) {
-      auto geometry = intersection.geometry();
-      auto innerGeometry = intersection.inside().geometry();
+      const auto geometry = intersection.geometry();
+      const auto innerGeometry = intersection.inside().geometry();
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+      const auto referenceElement = Dune::referenceElement(intersection);
+#else
       const auto& referenceElement
           = ReferenceElements<ctype, dim-1>::general(intersection.type());
+#endif
       const size_t numVertices = referenceElement.size(dim-1);
       std::vector<FieldVector<ctype, dim>> vertices(numVertices);
       for(size_t i = 0; i < numVertices; i++) {

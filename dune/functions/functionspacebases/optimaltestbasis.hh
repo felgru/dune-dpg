@@ -11,6 +11,7 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/hybridutilities.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/optimaltestfunctions/optimaltest.hh>
 #include <dune/localfunctions/optimaltestfunctions/refinedoptimaltest.hh>
@@ -427,10 +428,30 @@ public:
    */
   size_type size() const
   {
+    assert(node_ != nullptr);
     return node_->finiteElement().size();
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+  template<typename It>
+  It indices(It it) const
+  {
+    assert(node_ != nullptr);
+    for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
+    {
+      size_t space_index = 0;
+      size_t index_result = i;
+      bool index_found=false;
+
+      Hybrid::forEach(solutionLocalIndexSets_,
+                      computeIndex(space_index, index_result, index_found));
+
+      *it = {{ nodeFactory_->globalOffsets[space_index] + index_result }};
+    }
+    return it;
+  }
+#else
   MultiIndex index(size_type i) const
   {
     size_t space_index=0;
@@ -444,6 +465,7 @@ public:
     result[0]=(nodeFactory_->globalOffsets[space_index]+index_result);
     return result;
   }
+#endif
 
 protected:
   const NodeFactory* nodeFactory_;

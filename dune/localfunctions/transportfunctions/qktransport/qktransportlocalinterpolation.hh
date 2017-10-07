@@ -11,6 +11,7 @@
 #include <vector>
 #include <dune/common/fvector.hh>
 #include <dune/common/power.hh>
+#include <dune/common/version.hh>
 
 #include <dune/geometry/type.hh>
 #include <dune/localfunctions/lagrange/qk.hh>
@@ -46,11 +47,16 @@ public:
 
         out.resize((sizeP+sizeQ-(k+1)));
 
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+        const GeometryType triangle = GeometryTypes::triangle;
+        const GeometryType quad = GeometryTypes::quadrilateral;
+#else
         GeometryType triangle;
         GeometryType quad;
 
         triangle.makeSimplex(dim);
         quad.makeCube(dim);
+#endif
 
         std::vector<Dune::FieldVector<D,dim>> cornerT(dim+1);
         std::vector<Dune::FieldVector<D,dim>> cornerQ(4*(dim-1));
