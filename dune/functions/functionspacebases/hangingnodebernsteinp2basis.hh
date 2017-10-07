@@ -8,12 +8,7 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
-#include <dune/common/version.hh>
-#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
 #include <dune/common/std/optional.hh>
-#else
-#include <dune/functions/common/optional.hh>
-#endif
 
 #include <dune/localfunctions/bernstein/pqkfactory.hh>
 
@@ -114,17 +109,9 @@ public:
   {
     const auto& gridIndexSet = gridView_.indexSet();
     std::vector<size_t> edgeDofs(gridView_.size(1), SIZE_MAX);
-#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
     std::vector<Dune::Std::optional<std::array<size_t,3>>>
-#else
-    std::vector<Optional<std::array<size_t,3>>>
-#endif
         edgeConstraints(edgeDofs.size());
-#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
     std::vector<Dune::Std::optional<std::array<size_t,3>>>
-#else
-    std::vector<Optional<std::array<size_t,3>>>
-#endif
         vertexConstraints(gridView_.size(2));
     size_t nextEdgeDof = gridView_.size(dim); // edges start after vertices
     for(const auto& e : elements(gridView_)) {
@@ -234,11 +221,7 @@ public:
           if(vertexConstraints[subIndex]) {
             constraintOffsets.push_back({preceedingUnconstrainedIndices, 2});
             preceedingUnconstrainedIndices = 0;
-#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
             for(size_type idx : *vertexConstraints[subIndex])
-#else
-            for(size_type idx : vertexConstraints[subIndex].value())
-#endif
             {
               localToGlobal.push_back(MultiIndex{idx});
             }
@@ -250,11 +233,7 @@ public:
           if(edgeConstraints[subIndex]) {
             constraintOffsets.push_back({preceedingUnconstrainedIndices, 1});
             preceedingUnconstrainedIndices = 0;
-#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
             for(size_type idx : *edgeConstraints[subIndex])
-#else
-            for(size_type idx : edgeConstraints[subIndex].value())
-#endif
             {
               localToGlobal.push_back(MultiIndex{idx});
             }
