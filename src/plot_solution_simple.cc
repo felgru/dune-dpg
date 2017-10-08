@@ -77,9 +77,9 @@ int main(int argc, char** argv)
   FieldVector<double,dim> upper = {1,1};
   std::array<unsigned int,dim> elements = {nelements,nelements};
 
-  // shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+  // std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
-  shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+  std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
   typedef GridType::LeafGridView GridView;
   GridView gridView = grid->leafGridView();

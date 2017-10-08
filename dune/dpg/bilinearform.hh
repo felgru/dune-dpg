@@ -50,8 +50,8 @@ namespace Dune {
      *
      * \note For your convenience, use make_BilinearForm() instead.
      */
-    constexpr BilinearForm (const shared_ptr<TestSpaces>&     testSpaces,
-                            const shared_ptr<SolutionSpaces>& solutionSpaces,
+    constexpr BilinearForm (const std::shared_ptr<TestSpaces>&     testSpaces,
+                            const std::shared_ptr<SolutionSpaces>& solutionSpaces,
                             const BilinearTerms&              terms)
                : testSpaces(testSpaces),
                  solutionSpaces(solutionSpaces),
@@ -183,8 +183,8 @@ namespace Dune {
  * \param terms          a tuple of IntegralTerm
  */
 template<class TestSpaces, class SolutionSpaces, class BilinearTerms>
-auto make_BilinearForm(const shared_ptr<TestSpaces>&     testSpaces,
-                       const shared_ptr<SolutionSpaces>& solutionSpaces,
+auto make_BilinearForm(const std::shared_ptr<TestSpaces>&     testSpaces,
+                       const std::shared_ptr<SolutionSpaces>& solutionSpaces,
                        BilinearTerms                     terms)
     -> BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>
 {
