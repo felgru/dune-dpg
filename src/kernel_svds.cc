@@ -4,7 +4,6 @@
 #include <boost/math/constants/constants.hpp>
 
 #include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
 #include <dune/dpg/radiative_transfer/kanschat_scattering.hh>
 #include <dune/dpg/radiative_transfer/henyey_greenstein_scattering.hh>
 #include <dune/dpg/radiative_transfer/waveletkernelapproximation.hh>
@@ -45,17 +44,9 @@ std::vector<double> angles(unsigned int wltOrder,
   // Get Gauss-Legendre quadrature in [0,1]
   const int quadOrder = 2*wltOrder+1;
   const size_t dim = 1;
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
   const QuadratureRule<double, dim>& quad =
     QuadratureRules<double, dim>::rule(GeometryTypes::line,
       quadOrder, QuadratureType::GaussLegendre);
-#else
-  GeometryType type;
-  type.makeLine();
-  const QuadratureRule<double, dim>& quad =
-    QuadratureRules<double, dim>::rule(type,
-      quadOrder, QuadratureType::GaussLegendre);
-#endif
   using namespace boost::math::constants;
   std::vector<double> angles;
   angles.reserve((1<<level)*quad.size());
