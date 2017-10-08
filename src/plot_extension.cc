@@ -62,7 +62,7 @@ int main(int argc, char** argv)
   FieldVector<double,dim> upper = {1,1};
   std::array<unsigned int,dim> elements = {nelements,nelements};
 
-  shared_ptr<GridType> grid
+  std::shared_ptr<GridType> grid
       = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper,
                                                            elements);
 
