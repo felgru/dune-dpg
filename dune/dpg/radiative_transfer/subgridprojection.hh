@@ -11,7 +11,6 @@
 #include <boost/hana.hpp>
 
 #include <dune/common/exceptions.hh>
-#include <dune/common/version.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/dpg/functions/refinementinterpolation.hh>
 #include <dune/dpg/integralterm.hh>
@@ -106,13 +105,8 @@ namespace detail {
   hostInSubGridCellGeometry(const HostGridElement& hostGridElement,
       const SubGridElement& subGridElement)
   {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     const auto referenceElement
         = Dune::referenceElement<double, dim>(hostGridElement.type());
-#else
-    const auto& referenceElement
-        = ReferenceElements<double, dim>::general(hostGridElement.type());
-#endif
     const auto hostGridCellGeometry = hostGridElement.geometry();
     const auto subGridCellGeometry = subGridElement.geometry();
     const size_t numVertices = referenceElement.size(dim);
@@ -726,13 +720,8 @@ public:
                       , sourceSubGeometryInReferenceElement.local(
                           geometryInFather.global(
                           targetSubGeometryInReferenceElement
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
                             .global(referenceElement<double, dim>
                               (child.type()).position(0,dim))))
-#else
-                            .global(ReferenceElements<double, dim>
-                              ::general(child.type()).position(0,dim))))
-#endif
                       , sourceSubGeometryInReferenceElement
                           .jacobianInverseTransposed({}).leftmultiply(
                             geometryInFather
