@@ -183,18 +183,20 @@ int main(int argc, char** argv)
 
   PlotSolutions plotSolutions = PlotSolutions::doNotPlot;
 
-  int opt;
-  while ((opt = getopt(argc,argv,"ph")) != EOF)
-    switch(opt)
-    {
-      case 'p': plotSolutions = PlotSolutions::plotOuterIterations; break;
-      default:
-      case '?':
-      case 'h':
-        printHelp(argv[0]);
+  {
+    int opt;
+    while ((opt = getopt(argc,argv,"ph")) != EOF)
+      switch(opt)
+      {
+        case 'p': plotSolutions = PlotSolutions::plotOuterIterations; break;
+        default:
+        case '?':
+        case 'h':
+          printHelp(argv[0]);
+      }
+    if(optind != argc-4) {
+      printHelp(argv[0]);
     }
-  if(optind != argc-4) {
-    printHelp(argv[0]);
   }
 
   const unsigned int wltOrder = 2;
@@ -213,9 +215,9 @@ int main(int argc, char** argv)
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
   using Direction = FieldVector<double, dim>;
 
-  FieldVector<double,dim> lower = {0,0};
-  FieldVector<double,dim> upper = {1,1};
-  std::array<unsigned int,dim> elements = {sizeGrid,sizeGrid};
+  const FieldVector<double,dim> lower = {0,0};
+  const FieldVector<double,dim> upper = {1,1};
+  const std::array<unsigned int,dim> elements = {sizeGrid,sizeGrid};
 
   //std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
