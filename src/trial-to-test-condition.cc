@@ -3,6 +3,7 @@
 #endif
 #include <cmath>
 #include <iostream>
+#include <vector>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/dpg/innerproduct.hh>
@@ -45,7 +46,10 @@ int main() {
   const double theta = 1.;
   const FieldVector<double, dim> s = {std::cos(theta), std::sin(theta)};
 
-  for(int level = 0; level < 30; level++) {
+  const int numLevels = 30;
+  std::vector<std::shared_ptr<Grid>> grids;
+  grids.reserve(numLevels);
+  for(int level = 0; level < numLevels; level++) {
     const double size = std::exp2(-level);
     const FieldVector<double, dim> lower = {0, 0};
     const FieldVector<double, dim> upper = {size, size};
@@ -54,6 +58,8 @@ int main() {
     const std::shared_ptr<Grid> grid
         = StructuredGridFactory<Grid>::createSimplexGrid
                                         (lower, upper, numElements);
+    // To prevent bug in UGGrid destructor
+    grids.push_back(grid);
 
     using LeafGridView = typename Grid::LeafGridView;
     const LeafGridView gridView = grid->leafGridView();
