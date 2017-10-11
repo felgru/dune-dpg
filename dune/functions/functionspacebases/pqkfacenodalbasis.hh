@@ -187,7 +187,6 @@ class PQkFaceNode :
   public LeafBasisNode<std::size_t, TP>
 {
   static const int dim = GV::dimension;
-  static const int maxSize = 4*(k+1);
 
   using Base = LeafBasisNode<std::size_t, TP>;
   using FiniteElementCache = typename Dune::PQkFaceLocalFiniteElementCache

@@ -269,8 +269,6 @@ public:
 private:
   using GV = typename TestspaceCoefficientMatrix::GridView;
   static const int dim = GV::dimension;
-  // TODO: maxSize does not seem to be needed.
-  // static const int maxSize = see NodeFactory::maxNodeSize();
 
   using Base = LeafBasisNode<std::size_t, TP>;
   using TestSearchFiniteElement

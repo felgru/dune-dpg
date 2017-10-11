@@ -240,7 +240,6 @@ class PQkSubsampledDGNode :
   public LeafBasisNode<std::size_t, TP>
 {
   static const int dim = GV::dimension;
-  static const int maxSize = StaticPower<(s*k+1),GV::dimension>::power;
 
   using Base = LeafBasisNode<std::size_t, TP>;
   using FiniteElementCache
