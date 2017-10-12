@@ -501,9 +501,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   unsigned int numS = sVector.size();
 
   std::vector<std::unique_ptr<Grid>> grids;
-  grids.reserve(sVector.size()/kernelApproximation.numSperInterval);
-  for(size_t i = 0, imax = sVector.size()/kernelApproximation.numSperInterval;
-      i < imax; i++) {
+  grids.reserve(sVector.size());
+  for(size_t i = 0, imax = sVector.size(); i < imax; i++) {
     std::unique_ptr<Grid> gr = std::make_unique<Grid>(hostGrid);
     gr->createBegin();
     gr->insertLevel(hostGrid.maxLevel());
@@ -559,13 +558,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     testSpacesEnriched.push_back(
         make_space_tuple<FEBasisTestEnriched>(gridView));
 
-    for(unsigned int j = i*kernelApproximation.numSperInterval,
-                     jmax = (i+1)*kernelApproximation.numSperInterval;
-        j < jmax; j++) {
-      x[j].resize(std::get<0>(*solutionSpaces[i]).size()
-                  + std::get<1>(*solutionSpaces[i]).size());
-      x[j] = 0;
-    }
+    x[i].resize(std::get<0>(*solutionSpaces[i]).size()
+                + std::get<1>(*solutionSpaces[i]).size());
+    x[i] = 0;
   }
 
   /////////////////////////////////////////////////////////
@@ -602,16 +597,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     double kappaNorm = 1.;
     double uNorm = 0.;
     for(size_t i=0; i<solutionSpaces.size(); ++i) {
-      for(unsigned int j = i*kernelApproximation.numSperInterval,
-                      jmax = (i+1)*kernelApproximation.numSperInterval;
-          j < jmax; j++) {
-        const double ujNorm =
-          ErrorTools::l2norm(std::get<FEBasisInterior>(*solutionSpaces[i]),
-                             x[j]);
-        uNorm += ujNorm * ujNorm
-                  / (1 << kernelApproximation.getLevel())
-                  * quadWeight[j-i*kernelApproximation.numSperInterval];
-      }
+      const double uiNorm =
+        ErrorTools::l2norm(std::get<FEBasisInterior>(*solutionSpaces[i]),
+                           x[i]);
+      uNorm += uiNorm * uiNorm
+                / (1 << kernelApproximation.getLevel())
+                * quadWeight[i % kernelApproximation.numSperInterval];
     }
     uNorm = std::sqrt(uNorm);
     // To prevent division by zero.
@@ -662,48 +653,34 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           hostGridGlobalBasis,
           sVector,
           f, RHSApproximation{});
-      size_t i = 0;
-      for(auto& testSpace : testSpaces) {
+      for(size_t i = 0; i < numS; i++) {
         const FEBasisTest& subGridGlobalBasis
-            = std::get<FEBasisTest>(*testSpace);
-        for(size_t imax = i + kernelApproximation.numSperInterval;
-            i < imax; i++) {
-          rhsData.emplace_back(
-            attachDataToSubGrid(
-              subGridGlobalBasis,
-              hostGridGlobalBasis,
-              rhsFunctional[i]));
-        }
+            = std::get<FEBasisTest>(*testSpaces[i]);
+        rhsData.emplace_back(
+          attachDataToSubGrid(
+            subGridGlobalBasis,
+            hostGridGlobalBasis,
+            rhsFunctional[i]));
       }
     }
     std::vector<bool> boundary_is_homogeneous(numS, false);
     {
-      size_t i = 0;
-      for([[maybe_unused]] auto& testSpace : testSpaces) {
-        for(size_t imax = i + kernelApproximation.numSperInterval;
-            i < imax; i++) {
-          boundary_is_homogeneous[i]
-              = is_inflow_boundary_homogeneous(sVector[i]);
-          // TODO: write a generic test for homogeneous inflow boundary
-        }
+      for(size_t i = 0; i < numS; i++) {
+        boundary_is_homogeneous[i]
+            = is_inflow_boundary_homogeneous(sVector[i]);
+        // TODO: write a generic test for homogeneous inflow boundary
       }
       // get bv contribution to rhs
       FEBasisHostTrace hostGridGlobalBasis(hostGrid.leafGridView());
       const VectorType boundaryExtension
           = harmonic_extension_of_boundary_values(g, hostGridGlobalBasis);
       bvData.reserve(numS);
-      i = 0;
-      for(auto& testSpace : testSpaces) {
-        bool only_homogeneous_bv = true;
-        for(size_t imax = i + kernelApproximation.numSperInterval;
-            i < imax; i++) {
-          only_homogeneous_bv &= boundary_is_homogeneous[i];
-        }
-        if(only_homogeneous_bv) {
+      for(size_t i = 0; i < numS; i++) {
+        if(boundary_is_homogeneous[i]) {
           bvData.emplace_back();
         } else {
           const FEBasisTest& subGridGlobalBasis
-              = std::get<FEBasisTest>(*testSpace);
+              = std::get<FEBasisTest>(*testSpaces[i]);
           bvData.emplace_back(
             attachDataToSubGrid(
               subGridGlobalBasis,
@@ -781,68 +758,55 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         aposterioriSubinterval = 0.;
 
         VectorType bvExtension;
-        {
-          bool only_homogeneous_bv = true;
-          for(unsigned int j = i*kernelApproximation.numSperInterval,
-                          jmax = (i+1)*kernelApproximation.numSperInterval;
-              j < jmax; j++)
-          {
-            only_homogeneous_bv &= boundary_is_homogeneous[j];
-          }
-          if(!only_homogeneous_bv) {
-            FEBasisTest& feBasisTest = std::get<FEBasisTest>(*testSpaces[i]);
-            auto newGridData
+        if(!boundary_is_homogeneous[i]) {
+          FEBasisTest& feBasisTest = std::get<FEBasisTest>(*testSpaces[i]);
+          auto newGridData
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
-                = bvData[i]->restoreDataToRefinedSubGrid(feBasisTest);
+              = bvData[i]->restoreDataToRefinedSubGrid(feBasisTest);
 #else
-                = bvData[i].value().restoreDataToRefinedSubGrid(feBasisTest);
+              = bvData[i].value().restoreDataToRefinedSubGrid(feBasisTest);
 #endif
-            bvExtension.resize(newGridData.size(),
-                                 false /* don't copy old values */);
-            for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
-              bvExtension[k] = newGridData[k];
-            }
+          bvExtension.resize(newGridData.size(),
+                               false /* don't copy old values */);
+          for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
+            bvExtension[k] = newGridData[k];
           }
         }
 
-        // Loop over directions in the same angular subinterval.
-        for(unsigned int j = i*kernelApproximation.numSperInterval,
-                        jmax = (i+1)*kernelApproximation.numSperInterval;
-            j < jmax; j++)
         {
-          std::cout << "Direction " << j
+          std::cout << "Direction " << i
                     << ", inner iteration " << nRefinement << '\n';
 
           const double aposteriori_s
-              = compute_transport_solution(x[j], *grids[i],
+              = compute_transport_solution(x[i], *grids[i],
                   testSpaces[i], solutionSpaces[i], testSpacesEnriched[i],
-                  sVector[j], sigma, rhsData[j], boundary_is_homogeneous[j],
+                  sVector[i], sigma, rhsData[i], boundary_is_homogeneous[i],
                   bvExtension);
 
           aposterioriSubinterval
             += 2.*boost::math::constants::pi<double>()
               / (1 << kernelApproximation.getLevel())
-              * quadWeight[j-i*kernelApproximation.numSperInterval]
+              * quadWeight[i % kernelApproximation.numSperInterval]
               * aposteriori_s;
 
-          // TODO: Add (interpolation of) g to theta part of x[j]?
+          // TODO: Add (interpolation of) g to theta part of x[i]?
 
           ofs << "Iteration " << n << '.' << nRefinement
-              << " for direction " << j << ": \n"
+              << " for direction " << i << ": \n"
               << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
               << std::sqrt(aposteriori_s)
               << "\n  - Grid level: "     << grids[i]->maxLevel()
-              << "\n  - Number of DOFs: " << x[j].size()
+              << "\n  - Number of DOFs: " << x[i].size()
               << std::endl;
 
           std::cout << "\nIteration " << n << '.' << nRefinement
-              << " for direction " << j << ": \n"
+              << " for direction " << i << ": \n"
               << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
               << std::sqrt(aposteriori_s)
               << "\n  - Grid level: " << grids[i]->maxLevel()
-              << "\n  - Number of DOFs: " << x[j].size()
+              << "\n  - Number of DOFs: " << x[i].size()
               << std::endl;
-        } // End loop over directions in the same angular subinterval.
+        }
 
 
         if(++nRefinement >= maxNumberOfInnerIterations
@@ -893,28 +857,23 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         const FEBasisTrace& feBasisTrace
             = std::get<FEBasisTrace>(*solutionSpaces[i]);
 
-        for(unsigned int j = i*kernelApproximation.numSperInterval,
-                         jmax = (i+1)*kernelApproximation.numSperInterval;
-            j < jmax; j++)
-        {
-          std::cout << "Plot solution for direction " << j << '\n';
+        std::cout << "Plot solution for direction " << i << '\n';
 
-          std::string name = foldername+std::string("/u_rad_trans_n")
-                            + std::to_string(n)
-                            + std::string("_s")
-                            // + std::to_string(j*stride);
-                            + std::to_string(j);
-          FunctionPlotter uPlotter(name);
-          uPlotter.plot("u", x[j], feBasisInterior, 0, 0);
-          name = foldername+std::string("/theta_rad_trans_n")
-                            + std::to_string(n)
-                            + std::string("_s")
-                            // + std::to_string(j*stride);
-                            + std::to_string(j);
-          FunctionPlotter thetaPlotter(name);
-          thetaPlotter.plot("theta", x[j], feBasisTrace, 2,
-                            feBasisInterior.size());
-        }
+        std::string name = foldername+std::string("/u_rad_trans_n")
+                          + std::to_string(n)
+                          + std::string("_s")
+                          // + std::to_string(i*stride);
+                          + std::to_string(i);
+        FunctionPlotter uPlotter(name);
+        uPlotter.plot("u", x[i], feBasisInterior, 0, 0);
+        name = foldername+std::string("/theta_rad_trans_n")
+                          + std::to_string(n)
+                          + std::string("_s")
+                          // + std::to_string(i*stride);
+                          + std::to_string(i);
+        FunctionPlotter thetaPlotter(name);
+        thetaPlotter.plot("theta", x[i], feBasisTrace, 2,
+                          feBasisInterior.size());
       }
     }
 
@@ -1174,17 +1133,11 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
 
   // Interpolate x[i] to hostGridBasis.
   std::vector<VectorType> xHost(x.size());
-  {
-    size_t i = 0;
-    for(const auto& solutionSpace : solutionSpaces) {
-      const FEBasisInterior& feBasisInterior = std::get<0>(*solutionSpace);
-      for(size_t imax = i+kernelApproximation.numSperInterval;
-          i < imax; ++i) {
-        interpolateFromSubGrid(
-            feBasisInterior, x[i],
-            hostGridBasis, xHost[i]);
-      }
-    }
+  for(size_t i = 0, imax = x.size(); i < imax; i++) {
+    const FEBasisInterior& feBasisInterior = std::get<0>(*solutionSpaces[i]);
+    interpolateFromSubGrid(
+        feBasisInterior, x[i],
+        hostGridBasis, xHost[i]);
   }
 
   const auto scatteringAssembler =
@@ -1194,7 +1147,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
   std::vector<VectorType> rhsFunctional(numS);
   scatteringAssembler.precomputeScattering(rhsFunctional, xHost);
 
-  create_new_grids(grids, numS/kernelApproximation.numSperInterval);
+  create_new_grids(grids, numS);
 
   return rhsFunctional;
 }
