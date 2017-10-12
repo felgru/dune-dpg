@@ -19,6 +19,7 @@ for line in fileinput.input(sys.argv[2:]):
     levels.append(int(m.group(1)))
     conditions.append(float(m.group(2)))
 plt.plot(levels, conditions)
+plt.plot(levels, map(lambda l: 2**(2*l), levels), '.r')
 plt.yscale('log')
 plt.ylabel('condition of trial-to-test matrix')
 plt.xlabel('level $\ell$, $h = 2^{-\ell}$')
