@@ -38,11 +38,10 @@ namespace Dune
 
     /** \todo Please doc me !
      */
+    PkDGSubsampled2DLocalFiniteElement ()
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
-    PkDGSubsampled2DLocalFiniteElement () : gt(GeometryTypes::triangle)
     { }
 #else
-    PkDGSubsampled2DLocalFiniteElement ()
     {
       gt.makeTriangle();
     }
@@ -53,7 +52,6 @@ namespace Dune
     PkDGSubsampled2DLocalFiniteElement (int variant)
       : coefficients(variant)
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
-      , gt(GeometryTypes::triangle)
     { }
 #else
     {
@@ -70,7 +68,6 @@ namespace Dune
     PkDGSubsampled2DLocalFiniteElement (const unsigned int vertexmap[3])
       : coefficients(vertexmap)
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
-      , gt(GeometryTypes::triangle)
     { }
 #else
     {
@@ -107,10 +104,17 @@ namespace Dune
 
     /** \todo Please doc me !
      */
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+    static constexpr GeometryType type ()
+    {
+      return GeometryTypes::triangle;
+    }
+#else
     GeometryType type () const
     {
       return gt;
     }
+#endif
 
     PkDGSubsampled2DLocalFiniteElement* clone () const
     {
@@ -121,7 +125,9 @@ namespace Dune
     LocalBasis basis;
     LocalCoefficients coefficients;
     LocalInterpolation interpolation;
+#if not(DUNE_VERSION_NEWER(DUNE_GRID,2,6))
     GeometryType gt;
+#endif
   };
 
 }

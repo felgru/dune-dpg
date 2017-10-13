@@ -42,7 +42,6 @@ public:
       , coefficients(transport)
       , interpolation(transport)
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
-      , gt(GeometryTypes::cube(dim))
     {
         static_assert(dim==2, "QkTransportLocalFiniteElement is only implemented in 2D.");
     }
@@ -82,10 +81,17 @@ public:
 
     /** \todo Please doc me !
      */
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+    static constexpr GeometryType type ()
+    {
+      return GeometryTypes::cube(dim);
+    }
+#else
     GeometryType type () const
     {
-        return gt;
+      return gt;
     }
+#endif
 
 
     QkTransportLocalFiniteElement* clone () const
@@ -98,7 +104,9 @@ private:
     QkTransportLocalCoefficients<dim,k> coefficients;
     QkTransportLocalInterpolation<dim,QkTransportLocalBasis<D,R,dim,k>,k>
                                         interpolation;
+#if not(DUNE_VERSION_NEWER(DUNE_GRID,2,6))
     GeometryType gt;
+#endif
 
 };
 
