@@ -12,6 +12,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
 #include <dune/geometry/quadraturerules.hh>
+#include <dune/geometry/type.hh>
 
 #include <boost/math/constants/constants.hpp>
 
