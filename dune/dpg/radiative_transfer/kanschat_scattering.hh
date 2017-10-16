@@ -4,33 +4,44 @@
 #define DUNE_DPG_RADIATIVE_TRANSFER_KANSCHAT_SCATTERING_HH
 
 #include <cmath>
-#include <functional>
+#include <sstream>
+#include <string>
 
 namespace Dune {
 
-template<class Direction>
-std::function<double(const Direction& s1, const Direction& s2)>
-KanschatScattering(std::vector<double>&& a) {
-  return [a](const Direction& s1, const Direction& s2) {
-    double scalarProduct = s1 * s2;
-    if (scalarProduct > 1) scalarProduct = 1;
-    if (scalarProduct < 0) scalarProduct = 0;
-    const double phi = acos(scalarProduct);
+struct KanschatScattering {
+  KanschatScattering(std::vector<double>&& a) : a(a) {}
+
+  double operator()(double angle) const {
     double scattering = 0;
     for (unsigned int i = 0, asize = a.size(); i < asize; ++i) {
-      scattering += a[i]*cos(i*phi);
+      scattering += a[i]*std::cos(i*angle);
     }
     return scattering;
   };
-}
 
-template<class Direction>
-std::function<double(const Direction& s1, const Direction& s2)>
-ACP2011Scattering() {
-  return [](const Direction& s1, const Direction& s2) {
-    return 1 + 0.2*(s1 * s2);
+  std::string info() const {
+    std::stringstream buf;
+    buf << "Kanschat scattering kernel with a = {" << a[0];
+    for(size_t i = 1, imax = a.size(); i < imax; i++)
+      buf << ", " << a[i];
+    buf << '}';
+    return buf.str();
+  }
+
+private:
+  const std::vector<double> a;
+};
+
+struct ACP2011Scattering {
+  double operator() (double angle) const {
+    return 1 + 0.2*std::cos(angle);
   };
-}
+
+  std::string info() const {
+    return "scattering kernel from Avila, Codina and Principe 2011";
+  }
+};
 
 }
 

@@ -3,19 +3,18 @@
 #ifndef DUNE_DPG_RADIATIVE_TRANSFER_HENYEY_GREENSTEIN_SCATTERING_HH
 #define DUNE_DPG_RADIATIVE_TRANSFER_HENYEY_GREENSTEIN_SCATTERING_HH
 
-#include <cmath>
-#include <functional>
 #include <boost/math/constants/constants.hpp>
-#include <dune/common/exceptions.hh>
+#include <cmath>
+#include <string>
 
 namespace Dune {
 
-struct HenyeyGreensteinScattering{
+struct HenyeyGreensteinScattering {
   HenyeyGreensteinScattering(double gamma) : gamma(gamma) {}
 
   double operator()(double angle) const {
       return (1-gamma*gamma)/(2 * boost::math::constants::pi<double>()
-                              * (1+gamma*gamma-2*gamma*cos(angle)));
+                              * (1+gamma*gamma-2*gamma*std::cos(angle)));
   }
 
   std::string info() const {
