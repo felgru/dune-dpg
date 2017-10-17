@@ -3,9 +3,8 @@
 #ifndef DUNE_FUNCTIONS_DPG_CONSTRAINEDDISCRETEGLOBALBASISFUNCTIONS_HH
 #define DUNE_FUNCTIONS_DPG_CONSTRAINEDDISCRETEGLOBALBASISFUNCTIONS_HH
 
-#include <memory>
-
-#include <dune/common/shared_ptr.hh>
+#include <type_traits>
+#include <vector>
 
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/functions/functionspacebases/defaultnodetorangemap.hh>

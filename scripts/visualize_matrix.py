@@ -34,6 +34,7 @@ with open(input_name,'r') as f:
             else:
                 m[row,col] = np.float64(0.)
             col += 1
+    print('condition of matrix: ', np.linalg.cond(m))
     fig = plt.figure()
     ax = fig.add_subplot(111)
     cax = ax.matshow(m, norm=mpl.colors.LogNorm())

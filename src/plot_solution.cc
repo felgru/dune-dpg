@@ -7,6 +7,7 @@
 #include <array>
 #include <chrono>
 #include <functional>
+#include <memory>
 #include <tuple>
 #include <vector>
 
@@ -73,10 +74,10 @@ int main(int argc, char** argv)
   FieldVector<double,dim> upper = {1,1};
   std::array<unsigned int,dim> elements = {nelements,nelements};
 
-  // shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
+  // std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
   //                                 ::createCubeGrid(lower, upper, elements);
 
-  shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
+  std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
                                   ::createSimplexGrid(lower, upper, elements);
   hostGrid->setClosureType(HostGrid::NONE);
 

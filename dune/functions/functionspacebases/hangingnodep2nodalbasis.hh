@@ -333,7 +333,6 @@ class HangingNodeP2Node :
   public LeafBasisNode<std::size_t, TP>
 {
   static const int dim = GV::dimension;
-  static const int maxSize = StaticPower<(2+1),GV::dimension>::power;
 
   using Base = LeafBasisNode<std::size_t,TP>;
   using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;

@@ -34,7 +34,6 @@ namespace Dune
      */
     PkFace2DLocalFiniteElement ()
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
-      : gt(GeometryTypes::triangle)
     { }
 #else
     {
@@ -47,7 +46,6 @@ namespace Dune
     PkFace2DLocalFiniteElement (int variant)
       : coefficients(variant)
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
-      , gt(GeometryTypes::triangle)
     { }
 #else
     {
@@ -64,7 +62,6 @@ namespace Dune
     PkFace2DLocalFiniteElement (const unsigned int vertexmap[3])
       : coefficients(vertexmap)
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
-      , gt(GeometryTypes::triangle)
     { }
 #else
     {
@@ -101,10 +98,17 @@ namespace Dune
 
     /** \todo Please doc me !
      */
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+    static constexpr GeometryType type ()
+    {
+      return GeometryTypes::triangle;
+    }
+#else
     GeometryType type () const
     {
       return gt;
     }
+#endif
 
     PkFace2DLocalFiniteElement* clone () const
     {
@@ -115,7 +119,9 @@ namespace Dune
     PkFace2DLocalBasis<D,R,k> basis;
     PkFace2DLocalCoefficients<k> coefficients;
     PkFace2DLocalInterpolation<PkFace2DLocalBasis<D,R,k> > interpolation;
+#if not(DUNE_VERSION_NEWER(DUNE_GRID,2,6))
     GeometryType gt;
+#endif
   };
 
 }
