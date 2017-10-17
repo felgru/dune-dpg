@@ -209,11 +209,10 @@ void check(const Dune::GeometryType::BasicType &btype,
     checkWeights(quad);
     checkQuadrature(quad);
   }
-  if (dim>0 && (dim>3 ||
-                type.isCube() ||
-                type.isSimplex()))
+  if (dim>0 && (dim>3 || type.isCube() || type.isSimplex()))
   {
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+    type = type.isCube() ? Dune::GeometryTypes::cube(dim-1) : Dune::GeometryTypes::simplex(dim-1);
     check<ctype,((dim==0) ? 0 : dim-1)>(type, maxOrder, qt);
 #else
     check<ctype,((dim==0) ? 0 : dim-1)>(btype, maxOrder, qt);
@@ -248,11 +247,10 @@ void checkSubsampledRule(const Dune::GeometryType::BasicType &btype,
     checkWeights(quad);
     checkQuadrature(quad);
   }
-  if (dim>0 && (dim>3 ||
-                type.isCube() ||
-                type.isSimplex()))
+  if (dim>0 && (dim>3 || type.isCube() || type.isSimplex()))
   {
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+    type = type.isCube() ? Dune::GeometryTypes::cube(dim-1) : Dune::GeometryTypes::simplex(dim-1);
     check<ctype,((dim==0) ? 0 : dim-1)>(type, maxOrder, qt);
 #else
     check<ctype,((dim==0) ? 0 : dim-1)>(btype, maxOrder, qt);
