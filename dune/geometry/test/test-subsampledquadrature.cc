@@ -52,7 +52,11 @@ ctype analyticalSolution (Dune::GeometryType t, int p, int direction )
     const int pdim = (dim > 0 ? dim-1 : 0);
     if( direction < dim-1 )
     {
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
       GeometryType nt = Dune::GeometryTypes::simplex( dim-1 );
+#else
+      GeometryType nt( GeometryType::simplex, dim-1 );
+#endif
       if( dim > 0 )
         exact = analyticalSolution< ctype, pdim >( nt, p, direction );
       else
@@ -89,7 +93,11 @@ void checkQuadrature(const QuadratureRule &quad)
   typedef typename QuadratureRule::CoordType ctype;
   const unsigned int dim = QuadratureRule::d;
   const unsigned int p = quad.order();
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
   const Dune::GeometryType t = quad.type();
+#else
+  const Dune::GeometryType& t = quad.type();
+#endif
   FieldVector<ctype,dim> integral(0);
   for (typename QuadratureRule::iterator qp=quad.begin(); qp!=quad.end(); ++qp)
   {
@@ -132,7 +140,11 @@ void checkWeights(const QuadratureRule &quad)
   typedef typename QuadratureRule::CoordType ctype;
   const unsigned int dim = QuadratureRule::d;
   const unsigned int p = quad.order();
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
   const Dune::GeometryType t = quad.type();
+#else
+  const Dune::GeometryType& t = quad.type();
+#endif
   typedef typename QuadratureRule::iterator QuadIterator;
   double volume = 0;
   QuadIterator qp = quad.begin();
@@ -168,11 +180,20 @@ void checkWeights(const QuadratureRule &quad)
 }
 
 template<class ctype, int dim>
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
 void check(Dune::GeometryType type,
            unsigned int maxOrder,
            Dune::QuadratureType::Enum qt = Dune::QuadratureType::GaussLegendre)
+#else
+void check(const Dune::GeometryType::BasicType &btype,
+           unsigned int maxOrder,
+           Dune::QuadratureType::Enum qt = Dune::QuadratureType::GaussLegendre)
+#endif
 {
   typedef Dune::QuadratureRule<ctype, dim> Quad;
+#if not(DUNE_VERSION_NEWER(DUNE_GRID,2,6))
+  Dune::GeometryType type(btype,dim);
+#endif
 
   for (unsigned int p=0; p<=maxOrder; ++p)
   {
@@ -192,18 +213,32 @@ void check(Dune::GeometryType type,
                 type.isCube() ||
                 type.isSimplex()))
   {
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
     check<ctype,((dim==0) ? 0 : dim-1)>(type, maxOrder, qt);
+#else
+    check<ctype,((dim==0) ? 0 : dim-1)>(btype, maxOrder, qt);
+#endif
   }
 }
 
 template<class ctype, int refinement, int dim>
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
 void checkSubsampledRule(Dune::GeometryType type,
                          unsigned int maxOrder,
                          Dune::QuadratureType::Enum qt
                            = Dune::QuadratureType::GaussLegendre)
+#else
+void checkSubsampledRule(const Dune::GeometryType::BasicType &btype,
+                         unsigned int maxOrder,
+                         Dune::QuadratureType::Enum qt
+                           = Dune::QuadratureType::GaussLegendre)
+#endif
 {
   typedef Dune::QuadratureRule<ctype, dim> BaseQuad;
   typedef Dune::SubsampledQuadratureRule<ctype, refinement, dim> Quad;
+#if not(DUNE_VERSION_NEWER(DUNE_GRID,2,6))
+  const Dune::GeometryType type(btype,dim);
+#endif
 
   for (unsigned int p=0; p<=maxOrder; ++p)
   {
@@ -217,7 +252,11 @@ void checkSubsampledRule(Dune::GeometryType type,
                 type.isCube() ||
                 type.isSimplex()))
   {
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
     check<ctype,((dim==0) ? 0 : dim-1)>(type, maxOrder, qt);
+#else
+    check<ctype,((dim==0) ? 0 : dim-1)>(btype, maxOrder, qt);
+#endif
   }
 }
 
@@ -234,9 +273,17 @@ int main (int argc, char** argv)
     static const unsigned int dim = 2;
 
     checkSubsampledRule<double,refinement,dim>
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
         (Dune::GeometryTypes::simplex(dim), maxOrder);
+#else
+        (Dune::GeometryType::simplex, maxOrder);
+#endif
     checkSubsampledRule<double,refinement,dim>
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
         (Dune::GeometryTypes::cube(dim), maxOrder);
+#else
+        (Dune::GeometryType::cube, maxOrder);
+#endif
   }
   catch( const Dune::Exception &e )
   {
