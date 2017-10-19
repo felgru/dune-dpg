@@ -818,7 +818,7 @@ applyWeakBoundaryCondition
       if (intersection.boundary())
       { // the intersection is at the (physical) boundary of the domain
         const FieldVector<double,dim>& centerOuterNormal =
-               centerUnitOuterNormal(intersection);
+               intersection.centerUnitOuterNormal();
 
         if ((beta*centerOuterNormal) > -1e-10)
         { // everywhere except inflow boundary
@@ -910,7 +910,7 @@ defineCharacteristicFaces_impl(
     for (auto&& intersection : intersections(gridView, e))
     {
       const bool characteristic =
-          fabs(beta * centerUnitOuterNormal(intersection)) < delta;
+          fabs(beta * intersection.centerUnitOuterNormal()) < delta;
       characteristicFaces[intersection.indexInInside()] = characteristic;
       characteristicFound = characteristicFound || characteristic;
     }
@@ -1056,7 +1056,7 @@ defineCharacteristicFaces_impl(
     {
       if (conforming(intersection)) {
         const bool characteristic =
-            fabs(beta * centerUnitOuterNormal(intersection)) < delta;
+            fabs(beta * intersection.centerUnitOuterNormal()) < delta;
         characteristicFaces[intersection.indexInInside()] = characteristic;
         characteristicFound = characteristicFound || characteristic;
       }
@@ -1221,7 +1221,7 @@ applyMinimization
     for (auto&& intersection : intersections(gridView, e))
     {
       const FieldVector<double,dim>& centerOuterNormal =
-             centerUnitOuterNormal(intersection);
+             intersection.centerUnitOuterNormal();
       //set relevant faces for almost characteristic faces
       relevantFaces[intersection.indexInInside()]
           = (std::abs(beta*centerOuterNormal) < delta);

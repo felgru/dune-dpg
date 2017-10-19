@@ -22,38 +22,6 @@ class Intersection;
 
 namespace detail {
   template<class Intersection>
-  struct CenterUnitOuterNormal
-  {
-    static typename Intersection::GlobalCoordinate
-    from(const Intersection& intersection) {
-      return intersection.centerUnitOuterNormal();
-    }
-  };
-
-  template<int dim, class HostGrid, bool MapIndexStorage,
-           class IntersectionImp>
-  struct CenterUnitOuterNormal
-    <Intersection<const SubGrid<dim, HostGrid, MapIndexStorage>,
-                  IntersectionImp>>
-  {
-    using SubGridIntersection
-        = Intersection<const SubGrid<dim, HostGrid, MapIndexStorage>,
-                       IntersectionImp>;
-    using ctype = typename SubGridIntersection::ctype;
-
-    static typename SubGridIntersection::GlobalCoordinate
-    from(const SubGridIntersection& intersection) {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
-      return intersection.unitOuterNormal(referenceElement<ctype, dim-1>
-                    (intersection.type()).position(0,0));
-#else
-      return intersection.unitOuterNormal(ReferenceElements<ctype, dim-1>::
-                    general(intersection.type()).position(0,0));
-#endif
-    }
-  };
-
-  template<class Intersection>
   struct GeometryInInside
   {
     static typename Intersection::LocalGeometry
@@ -167,12 +135,6 @@ namespace detail {
   };
 
 } // end namespace detail
-
-template<class Intersection>
-auto centerUnitOuterNormal(const Intersection& intersection) {
-  return detail::CenterUnitOuterNormal<std::decay_t<Intersection>>::
-      from(intersection);
-}
 
 template<class Intersection>
 auto geometryInInside(const Intersection& intersection) {
