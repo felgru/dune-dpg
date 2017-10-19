@@ -107,33 +107,6 @@ namespace detail {
     }
   };
 
-  template<class Intersection>
-  struct Conforming
-  {
-    static bool from(const Intersection& intersection) {
-      return intersection.conforming();
-    }
-  };
-
-  template<int dim, class HostGrid, bool MapIndexStorage,
-           class IntersectionImp>
-  struct Conforming
-    <Intersection<const SubGrid<dim, HostGrid, MapIndexStorage>,
-                  IntersectionImp>>
-  {
-    using SubGridIntersection
-        = Intersection<const SubGrid<dim, HostGrid, MapIndexStorage>,
-                       IntersectionImp>;
-
-    static bool
-    from(const SubGridIntersection& intersection) {
-      // This assumes that neighboring elements on the same level
-      // are always conforming which might not always hold.
-      return !intersection.neighbor()
-        || intersection.inside().level() == intersection.outside().level();
-    }
-  };
-
 } // end namespace detail
 
 template<class Intersection>
@@ -146,11 +119,6 @@ template<class Intersection>
 auto geometryInOutside(const Intersection& intersection) {
   return detail::GeometryInOutside<std::decay_t<Intersection>>::
       from(intersection);
-}
-
-template<class Intersection>
-bool conforming(const Intersection& intersection) {
-  return detail::Conforming<std::decay_t<Intersection>>::from(intersection);
 }
 
 } // end namespace Dune

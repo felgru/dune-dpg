@@ -77,7 +77,7 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
     localIndexSet.bind(localView);
     for(auto&& intersection : intersections(gridView, element))
     {
-      if(!conforming(intersection))
+      if(!intersection.conforming())
         if(intersection.inside().level() < intersection.outside().level())
           // inside dominates outside (with one level difference)
         {

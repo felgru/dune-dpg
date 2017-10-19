@@ -1054,7 +1054,7 @@ defineCharacteristicFaces_impl(
 
     for (auto&& intersection : intersections(gridView, e))
     {
-      if (conforming(intersection)) {
+      if (intersection.conforming()) {
         const bool characteristic =
             fabs(beta * intersection.centerUnitOuterNormal()) < delta;
         characteristicFaces[intersection.indexInInside()] = characteristic;
