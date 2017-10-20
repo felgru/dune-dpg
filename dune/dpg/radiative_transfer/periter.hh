@@ -972,13 +972,6 @@ compute_transport_solution(
                               innerProduct,
                               geometryBuffer);
 
-  // Determine Dirichlet dofs for theta (inflow boundary)
-  std::vector<bool> dirichletNodesInflow;
-  BoundaryTools::getInflowBoundaryMask(
-              std::get<1>(*solutionSpaces),
-              dirichletNodesInflow,
-              s);
-
   VectorType rhsFunctional;
   {
     auto& feBasisTest = std::get<0>(*testSpaces);
@@ -1022,11 +1015,19 @@ compute_transport_solution(
         stiffnessMatrix, rhs,
         rhsFunction);
   }
-  systemAssembler.template applyDirichletBoundary<1>
-      (stiffnessMatrix,
-      rhs,
-      dirichletNodesInflow,
-      0.);
+  {
+    // Determine Dirichlet dofs for theta (inflow boundary)
+    std::vector<bool> dirichletNodesInflow;
+    BoundaryTools::getInflowBoundaryMask(
+                std::get<1>(*solutionSpaces),
+                dirichletNodesInflow,
+                s);
+    systemAssembler.template applyDirichletBoundary<1>
+        (stiffnessMatrix,
+        rhs,
+        dirichletNodesInflow,
+        0.);
+  }
 #if 0
   systemAssembler.template defineCharacteristicFaces<1>(
       stiffnessMatrix,
