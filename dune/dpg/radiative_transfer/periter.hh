@@ -999,7 +999,6 @@ compute_transport_solution(
   /////////////////////////////////////////////////////////
   //  Assemble the systems
   /////////////////////////////////////////////////////////
-  // loop of the discrete ordinates
   if(boundary_is_homogeneous) {
     auto rhsFunction = make_LinearForm(
           systemAssembler.getTestSearchSpaces(),
