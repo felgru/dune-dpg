@@ -263,7 +263,7 @@ public:
     bufferMap.clear();
   }
 
-  std::pair<CoefMatrices&, bool> operator()(const GeometryComparable<Geometry> geometry)
+  std::pair<CoefMatrices&, bool> operator()(const GeometryComparable<Geometry>& geometry)
   {
     CoefMatrices nullmatrix;
     auto insert = bufferMap.insert(std::pair<const GeometryComparable<Geometry>,
