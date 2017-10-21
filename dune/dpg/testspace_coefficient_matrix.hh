@@ -195,7 +195,6 @@ public:
                                        InnerProduct& innerProd) :
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
-    gridView_(std::get<0>(*bilinForm.getSolutionSpaces()).gridView()),
     localViewsSolution_(detail::getLocalViews(
                           *bilinearForm_.getSolutionSpaces())),
     localViewsTest_(detail::getLocalViews(*bilinearForm_.getTestSpaces()))
@@ -232,18 +231,12 @@ public:
 
   const GridView& gridView() const
   {
-    return gridView_;
-  }
-
-  void update (const GridView& gv)
-  {
-    gridView_ = gv;
+    return std::get<0>(*bilinearForm_.getSolutionSpaces()).gridView();
   }
 
   private:
   BilinearForm&            bilinearForm_;
   InnerProduct&            innerProduct_;
-  GridView                 gridView_;
   SolutionLocalViews       localViewsSolution_;
   TestLocalViews           localViewsTest_;
   CoefficientMatrices<MatrixType> coefMatrices_;
@@ -307,7 +300,6 @@ class BufferedTestspaceCoefficientMatrix
   BufferedTestspaceCoefficientMatrix(BilinearForm& bilinForm, InnerProduct& innerProd, GeoBuffer& buffer) :
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
-    gridView_(std::get<0>(*bilinForm.getSolutionSpaces()).gridView()),
     localViewsSolution_(detail::getLocalViews(
                           *bilinearForm_.getSolutionSpaces())),
     localViewsTest_(detail::getLocalViews(*bilinearForm_.getTestSpaces())),
@@ -359,18 +351,12 @@ class BufferedTestspaceCoefficientMatrix
 
   const GridView& gridView() const
   {
-    return gridView_;
-  }
-
-  void update (const GridView& gv)
-  {
-    gridView_ = gv;
+    return std::get<0>(*bilinearForm_.getSolutionSpaces()).gridView();
   }
 
   private:
   BilinearForm&         bilinearForm_;
   InnerProduct&         innerProduct_;
-  GridView              gridView_;
   SolutionLocalViews    localViewsSolution_;
   TestLocalViews        localViewsTest_;
   CoefficientMatrices<MatrixType>* coefMatrices_;
