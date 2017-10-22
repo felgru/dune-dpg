@@ -24,7 +24,7 @@ namespace Dune {
 /**
  * \brief This constructs the right hand side vector of a DPG system.
  *
- * \tparam SolutionSpaces  tuple of solution spaces
+ * \tparam SolutionSpace  the GlobalBasis of the solution spaces (on host grid)
  */
 template<class SolutionSpace,
          class KernelApproximation>
