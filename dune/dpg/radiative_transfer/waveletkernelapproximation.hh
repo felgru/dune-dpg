@@ -59,7 +59,7 @@ namespace ScatteringKernelApproximation {
                   const Eigen::VectorXd& quadWeight,
                   double xmin, double xmax)
     {
-      double s = 0.5*(xmax-xmin)*(quadWeight.array()*pow(f.array(),2)).sum();
+      double s = 0.5*(xmax-xmin)*(quadWeight.array()*f.array().square()).sum();
       return std::sqrt(s);
     }
 
@@ -214,7 +214,7 @@ namespace ScatteringKernelApproximation {
       const Eigen::VectorXd& quadWeight)
     {
       // Translate x values from the interval [-1, 1] to [xmin, xmax]
-      Eigen::VectorXd x=0.5*(xmax-xmin)*(quadPos.array()+1)+xmin;
+      const Eigen::VectorXd x = 0.5*(xmax-xmin)*(quadPos.array()+1)+xmin;
 
       // Step 0: Create Functions F=[f_1^1,...,f_k^1] and P=[1.,x,...x^{K-1}] in [xmin,xmax]
       std::vector<Eigen::VectorXd> F(L);
@@ -304,13 +304,15 @@ namespace ScatteringKernelApproximation {
       getLegendreQuad(quadPos,quadWeight,quadOrder,-1.,1.);
 
       // Translate quadPos values from the interval [-1, 1] to [xmin, xmax]
-      Eigen::VectorXd quadPosShift=0.5*(xmax-xmin)*(quadPos.array()+1)+xmin;
+      const Eigen::VectorXd quadPosShift
+          = 0.5*(xmax-xmin)*(quadPos.array()+1)+xmin;
 
       for(int lx=0; lx<L; lx++){
         Eigen::VectorXd legendrePoly=getLegendrePoly(quadPos,lx);
-        legendrePoly*=std::sqrt(2./(xmax-xmin)); // normalize in [xmin,xmax]
+        legendrePoly *= std::sqrt(2./(xmax-xmin)); // normalize in [xmin,xmax]
         for(int ly=0; ly<L; ly++){
-          Eigen::VectorXd lagrangePoly=getLagrangePoly(quadPosShift,xInterp,ly);
+          const Eigen::VectorXd lagrangePoly
+              = getLagrangePoly(quadPosShift,xInterp,ly);
           A(lx,ly)=ip(legendrePoly,lagrangePoly,quadWeight,xmin,xmax);
         }
       }
@@ -321,29 +323,30 @@ namespace ScatteringKernelApproximation {
     ProjectOntoVJ(const lambdaExpr& f,
                   double r, int J, int L, int quadOrder)
     {
-      Eigen::VectorXd data=Eigen::VectorXd::Zero(static_cast<int>(L*pow(2,J)));
+      Eigen::VectorXd data = Eigen::VectorXd::Zero(L*(1 << J));
       double xmin;
       double xmax;
-      for(int k=0; k<static_cast<int>(pow(2,J)); k++){
-        xmin=-r+r*k*pow(2.,-J+1);
-        xmax=-r+r*(k+1)*pow(2.,-J+1);
-        Eigen::VectorXd x=Eigen::VectorXd::LinSpaced(L,xmin,xmax);
+      for(int k=0, kmax=(1<<J); k<kmax; k++){
+        xmin = -r+r*k*std::exp2(-J+1);
+        xmax = -r+r*(k+1)*std::exp2(-J+1);
+        const Eigen::VectorXd x = Eigen::VectorXd::LinSpaced(L,xmin,xmax);
         Eigen::VectorXd fx(L);
-        for(int l=0; l<L; l++) fx(l)=f(x(l),xmin,xmax);
-        Eigen::MatrixXd A
+        for(int l=0; l<L; l++) fx(l) = f(x(l),xmin,xmax);
+        const Eigen::MatrixXd A
           = get_lagrange_to_legendre_matrix(x,xmin,xmax,quadOrder);
-        Eigen::VectorXd datak=A*fx;
-        data.segment(L*k,L)=datak;
+        const Eigen::VectorXd datak = A*fx;
+        data.segment(L*k,L) = datak;
       }
       return data;
     }
 
     Eigen::VectorXd
-    lagrange_to_legendre_VJ(Eigen::VectorXd& f, int maxLevel, int waveletOrder)
+    lagrange_to_legendre_VJ(const Eigen::VectorXd& f,
+                            int maxLevel, int waveletOrder)
     {
       // Get Gauss-Legendre quadrature in [0,1]
-      int quadOrder=2*waveletOrder+1;
-      const size_t dim = 1;
+      const int quadOrder = 2*waveletOrder+1;
+      const int dim = 1;
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
       const Dune::QuadratureRule<double, dim>& quad =
         Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
@@ -362,8 +365,8 @@ namespace ScatteringKernelApproximation {
       Eigen::VectorXd angle(waveletOrder+1);
       Eigen::VectorXd data((waveletOrder+1) << maxLevel);
       using namespace boost::math::constants;
-      double r = pi<double>();
-      for(int k = 0; k < (1<<maxLevel); ++k)
+      const double r = pi<double>();
+      for(int k = 0, kmax = (1<<maxLevel); k < kmax; ++k)
       {
         for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
           // Angle in [-pi,pi]
@@ -371,21 +374,22 @@ namespace ScatteringKernelApproximation {
         }
         xmin = r *   k   * std::exp2(-(double)maxLevel+1) - r;
         xmax = r *  (k+1)* std::exp2(-(double)maxLevel+1) - r;
-        Eigen::MatrixXd A
+        const Eigen::MatrixXd A
           = get_lagrange_to_legendre_matrix(angle,xmin,xmax,quadOrder);
-        Eigen::VectorXd datak=
-          A*(f.segment((waveletOrder+1)*k,(waveletOrder+1)));
-        data.segment((waveletOrder+1)*k,waveletOrder+1)=datak;
+        const Eigen::VectorXd datak
+          = A*(f.segment((waveletOrder+1)*k,(waveletOrder+1)));
+        data.segment((waveletOrder+1)*k,waveletOrder+1) = datak;
       }
       return data;
     }
 
     Eigen::VectorXd
-    legendre_to_lagrange_VJ(Eigen::VectorXd& f, int maxLevel, int waveletOrder)
+    legendre_to_lagrange_VJ(const Eigen::VectorXd& f,
+                            int maxLevel, int waveletOrder)
     {
       // Get Gauss-Legendre quadrature in [0,1]
-      int quadOrder=2*waveletOrder+1;
-      const size_t dim = 1;
+      const int quadOrder = 2*waveletOrder+1;
+      const int dim = 1;
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
       const Dune::QuadratureRule<double, dim>& quad =
         Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
@@ -404,20 +408,20 @@ namespace ScatteringKernelApproximation {
       Eigen::VectorXd angle(waveletOrder+1);
       Eigen::VectorXd data((waveletOrder+1) << maxLevel);
       using namespace boost::math::constants;
-      double r = pi<double>();
-      for(int k = 0; k < (1<<maxLevel); ++k)
+      const double r = pi<double>();
+      for(int k = 0, kmax = (1<<maxLevel); k < kmax; ++k)
       {
         for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
           // Angle in [-pi,pi]
           angle(pt) = 2*r*(k+quad[pt].position())/(1<<maxLevel) - r;
         }
         xmin = r *   k   * std::exp2(-(double)maxLevel+1) - r;
-        xmax = r *  (k+1)* std::exp2(-(double)maxLevel+1) - r;
-        Eigen::MatrixXd A
+        xmax = r * (k+1) * std::exp2(-(double)maxLevel+1) - r;
+        const Eigen::MatrixXd A
           = get_lagrange_to_legendre_matrix(angle,xmin,xmax,quadOrder);
-        Eigen::VectorXd datak =
-          A.fullPivLu().solve(f.segment((waveletOrder+1)*k,(waveletOrder+1)));
-        data.segment((waveletOrder+1)*k,waveletOrder+1)=datak;
+        const Eigen::VectorXd datak
+          = A.fullPivLu().solve(f.segment((waveletOrder+1)*k,(waveletOrder+1)));
+        data.segment((waveletOrder+1)*k,waveletOrder+1) = datak;
       }
       return data;
     }
@@ -446,13 +450,13 @@ namespace ScatteringKernelApproximation {
         Eigen::VectorXd c0(L);
         Eigen::VectorXd c1(L);
         // Get elementary wavelet transform matrices
-        std::vector<Eigen::MatrixXd> elem_matrix
+        const std::vector<Eigen::MatrixXd> elem_matrix
                 = get_alpert_transform_matrices(L,quadOrder);
 
         for(int j=J-1; j>=0; j--){
-          s[j].resize(static_cast<int>(L*pow(2,j)));
-          w[j].resize(static_cast<int>(L*pow(2,j)));
-          for(int k=0; k<pow(2.,j); k++){
+          s[j].resize(L*(1 << j));
+          w[j].resize(L*(1 << j));
+          for(int k=0, kmax=(1<<j); k<kmax; k++){
             c0=s[j+1].segment(L*2*k,L);
             c1=s[j+1].segment(L*(2*k+1),L);
             s[j].segment(k*L,L)=elem_matrix[0]*c0+elem_matrix[1]*c1;
@@ -468,7 +472,7 @@ namespace ScatteringKernelApproximation {
     // w.first     --> components in V_0
     // w.second[j] --> Components in W_j (0 <= j <= J)
     Eigen::VectorXd
-    IDWT(std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>& w,
+    IDWT(const std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>& w,
          size_t L,
          size_t J,
          size_t quadOrder)
@@ -478,20 +482,19 @@ namespace ScatteringKernelApproximation {
         elem_matrix = get_alpert_transform_matrices(L,quadOrder);
       std::vector<Eigen::VectorXd> s(J+1);
       s[0]=w.first;
-      for(size_t j=1; j<=J; j++){
-        s[j].resize(static_cast<int>(L*pow(2,j)));
+      for(size_t j=1; j<=J; j++) {
+        s[j].resize(L*(1 << j));
         Eigen::VectorXd stmp(L);
         Eigen::VectorXd wtmp(L);
-        for(int k=0; k<pow(2.,j); k++){
-          int kdiv2=(int) k/2;
-          int kmod2=k%2;
+        for(int k=0, kmax=(1 << j); k<kmax; k++){
+          const int kdiv2 = k/2;
+          const int kmod2 = k%2;
           stmp=s[j-1].segment(L*kdiv2,L);
           wtmp=w.second[j-1].segment(L*kdiv2,L);
-          if(kmod2==0){
+          if(kmod2==0) {
             s[j].segment(L*k,L)=elem_matrix[0].transpose()*stmp
                                 +elem_matrix[2].transpose()*wtmp;
-          }
-          else{
+          } else {
             s[j].segment(L*k,L)=elem_matrix[1].transpose()*stmp
                                 +elem_matrix[3].transpose()*wtmp;
           }
@@ -516,43 +519,42 @@ namespace ScatteringKernelApproximation {
         // Get Gauss-Legendre quadrature rule of nQuadAngle points
         // i.e. order=2*nQuadAngle-1. Interval: [-1,1]
         Eigen::VectorXd quadPos,quadWeight;
-        size_t quadOrder=2*nQuadAngle-1;
+        const size_t quadOrder=2*nQuadAngle-1;
         getLegendreQuad(quadPos,quadWeight,quadOrder,-1.,1.);
 
         // Get Alpert wavelets in [-1,1]
-        std::vector<Eigen::VectorXd> alpertWlt1 =
+        const std::vector<Eigen::VectorXd> alpertWlt1 =
           getAlpertWlt(wltOrder+1,-1.,1.,quadPos,quadWeight);
 
         // Auxiliary variables to use in loop
-        auto w = quadWeight * quadWeight.transpose();
+        const auto w = quadWeight * quadWeight.transpose();
 
-        Eigen::VectorXd one =
-          Eigen::VectorXd::Constant(quadPos.size(),1.);
+        const Eigen::VectorXd one = Eigen::VectorXd::Ones(quadPos.size());
         Eigen::VectorXd x(quadPos.size());
         Eigen::VectorXd y(quadPos.size());
 
         // Matrix. Terms <k, sf * sf'>
         for(size_t ly = 0; ly < wltOrder+1; ly++) {
-          Eigen::VectorXd sfy
+          const Eigen::VectorXd sfy
             = getLegendrePoly(quadPos,ly);
-            double ymin = -r;
-            double ymax = r;
-            y = 0.5*(quadPos + one)*(ymax - ymin) + ymin*one;
-            auto Y = y * one.transpose();
+          const double ymin = -r;
+          const double ymax = r;
+          y = 0.5*(quadPos + one)*(ymax - ymin) + ymin*one;
+          const auto Y = y * one.transpose();
 
           for(size_t lx = 0; lx < wltOrder+1; lx++) {
-            Eigen::VectorXd sfx
+            const Eigen::VectorXd sfx
               = getLegendrePoly(quadPos,lx);
 
-            double xmin = -r;
-            double xmax = r;
+            const double xmin = -r;
+            const double xmax = r;
             x = 0.5*(quadPos + one)*(xmax - xmin) + xmin*one;
             auto X = one * x.transpose();
 
-            auto diff = X - Y;
-            auto Keval = diff.unaryExpr(kernelFunction);
+            const auto diff = X - Y;
+            const auto Keval = diff.unaryExpr(kernelFunction);
 
-            auto prod = r*w.cwiseProduct(
+            const auto prod = r*w.cwiseProduct(
               Keval.cwiseProduct( sfy * sfx.transpose()));
             kernelMatrix(lx, ly) = prod.sum();
           }
@@ -560,26 +562,26 @@ namespace ScatteringKernelApproximation {
 
         // Matrix. Terms <k, sf * wlt'> and <k, sf' * wlt>
         for(size_t ly = 0; ly < wltOrder+1; ly++) {
-          Eigen::VectorXd sfy
+          const Eigen::VectorXd sfy
             = getLegendrePoly(quadPos,ly);
-          double ymin = -r;
-          double ymax = r;
+          const double ymin = -r;
+          const double ymax = r;
           y = 0.5*(quadPos + one)*(ymax - ymin) + ymin*one;
-          auto Y = y * one.transpose();
+          const auto Y = y * one.transpose();
 
           for(size_t jx = 0; jx < maxLevel; jx++) {
             for(size_t kx = 0, kx_max = 1 << jx; kx < kx_max; kx++) {
 
-              double xmin = r *   kx   * std::exp2(-(double)jx+1) - r;
-              double xmax = r * (kx+1) * std::exp2(-(double)jx+1) - r;
+              const double xmin = r *   kx   * std::exp2(-(double)jx+1) - r;
+              const double xmax = r * (kx+1) * std::exp2(-(double)jx+1) - r;
               x = 0.5*(quadPos + one)*(xmax - xmin) + xmin*one;
-              auto X = one * x.transpose();
+              const auto X = one * x.transpose();
 
-              auto diff = X - Y;
-              auto Keval = diff.unaryExpr(kernelFunction);
+              const auto diff = X - Y;
+              const auto Keval = diff.unaryExpr(kernelFunction);
 
               for(size_t lx = 0; lx < wltOrder+1; lx++) {
-                  auto prod = r/std::pow(2,(double)jx/2)
+                const auto prod = r/std::exp2((double)jx/2)
                   * w.cwiseProduct( Keval.cwiseProduct(
                   sfy * alpertWlt1[lx].transpose()));
                 const size_t i = ((1 << jx) + kx)*(wltOrder+1)+lx;
@@ -595,25 +597,25 @@ namespace ScatteringKernelApproximation {
         for(size_t jy = 0; jy < maxLevel; jy++) {
           for(size_t ky = 0, ky_max = 1 << jy; ky < ky_max; ky++) {
 
-            double ymin = r *   ky   * std::exp2(-(double)jy+1) - r;
-            double ymax = r * (ky+1) * std::exp2(-(double)jy+1) - r;
+            const double ymin = r *   ky   * std::exp2(-(double)jy+1) - r;
+            const double ymax = r * (ky+1) * std::exp2(-(double)jy+1) - r;
             y = 0.5*(quadPos + one)*(ymax - ymin) + ymin*one;
-            auto Y = y * one.transpose();
+            const auto Y = y * one.transpose();
 
             for(size_t jx = 0; jx < maxLevel; jx++) {
               for(size_t kx = 0, kx_max = 1 << jx; kx < kx_max; kx++) {
 
-                double xmin = r *   kx   * std::exp2(-(double)jx+1) - r;
-                double xmax = r * (kx+1) * std::exp2(-(double)jx+1) - r;
+                const double xmin = r *   kx   * std::exp2(-(double)jx+1) - r;
+                const double xmax = r * (kx+1) * std::exp2(-(double)jx+1) - r;
                 x = 0.5*(quadPos + one)*(xmax - xmin) + xmin*one;
-                auto X = one * x.transpose();
+                const auto X = one * x.transpose();
 
-                auto diff = X - Y;
-                auto Keval = diff.unaryExpr(kernelFunction);
+                const auto diff = X - Y;
+                const auto Keval = diff.unaryExpr(kernelFunction);
 
                 for(size_t ly = 0; ly < wltOrder+1; ly++) {
                   for(size_t lx = 0; lx < wltOrder+1; lx++) {
-                    auto prod = r/std::pow(2,(double)(jx+jy)/2)
+                    const auto prod = r/std::exp2((double)(jx+jy)/2)
                        * w.cwiseProduct( Keval.cwiseProduct(
                         alpertWlt1[ly] * alpertWlt1[lx].transpose()));
                     const size_t i = ((1 << jx) + kx)*(wltOrder+1)+lx;
@@ -691,9 +693,9 @@ namespace ScatteringKernelApproximation {
         }
 
         std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
-        XdToPair(Eigen::VectorXd& v) const {
+        XdToPair(const Eigen::VectorXd& v) const {
           if(level==0) {
-            return std::make_pair(v,std::vector<Eigen::VectorXd>());
+            return std::make_pair(v, std::vector<Eigen::VectorXd>());
           }
           else {
             Eigen::VectorXd sf = v.segment(0,wltOrder+1);
@@ -765,11 +767,11 @@ namespace ScatteringKernelApproximation {
         }
 
         template<class Direction>
-        void compute_sVector(std::vector< Direction >& sVector) {
+        void compute_sVector(std::vector< Direction >& sVector) const {
 
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
-          const size_t dim = 1;
+          const int dim = 1;
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
@@ -783,7 +785,7 @@ namespace ScatteringKernelApproximation {
 #endif
           using namespace boost::math::constants;
           size_t i=0;
-          for(int k = 0; k < (1<<level); ++k)
+          for(int k = 0, kmax = (1<<level); k < kmax; ++k)
           {
             for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
               double angle = 2*pi<double>()*(k+quad[pt].position())
@@ -794,10 +796,10 @@ namespace ScatteringKernelApproximation {
           }
         }
 
-        std::vector<double> getQuadWeightSubinterval(){
+        std::vector<double> getQuadWeightSubinterval() const {
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
-          const size_t dim = 1;
+          const int dim = 1;
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
@@ -818,15 +820,15 @@ namespace ScatteringKernelApproximation {
           return weight;
         }
 
-        size_t getLevel() {
+        size_t getLevel() const {
           return level;
         }
 
-        size_t getMaxLevel() {
+        size_t getMaxLevel() const {
           return maxLevel;
         }
 
-        size_t getNumS() {
+        size_t getNumS() const {
           return ((wltOrder+1) << level);
         }
 
@@ -1009,11 +1011,11 @@ namespace ScatteringKernelApproximation {
         }
 
         template<class Direction>
-        void compute_sVector(std::vector< Direction >& sVector) {
+        void compute_sVector(std::vector< Direction >& sVector) const {
 
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
-          const size_t dim = 1;
+          const int dim = 1;
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
@@ -1038,10 +1040,10 @@ namespace ScatteringKernelApproximation {
           }
         }
 
-        std::vector<double> getQuadWeightSubinterval(){
+        std::vector<double> getQuadWeightSubinterval() const {
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
-          const size_t dim = 1;
+          const int dim = 1;
 #if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
@@ -1062,11 +1064,11 @@ namespace ScatteringKernelApproximation {
           return weight;
         }
 
-        size_t getLevel() {
+        size_t getLevel() const {
           return level;
         }
 
-        size_t getMaxLevel() {
+        size_t getMaxLevel() const {
           return maxLevel;
         }
 
@@ -1116,14 +1118,14 @@ namespace ScatteringKernelApproximation {
 
         Eigen::MatrixXd computeArcDistanceMatrix (
           const size_t targetLevel,
-          std::pair<Eigen::MatrixXd,Eigen::MatrixXd> levelsMatrix) const {
-
+          const std::pair<Eigen::MatrixXd,Eigen::MatrixXd>& levelsMatrix) const
+        {
           using namespace boost::math::constants;
 
           // Matrix with 2^{min(j,j')}
-          Eigen::MatrixXd twoPowMinLevel = (levelsMatrix.first).cwiseMin(levelsMatrix.second);
-          twoPowMinLevel = twoPowMinLevel.unaryExpr( [] (double x)
-            {return std::pow(2.,x);} );
+          const Eigen::MatrixXd twoPowMinLevel
+              = (levelsMatrix.first).cwiseMin(levelsMatrix.second)
+                .unaryExpr([](double x) { return std::exp2(x); });
 
           // Matrix with dist(S_\lambda,S,{\lambda'})
           const double r = pi<double>();
@@ -1133,14 +1135,14 @@ namespace ScatteringKernelApproximation {
           for(size_t jy = 0; jy < targetLevel; jy++) {
             for(size_t ky = 0, ky_max = 1 << jy; ky < ky_max; ky++) {
 
-              double ymin = r *   ky   * std::exp2(-(double)jy+1) - r;
-              double ymax = r * (ky+1) * std::exp2(-(double)jy+1) - r;
+              const double ymin = r *   ky   * std::exp2(-(double)jy+1) - r;
+              const double ymax = r * (ky+1) * std::exp2(-(double)jy+1) - r;
 
               for(size_t jx = 0; jx < targetLevel; jx++) {
                 for(size_t kx = 0, kx_max = 1 << jx; kx < kx_max; kx++) {
 
-                  double xmin = r *   kx   * std::exp2(-(double)jx+1) - r;
-                  double xmax = r * (kx+1) * std::exp2(-(double)jx+1) - r;
+                  const double xmin = r *   kx   * std::exp2(-(double)jx+1) - r;
+                  const double xmax = r * (kx+1) * std::exp2(-(double)jx+1) - r;
 
                   if(ymax < xmin)
                     d = (xmin-ymax < 2*r+ymin-xmax) ? (xmin-ymax) : (2*r+ymin-xmax);
@@ -1168,12 +1170,12 @@ namespace ScatteringKernelApproximation {
         static std::pair<Eigen::MatrixXd,Eigen::MatrixXd>
         computeLevelsMatrix(size_t targetLevel) {
 
-          Eigen::VectorXd ones
+          const Eigen::VectorXd ones
             = Eigen::VectorXd::Ones((wltOrder+1) << targetLevel);
           Eigen::VectorXd levelsVector = ones;
 
           levelsVector.segment(0,wltOrder+1)
-          = Eigen::VectorXd::Zero(wltOrder+1);
+            = Eigen::VectorXd::Zero(wltOrder+1);
 
           size_t pos0 = wltOrder+1;
           size_t pos1 = pos0;
@@ -1189,7 +1191,7 @@ namespace ScatteringKernelApproximation {
 
 
         void truncationInScale(
-          std::pair<Eigen::MatrixXd,Eigen::MatrixXd> levelsMatrix,
+          const std::pair<Eigen::MatrixXd,Eigen::MatrixXd>& levelsMatrix,
           size_t targetLevel)
         {
           Eigen::MatrixXd filter = (levelsMatrix.first - levelsMatrix.second).cwiseAbs();
@@ -1204,7 +1206,7 @@ namespace ScatteringKernelApproximation {
         }
 
         void truncationInSpace(
-          std::pair<Eigen::MatrixXd,Eigen::MatrixXd> levelsMatrix,
+          const std::pair<Eigen::MatrixXd,Eigen::MatrixXd>& levelsMatrix,
           size_t targetLevel)
         {
           Eigen::MatrixXd lhsBound
@@ -1213,7 +1215,7 @@ namespace ScatteringKernelApproximation {
           Eigen::MatrixXd rhsBound = (levelsMatrix.first - levelsMatrix.second).cwiseAbs();
 
           rhsBound = rhsBound.unaryExpr( [targetLevel] (double x)
-            { return std::pow(2.,targetLevel-x)/(1.+x*x); });
+            { return std::exp2(targetLevel-x)/(1.+x*x); });
 
           Eigen::MatrixXd filter = (lhsBound.array() <= rhsBound.array()).cast<double>();
 
