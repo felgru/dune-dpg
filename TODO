@@ -1,7 +1,7 @@
 known bugs:
 
-* src/kernel_svds.cc has to be adapted to changes in the scattering kernel
-  functions.
+* src/kernel_svds.cc does not work for non-wavelet kernels due to
+  changes in the scattering kernel functions.
 * src/dune_dpg_saddlepoint.cc currently does not compile.
   The concatenation of solution and test spaces in SaddlepointSystemAssembler
   cannot be done properly with the new shared_ptr-to-space-tuple interface.
