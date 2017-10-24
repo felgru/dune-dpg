@@ -3,7 +3,7 @@
 #endif
 #include <iostream>
 #include <fstream>
-#include <cstdlib> // for std::abort()
+#include <cstdlib> // for std::exit()
 #include <unistd.h>
 
 #include <array>

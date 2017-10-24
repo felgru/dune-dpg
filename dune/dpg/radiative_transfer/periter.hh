@@ -4,6 +4,7 @@
 #define DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
 
 #include <chrono>
+#include <cstdlib>
 #include <ctime>
 #include <iomanip>
 #include <set>
@@ -405,7 +406,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   if(plotSolutions == PlotSolutions::plotLastIteration) {
     std::cerr
         << "Plotting of only the last iteration is not implemented yet!\n";
-    std::abort();
+    std::exit(1);
   }
   static_assert(std::is_same<RHSApproximation, FeRHS>::value
       || std::is_same<RHSApproximation, ApproximateRHS>::value,
