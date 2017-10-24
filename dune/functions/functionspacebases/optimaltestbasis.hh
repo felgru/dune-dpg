@@ -181,10 +181,12 @@ public:
     return testspaceCoefficientMatrix_.gridView();
   }
 
-  void update (const GridView& gv)
-  {
-    testspaceCoefficientMatrix_.update(gv);
-  }
+  /**
+   * \note We don't update anything here, as we expect the spaces referred
+   * to in testspaceCoefficientMatrix_ to be updated seperately.
+   */
+  void update (const GridView&)
+  {}
 
   template<class TP>
   Node<TP> node(const TP& tp) const

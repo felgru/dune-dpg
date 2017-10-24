@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
-#include <cstdlib> // for std::abort()
+#include <cstdlib> // for std::exit()
 #include <functional>
 #include <iostream>
 #include <tuple>
@@ -55,7 +55,7 @@ int main(int argc, char** argv)
               << "Direction β will be automatically normalized.\n\n"
               << "When unspecified, c=0 and β=(cos(π/8), sin(π/8))."
               << std::endl;
-    std::abort();
+    std::exit(1);
   }
 
   ///////////////////////////////////
@@ -69,7 +69,7 @@ int main(int argc, char** argv)
 
   if(nelements==0) {
     std::cerr << "n has to be nonzero." << std::endl;
-    std::abort();
+    std::exit(1);
   }
 
   FieldVector<double,dim> lower = {0,0};
@@ -102,7 +102,7 @@ int main(int argc, char** argv)
     if(betaX==0. && betaY==0.) {
       std::cerr << "β=(βx, βy) has to be a nonzero vector."
                 << std::endl;
-      std::abort();
+      std::exit(1);
     }
     const double normBeta = std::sqrt(betaX*betaX+betaY*betaY);
     betaX = betaX/normBeta;

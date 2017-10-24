@@ -2,7 +2,7 @@
 # include "config.h"
 #endif
 #include <iostream>
-#include <cstdlib> // for std::abort()
+#include <cstdlib> // for std::exit()
 
 #include <array>
 #include <chrono>
@@ -58,7 +58,7 @@ int main(int argc, char** argv)
   if(argc != 2) {
     std::cerr << "Usage: " << argv[0] << " n" << std::endl << std::endl
               << "Solves the transport problem on an nxn grid." << std::endl;
-    std::abort();
+    std::exit(1);
   }
   ///////////////////////////////////
   //   Generate the grid

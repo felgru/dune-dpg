@@ -114,14 +114,56 @@ template <typename MatrixType>
 class CoefficientMatrices
 {
 public:
-  MatrixType& coefficientMatrix()
+  const MatrixType& coefficientMatrix() const
   {
     return coefficientMatrix_;
   }
 
-  MatrixType& systemMatrix()
+  const MatrixType& systemMatrix() const
   {
     return systemMatrix_;
+  }
+
+  template<typename Entity, typename BilinearForm, typename InnerProduct,
+           typename SolutionLocalViews, typename TestLocalViews>
+  void set(const Entity&        e,
+           BilinearForm&        bilinearForm,
+           InnerProduct&        innerProduct,
+           SolutionLocalViews&  localViewsSolution,
+           TestLocalViews&      localViewsTest)
+  {
+    using namespace Dune::detail;
+
+    bindLocalViews(localViewsTest, e);
+    bindLocalViews(localViewsSolution, e);
+
+    MatrixType stiffnessMatrix;
+
+    innerProduct.bind(localViewsTest);
+    innerProduct.getLocalMatrix(stiffnessMatrix);
+
+    MatrixType bilinearMatrix;
+
+    bilinearForm.bind(localViewsTest, localViewsSolution);
+    bilinearForm.getLocalMatrix(bilinearMatrix);
+
+    Cholesky<MatrixType> cholesky(stiffnessMatrix);
+    cholesky.apply(bilinearMatrix, coefficientMatrix_);
+
+    const unsigned int m = coefficientMatrix_.M();
+    systemMatrix_.setSize(m, m);
+
+    for (unsigned int i=0; i<m; i++)
+    {
+      for (unsigned int j=0; j<m; j++)
+      {
+        systemMatrix_[i][j]=0;
+        for (unsigned int k=0; k<coefficientMatrix_.N(); k++)
+        {
+          systemMatrix_[i][j]+=(bilinearMatrix[k][i]*coefficientMatrix_[k][j]);
+        }
+      }
+    }
   }
 
 private:
@@ -153,7 +195,6 @@ public:
                                        InnerProduct& innerProd) :
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
-    gridView_(std::get<0>(*bilinForm.getSolutionSpaces()).gridView()),
     localViewsSolution_(detail::getLocalViews(
                           *bilinearForm_.getSolutionSpaces())),
     localViewsTest_(detail::getLocalViews(*bilinearForm_.getTestSpaces()))
@@ -161,48 +202,21 @@ public:
 
   void bind(const typename GridView::template Codim<0>::Entity& e)
   {
-    using namespace Dune::detail;
-
-    bindLocalViews(localViewsTest_, e);
-    bindLocalViews(localViewsSolution_, e);
-
-    MatrixType stiffnessMatrix;
-
-    innerProduct_.bind(localViewsTest_);
-    innerProduct_.getLocalMatrix(stiffnessMatrix);
-
-    MatrixType bilinearMatrix;
-
-    bilinearForm_.bind(localViewsTest_, localViewsSolution_);
-    bilinearForm_.getLocalMatrix(bilinearMatrix);
-
-    Cholesky<MatrixType> cholesky(stiffnessMatrix);
-    cholesky.apply(bilinearMatrix, coefficientMatrix_);
-
-    unsigned int m = coefficientMatrix_.M();
-    systemMatrix_.setSize(m, m);
-
-    for (unsigned int i=0; i<m; i++)
-    {
-      for (unsigned int j=0; j<m; j++)
-      {
-        systemMatrix_[i][j]=0;
-        for (unsigned int k=0; k<coefficientMatrix_.N(); k++)
-        {
-          systemMatrix_[i][j]+=(bilinearMatrix[k][i]*coefficientMatrix_[k][j]);
-        }
-      }
-    }
+    coefMatrices_.set(e,
+                      bilinearForm_,
+                      innerProduct_,
+                      localViewsSolution_,
+                      localViewsTest_);
   }
 
-  const MatrixType& coefficientMatrix()
+  const MatrixType& coefficientMatrix() const
   {
-    return coefficientMatrix_;
+    return coefMatrices_.coefficientMatrix();
   }
 
-  const MatrixType& systemMatrix()
+  const MatrixType& systemMatrix() const
   {
-    return systemMatrix_;
+    return coefMatrices_.systemMatrix();
   }
 
   const BilinearForm& bilinearForm() const
@@ -217,22 +231,15 @@ public:
 
   const GridView& gridView() const
   {
-    return gridView_;
-  }
-
-  void update (const GridView& gv)
-  {
-    gridView_ = gv;
+    return std::get<0>(*bilinearForm_.getSolutionSpaces()).gridView();
   }
 
   private:
   BilinearForm&            bilinearForm_;
   InnerProduct&            innerProduct_;
-  GridView                 gridView_;
   SolutionLocalViews       localViewsSolution_;
   TestLocalViews           localViewsTest_;
-  MatrixType               coefficientMatrix_;     // G^{-1}B
-  MatrixType               systemMatrix_;          // B^TG^{-1}B
+  CoefficientMatrices<MatrixType> coefMatrices_;
 };
 
 
@@ -249,7 +256,7 @@ public:
     bufferMap.clear();
   }
 
-  std::pair<CoefMatrices&, bool> operator()(const GeometryComparable<Geometry> geometry)
+  std::pair<CoefMatrices&, bool> operator()(const GeometryComparable<Geometry>& geometry)
   {
     CoefMatrices nullmatrix;
     auto insert = bufferMap.insert(std::pair<const GeometryComparable<Geometry>,
@@ -293,7 +300,6 @@ class BufferedTestspaceCoefficientMatrix
   BufferedTestspaceCoefficientMatrix(BilinearForm& bilinForm, InnerProduct& innerProd, GeoBuffer& buffer) :
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
-    gridView_(std::get<0>(*bilinForm.getSolutionSpaces()).gridView()),
     localViewsSolution_(detail::getLocalViews(
                           *bilinearForm_.getSolutionSpaces())),
     localViewsTest_(detail::getLocalViews(*bilinearForm_.getTestSpaces())),
@@ -312,52 +318,25 @@ class BufferedTestspaceCoefficientMatrix
     GeometryComparable<Geometry> newGeometry;
     newGeometry.set(e.geometry());
     auto pair = geometryBuffer_(newGeometry);
-    coefficientMatrix_ = &pair.first.coefficientMatrix();
-    systemMatrix_ = &pair.first.systemMatrix();
+    coefMatrices_ = &pair.first;
     if (!pair.second)
     {
-      bindLocalViews(localViewsTest_, e);
-      bindLocalViews(localViewsSolution_, e);
-
-      MatrixType stiffnessMatrix;
-
-      innerProduct_.bind(localViewsTest_);
-      innerProduct_.getLocalMatrix(stiffnessMatrix);
-
-      MatrixType bilinearMatrix;
-
-      bilinearForm_.bind(localViewsTest_, localViewsSolution_);
-      bilinearForm_.getLocalMatrix(bilinearMatrix);
-
-      Cholesky<MatrixType> cholesky(stiffnessMatrix);
-      cholesky.apply(bilinearMatrix, (*coefficientMatrix_));
-
-      unsigned int m = coefficientMatrix_->M();
-      unsigned int n = coefficientMatrix_->N();
-      systemMatrix_->setSize(m, m);
-
-      for (unsigned int i=0; i<m; i++)
-      {
-        for (unsigned int j=0; j<m; j++)
-        {
-          (*systemMatrix_)[i][j]=0;
-          for (unsigned int k=0; k<n; k++)
-          {
-            (*systemMatrix_)[i][j]+=(bilinearMatrix[k][i]*(*coefficientMatrix_)[k][j]);
-          }
-        }
-      }
+      coefMatrices_->set(e,
+                         bilinearForm_,
+                         innerProduct_,
+                         localViewsSolution_,
+                         localViewsTest_);
     }
   }
 
-  const MatrixType& coefficientMatrix()
+  const MatrixType& coefficientMatrix() const
   {
-    return *coefficientMatrix_;
+    return coefMatrices_->coefficientMatrix();
   }
 
-  const MatrixType& systemMatrix()
+  const MatrixType& systemMatrix() const
   {
-    return *systemMatrix_;
+    return coefMatrices_->systemMatrix();
   }
 
   const BilinearForm& bilinearForm() const
@@ -372,22 +351,15 @@ class BufferedTestspaceCoefficientMatrix
 
   const GridView& gridView() const
   {
-    return gridView_;
-  }
-
-  void update (const GridView& gv)
-  {
-    gridView_ = gv;
+    return std::get<0>(*bilinearForm_.getSolutionSpaces()).gridView();
   }
 
   private:
   BilinearForm&         bilinearForm_;
   InnerProduct&         innerProduct_;
-  GridView              gridView_;
   SolutionLocalViews    localViewsSolution_;
   TestLocalViews        localViewsTest_;
-  MatrixType*           coefficientMatrix_;     // G^{-1}B
-  MatrixType*           systemMatrix_;          // B^TG^{-1}B
+  CoefficientMatrices<MatrixType>* coefMatrices_;
   GeoBuffer&            geometryBuffer_;
 };
 
