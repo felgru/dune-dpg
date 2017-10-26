@@ -5,7 +5,6 @@
 #include <cstdlib> // for std::exit()
 
 #include <array>
-#include <functional>
 #include <tuple>
 #include <vector>
 
@@ -43,7 +42,7 @@ using namespace Dune;
 
 //The analytic solution
 template <class Direction, class Domain = Direction>
-std::function<double(const Domain&)> uAnalytic(const Direction& s)
+auto uAnalytic(const Direction& s)
 {
   return [s] (const Domain& x) -> double
     { double crossproduct = s[0]*x[1]-s[1]*x[0];
@@ -57,7 +56,7 @@ std::function<double(const Domain&)> uAnalytic(const Direction& s)
 
 // The right hand-side
 template <class Direction, class Domain = Direction>
-std::function<double(const Domain&)> f(const Direction& s)
+auto f(const Direction& s)
 {
   return [] (const Domain& x) { return 1.;};
 }

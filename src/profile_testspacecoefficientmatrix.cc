@@ -6,7 +6,6 @@
 #include <array>
 #include <chrono>
 #include <cstdlib> // for std::exit()
-#include <functional>
 #include <iostream>
 #include <tuple>
 #include <vector>
@@ -39,7 +38,7 @@ using namespace Dune;
 
 // The right hand-side
 template <class Direction, class Domain = Direction>
-std::function<double(const Domain&)> f(const Direction& s)
+auto f(const Direction& s)
 {
   return [] (const Domain& x) { return 1.;};
 }

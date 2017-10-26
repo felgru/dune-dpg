@@ -3,7 +3,6 @@
 #ifndef DUNE_DPG_ASSEMBLE_HELPER_HH
 #define DUNE_DPG_ASSEMBLE_HELPER_HH
 
-#include <functional>
 #include <memory>
 #include <utility>
 #include <tuple>

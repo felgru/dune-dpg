@@ -3,7 +3,6 @@
 #ifndef DUNE_DPG_SYSTEM_ASSEMBLER_DPG_HH
 #define DUNE_DPG_SYSTEM_ASSEMBLER_DPG_HH
 
-#include <functional>
 #include <iterator>
 #include <list>
 #include <map>

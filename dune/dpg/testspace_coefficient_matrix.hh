@@ -4,7 +4,6 @@
 #define DUNE_TESTSPACECOEFFICIENTMATRIX_HH
 
 #include <tuple>
-#include <functional>
 #include <memory>
 #include <type_traits>
 #include <cassert>
