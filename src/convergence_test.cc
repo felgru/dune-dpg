@@ -1,8 +1,9 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#include <iostream>
+#include <cmath>
 #include <cstdlib> // for std::exit()
+#include <iostream>
 
 #include <array>
 #include <tuple>
@@ -48,9 +49,9 @@ auto uAnalytic(const Direction& s)
     { double crossproduct = s[0]*x[1]-s[1]*x[0];
       // return distance to inflow boundary along s
       if(crossproduct > 0)
-        return sqrt(s[1]*s[1]/(s[0]*s[0])+1)*x[0];
+        return std::sqrt(s[1]*s[1]/(s[0]*s[0])+1)*x[0];
       else
-        return sqrt(s[0]*s[0]/(s[1]*s[1])+1)*x[1];
+        return std::sqrt(s[0]*s[0]/(s[1]*s[1])+1)*x[1];
     };
 }
 
@@ -123,8 +124,8 @@ int main(int argc, char** argv)
       = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
   FieldVector<double, dim> beta
-             = {cos(boost::math::constants::pi<double>()/8),
-                sin(boost::math::constants::pi<double>()/8)};
+             = {std::cos(boost::math::constants::pi<double>()/8),
+                std::sin(boost::math::constants::pi<double>()/8)};
   double c = 0;
 
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
