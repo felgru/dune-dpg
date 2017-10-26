@@ -5,7 +5,6 @@
 #include <cstdlib> // for std::exit()
 
 #include <array>
-#include <functional>
 #include <tuple>
 #include <vector>
 
