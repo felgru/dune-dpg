@@ -87,11 +87,6 @@ namespace Dune
     }
 #endif
 
-    QkFace2DLocalFiniteElement* clone () const
-    {
-      return new QkFace2DLocalFiniteElement(*this);
-    }
-
   private:
     LocalBasis basis;
     LocalCoefficients coefficients;

@@ -89,11 +89,6 @@ namespace Dune
     }
 #endif
 
-    QkTraceLocalFiniteElement* clone () const
-    {
-      return new QkTraceLocalFiniteElement(*this);
-    }
-
   private:
     LocalBasis basis;
     LocalCoefficients coefficients;

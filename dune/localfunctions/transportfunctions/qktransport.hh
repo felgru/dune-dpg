@@ -93,12 +93,6 @@ public:
     }
 #endif
 
-
-    QkTransportLocalFiniteElement* clone () const
-    {
-        return new QkTransportLocalFiniteElement(*this);
-    }
-
 private:
     QkTransportLocalBasis<D,R,dim,k> basis;
     QkTransportLocalCoefficients<dim,k> coefficients;

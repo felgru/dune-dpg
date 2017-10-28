@@ -110,11 +110,6 @@ namespace Dune
     }
 #endif
 
-    PkFace2DLocalFiniteElement* clone () const
-    {
-      return new PkFace2DLocalFiniteElement(*this);
-    }
-
   private:
     PkFace2DLocalBasis<D,R,k> basis;
     PkFace2DLocalCoefficients<k> coefficients;

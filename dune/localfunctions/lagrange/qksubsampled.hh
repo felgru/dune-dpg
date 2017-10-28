@@ -94,11 +94,6 @@ namespace Dune
     }
 #endif
 
-    QkSubsampledLocalFiniteElement* clone () const
-    {
-      return new QkSubsampledLocalFiniteElement(*this);
-    }
-
   private:
     LocalBasis basis;
     LocalCoefficients coefficients;
