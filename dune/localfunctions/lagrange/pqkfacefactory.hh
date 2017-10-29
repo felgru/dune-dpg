@@ -24,7 +24,7 @@ namespace Dune
   template<class D, class R, int d, int k>
   struct DimSpecificPQkFaceLocalFiniteElementFactory
   {
-    typedef typename FixedOrderLocalBasisTraits<typename P0LocalFiniteElement<D,R,d>::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename P0LocalFiniteElement<D,R,d>::Traits::LocalBasisType::Traits T;
 
     //! create finite element for given GeometryType
     static LocalFiniteElementVirtualInterface<T>* create(const GeometryType& gt)
@@ -40,8 +40,8 @@ namespace Dune
   template<class D, class R, int k>
   struct DimSpecificPQkFaceLocalFiniteElementFactory<D,R,3,k>
   {
-    typedef typename FixedOrderLocalBasisTraits<typename
-      P0LocalFiniteElement<D,R,3>::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename P0LocalFiniteElement<D,R,3>::Traits::
+                                    LocalBasisType::Traits T;
 
     //! create finite element for given GeometryType
     static LocalFiniteElementVirtualInterface<T>* create(const GeometryType& gt)
@@ -58,8 +58,8 @@ namespace Dune
   template<class D, class R, int k>
   struct DimSpecificPQkFaceLocalFiniteElementFactory<D,R,2,k>
   {
-    typedef typename FixedOrderLocalBasisTraits<typename
-      P0LocalFiniteElement<D,R,2>::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename P0LocalFiniteElement<D,R,2>::Traits::
+                                    LocalBasisType::Traits T;
     typedef PkFace2DLocalFiniteElement<D,R,k> Pk;
     typedef QkFace2DLocalFiniteElement<D,R,k> Qk;
 
@@ -80,7 +80,8 @@ namespace Dune
   template<class D, class R, int dim, int k>
   struct PQkFaceLocalFiniteElementFactory
   {
-    typedef typename FixedOrderLocalBasisTraits<typename P0LocalFiniteElement<D,R,dim>::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename P0LocalFiniteElement<D,R,dim>::Traits::
+                                    LocalBasisType::Traits T;
     typedef LocalFiniteElementVirtualInterface<T> FiniteElementType;
     typedef P0LocalFiniteElement<D,R,dim> P0;
 
@@ -113,7 +114,8 @@ namespace Dune
   class PQkFaceLocalFiniteElementCache
   {
   protected:
-    typedef typename FixedOrderLocalBasisTraits<typename P0LocalFiniteElement<D,R,dim>::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename P0LocalFiniteElement<D,R,dim>::Traits::
+                                    LocalBasisType::Traits T;
     typedef LocalFiniteElementVirtualInterface<T> FE;
     typedef typename std::map<GeometryType,FE*> FEMap;
 

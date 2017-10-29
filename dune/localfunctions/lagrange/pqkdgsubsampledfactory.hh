@@ -30,9 +30,8 @@ namespace Dune
   template<class D, class R, int s, int k>
   struct DimSpecificPQkDGSubsampledLocalFiniteElementFactory<D,R,2,s,k>
   {
-    typedef typename FixedOrderLocalBasisTraits<
-        typename PkDGSubsampled2DLocalFiniteElement<D,R,s,0>
-        ::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename PkDGSubsampled2DLocalFiniteElement<D,R,s,0>
+        ::Traits::LocalBasisType::Traits T;
     typedef PkDGSubsampled2DLocalFiniteElement<D,R,s,k> Pk;
     // typedef QkDGSubsampled2DLocalFiniteElement<D,R,s,k> Qk;
 
@@ -53,9 +52,8 @@ namespace Dune
   template<class D, class R, int dim, int s, int k>
   struct PQkDGSubsampledLocalFiniteElementFactory
   {
-    typedef typename FixedOrderLocalBasisTraits<
-        typename PkDGSubsampled2DLocalFiniteElement<D,R,s,0>
-        ::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename PkDGSubsampled2DLocalFiniteElement<D,R,s,0>
+        ::Traits::LocalBasisType::Traits T;
     typedef LocalFiniteElementVirtualInterface<T> FiniteElementType;
 
     //! create finite element for given GeometryType
@@ -83,9 +81,8 @@ namespace Dune
   class PQkDGSubsampledLocalFiniteElementCache
   {
   protected:
-    typedef typename FixedOrderLocalBasisTraits<
-        typename PkDGSubsampled2DLocalFiniteElement<D,R,s,0>
-        ::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename PkDGSubsampled2DLocalFiniteElement<D,R,s,0>
+        ::Traits::LocalBasisType::Traits T;
     typedef LocalFiniteElementVirtualInterface<T> FE;
     typedef typename std::map<GeometryType,FE*> FEMap;
 

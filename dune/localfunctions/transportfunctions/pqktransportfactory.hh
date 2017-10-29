@@ -38,7 +38,8 @@ namespace Dune
 template<class D, class R, int d, int k>
 struct DimSpecificPQkTransportLocalFiniteElementFactory
 {
-    typedef typename FixedOrderLocalBasisTraits<typename P0LocalFiniteElement<D,R,d>::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename
+      P0LocalFiniteElement<D,R,d>::Traits::LocalBasisType::Traits T;
 
     //! create finite element for given GeometryType
     static LocalFiniteElementVirtualInterface<T>* create(const GeometryType& gt)
@@ -54,7 +55,8 @@ struct DimSpecificPQkTransportLocalFiniteElementFactory
 template<class D, class R, int k>
 struct DimSpecificPQkTransportLocalFiniteElementFactory<D,R,3,k>
 {
-    typedef typename FixedOrderLocalBasisTraits<typename P0LocalFiniteElement<D,R,3>::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename
+      P0LocalFiniteElement<D,R,3>::Traits::LocalBasisType::Traits T;
     typedef PrismP1LocalFiniteElement<D,R> PrismP1;
     typedef PrismP2LocalFiniteElement<D,R> PrismP2;
     typedef PyramidP1LocalFiniteElement<D,R> PyramidP1;
@@ -82,7 +84,8 @@ struct DimSpecificPQkTransportLocalFiniteElementFactory<D,R,3,k>
 template<class D, class R, int dim, int k>
 struct PQkTransportLocalFiniteElementFactory
 {
-    typedef typename FixedOrderLocalBasisTraits<typename P0LocalFiniteElement<D,R,dim>::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename
+      P0LocalFiniteElement<D,R,dim>::Traits::LocalBasisType::Traits T;
     typedef LocalFiniteElementVirtualInterface<T> FiniteElementType;
     typedef P0LocalFiniteElement<D,R,dim> P0;
     typedef PkLocalFiniteElement<D,R,dim,k> Pk;
@@ -123,7 +126,8 @@ template<class D, class R, int dim, int k>
 class PQkTransportLocalFiniteElementCache
 {
 protected:
-    typedef typename FixedOrderLocalBasisTraits<typename P0LocalFiniteElement<D,R,dim>::Traits::LocalBasisType::Traits,0>::Traits T;
+    typedef typename
+      P0LocalFiniteElement<D,R,dim>::Traits::LocalBasisType::Traits T;
     typedef LocalFiniteElementVirtualInterface<T> FE;
     typedef typename std::map<GeometryType,FE*> FEMap;
 
