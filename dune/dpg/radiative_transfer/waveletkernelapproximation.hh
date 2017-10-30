@@ -821,9 +821,9 @@ namespace ScatteringKernelApproximation {
           return level;
         }
 
-        Eigen::VectorXd
+        static Eigen::VectorXd
         PairToXd(const std::pair<Eigen::VectorXd,
-                std::vector<Eigen::VectorXd>>& wPair) const {
+                                 std::vector<Eigen::VectorXd>>& wPair) {
 
           const Eigen::VectorXd w0 = wPair.first;
           const std::vector<Eigen::VectorXd> w1 = wPair.second;
@@ -1069,9 +1069,9 @@ namespace ScatteringKernelApproximation {
           return level;
         }
 
-        Eigen::VectorXd
+        static Eigen::VectorXd
         PairToXd(const std::pair<Eigen::VectorXd,
-                std::vector<Eigen::VectorXd>>& wPair) const {
+                                 std::vector<Eigen::VectorXd>>& wPair) {
 
           const Eigen::VectorXd w0 = wPair.first;
           const std::vector<Eigen::VectorXd> w1 = wPair.second;
