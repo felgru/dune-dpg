@@ -669,50 +669,6 @@ namespace ScatteringKernelApproximation {
 
         }
 
-        Eigen::VectorXd
-        PairToXd(const std::pair<Eigen::VectorXd,
-                std::vector<Eigen::VectorXd>>& wPair) const {
-
-          const Eigen::VectorXd w0 = wPair.first;
-          const std::vector<Eigen::VectorXd> w1 = wPair.second;
-
-          const size_t L = w0.size();
-          const size_t J = w1.size();
-
-          Eigen::VectorXd w(L << J);
-          w.segment(0, L) = w0;
-
-          size_t pos0 = L;
-          size_t pos1 = L;
-          for(size_t j=0; j < J; j++) {
-            pos0 = pos1;
-            pos1 = pos0+w1[j].size();
-            w.segment(pos0, w1[j].size()) = w1[j];
-          }
-          return w;
-        }
-
-        std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
-        XdToPair(const Eigen::VectorXd& v) const {
-          if(level==0) {
-            return std::make_pair(v, std::vector<Eigen::VectorXd>());
-          }
-          else {
-            Eigen::VectorXd sf = v.segment(0,wltOrder+1);
-            std::vector<Eigen::VectorXd> wlt(level);
-
-            size_t pos0 = wltOrder+1;
-            size_t pos1 = pos0;
-
-            for(size_t j=0; j<level; j++) {
-              pos0 = pos1;
-              pos1 = pos0 + ((wltOrder+1)<<j);
-              wlt[j] = v.segment(pos0, (wltOrder+1)<<j);
-            }
-            return std::make_pair(sf,wlt);
-          }
-        }
-
         // Given a vector of u(s_i), compute (Ku)(s_i) with SVD
         void applyToVector(Eigen::VectorXd& u) const {
 
@@ -865,6 +821,50 @@ namespace ScatteringKernelApproximation {
           return level;
         }
 
+        Eigen::VectorXd
+        PairToXd(const std::pair<Eigen::VectorXd,
+                std::vector<Eigen::VectorXd>>& wPair) const {
+
+          const Eigen::VectorXd w0 = wPair.first;
+          const std::vector<Eigen::VectorXd> w1 = wPair.second;
+
+          const size_t L = w0.size();
+          const size_t J = w1.size();
+
+          Eigen::VectorXd w(L << J);
+          w.segment(0, L) = w0;
+
+          size_t pos0 = L;
+          size_t pos1 = L;
+          for(size_t j=0; j < J; j++) {
+            pos0 = pos1;
+            pos1 = pos0+w1[j].size();
+            w.segment(pos0, w1[j].size()) = w1[j];
+          }
+          return w;
+        }
+
+        std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
+        XdToPair(const Eigen::VectorXd& v) const {
+          if(level==0) {
+            return std::make_pair(v, std::vector<Eigen::VectorXd>());
+          }
+          else {
+            Eigen::VectorXd sf = v.segment(0,wltOrder+1);
+            std::vector<Eigen::VectorXd> wlt(level);
+
+            size_t pos0 = wltOrder+1;
+            size_t pos1 = pos0;
+
+            for(size_t j=0; j<level; j++) {
+              pos0 = pos1;
+              pos1 = pos0 + ((wltOrder+1)<<j);
+              wlt[j] = v.segment(pos0, (wltOrder+1)<<j);
+            }
+            return std::make_pair(sf,wlt);
+          }
+        }
+
         size_t maxLevel;
         size_t num_s;
         Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner> kernelSVD;
@@ -920,50 +920,6 @@ namespace ScatteringKernelApproximation {
                 << kernelMatrix.rows() << " x " << kernelMatrix.cols()
                 << " . It has " << kernelMatrix.size() << " elements."
                 << std::endl << std::endl;
-        }
-
-        Eigen::VectorXd
-        PairToXd(const std::pair<Eigen::VectorXd,
-                std::vector<Eigen::VectorXd>>& wPair) const {
-
-          const Eigen::VectorXd w0 = wPair.first;
-          const std::vector<Eigen::VectorXd> w1 = wPair.second;
-
-          const size_t L = w0.size();
-          const size_t J = w1.size();
-
-          Eigen::VectorXd w(L << J);
-          w.segment(0, L) = w0;
-
-          size_t pos0 = L;
-          size_t pos1 = L;
-          for(size_t j=0; j < J; j++) {
-            pos0 = pos1;
-            pos1 = pos0 + w1[j].size();
-            w.segment(pos0, w1[j].size()) = w1[j];
-          }
-          return w;
-        }
-
-        std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
-        XdToPair(Eigen::VectorXd& v) const {
-          if(level==0) {
-            return std::make_pair(v,std::vector<Eigen::VectorXd>());
-          }
-          else {
-            Eigen::VectorXd sf = v.segment(0,wltOrder+1);
-            std::vector<Eigen::VectorXd> wlt(level);
-
-            size_t pos0 = wltOrder+1;
-            size_t pos1 = pos0;
-
-            for(size_t j=0; j<level; j++) {
-              pos0 = pos1;
-              pos1 = pos0 + ((wltOrder+1)<<j);
-              wlt[j] = v.segment(pos0, (wltOrder+1)<<j);
-            }
-            return std::make_pair(sf,wlt);
-          }
         }
 
         void applyToVector(Eigen::VectorXd& u) const {
@@ -1111,6 +1067,50 @@ namespace ScatteringKernelApproximation {
           }
 
           return level;
+        }
+
+        Eigen::VectorXd
+        PairToXd(const std::pair<Eigen::VectorXd,
+                std::vector<Eigen::VectorXd>>& wPair) const {
+
+          const Eigen::VectorXd w0 = wPair.first;
+          const std::vector<Eigen::VectorXd> w1 = wPair.second;
+
+          const size_t L = w0.size();
+          const size_t J = w1.size();
+
+          Eigen::VectorXd w(L << J);
+          w.segment(0, L) = w0;
+
+          size_t pos0 = L;
+          size_t pos1 = L;
+          for(size_t j=0; j < J; j++) {
+            pos0 = pos1;
+            pos1 = pos0 + w1[j].size();
+            w.segment(pos0, w1[j].size()) = w1[j];
+          }
+          return w;
+        }
+
+        std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
+        XdToPair(Eigen::VectorXd& v) const {
+          if(level==0) {
+            return std::make_pair(v,std::vector<Eigen::VectorXd>());
+          }
+          else {
+            Eigen::VectorXd sf = v.segment(0,wltOrder+1);
+            std::vector<Eigen::VectorXd> wlt(level);
+
+            size_t pos0 = wltOrder+1;
+            size_t pos1 = pos0;
+
+            for(size_t j=0; j<level; j++) {
+              pos0 = pos1;
+              pos1 = pos0 + ((wltOrder+1)<<j);
+              wlt[j] = v.segment(pos0, (wltOrder+1)<<j);
+            }
+            return std::make_pair(sf,wlt);
+          }
         }
 
         Eigen::MatrixXd computeArcDistanceMatrix (
