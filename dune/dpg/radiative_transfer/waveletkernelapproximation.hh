@@ -746,17 +746,14 @@ namespace ScatteringKernelApproximation {
         std::vector<Direction> setAccuracy(double accuracy) {
           using namespace Eigen;
           VectorXd singularValues = kernelSVD.singularValues();
-          size_t i = singularValues.size() - 1;
-          double err = 0,
-                rank_err = singularValues(i) * singularValues(i);
-          while (err + rank_err < (accuracy * accuracy / 4.) && i > 0) {
-            err += rank_err;
-            i -= 1;
+          Index i = 0;
+          double rank_err = singularValues(i) * singularValues(i);
+          while (rank_err > (accuracy * accuracy / 4.)
+                 && i < singularValues.size()) {
+            i += 1;
             rank_err = singularValues(i) * singularValues(i);
           }
-          rank = i+1;
-          // TODO: If accuracy is low enough to allow rank = 0,
-          //       this gives rank = 1.
+          rank = i;
 
           level = setLevel(accuracy/2.,maxLevel);
 
@@ -1535,18 +1532,14 @@ namespace ScatteringKernelApproximation {
         std::vector<Direction> setAccuracy(double accuracy) {
           using namespace Eigen;
           VectorXd singularValues = kernelSVD.singularValues();
-          size_t i = singularValues.size() - 1;
-          double err = 0,
-                rank_err = singularValues(i) * singularValues(i);
-          const double accuracy_squared = accuracy * accuracy / 4.;
-          while (err + rank_err < accuracy_squared && i > 0) {
-            err += rank_err;
-            i -= 1;
+          Index i = 0;
+          double rank_err = singularValues(i) * singularValues(i);
+          while (rank_err > (accuracy * accuracy / 4.)
+                 && i < singularValues.size()) {
+            i += 1;
             rank_err = singularValues(i) * singularValues(i);
           }
-          rank = i+1;
-          // TODO: If accuracy is low enough to allow rank = 0,
-          //       this gives rank = 1.
+          rank = i;
 
           // set level according to given accuracy
           level = setLevel(accuracy, maxLevel);
