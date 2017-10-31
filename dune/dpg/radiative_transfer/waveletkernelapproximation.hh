@@ -671,35 +671,17 @@ namespace ScatteringKernelApproximation {
 
         // Given a vector of u(s_i), compute (Ku)(s_i) with SVD
         void applyToVector(Eigen::VectorXd& u) const {
-
-          using namespace boost::math::constants;
-          // Express u in Legendre basis on each segment of [-pi,pi]
-          const size_t uLevel = std::ilogb(u.size()/(wltOrder+1));
-          Eigen::VectorXd uLegendre
-            = lagrange_to_legendre_VJ(u, uLevel, wltOrder);
-          // Express u in wlt basis using DWT
-          const size_t quadOrder = 2*nQuadAngle-1;
-          const auto uWltPair = DWT(uLegendre, wltOrder+1, uLevel, quadOrder);
-          Eigen::VectorXd uWlt = PairToXd(uWltPair);
           // Compute Ku with SVD up to level given by rank.
-          // The result is expressed in the wlt basis
-          Eigen::VectorXd KuWlt
-            = kernelSVD.matrixU().topLeftCorner(rows, rank)
-            * kernelSVD.singularValues().head(rank).asDiagonal()
-            * kernelSVD.matrixV().topLeftCorner(uWlt.size(), rank).adjoint()
-            * uWlt;
-          // Express Ku in Legendre basis on each segment of [-pi,pi]
-          // via an inverse wlt transform
-          std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
-            KuWltPair = XdToPair(KuWlt);
-          Eigen::VectorXd KuLegendre
-            = IDWT(KuWltPair, wltOrder+1, level, quadOrder);
-          // Express Ku in Lagrange basis basis on each segment of [-pi,pi],
-          // i.e., in a vector of (Ku)(s_i)
-          u = legendre_to_lagrange_VJ(KuLegendre, level, wltOrder);
+          // The result is expressed in scaling functions
+          u = (Uscaling
+              * kernelSVD.singularValues().head(rank).asDiagonal()
+              * Vscaling.adjoint()
+              * u).eval();
         }
 
-        std::vector<Direction> setAccuracy(double accuracy) {
+        std::vector<Direction> setAccuracyAndInputSize(double accuracy,
+                                                       size_t inputSize)
+        {
           using namespace Eigen;
           VectorXd singularValues = kernelSVD.singularValues();
           Index i = 0;
@@ -711,11 +693,45 @@ namespace ScatteringKernelApproximation {
           }
           rank = i;
 
+          size_t inLevel = level;
           level = requiredLevel(accuracy/2.,maxLevel);
 
           std::vector<Direction> sVector((wltOrder+1) << level);
           compute_sVector(sVector);
           rows = sVector.size();
+          cols = inputSize;
+
+          // set up restriction of SVD transformed to scaling functions
+
+          Uscaling.resize(rows, rank);
+          for(size_t i = 0; i < rank; i++) {
+            // Express column in Legendre basis on each segment of [-pi,pi]
+            // via an inverse wlt transform
+            const size_t quadOrder = 2*nQuadAngle-1;
+            const std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
+              colWltPair = XdToPair(kernelSVD.matrixU().block(0,i,rows,1));
+            Eigen::VectorXd colLegendre
+              = IDWT(colWltPair, wltOrder+1, level, quadOrder);
+            // Express column in Lagrange basis basis on each segment of
+            // [-pi,pi]
+            Uscaling.col(i)
+              = legendre_to_lagrange_VJ(colLegendre, level, wltOrder);
+          }
+          {
+            Eigen::MatrixXd inputTransformation(cols, cols);
+            for(size_t i = 0; i < cols; i++) {
+              Eigen::VectorXd iLegendre = lagrange_to_legendre_VJ(
+                  Eigen::VectorXd::Unit(cols,i), inLevel, wltOrder);
+              // Express iLegendre in wlt basis using DWT
+              const size_t quadOrder = 2*nQuadAngle-1;
+              const auto iWltPair
+                  = DWT(iLegendre, wltOrder+1, inLevel, quadOrder);
+              inputTransformation.col(i) = PairToXd(iWltPair);
+            }
+            Vscaling = inputTransformation.adjoint()
+                     * kernelSVD.matrixV().topLeftCorner(cols, rank);
+          }
+
           return sVector;
         }
 
@@ -844,19 +860,20 @@ namespace ScatteringKernelApproximation {
           return w;
         }
 
-        std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
-        XdToPair(const Eigen::VectorXd& v) const {
-          if(level==0) {
+        static std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
+        XdToPair(const Eigen::VectorXd& v) {
+          if(v.size() == wltOrder + 1) {
             return std::make_pair(v, std::vector<Eigen::VectorXd>());
           }
           else {
             Eigen::VectorXd sf = v.segment(0,wltOrder+1);
-            std::vector<Eigen::VectorXd> wlt(level);
+            const size_t vLevel = std::ilogb(v.size()/(wltOrder+1));
+            std::vector<Eigen::VectorXd> wlt(vLevel);
 
             size_t pos0 = wltOrder+1;
             size_t pos1 = pos0;
 
-            for(size_t j=0; j<level; j++) {
+            for(size_t j=0; j<vLevel; j++) {
               pos0 = pos1;
               pos1 = pos0 + ((wltOrder+1)<<j);
               wlt[j] = v.segment(pos0, (wltOrder+1)<<j);
@@ -867,9 +884,13 @@ namespace ScatteringKernelApproximation {
 
         size_t maxLevel;
         size_t num_s;
-        Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner> kernelSVD;
-        size_t level;
+        Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner>
+            kernelSVD;
+        Eigen::MatrixXd Uscaling;
+        Eigen::MatrixXd Vscaling;
+        size_t level; //!< level of scaling functions in output vector
         size_t rows;
+        size_t cols;
         size_t rank;
         size_t nQuadAngle;
       };
