@@ -34,7 +34,8 @@ class GeometryComparable
       // the other result in different coefficients of the optimal testspace
       // if the corners are ordered in a different way because the
       // basis functions on the physical domain are different
-      /*unsigned int j=0;
+#if 0
+      unsigned int j=0;
       while (j<i and (cornerVector[j][0]<geometry.corner(i)[0]
                       or (cornerVector[j][0]==geometry.corner(i)[0]
                           and cornerVector[j][1]<=geometry.corner(i)[1])))
@@ -45,7 +46,8 @@ class GeometryComparable
       {
         cornerVector[k]=cornerVector[k-1];
       }
-      cornerVector[j]=geometry.corner(i);*/
+      cornerVector[j]=geometry.corner(i);
+#endif
     }
   }
 
