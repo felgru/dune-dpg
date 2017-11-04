@@ -33,6 +33,10 @@ add_executable("plot_extension" plot_extension.cc)
 add_dune_ug_flags(plot_extension)
 target_link_dune_default_libraries("plot_extension")
 
+add_executable("trial-to-test-condition" trial-to-test-condition.cc)
+add_dune_ug_flags(trial-to-test-condition)
+target_link_dune_default_libraries("trial-to-test-condition")
+
 #foreach(level 0 1 2)
 #  set(degree 3)
 #  set(profile_executable
