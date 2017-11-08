@@ -16,8 +16,13 @@
 
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include "assemble_helper.hh"
-#include "cholesky.hh"
 #include "quadrature.hh"
+
+#if DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY
+#  include <dune/dpg/leastsquares.hh>
+#else
+#  include <dune/dpg/cholesky.hh>
+#endif
 
 
 namespace Dune {
@@ -655,8 +660,14 @@ namespace Dune {
 
     // Solve for the Riesz lift and then compute the residual
     BlockVector<FieldVector<double,1> > tmpVector(rhsElement);
-    Cholesky<Matrix<FieldMatrix<double,1,1>>> cholesky(innerProductMatrix);
-    cholesky.apply(tmpVector);
+#if DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY
+    solveLeastSquares(innerProductMatrix, tmpVector);
+#else
+    {
+      Cholesky<Matrix<FieldMatrix<double,1,1>>> cholesky(innerProductMatrix);
+      cholesky.apply(tmpVector);
+    }
+#endif
 
     // compute the scalar product of the following two vectors
     return tmpVector * rhsElement;
