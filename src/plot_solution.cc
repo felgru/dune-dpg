@@ -1,12 +1,12 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#include <iostream>
+#include <cmath>
 #include <cstdlib> // for std::exit()
+#include <iostream>
 
 #include <array>
 #include <chrono>
-#include <functional>
 #include <memory>
 #include <tuple>
 #include <vector>
@@ -33,6 +33,7 @@
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
+#include <dune/dpg/errorplotter.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/functionplotter.hh>
@@ -46,7 +47,7 @@ using namespace Dune;
 
 // The right hand-side
 template <class Direction, class Domain = Direction>
-std::function<double(const Domain&)> f(const Direction& s)
+auto f(const Direction& s)
 {
   return [] (const Domain& x) { return 1.;};
 }
@@ -130,8 +131,8 @@ int main(int argc, char** argv)
         = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
     FieldVector<double, dim> beta
-               = {cos(boost::math::constants::pi<double>()/8),
-                  sin(boost::math::constants::pi<double>()/8)};
+               = {std::cos(boost::math::constants::pi<double>()/8),
+                  std::sin(boost::math::constants::pi<double>()/8)};
     double c = 0;
 
     auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
@@ -152,29 +153,6 @@ int main(int argc, char** argv)
                                     DomainOfIntegration::face>(1., beta)));
      auto innerProduct_aposteriori
         = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
-
-    auto aPosterioriInnerProduct = make_InnerProduct(solutionSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,              // (u,u)
-                                    DomainOfIntegration::interior>(1),
-              make_IntegralTerm<1,1,IntegrationType::valueValue,              // (w,w)
-                                    DomainOfIntegration::interior>(1),
-              make_IntegralTerm<0,1,IntegrationType::valueValue,              // -2(u,w)
-                                    DomainOfIntegration::interior>(-2),
-              make_IntegralTerm<1,1,IntegrationType::gradGrad,              // (beta grad w,beta grad w)
-                                    DomainOfIntegration::interior>(1, beta),
-              make_IntegralTerm<1,1,IntegrationType::valueValue,              // (cw,cw)
-                                    DomainOfIntegration::interior>(c*c),
-              make_IntegralTerm<1,1,IntegrationType::gradValue,              // 2(beta grad w, cw)
-                                    DomainOfIntegration::interior>(2*c, beta)
-          ));
-    auto aPosterioriLinearForm = make_LinearForm(solutionSpaces,
-          make_tuple(
-              make_LinearIntegralTerm<1,LinearIntegrationType::gradFunction,// -2(beta grad w,f)
-                                    DomainOfIntegration::interior>([beta](const FieldVector<double, dim>& x){return (-2)*f(beta)(x);}, beta),
-              make_LinearIntegralTerm<1,LinearIntegrationType::valueFunction,    // -2(cw,f)
-                                    DomainOfIntegration::interior>([beta, c](const FieldVector<double, dim>& x){return (-2)*c*f(beta)(x);})
-          ));
 
     //  System assembler without geometry buffer
     //auto systemAssembler
@@ -282,18 +260,15 @@ int main(int argc, char** argv)
 
     std::chrono::steady_clock::time_point starterror = std::chrono::steady_clock::now();
     const double ratio = .2;
-    err = ErrorTools::DoerflerMarking(*grid, ratio,
-                              ErrorTools::residual(
+    auto errorEstimates = ErrorTools::residual(
                                      bilinearForm_aposteriori,
                                      innerProduct_aposteriori,
-                                     aPosterioriInnerProduct,
-                                     aPosterioriLinearForm, f(beta),
-                                     x, rhs, 1));   // the last parameter is in [0,1] and
-                                                    // determines which error indicator
-                                                    // is used
-                                                    // 1 = residuum
-                                                    // 0 = |u-lifting(u^)|_L_2^2
-                                                    //     + conforming residuum^2
+                                     x, rhs);
+    ErrorPlotter errPlotter("transport_error_"
+                            + std::to_string(nelements)
+                            + "_" + std::to_string(i));
+    errPlotter.plot("errors", errorEstimates, gridView);
+    err = ErrorTools::DoerflerMarking(*grid, ratio, std::move(errorEstimates));
 
     std::cout << "A posteriori error in iteration " << i << ": "
               << err << std::endl;

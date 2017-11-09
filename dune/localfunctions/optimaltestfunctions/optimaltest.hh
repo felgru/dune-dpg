@@ -85,11 +85,6 @@ namespace Dune
       return gt;
     }
 
-    OptimalTestLocalFiniteElement* clone () const
-    {
-      return new OptimalTestLocalFiniteElement(*this);
-    }
-
   private:
     LocalBasis basis;
     LocalCoefficients coefficients;

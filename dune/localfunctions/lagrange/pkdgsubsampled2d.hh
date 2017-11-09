@@ -116,11 +116,6 @@ namespace Dune
     }
 #endif
 
-    PkDGSubsampled2DLocalFiniteElement* clone () const
-    {
-      return new PkDGSubsampled2DLocalFiniteElement(*this);
-    }
-
   private:
     LocalBasis basis;
     LocalCoefficients coefficients;

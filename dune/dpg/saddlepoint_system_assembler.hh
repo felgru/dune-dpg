@@ -3,7 +3,6 @@
 #ifndef DUNE_DPG_SADDLEPOINT_SYSTEM_ASSEMBLER_HH
 #define DUNE_DPG_SADDLEPOINT_SYSTEM_ASSEMBLER_HH
 
-#include <functional>
 #include <list>
 #include <map>
 #include <memory>

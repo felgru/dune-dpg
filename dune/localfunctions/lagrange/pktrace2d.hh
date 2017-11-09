@@ -110,11 +110,6 @@ namespace Dune
     }
 #endif
 
-    PkTrace2DLocalFiniteElement* clone () const
-    {
-      return new PkTrace2DLocalFiniteElement(*this);
-    }
-
   private:
     PkTrace2DLocalBasis<D,R,k> basis;
     PkTrace2DLocalCoefficients<k> coefficients;

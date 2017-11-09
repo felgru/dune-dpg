@@ -1,11 +1,11 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#include <iostream>
+#include <cmath>
 #include <cstdlib> // for std::exit()
+#include <iostream>
 
 #include <array>
-#include <functional>
 #include <tuple>
 #include <vector>
 
@@ -43,21 +43,21 @@ using namespace Dune;
 
 //The analytic solution
 template <class Direction, class Domain = Direction>
-std::function<double(const Domain&)> uAnalytic(const Direction& s)
+auto uAnalytic(const Direction& s)
 {
   return [s] (const Domain& x) -> double
     { double crossproduct = s[0]*x[1]-s[1]*x[0];
       // return distance to inflow boundary along s
       if(crossproduct > 0)
-        return sqrt(s[1]*s[1]/(s[0]*s[0])+1)*x[0];
+        return std::sqrt(s[1]*s[1]/(s[0]*s[0])+1)*x[0];
       else
-        return sqrt(s[0]*s[0]/(s[1]*s[1])+1)*x[1];
+        return std::sqrt(s[0]*s[0]/(s[1]*s[1])+1)*x[1];
     };
 }
 
 // The right hand-side
 template <class Direction, class Domain = Direction>
-std::function<double(const Domain&)> f(const Direction& s)
+auto f(const Direction& s)
 {
   return [] (const Domain& x) { return 1.;};
 }
@@ -124,8 +124,8 @@ int main(int argc, char** argv)
       = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
   FieldVector<double, dim> beta
-             = {cos(boost::math::constants::pi<double>()/8),
-                sin(boost::math::constants::pi<double>()/8)};
+             = {std::cos(boost::math::constants::pi<double>()/8),
+                std::sin(boost::math::constants::pi<double>()/8)};
   double c = 0;
 
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,

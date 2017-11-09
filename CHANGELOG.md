@@ -8,6 +8,7 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 ### Added
 * New `ErrorTools::l2norm` function to compute the L_2 norm of a
   finite element function.
+* New `ErrorPlotter` class to plot error estimators.
 * New GlobalBasis `HangingNodeP2NodalBasis` that implements P2 elements
   with hanging nodes. Since we only handle hanging nodes of order one,
   you have to make sure that neighboring cells in the grid do not vary
@@ -40,6 +41,8 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 ### Changed
 * We now require version 2.5 of the DUNE core modules and a fully C++14
   compatible compiler, e.g. GCC-6.
+  dune-dpg is fully forward-compatible to the upcoming 2.6 release of
+  the DUNE core modules.
 * `SystemAssembler`, `RhsAssembler`, `BilinearForm`, `LinearForm` and
   `InnerProduct` now try to share spaces. This allows the user to update
   all spaces at once after refining the grid. To make this sharing of
@@ -71,10 +74,15 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * `LinearFunctionalTerm` now also works with a refined solution space.
 * We now check in a static_assert that `defineCharacteristicFaces` is
   not called with refined spaces.
+* Using DUNE 2.6 will use the more efficient `indices` interface which
+  was recently added to dune-functions. This should give faster access
+  to global indices, especially if you are using the `OptimalTestBasis`
+  class.
 * README, INSTALL: Mention dune-uggrid instead of ug.
 * Remove some noise from the API documentation and add some more
   documentation for previously undocumented things.
 * `ReferenceRefinementCache` now gets shared between refined spaces.
+* INSTALL.md: Improve documentation of non-standard search paths.
 
 ### Fixed
 * `BoundaryTools::getBoundaryValue` was mixing up local and global functions,
@@ -101,6 +109,13 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 ### Removed
 * Remove the `make_DPGLinearForm` and `make_DPG_LinearForm` functions,
   use `make_LinearForm` instead.
+* Remove the `update` method from `BufferedTestspaceCoefficientMatrix`
+  and `UnbufferedTestspaceCoefficientMatrix`.
+* Remove the `clone` method from all local bases. This method was never
+  used and has been removed from all the local bases in
+  dune-localfunctions 2.6.
+* Make the auxiliary class `computeIndex` a private member.
+  This should have never been a part of the public dune-dpg API.
 * Remove some unused auxiliary types.
 
 ## 0.2.1 - 2016-11-07

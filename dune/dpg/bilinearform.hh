@@ -5,7 +5,6 @@
 
 #include <tuple>
 #include <vector>
-#include <functional>
 #include <memory>
 #include <type_traits>
 

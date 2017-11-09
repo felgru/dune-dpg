@@ -3,9 +3,7 @@
 #ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_OPTIMALTESTBASIS_HH
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_OPTIMALTESTBASIS_HH
 
-#include <array>
 #include <tuple>
-#include <functional>
 #include <memory>
 #include <type_traits>
 
@@ -25,54 +23,13 @@
 #include <dune/dpg/testspace_coefficient_matrix.hh>
 #include <dune/dpg/type_traits.hh>
 
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#include <boost/hana.hpp>
+#endif
+
 
 namespace Dune {
 namespace Functions {
-
-
-
-
-//////////////////////////////////////////////////////////////////////////////
-// Helper begin
-//////////////////////////////////////////////////////////////////////////////
-
-
-struct computeIndex
-{
-    computeIndex(size_t& space_index, size_t& index_result, bool& index_found)
-    : space_index(space_index),
-      index_result(index_result),
-      index_found(index_found)
-    {}
-
-    template<class LIS>
-    void operator()(LIS& localIndexSet) const
-    {
-      if (!index_found)
-      {
-        if (localIndexSet.size() > index_result)
-        {
-          index_found  = true;
-          index_result = (localIndexSet.index(index_result))[0];
-        }
-        else
-        {
-          space_index  += 1;
-          index_result -= localIndexSet.size();
-        }
-      }
-    }
-
-private:
-    size_t& space_index;
-    size_t& index_result;
-    bool&   index_found;
-};
-
-
-//////////////////////////////////////////////////////////////////////////////
-// Helper end
-//////////////////////////////////////////////////////////////////////////////
 
 /* some forward declarations for refined bases */
 
@@ -373,6 +330,52 @@ class OptimalTestBasisNodeIndexSet
   using GV = typename TestspaceCoefficientMatrix::GridView;
   enum {dim = GV::dimension};
 
+#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+  template<typename It, typename LIS>
+  static It computeIndices(It it, const LIS& localIndexSet,
+                           size_t globalOffset)
+  {
+    for (size_type i = 0, end = localIndexSet.size(); i < end; ++it, ++i)
+    {
+      *it = {{ globalOffset + (localIndexSet.index(i))[0] }};
+    }
+    return it;
+  }
+
+#else
+  struct computeIndex
+  {
+    computeIndex(size_t& space_index, size_t& index_result, bool& index_found)
+    : space_index(space_index),
+      index_result(index_result),
+      index_found(index_found)
+    {}
+
+    template<class LIS>
+    void operator()(LIS& localIndexSet) const
+    {
+      if (!index_found)
+      {
+        if (localIndexSet.size() > index_result)
+        {
+          index_found  = true;
+          index_result = (localIndexSet.index(index_result))[0];
+        }
+        else
+        {
+          space_index  += 1;
+          index_result -= localIndexSet.size();
+        }
+      }
+    }
+
+  private:
+    size_t& space_index;
+    size_t& index_result;
+    bool&   index_found;
+  };
+#endif
+
 public:
 
   using size_type = std::size_t;
@@ -438,18 +441,16 @@ public:
   It indices(It it) const
   {
     assert(node_ != nullptr);
-    for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
-    {
-      size_t space_index = 0;
-      size_t index_result = i;
-      bool index_found=false;
-
-      Hybrid::forEach(solutionLocalIndexSets_,
-                      computeIndex(space_index, index_result, index_found));
-
-      *it = {{ nodeFactory_->globalOffsets[space_index] + index_result }};
-    }
-    return it;
+    using namespace boost::hana;
+    return fold_left(
+              make_range(int_c<0>,
+                int_c<std::tuple_size<SolutionLocalIndexSets>::value>),
+              it,
+              [&](It it, auto i) {
+                return computeIndices(it,
+                  std::get<i>(solutionLocalIndexSets_),
+                  nodeFactory_->globalOffsets[i]);
+              });
   }
 #else
   MultiIndex index(size_type i) const

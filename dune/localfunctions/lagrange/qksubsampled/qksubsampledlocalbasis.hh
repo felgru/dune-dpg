@@ -77,7 +77,7 @@ namespace Dune
     }
 
   public:
-    typedef LocalBasisTraits<D,d,Dune::FieldVector<D,d>,R,1,Dune::FieldVector<R,1>,Dune::FieldMatrix<R,1,d>, 1> Traits;
+    typedef LocalBasisTraits<D,d,Dune::FieldVector<D,d>,R,1,Dune::FieldVector<R,1>,Dune::FieldMatrix<R,1,d> > Traits;
 
     //! \brief number of shape functions
     constexpr unsigned int size () const

@@ -5,8 +5,8 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstdlib> // for std::exit()
-#include <functional>
 #include <iostream>
 #include <tuple>
 #include <vector>
@@ -39,7 +39,7 @@ using namespace Dune;
 
 // The right hand-side
 template <class Direction, class Domain = Direction>
-std::function<double(const Domain&)> f(const Direction& s)
+auto f(const Direction& s)
 {
   return [] (const Domain& x) { return 1.;};
 }
@@ -89,8 +89,8 @@ int main(int argc, char** argv)
 
   double c = 0;
   FieldVector<double, dim> beta
-               = {cos(boost::math::constants::pi<double>()/8),
-                  sin(boost::math::constants::pi<double>()/8)};
+               = {std::cos(boost::math::constants::pi<double>()/8),
+                  std::sin(boost::math::constants::pi<double>()/8)};
 
   if(argc==5) {
   // coefficient c

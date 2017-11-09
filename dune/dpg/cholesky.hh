@@ -13,8 +13,8 @@ template<typename MatrixType>
 class Cholesky
 {
 public:
-  Cholesky<MatrixType>(MatrixType& matrix):
-  matrix(matrix)
+  Cholesky<MatrixType>(MatrixType& matrix)
+    : matrix(matrix)
   {
     unsigned int n = matrix.N();
     if(!(n==matrix.M()))
@@ -48,7 +48,7 @@ public:
     }
   }
 
-  void apply(MatrixType& rhsMatrix)
+  void apply(MatrixType& rhsMatrix) const
   {
     const unsigned int m = rhsMatrix.M();
     const unsigned int n = matrix.N();
@@ -82,7 +82,7 @@ public:
     }
   }
 
-  void apply(MatrixType& rhsMatrix, MatrixType& solutionMatrix)
+  void apply(const MatrixType& rhsMatrix, MatrixType& solutionMatrix) const
   {
     const unsigned int m = rhsMatrix.M();
     const unsigned int n = matrix.N();
@@ -119,7 +119,7 @@ public:
   }
 
 
-  void apply(BlockVector<FieldVector<double,1> >& rhsVector)
+  void apply(BlockVector<FieldVector<double,1> >& rhsVector) const
   {
     const unsigned int n = rhsVector.size();
     if(!(n==matrix.N()))
