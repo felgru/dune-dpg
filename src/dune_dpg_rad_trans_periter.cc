@@ -257,12 +257,17 @@ int main(int argc, char** argv)
   const auto f
     = [](const Domain& x, const Direction& s)
       {
-        int n=3;
-        double v1 = 1.;
-        double v2 = 3.;
-        return
-         (((int)std::floor(n*x[0])+(int)std::floor(n*x[1]))%2 ==0) ?
-         v1 : v2;
+        const int n=7;
+        const int i = static_cast<int>(n*x[0]);
+        const int j = static_cast<int>(n*x[1]);
+        const double v1 = 1.;
+        const double v2 = 3.;
+        if(i<=0 or i>=6 or j<=0 or j>=6 or
+            (i+j) % 2 == 0 or (i==3 and j==5)) {
+          return v1;
+        } else {
+          return v2;
+        }
       };
   const auto g = [](const Domain& x) { return 0.; };
   const auto homogeneous_inflow_boundary =
