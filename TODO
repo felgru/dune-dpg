@@ -17,3 +17,9 @@ known bugs:
   ChooseQuadrature without specifying the transport direction β.
 * Adjust quadrature order for non-constant function (rhs term) in
   getvolumeterm_impl.hh and in linearintegralterm.hh
+
+potential performance improvements:
+
+* Using the Eigen::Map wrapper around Dune's matrix and vector classes
+  might spare us some temporary copies in the wavelet code.
+  We need however to check that Map works with vectors of FieldVectors.
