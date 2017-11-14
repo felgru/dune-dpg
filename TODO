@@ -15,3 +15,9 @@ known bugs:
   ChooseQuadrature without specifying the transport direction β.
 * Adjust quadrature order for non-constant function (rhs term) in
   getvolumeterm_impl.hh and in linearintegralterm.hh
+
+proposed features:
+
+* Implement a multi-grid preconditioner so that we can replace the
+  UMFPACK solver with a CG solver.
+  See e.g. Roberts and Chan 2017
