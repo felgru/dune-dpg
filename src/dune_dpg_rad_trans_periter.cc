@@ -232,22 +232,11 @@ int main(int argc, char** argv)
   grid->setClosureType(GridType::NONE);
 #endif
 
-  auto f_constant
+#if PERITER_PEAKY_BV
+  const auto f
     = [](const Domain& x, const Direction& s)
       { return 1.; };
-#if 0
-  auto f_checkerboard
-    = [](const Domain& x, const Direction& s)
-      {
-        int n=3;
-        double v1 = 1.;
-        double v2 = 3.;
-        return
-         (((int)std::floor(n*x[0])+(int)std::floor(n*x[1]))%2 ==0) ?
-         v1 : v2;
-      };
-#endif
-  auto g = [](const Domain& x)
+  const auto g = [](const Domain& x)
       {
         if(x[0] < .1) {
           const double xProj = x[1];
@@ -262,8 +251,25 @@ int main(int argc, char** argv)
           return 0.;
         }
       };
-  auto homogeneous_inflow_boundary =
+  const auto homogeneous_inflow_boundary =
     [](const Direction& s) { return !(s[0] > 0.); };
+#elif PERITER_CHECKERBOARD
+  const auto f
+    = [](const Domain& x, const Direction& s)
+      {
+        int n=3;
+        double v1 = 1.;
+        double v2 = 3.;
+        return
+         (((int)std::floor(n*x[0])+(int)std::floor(n*x[1]))%2 ==0) ?
+         v1 : v2;
+      };
+  const auto g = [](const Domain& x) { return 0.; };
+  const auto homogeneous_inflow_boundary =
+    [](const Direction& s) { return true; };
+#else
+#  error "Not specified which problem to solve."
+#endif
   const double sigma = 5.;
   const double domainDiameter = std::sqrt(2.);
   // TODO: Adapt CT when sigma varies
@@ -278,7 +284,7 @@ int main(int argc, char** argv)
 
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
           FeRHS>()
-      .solve(*grid, f_constant, g, homogeneous_inflow_boundary, sigma,
+      .solve(*grid, f, g, homogeneous_inflow_boundary, sigma,
              HenyeyGreensteinScattering(gamma),
              rho, CT, targetAccuracy, N, plotSolutions);
 
