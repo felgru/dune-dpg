@@ -278,8 +278,8 @@ int main(int argc, char** argv)
         const int n=7;
         const int i = static_cast<int>(n*x[0]);
         const int j = static_cast<int>(n*x[1]);
-        const double v1 = 1.;
-        const double v2 = 3.;
+        const double v1 = 0.;
+        const double v2 = 1.;
         if(i<=0 or i>=6 or j<=0 or j>=6 or
             (i+j) % 2 == 0 or (i==3 and j==5)) {
           return v1;
