@@ -73,6 +73,8 @@ if(dune-subgrid_FOUND)
   add_dune_suitesparse_flags(dune_dpg_rad_trans_periter)
   add_dune_ug_flags(dune_dpg_rad_trans_periter)
   target_link_dune_default_libraries("dune_dpg_rad_trans_periter")
+  target_compile_definitions(dune_dpg_rad_trans_periter
+                             PUBLIC PERITER_PEAKY_BV=1)
 
   add_executable("dune_dpg_rad_trans_periter_uniform"
                  dune_dpg_rad_trans_periter.cc)
@@ -80,7 +82,8 @@ if(dune-subgrid_FOUND)
   add_dune_ug_flags(dune_dpg_rad_trans_periter_uniform)
   target_link_dune_default_libraries("dune_dpg_rad_trans_periter_uniform")
   target_compile_definitions(dune_dpg_rad_trans_periter_uniform
-                             PUBLIC PERITER_USE_UNIFORM_GRID=1)
+                             PUBLIC PERITER_USE_UNIFORM_GRID=1;
+                                    PERITER_PEAKY_BV=1)
 endif()
 
 add_executable("kernel_svds" kernel_svds.cc)
