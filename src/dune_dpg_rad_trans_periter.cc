@@ -166,6 +166,19 @@ void printHelp(const char* name) {
   std::exit(0);
 }
 
+void checkSizeGrid(unsigned int sizeGrid, unsigned int multipleOf) {
+  if(sizeGrid == 0) {
+    std::cerr << "Grid size has to be non-zero\n";
+    std::exit(1);
+  }
+  if(sizeGrid % multipleOf != 0) {
+    std::cerr << "Grid size has to be a multiple of " << multipleOf
+              << " to resolve rhs and boundary data, but is "
+              << sizeGrid << '\n';
+    std::exit(1);
+  }
+}
+
 int main(int argc, char** argv)
 {
   try{
@@ -204,6 +217,11 @@ int main(int argc, char** argv)
   const double gamma = atof(argv[optind+1]);
   const int N = atoi(argv[optind+2]);
   const unsigned int sizeGrid = atoi(argv[optind+3]);
+#if PERITER_PEAKY_BV
+  checkSizeGrid(sizeGrid, 8);
+#elif PERITER_CHECKERBOARD
+  checkSizeGrid(sizeGrid, 7);
+#endif
 
   ///////////////////////////////////
   //   Generate the grid
