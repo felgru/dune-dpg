@@ -215,7 +215,8 @@ int main(int argc, char** argv)
   const unsigned int wltOrder = 2;
   const double targetAccuracy = atof(argv[optind]);
   const double gamma = atof(argv[optind+1]);
-  const int N = atoi(argv[optind+2]);
+  const unsigned int N = atoi(argv[optind+2]);
+  const unsigned int maxNumberOfInnerIterations = 64;
   const unsigned int sizeGrid = atoi(argv[optind+3]);
 #if PERITER_PEAKY_BV
   checkSizeGrid(sizeGrid, 8);
@@ -309,7 +310,8 @@ int main(int argc, char** argv)
           FeRHS>()
       .solve(*grid, f, g, homogeneous_inflow_boundary, sigma,
              HenyeyGreensteinScattering(gamma),
-             rho, CT, targetAccuracy, N, plotSolutions);
+             rho, CT, targetAccuracy, N, maxNumberOfInnerIterations,
+             plotSolutions);
 
   return 0;
   }

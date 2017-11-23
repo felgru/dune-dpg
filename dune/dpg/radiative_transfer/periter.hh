@@ -145,6 +145,7 @@ class Periter {
              double CT,
              double targetAccuracy,
              unsigned int maxNumberOfIterations,
+             unsigned int maxNumberOfInnerIterations,
              PlotSolutions plotSolutions = PlotSolutions::doNotPlot);
 
   private:
@@ -402,6 +403,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            double CT,
            double targetAccuracy,
            unsigned int maxNumberOfIterations,
+           unsigned int maxNumberOfInnerIterations,
            PlotSolutions plotSolutions) {
   if(plotSolutions == PlotSolutions::plotLastIteration) {
     std::cerr
@@ -746,7 +748,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       detail::updateSpaces(*testSpaces[i], grids[i]->leafGridView());
       detail::updateSpaces(*testSpacesEnriched[i], grids[i]->leafGridView());
 
-      const unsigned int maxNumberOfInnerIterations = 64;
       double aposterioriSubinterval;
       unsigned int nRefinement = 0;
       // TODO: refine grid for all all directions in same interval at once.

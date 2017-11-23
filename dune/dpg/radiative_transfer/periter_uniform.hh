@@ -91,6 +91,7 @@ class Periter {
              double CT,
              double targetAccuracy,
              unsigned int maxNumberOfIterations,
+             unsigned int maxNumberOfInnerIterations,
              PlotSolutions plotSolutions = PlotSolutions::doNotPlot);
 
   private:
@@ -315,6 +316,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            double CT,
            double targetAccuracy,
            unsigned int maxNumberOfIterations,
+           unsigned int maxNumberOfInnerIterations,
            PlotSolutions plotSolutions) {
   if(plotSolutions == PlotSolutions::plotLastIteration) {
     std::cerr
@@ -547,7 +549,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << "-----------------------------------\n";
     double aposterioriTransportGlobal = 0.;
 
-    const unsigned int maxNumberOfInnerIterations = 16;
     for(unsigned int nRefinement = 0; ; )
         // At the end of the loop, we will break if
         // aposterioriTransportGlobal < kapp3*eta
