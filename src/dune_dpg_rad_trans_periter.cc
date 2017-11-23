@@ -161,13 +161,15 @@ double gFunction(const Domain& x,
 
 void printHelp(const char* name) {
   std::cerr << "Usage: " << name
-            << " [-p] [-n <n>]"
+            << " [-p] [-n <n>] [-o <dir>]"
             << " <target accuracy>"
             << " <gamma>"
             << " <# of iterations>"
             << " <size of grid>\n"
             << " -p: plot solutions\n"
-            << " -n <n>: set maximal number of inner iterations to <n>\n";
+            << " -n <n>: set maximal number of inner iterations to <n>\n"
+            << " -o <dir>: set output directory to <dir>, default is "
+               "\"../results/\"\n";
   std::exit(0);
 }
 
@@ -200,15 +202,17 @@ int main(int argc, char** argv)
   ///////////////////////////////////
 
   PlotSolutions plotSolutions = PlotSolutions::doNotPlot;
+  std::string basedir = "../results/";
   unsigned int maxNumberOfInnerIterations = 64;
 
   {
     int opt;
-    while ((opt = getopt(argc,argv,"n:ph")) != EOF)
+    while ((opt = getopt(argc,argv,"n:o:ph")) != EOF)
       switch(opt)
       {
         case 'p': plotSolutions = PlotSolutions::plotOuterIterations; break;
         case 'n': maxNumberOfInnerIterations = atoi(optarg); break;
+        case 'o': basedir = optarg; break;
         default:
         case '?':
         case 'h':
@@ -236,7 +240,7 @@ int main(int argc, char** argv)
         = std::chrono::system_clock::now();
     const std::time_t cnow = std::chrono::system_clock::to_time_t(now);
     std::stringstream folderstream;
-    folderstream << "../results/"
+    folderstream << basedir
                  << std::put_time(std::localtime(&cnow), "%F-time%H%M%S");
     foldername = folderstream.str();
   }
