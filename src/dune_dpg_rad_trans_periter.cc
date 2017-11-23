@@ -157,12 +157,13 @@ double gFunction(const Domain& x,
 
 void printHelp(const char* name) {
   std::cerr << "Usage: " << name
-            << " [-p] "
+            << " [-p] [-n <n>]"
             << " <target accuracy>"
             << " <gamma>"
             << " <# of iterations>"
             << " <size of grid>\n"
-            << " -p: plot solutions" << std::endl;
+            << " -p: plot solutions\n"
+            << " -n <n>: set maximal number of inner iterations to <n>\n";
   std::exit(0);
 }
 
@@ -195,13 +196,15 @@ int main(int argc, char** argv)
   ///////////////////////////////////
 
   PlotSolutions plotSolutions = PlotSolutions::doNotPlot;
+  unsigned int maxNumberOfInnerIterations = 64;
 
   {
     int opt;
-    while ((opt = getopt(argc,argv,"ph")) != EOF)
+    while ((opt = getopt(argc,argv,"n:ph")) != EOF)
       switch(opt)
       {
         case 'p': plotSolutions = PlotSolutions::plotOuterIterations; break;
+        case 'n': maxNumberOfInnerIterations = atoi(optarg); break;
         default:
         case '?':
         case 'h':
@@ -216,7 +219,6 @@ int main(int argc, char** argv)
   const double targetAccuracy = atof(argv[optind]);
   const double gamma = atof(argv[optind+1]);
   const unsigned int N = atoi(argv[optind+2]);
-  const unsigned int maxNumberOfInnerIterations = 64;
   const unsigned int sizeGrid = atoi(argv[optind+3]);
 #if PERITER_PEAKY_BV
   checkSizeGrid(sizeGrid, 8);
