@@ -1,9 +1,13 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+#include <chrono>
+#include <cstdlib> // for std::exit() and std::system()
+#include <ctime>
 #include <iostream>
 #include <fstream>
-#include <cstdlib> // for std::exit()
+#include <sstream>
+#include <string>
 #include <unistd.h>
 
 #include <array>
@@ -226,6 +230,18 @@ int main(int argc, char** argv)
   checkSizeGrid(sizeGrid, 7);
 #endif
 
+  std::string foldername;
+  {
+    const std::chrono::system_clock::time_point now
+        = std::chrono::system_clock::now();
+    const std::time_t cnow = std::chrono::system_clock::to_time_t(now);
+    std::stringstream folderstream;
+    folderstream << "../results/"
+                 << std::put_time(std::localtime(&cnow), "%F-time%H%M%S");
+    foldername = folderstream.str();
+  }
+  std::system(("mkdir -p "+foldername).data());
+
   ///////////////////////////////////
   //   Generate the grid
   ///////////////////////////////////
@@ -313,7 +329,7 @@ int main(int argc, char** argv)
       .solve(*grid, f, g, homogeneous_inflow_boundary, sigma,
              HenyeyGreensteinScattering(gamma),
              rho, CT, targetAccuracy, N, maxNumberOfInnerIterations,
-             plotSolutions);
+             foldername, plotSolutions);
 
   return 0;
   }

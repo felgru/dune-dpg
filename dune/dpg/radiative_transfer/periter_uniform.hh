@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <iomanip>
-#include <sstream>
+#include <string>
 #include <vector>
 
 #include <dune/istl/matrix.hh>
@@ -92,6 +92,7 @@ class Periter {
              double targetAccuracy,
              unsigned int maxNumberOfIterations,
              unsigned int maxNumberOfInnerIterations,
+             const std::string& outputfolder,
              PlotSolutions plotSolutions = PlotSolutions::doNotPlot);
 
   private:
@@ -317,6 +318,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            double targetAccuracy,
            unsigned int maxNumberOfIterations,
            unsigned int maxNumberOfInnerIterations,
+           const std::string& outputfolder,
            PlotSolutions plotSolutions) {
   if(plotSolutions == PlotSolutions::plotLastIteration) {
     std::cerr
@@ -340,19 +342,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // To print information in dune-dpg/results/
   /////////////////////////////////////////////
 
-  std::string foldername;
-  {
-    const std::chrono::system_clock::time_point now
-        = std::chrono::system_clock::now();
-    const std::time_t cnow = std::chrono::system_clock::to_time_t(now);
-    std::stringstream folderstream;
-    folderstream << "../results/"
-                 << std::put_time(std::localtime(&cnow), "%F-time%H%M%S")
-                 << "-uniform";
-    foldername = folderstream.str();
-  }
-  system(("mkdir -p  "+foldername).data());
-  std::ofstream ofs(foldername+"/output");
+  std::ofstream ofs(outputfolder+"/output");
 
   // TODO: estimate norm of rhs f
   const double fnorm = 1;
@@ -654,14 +644,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       {
         std::cout << "Direction " << i << '\n';
 
-        std::string name = foldername
+        std::string name = outputfolder
                         + std::string("/u_rad_trans_n")
                         + std::to_string(n)
                         + std::string("_s")
                         + std::to_string(i);
         FunctionPlotter uPlotter(name);
         uPlotter.plot("u", x[i], feBasisInterior, 0, 0);
-        name = foldername
+        name = outputfolder
                         + std::string("/theta_rad_trans_n")
                         + std::to_string(n)
                         + std::string("_s")
