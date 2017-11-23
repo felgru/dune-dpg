@@ -1,9 +1,13 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+#include <chrono>
+#include <cstdlib> // for std::exit() and std::system()
+#include <ctime>
 #include <iostream>
 #include <fstream>
-#include <cstdlib> // for std::exit()
+#include <sstream>
+#include <string>
 #include <unistd.h>
 
 #include <array>
@@ -157,12 +161,15 @@ double gFunction(const Domain& x,
 
 void printHelp(const char* name) {
   std::cerr << "Usage: " << name
-            << " [-p] "
+            << " [-p] [-n <n>] [-o <dir>]"
             << " <target accuracy>"
             << " <gamma>"
             << " <# of iterations>"
             << " <size of grid>\n"
-            << " -p: plot solutions" << std::endl;
+            << " -p: plot solutions\n"
+            << " -n <n>: set maximal number of inner iterations to <n>\n"
+            << " -o <dir>: set output directory to <dir>, default is "
+               "\"../results/\"\n";
   std::exit(0);
 }
 
@@ -195,13 +202,17 @@ int main(int argc, char** argv)
   ///////////////////////////////////
 
   PlotSolutions plotSolutions = PlotSolutions::doNotPlot;
+  std::string basedir = "../results/";
+  unsigned int maxNumberOfInnerIterations = 64;
 
   {
     int opt;
-    while ((opt = getopt(argc,argv,"ph")) != EOF)
+    while ((opt = getopt(argc,argv,"n:o:ph")) != EOF)
       switch(opt)
       {
         case 'p': plotSolutions = PlotSolutions::plotOuterIterations; break;
+        case 'n': maxNumberOfInnerIterations = atoi(optarg); break;
+        case 'o': basedir = optarg; break;
         default:
         case '?':
         case 'h':
@@ -215,13 +226,25 @@ int main(int argc, char** argv)
   const unsigned int wltOrder = 2;
   const double targetAccuracy = atof(argv[optind]);
   const double gamma = atof(argv[optind+1]);
-  const int N = atoi(argv[optind+2]);
+  const unsigned int N = atoi(argv[optind+2]);
   const unsigned int sizeGrid = atoi(argv[optind+3]);
 #if PERITER_PEAKY_BV
   checkSizeGrid(sizeGrid, 8);
 #elif PERITER_CHECKERBOARD
   checkSizeGrid(sizeGrid, 7);
 #endif
+
+  std::string foldername;
+  {
+    const std::chrono::system_clock::time_point now
+        = std::chrono::system_clock::now();
+    const std::time_t cnow = std::chrono::system_clock::to_time_t(now);
+    std::stringstream folderstream;
+    folderstream << basedir
+                 << std::put_time(std::localtime(&cnow), "%F-time%H%M%S");
+    foldername = folderstream.str();
+  }
+  std::system(("mkdir -p "+foldername).data());
 
   ///////////////////////////////////
   //   Generate the grid
@@ -309,7 +332,8 @@ int main(int argc, char** argv)
           FeRHS>()
       .solve(*grid, f, g, homogeneous_inflow_boundary, sigma,
              HenyeyGreensteinScattering(gamma),
-             rho, CT, targetAccuracy, N, plotSolutions);
+             rho, CT, targetAccuracy, N, maxNumberOfInnerIterations,
+             foldername, plotSolutions);
 
   return 0;
   }
