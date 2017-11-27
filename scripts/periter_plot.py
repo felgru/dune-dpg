@@ -235,6 +235,7 @@ def plot_convergence(data,
                        loc=legendlocation, shadow=True,
                        bbox_to_anchor=(0.5, 1.9),
                        ncol=1, fancybox=True, fontsize=12)
+    ax1.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
     if xlim != None:
         plt.xlim(xlim)
     if ylim != None:
@@ -301,6 +302,7 @@ def plot_directions(data,
         # lines2, labels2 = ax2.get_legend_handles_labels()
         plt.legend(lines1, labels1,
                    loc=legendlocation, shadow=True)
+    ax1.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
     if xlim != None:
         plt.xlim(xlim)
     if ylim != None:
@@ -419,6 +421,7 @@ def plot_kernel_acc_VS_time(data,
         lines2, labels2 = ax2.get_legend_handles_labels()
         plt.legend(lines1 + lines2, labels1 + labels2,
                    loc=legendlocation, shadow=True)
+    ax1.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
     if xlim != None:
         plt.xlim(xlim)
     if ylim != None:
@@ -490,6 +493,7 @@ def plot_kernel_matrix_info(data,
         lines2, labels2 = ax2.get_legend_handles_labels()
         plt.legend(lines1 + lines2, labels1 + labels2,
                    loc=legendlocation, shadow=True)
+    ax1.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
     if xlim != None:
         plt.xlim(xlim)
     if ylim != None:
