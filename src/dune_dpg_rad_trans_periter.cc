@@ -245,7 +245,7 @@ int main(int argc, char** argv)
     foldername = folderstream.str();
   }
   std::system(("mkdir -p "+foldername).data());
-  std::cout << "output path: foldername\n" << std::endl;
+  std::cout << "output path: " << foldername << "\n\n";
 
   ///////////////////////////////////
   //   Generate the grid
