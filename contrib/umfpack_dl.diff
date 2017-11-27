@@ -1,0 +1,117 @@
+Description: increase UMFPack memory limitations
+ Currently, UMFPack throws an out of memory exception when the memory
+ consumption becomes larger than 2GB.
+ .
+ This can be fixed by using the umfpack_dl_* functions which use long
+ integers for indices instead of the umfpack_di_* functions.
+Author: Kilian Weishaupt
+Origin: other, https://gitlab.dune-project.org/core/dune-istl/issues/33
+Bug: https://gitlab.dune-project.org/core/dune-istl/issues/33
+diff --git a/dune/istl/colcompmatrix.hh b/dune/istl/colcompmatrix.hh
+index 36949a33..30597351 100644
+--- a/dune/istl/colcompmatrix.hh
++++ b/dune/istl/colcompmatrix.hh
+@@ -214,12 +214,12 @@ namespace Dune
+       return values;
+     }
+
+-    int* getRowIndex() const
++    const long int* getRowIndex() const
+     {
+       return rowindex;
+     }
+
+-    int* getColStart() const
++    const long int* getColStart() const
+     {
+       return colstart;
+     }
+@@ -242,8 +242,8 @@ namespace Dune
+   public:
+     int N_, M_, Nnz_;
+     B* values;
+-    int* rowindex;
+-    int* colstart;
++    long int* rowindex;
++    long int* colstart;
+   };
+
+   template<class T, class A, int n, int m>
+@@ -354,8 +354,8 @@ namespace Dune
+     mat->Nnz_*=n*m;
+     // initialize data
+     mat->values=new T[mat->Nnz_];
+-    mat->rowindex=new int[mat->Nnz_];
+-    mat->colstart=new int[cols+1];
++    mat->rowindex=new long int[mat->Nnz_];
++    mat->colstart=new long int[cols+1];
+   }
+
+   template<class T, class A, int n, int m>
+diff --git a/dune/istl/umfpack.hh b/dune/istl/umfpack.hh
+index e6e3c8d8..59612b43 100644
+--- a/dune/istl/umfpack.hh
++++ b/dune/istl/umfpack.hh
+@@ -65,52 +65,52 @@ namespace Dune {
+     template<typename... A>
+     static void defaults(A... args)
+     {
+-      umfpack_di_defaults(args...);
++      umfpack_dl_defaults(args...);
+     }
+     template<typename... A>
+     static void free_numeric(A... args)
+     {
+-      umfpack_di_free_numeric(args...);
++      umfpack_dl_free_numeric(args...);
+     }
+     template<typename... A>
+     static void free_symbolic(A... args)
+     {
+-      umfpack_di_free_symbolic(args...);
++      umfpack_dl_free_symbolic(args...);
+     }
+     template<typename... A>
+     static int load_numeric(A... args)
+     {
+-      return umfpack_di_load_numeric(args...);
++      return umfpack_dl_load_numeric(args...);
+     }
+     template<typename... A>
+     static void numeric(A... args)
+     {
+-      umfpack_di_numeric(args...);
++      umfpack_dl_numeric(args...);
+     }
+     template<typename... A>
+     static void report_info(A... args)
+     {
+-      umfpack_di_report_info(args...);
++      umfpack_dl_report_info(args...);
+     }
+     template<typename... A>
+     static void report_status(A... args)
+     {
+-      umfpack_di_report_status(args...);
++      umfpack_dl_report_status(args...);
+     }
+     template<typename... A>
+     static int save_numeric(A... args)
+     {
+-      return umfpack_di_save_numeric(args...);
++      return umfpack_dl_save_numeric(args...);
+     }
+     template<typename... A>
+     static void solve(A... args)
+     {
+-      umfpack_di_solve(args...);
++      umfpack_dl_solve(args...);
+     }
+     template<typename... A>
+     static void symbolic(A... args)
+     {
+-      umfpack_di_symbolic(args...);
++      umfpack_dl_symbolic(args...);
+     }
+   };
+
