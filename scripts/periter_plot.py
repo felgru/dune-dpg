@@ -125,12 +125,13 @@ def plot_convergence(data,
          yscale='log',
          legendlocation='upper center',
          colorPalette=[
-         '#0063cc', '#80bdff',  # blue
-         '#33cc33', '#99e699',  # green
-         '#cc0000', '#ff5c33',  # red
-         '#b800e6', '#e580ff',  # purple
-         '#cc9900', '#ffd24d'  # yellow
-         ]):
+            '#0063cc', '#80bdff',  # blue
+            '#33cc33', '#99e699',  # green
+            '#cc0000', '#ff5c33',  # red
+            '#b800e6', '#e580ff',  # purple
+            '#cc9900', '#ffd24d'  # yellow
+            ],
+         simple_plot=False):
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
     if title != None:
@@ -155,20 +156,30 @@ def plot_convergence(data,
     line1_ = ax1.plot(iterationIndices, data['aPost'],
                      label='$t_n$: err transport solves (a posteriori estimation)')
 
-    line1__ = ax1.plot(iterationIndices
-                    , data['globalAccIterationApost']
-                    , label='$e_n = t_n+C_T k_n$ ($||\\bar u_n -T^{-1}K \\bar u_{n-1}||\leq e_n)$')
+    if not simple_plot:
+        line1__ = ax1.plot(iterationIndices
+                        , data['globalAccIterationApost']
+                        , label='$e_n = t_n+C_T k_n$ ($||\\bar u_n -T^{-1}K'
+                                '\\bar u_{n-1}||\leq e_n)$')
 
-    line1___ = ax1.plot(iterationIndices, data['eta'], label='$\eta_n (e_n\leq\eta_n)$')
+        line1___ = ax1.plot(iterationIndices, data['eta'],
+                            label='$\eta_n (e_n\leq\eta_n)$')
 
     line1____ = ax1.plot(iterationIndices, data['globalAccApost'],
-        label='$\sum_{j=0}^{n} \\rho^j e_{n-j}$ (a posteriori bound for $||u_n - \\bar u_n||$)')
+        label='$\sum_{j=0}^{n} \\rho^j e_{n-j}$'
+              ' (a posteriori bound for $||u_n - \\bar u_n||$)')
 
-    line1_____ = ax1.plot(iterationIndices, errIdealIteration,
-        label='$\sum_{j=0}^{n} \\rho^j \eta_{n-j}$ ($\sum_{j=0}^{n} \\rho^j e_{n-j} \leq \sum_{j=0}^{n} \\rho^j \eta_{n-j}$)')
+    if not simple_plot:
+        line1_____ = ax1.plot(iterationIndices, errIdealIteration,
+            label='$\sum_{j=0}^{n} \\rho^j \eta_{n-j}$ '
+                  '($\sum_{j=0}^{n} \\rho^j e_{n-j} '
+                  '\leq \sum_{j=0}^{n} \\rho^j \eta_{n-j}$)')
 
-    line1______ = ax1.plot(iterationIndices, (1.+np.pi*np.pi/6.)*np.asarray(rhoN),
-        label='$(1+\pi^2/6)\\rho^n$ ($\sum_{j=0}^{n} \\rho^j \eta_{n-j} \leq (1+\pi^2/6)\\rho^n$)')
+        line1______ = ax1.plot(iterationIndices,
+                (1.+np.pi*np.pi/6.)*np.asarray(rhoN),
+                label='$(1+\pi^2/6)\\rho^n$ '
+                      '($\sum_{j=0}^{n} \\rho^j \eta_{n-j} '
+                      '\leq (1+\pi^2/6)\\rho^n$)')
 
     # plot in RWTH blue
     plt.setp(line1, linewidth=2.0,
@@ -177,21 +188,23 @@ def plot_convergence(data,
     plt.setp(line1_, linewidth=2.0,
              marker='o', markersize=4.0,
              color=colorPalette[1])
-    plt.setp(line1__, linewidth=2.0,
-             marker='o', markersize=4.0,
-             color=colorPalette[2])
-    plt.setp(line1___, linewidth=2.0,
-             marker='o', markersize=4.0,
-             color=colorPalette[3])
+    if not simple_plot:
+        plt.setp(line1__, linewidth=2.0,
+                 marker='o', markersize=4.0,
+                 color=colorPalette[2])
+        plt.setp(line1___, linewidth=2.0,
+                 marker='o', markersize=4.0,
+                 color=colorPalette[3])
     plt.setp(line1____, linewidth=2.0,
              marker='o', markersize=4.0,
              color=colorPalette[4])
-    plt.setp(line1_____, linewidth=2.0,
-             marker='o', markersize=4.0,
-             color=colorPalette[5])
-    plt.setp(line1______, linewidth=2.0,
-             marker='o', markersize=4.0,
-             color=colorPalette[6])
+    if not simple_plot:
+        plt.setp(line1_____, linewidth=2.0,
+                 marker='o', markersize=4.0,
+                 color=colorPalette[5])
+        plt.setp(line1______, linewidth=2.0,
+                 marker='o', markersize=4.0,
+                 color=colorPalette[6])
 
     line2 = ax2.plot(iterationIndices, data['dofs'], label='# of DoFs')
     # plot in RWTH purple
@@ -204,17 +217,24 @@ def plot_convergence(data,
     ax1.set_yscale(yscale)
     ax2.set_yscale(yscale)
     # Shrink current axis by 20%
-    box1 = ax1.get_position()
-    ax1.set_position([box1.x0, box1.y0,
-        box1.width, box1.height * 0.6])
-    ax2.set_position([box1.x0, box1.y0,
-        box1.width, box1.height * 0.6])
+    if not simple_plot:
+        box1 = ax1.get_position()
+        ax1.set_position([box1.x0, box1.y0,
+            box1.width, box1.height * 0.6])
+        ax2.set_position([box1.x0, box1.y0,
+            box1.width, box1.height * 0.6])
     if legendlocation != None:
         lines1, labels1 = ax1.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
-        plt.legend(lines1 + lines2, labels1 + labels2,
-                   loc=legendlocation, shadow=True, bbox_to_anchor=(0.5, 1.9),
-          ncol=1, fancybox=True,fontsize=12)
+        if simple_plot:
+            plt.legend(lines1 + lines2, labels1 + labels2,
+                       loc=legendlocation, shadow=True,
+                       ncol=1, fancybox=True,fontsize=12)
+        else:
+            plt.legend(lines1 + lines2, labels1 + labels2,
+                       loc=legendlocation, shadow=True,
+                       bbox_to_anchor=(0.5, 1.9),
+                       ncol=1, fancybox=True, fontsize=12)
     if xlim != None:
         plt.xlim(xlim)
     if ylim != None:
@@ -525,9 +545,12 @@ def print_preamble():
 
 aparser = argparse.ArgumentParser(
         description='Generate convergence plot and table for Periter')
-aparser.add_argument('--preamble', dest='print_preamble',
+#aparser.add_argument('--preamble', dest='print_preamble',
+#                     action='store_true', default=False,
+#                     help='print Latex preamble for the convergence table')
+aparser.add_argument('--paper', dest='simple_plot',
                      action='store_true', default=False,
-                     help='print Latex preamble for the convergence table')
+                     help='generate simpler plot for our paper')
 aparser.add_argument('infile', action='store')
 aparser.add_argument('prefixOutputFile', action='store',
                      help='prefix of the name of the plot files')
@@ -548,6 +571,7 @@ data = readData(args.infile)
 plot_convergence(data,
      outputfile=args.prefixOutputFile+"-conv.pdf",
      # title='a posteriori errors of Periter',
+     simple_plot=args.simple_plot
     )
 plot_directions(data,
      outputfile=args.prefixOutputFile+"-directions.pdf",
