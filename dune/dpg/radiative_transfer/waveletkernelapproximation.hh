@@ -647,7 +647,7 @@ namespace ScatteringKernelApproximation {
         template<class Function>
         SVD(const Function& kernelFunction,
             double accuracyKernel)
-          : maxLevel(setLevel(accuracyKernel,100)),
+          : maxLevel(requiredLevel(accuracyKernel,100)),
             num_s((wltOrder+1) << maxLevel),
             kernelSVD(num_s, num_s, Eigen::ComputeThinU | Eigen::ComputeThinV),
             level(maxLevel),
@@ -711,7 +711,7 @@ namespace ScatteringKernelApproximation {
           }
           rank = i;
 
-          level = setLevel(accuracy/2.,maxLevel);
+          level = requiredLevel(accuracy/2.,maxLevel);
 
           std::vector<Direction> sVector((wltOrder+1) << level);
           compute_sVector(sVector);
@@ -810,7 +810,7 @@ namespace ScatteringKernelApproximation {
 
       private:
 
-        static inline size_t setLevel(double accuracy, size_t maxLevel) {
+        static inline size_t requiredLevel(double accuracy, size_t maxLevel) {
           size_t level=0;
 
           for(; level < maxLevel; ++level) {
@@ -891,7 +891,7 @@ namespace ScatteringKernelApproximation {
         template<class Function>
         MatrixTH(const Function& kernelFunction,
             double accuracyKernel)
-          : maxLevel(setLevel(accuracyKernel,100)),
+          : maxLevel(requiredLevel(accuracyKernel,100)),
             num_s((wltOrder+1) << maxLevel),
             level(maxLevel),
             rank(num_s),
@@ -948,7 +948,7 @@ namespace ScatteringKernelApproximation {
 
         std::vector<Direction> setAccuracy(double accuracy) {
           // Compute the new wavelet level
-          level = setLevel(accuracy/2.,maxLevel);
+          level = requiredLevel(accuracy/2.,maxLevel);
 
           // Directions
           std::vector<Direction> sVector((wltOrder+1) << level);
@@ -1058,7 +1058,7 @@ namespace ScatteringKernelApproximation {
 
       private:
 
-        static inline size_t setLevel(double accuracy, size_t maxLevel) {
+        static inline size_t requiredLevel(double accuracy, size_t maxLevel) {
           size_t level=0;
 
           for(; level < maxLevel; ++level) {
@@ -1443,7 +1443,7 @@ namespace ScatteringKernelApproximation {
 
         template<class Function>
         MatrixCompression(const Function& kernelFunction, double maxAccuracy)
-          : maxLevel(setLevel(maxAccuracy, 1000)),
+          : maxLevel(requiredLevel(maxAccuracy, 1000)),
             level(maxLevel),
             rows(1u << level),
             kernelMatrix(waveletKernelMatrix(kernelFunction, maxLevel))
@@ -1456,7 +1456,7 @@ namespace ScatteringKernelApproximation {
         }
 
         std::vector<Direction> setAccuracy(double accuracy) {
-          level = setLevel(accuracy, maxLevel);
+          level = requiredLevel(accuracy, maxLevel);
           rows = 1u << level;
 
           // compute transport directions corresponding to quadrature points
@@ -1482,7 +1482,7 @@ namespace ScatteringKernelApproximation {
         }
 
       private:
-        static inline size_t setLevel(double accuracy, size_t maxLevel) {
+        static inline size_t requiredLevel(double accuracy, size_t maxLevel) {
           size_t level = 1;
           for(; level < maxLevel; ++level) {
             if(1./((1 << level)*(1+level*level)) < accuracy/4.)
@@ -1509,7 +1509,7 @@ namespace ScatteringKernelApproximation {
 
         template<class Function>
         SVD(const Function& kernelFunction, double maxAccuracy)
-          : maxLevel(setLevel(maxAccuracy, 1000u)),
+          : maxLevel(requiredLevel(maxAccuracy, 1000u)),
             level(maxLevel),
             kernelSVD(maxLevel, maxLevel,
                       Eigen::ComputeThinU | Eigen::ComputeThinV),
@@ -1542,7 +1542,7 @@ namespace ScatteringKernelApproximation {
           rank = i;
 
           // set level according to given accuracy
-          level = setLevel(accuracy, maxLevel);
+          level = requiredLevel(accuracy, maxLevel);
           rows = 1u << level;
 
           // compute transport directions corresponding to quadrature points
@@ -1570,7 +1570,7 @@ namespace ScatteringKernelApproximation {
         }
 
       private:
-        static inline size_t setLevel(double accuracy, size_t maxLevel) {
+        static inline size_t requiredLevel(double accuracy, size_t maxLevel) {
           size_t level = 1;
           for(; level < maxLevel; ++level){
             if(1./((1 << level)*(1+level*level)) < accuracy/4.)
