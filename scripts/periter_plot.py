@@ -9,15 +9,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 def readData(datafile):
-    # parametersPattern = re.compile(
-    #     r'^Periter with( up to)? ([0-9]+) directions, rho = ([0-9]*\.?[0-9]*)'
-    #     r', CT = ([0-9]*\.?[0-9]*)'
-    #     r', kappa1 = ([0-9]*\.?[0-9]*)'
-    #     r', kappa2 = ([0-9]*\.?[0-9]*)'
-    #     r', kappa3 = ([0-9]*\.?[0-9]*)'
-    #     , re.MULTILINE)
     parametersPattern = re.compile(
-        r'^PERITER algorithm\n'
+        r'PERITER algorithm\n'
         r'=================\n'
         r'Prescribed final accuracy: ([0-9]*\.?[0-9]*)\n'
         r'Henyey Greenstein kernel with gamma = ([0-9]*\.?[0-9]*)\n'
