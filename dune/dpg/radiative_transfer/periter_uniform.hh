@@ -80,12 +80,12 @@ class Periter {
    * \param plotSolutions  specifies when to create .vtu files for plotting
    *                       the solution
    */
-  template<class Grid, class F, class G, class HB, class Kernel>
+  template<class Grid, class F, class G, class HB, class Sigma, class Kernel>
   void solve(Grid& grid,
              const F& f,
              const G& g,
              const HB& is_inflow_boundary_homogeneous,
-             double sigma,
+             const Sigma sigma,
              const Kernel& kernel,
              double rho,
              double CT,
@@ -122,14 +122,15 @@ class Periter {
    *
    * \return the squared a posteriori error of the solution
    */
-  template<class TestSpaces, class SolutionSpaces, class TestSpacesEnriched>
+  template<class TestSpaces, class SolutionSpaces, class TestSpacesEnriched,
+           class Sigma>
   static double compute_transport_solution(
       VectorType& x,
       const std::shared_ptr<TestSpaces>& testSpaces,
       const std::shared_ptr<SolutionSpaces>& solutionSpaces,
       const std::shared_ptr<TestSpacesEnriched>& testSpacesEnriched,
       const FieldVector<double, 2>& s,
-      double sigma,
+      const Sigma sigma,
       const VectorType& rhsFunctional,
       bool boundary_is_homogeneous,
       const VectorType& bvExtension);
@@ -305,13 +306,13 @@ namespace detail {
 #endif
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class Grid, class F, class G, class HB, class Kernel>
+template<class Grid, class F, class G, class HB, class Sigma, class Kernel>
 void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            Grid& grid,
            const F& f,
            const G& g,
            const HB& is_inflow_boundary_homogeneous,
-           double sigma,
+           const Sigma sigma,
            const Kernel& kernel,
            double rho,
            double CT,
@@ -705,7 +706,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class TestSpaces, class SolutionSpaces, class TestSpacesEnriched>
+template<class TestSpaces, class SolutionSpaces, class TestSpacesEnriched,
+         class Sigma>
 double
 Periter<ScatteringKernelApproximation, RHSApproximation>::
 compute_transport_solution(
@@ -714,7 +716,7 @@ compute_transport_solution(
     const std::shared_ptr<SolutionSpaces>& solutionSpaces,
     const std::shared_ptr<TestSpacesEnriched>& testSpacesEnriched,
     const FieldVector<double, 2>& s,
-    double sigma,
+    const Sigma sigma,
     const VectorType& rhsFunctional,
     bool boundary_is_homogeneous,
     const VectorType& bvExtension)
