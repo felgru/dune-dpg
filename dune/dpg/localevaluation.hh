@@ -11,6 +11,7 @@
 
 #include "assemble_types.hh"
 #include "type_traits.hh"
+#include <dune/common/std/type_traits.hh>
 
 namespace Dune {
 namespace detail {
@@ -203,7 +204,8 @@ struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad, true> {
 
 
 template<class FactorType, class PositionType,
-         typename std::enable_if<std::is_arithmetic<FactorType>::value>
+         typename std::enable_if<
+                    std::is_arithmetic<std::decay_t<FactorType>>::value>
                               ::type* = nullptr >
 inline double evaluateFactor(FactorType factor, PositionType)
 {
@@ -211,15 +213,17 @@ inline double evaluateFactor(FactorType factor, PositionType)
 }
 
 template<class FactorType, class PositionType,
-         typename std::enable_if<std::is_function<FactorType>::value>
-                              ::type* = nullptr >
+         typename std::enable_if<
+                    Std::is_callable<FactorType(const PositionType&),double>
+                    ::value>::type* = nullptr >
 inline double evaluateFactor(FactorType factor, PositionType x)
 {
   return factor(x);
 }
 
 template<class FactorType, class PositionType,
-         typename std::enable_if<is_vector<FactorType>::value>
+         typename std::enable_if<
+                    is_vector<std::decay_t<FactorType>>::value>
                               ::type* = nullptr >
 inline double evaluateFactor(const FactorType& factor, PositionType x)
 {

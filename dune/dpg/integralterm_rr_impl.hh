@@ -223,16 +223,23 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
       for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
 
-        // Position of the current quadrature point in the reference element (face!)
+        // Position of the current quadrature point in the reference element
+        // (face!)
         const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
 
-        // The multiplicative factor in the integral transformation formula -
+        // position of the quadrature point within the subelement
+        const FieldVector<double,dim> elementQuadPosSubCell =
+                faceComputations.faceToElementPosition(quadFacePos);
 
+        const FieldVector<double,dim> globalQuadPos =
+                geometry.global(subGeometryInReferenceElement.global(
+                      elementQuadPosSubCell));
+
+        // The multiplicative factor in the integral transformation formula
         double integrationWeight;
         if(type == IntegrationType::normalVector ||
            type == IntegrationType::travelDistanceWeighted) {
-                            // TODO: needs global geometry
-          integrationWeight = detail::evaluateFactor(factor, quadFacePos)
+          integrationWeight = detail::evaluateFactor(factor, globalQuadPos)
                             * quadFace[pt].weight()
                             * integrationElement;
           // TODO: scale lhsBeta to length 1
@@ -259,14 +266,10 @@ faceImpl(const LhsLocalView& lhsLocalView,
             }
           }
 
-          // TODO: needs global geometry
-          integrationWeight = sign * detail::evaluateFactor(factor, quadFacePos)
+          integrationWeight = sign
+                            * detail::evaluateFactor(factor, globalQuadPos)
                             * quadFace[pt].weight() * integrationElement;
         }
-
-        // position of the quadrature point within the subelement
-        const FieldVector<double,dim> elementQuadPosSubCell =
-                faceComputations.faceToElementPosition(quadFacePos);
 
         if(type == IntegrationType::travelDistanceWeighted) {
           integrationWeight *= detail::travelDistance(

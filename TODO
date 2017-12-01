@@ -8,10 +8,10 @@ known bugs:
   The concatenation would introduce copies of spaces which would in turn defy
   the purpose of using shared_ptrs, i.e. having only a single set of spaces
   that can be refined all at once after grid refinement.
-* evaluateFactor() in integralterm.hh is called with the *local* position
-  of a given quadrature point, this should be first transformed into
-  global coordinates. (Already fixed but not tested for interior implementation,
-  has to be fixed for face implementation)
+* IntegralTerm now works when factor is a callable object. We do however
+  not increase the quadrature order. Thus it will only give reliable
+  results when factor is a picewise constant function that is aligned
+  with the grid on which the FE spaces are defined.
 * PQkTransportBasis cannot be used as a test space at the moment.
   There are compile-time errors that are probably caused by using
   ChooseQuadrature without specifying the transport direction β.
@@ -23,3 +23,9 @@ potential performance improvements:
 * Using the Eigen::Map wrapper around Dune's matrix and vector classes
   might spare us some temporary copies in the wavelet code.
   We need however to check that Map works with vectors of FieldVectors.
+
+proposed features:
+
+* Implement a multi-grid preconditioner so that we can replace the
+  UMFPACK solver with a CG solver.
+  See e.g. Roberts and Chan 2017
