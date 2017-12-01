@@ -130,9 +130,11 @@ faceImpl(const LhsLocalView& lhsLocalView,
       ++nOutflowFaces;
   }
 
+  const auto geometry = element.geometry();
+
   FieldVector<double,dim> referenceBeta;
   {
-    const auto& jacobianInverse = element.geometry().jacobianInverseTransposed({0., 0.});
+    const auto& jacobianInverse = geometry.jacobianInverseTransposed({0., 0.});
     jacobianInverse.mtv(lhsBeta, referenceBeta);
   }
 
@@ -162,20 +164,27 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
     for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
 
-      // Position of the current quadrature point in the reference element (face!)
+      // Position of the current quadrature point in the reference element
+      // (face!)
       const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
 
-      // The multiplicative factor in the integral transformation formula multiplied with outer normal
+      // position of the quadrature point within the element
+      const FieldVector<double,dim> elementQuadPos =
+              faceComputations.faceToElementPosition(quadFacePos);
+
+      const FieldVector<double,dim> globalQuadPos =
+              geometry.global(elementQuadPos);
+
+      // The multiplicative factor in the integral transformation
+      // formula multiplied with outer normal
       const FieldVector<double,dim> integrationOuterNormal =
               faceComputations.integrationOuterNormal();
 
-      // The multiplicative factor in the integral transformation formula -
-
+      // The multiplicative factor in the integral transformation formula
       double integrationWeight;
       if(type == IntegrationType::normalVector ||
          type == IntegrationType::travelDistanceWeighted) {
-                          // TODO: needs global geometry
-        integrationWeight = detail::evaluateFactor(factor, quadFacePos)
+        integrationWeight = detail::evaluateFactor(factor, globalQuadPos)
                           * quadFace[pt].weight();
         if(type == IntegrationType::travelDistanceWeighted)
         {
@@ -209,14 +218,10 @@ faceImpl(const LhsLocalView& lhsLocalView,
           }
         }
 
-        // TODO: needs global geometry
-        integrationWeight = sign * detail::evaluateFactor(factor, quadFacePos)
+        integrationWeight = sign
+                          * detail::evaluateFactor(factor, globalQuadPos)
                           * quadFace[pt].weight() * integrationElement;
       }
-
-      // position of the quadrature point within the element
-      const FieldVector<double,dim> elementQuadPos =
-              faceComputations.faceToElementPosition(quadFacePos);
 
       if(type == IntegrationType::travelDistanceWeighted) {
         // factor r_K(s)/|beta|
