@@ -295,6 +295,8 @@ int main(int argc, char** argv)
       };
   const auto homogeneous_inflow_boundary =
     [](const Direction& s) { return !(s[0] > 0.); };
+  const double sigma = 5.;
+  const double sigmaMin = sigma;
 #elif PERITER_CHECKERBOARD
   const auto f
     = [](const Domain& x, const Direction& s)
@@ -304,6 +306,22 @@ int main(int argc, char** argv)
         const int j = static_cast<int>(n*x[1]);
         const double v1 = 0.;
         const double v2 = 1.;
+        if(i==3 and j==3) {
+          return v2;
+        } else {
+          return v1;
+        }
+      };
+  const auto g = [](const Domain& x) { return 0.; };
+  const auto homogeneous_inflow_boundary =
+    [](const Direction& s) { return true; };
+  const auto sigma = [](const Domain& x)
+      {
+        const int n=7;
+        const int i = static_cast<int>(n*x[0]);
+        const int j = static_cast<int>(n*x[1]);
+        const double v1 = 1.;
+        const double v2 = 10.;
         if(i<=0 or i>=6 or j<=0 or j>=6 or
             (i+j) % 2 == 0 or (i==3 and j==5)) {
           return v1;
@@ -311,22 +329,19 @@ int main(int argc, char** argv)
           return v2;
         }
       };
-  const auto g = [](const Domain& x) { return 0.; };
-  const auto homogeneous_inflow_boundary =
-    [](const Direction& s) { return true; };
+  const double sigmaMin = 1.;
 #else
 #  error "Not specified which problem to solve."
 #endif
-  const double sigma = 5.;
   const double domainDiameter = std::sqrt(2.);
   // TODO: Adapt CT when sigma varies
   // Formula from Lemma 2.8 paper [DGM]
   const double CT
-    = std::min(domainDiameter,std::sqrt(domainDiameter/(2*sigma)));
+    = std::min(domainDiameter, std::sqrt(domainDiameter/(2*sigmaMin)));
   // TODO: Adapt rho when sigma varies
   // Formula from Lemma 2.13 paper [DGM]
   const double rho
-    = std::min(1./sigma,std::sqrt(domainDiameter/(2*sigma)));
+    = std::min(1./sigmaMin, std::sqrt(domainDiameter/(2*sigmaMin)));
   assert(rho < 1.);
 
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
