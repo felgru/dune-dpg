@@ -676,7 +676,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   Spaces spaces(gridView);
 
   ScatteringKernelApproximation kernelApproximation(kernel,
-      approximationParameters.finalScatteringAccuracy(targetAccuracy));
+      approximationParameters.finalScatteringAccuracy(targetAccuracy), 2);
 
   logger.logPeriterOverview(targetAccuracy, kernel,
       kernelApproximation, approximationParameters);

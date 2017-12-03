@@ -628,8 +628,10 @@ namespace ScatteringKernelApproximation {
 
         template<class Function>
         SVD(const Function& kernelFunction,
-            double accuracyKernel)
-          : maxLevel(requiredLevel(accuracyKernel,100)),
+            double accuracyKernel,
+            size_t minLevel)
+          : minLevel(minLevel),
+            maxLevel(std::max(minLevel, requiredLevel(accuracyKernel,100))),
             nQuadAngle(30),
             truthMatrix(waveletKernelMatrix(kernelFunction,
                         wltOrder, maxLevel, nQuadAngle)),
@@ -806,7 +808,7 @@ namespace ScatteringKernelApproximation {
         }
 
         void setDimensions(double accuracy, size_t inputSize) {
-          level = requiredLevel(accuracy/2., maxLevel);
+          level = std::max(minLevel, requiredLevel(accuracy/2., maxLevel));
           rows = (wltOrder+1) << level;
           cols = inputSize;
         }
@@ -856,6 +858,7 @@ namespace ScatteringKernelApproximation {
           }
         }
 
+        size_t minLevel;
         size_t maxLevel;
         size_t nQuadAngle;
         const Eigen::MatrixXd truthMatrix;
