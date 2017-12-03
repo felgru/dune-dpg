@@ -1,11 +1,12 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+#include <algorithm>
 #include <chrono>
 #include <cstdlib> // for std::exit() and std::system()
 #include <ctime>
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <unistd.h>
@@ -28,136 +29,6 @@
 
 
 using namespace Dune;
-
-
-// Value of the analytic solution "for the interior of the domain"
-template <class Domain,class Direction>
-double fInner(const Domain& x,
-              const Direction& s)
-{
-  double c0 = 1.;
-  double c1 = 1.;
-  double value = std::expm1(c0*x[0])*std::expm1(c1*x[1]);//v pure transport
-  //double value = 1-(x[0]-0.5)*(x[0]-0.5)-(x[1]-0.5)*(x[1]-0.5); //v RT
-  return value;
-}
-// Partial derivative of fInner with respect to x[0]
-template <class Domain,class Direction>
-double fInnerD0(const Domain& x,
-                const Direction& s)
-{
-  double c0 = 1.;
-  double c1 = 1.;
-  double value = c0*std::exp(c0*x[0])*std::expm1(c1*x[1]);//v pure transport
-  //double value = -2*(x[0]-0.5); //v RT
-  return value;
-}
-// Partial derivative of fInner with respect to x[1]
-template <class Domain,class Direction>
-double fInnerD1(const Domain& x,
-                const Direction& s)
-{
-  double c0 = 1.;
-  double c1 = 1.;
-  double value = std::expm1(c0*x[0])*std::exp(c1*x[1])*c1;//v pure transport
-  //double value = -2*(x[1]-0.5); //v RT
-  return value;
-}
-
-// This function satifies the zero incoming flux bounday conditions
-template <class Domain,class Direction>
-double fBoundary(const Domain& x,
-                 const Direction& s)
-{
-  // double value = 1.;//v pure transport
-  double value = ( (s[0]>0)*x[0] + (s[0]==0)*1. + (s[0]<0)*(1-x[0]) )*
-                 ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) );//v RT
-  return value;
-}
-// Partial derivative of fBoundary with respect to x[0]
-template <class Domain,class Direction>
-double fBoundaryD0(const Domain& x,
-                   const Direction& s)
-{
-  //double value = 0.;//v pure transport
-  double value = ( (s[0]>0)*1 + (s[0]==0)*0. + (s[0]<0)*(-1.) )*
-                 ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) );//v RT
-  return value;
-}
-// Partial derivative of fBoundary with respect to x[1]
-template <class Domain,class Direction>
-double fBoundaryD1(const Domain& x,
-                   const Direction& s)
-{
-  // double value = 0.;//v pure transport
-  double value = ( (s[0]>0)*x[0] + (s[0]==0)*1. + (s[0]<0)*(1-x[0]) )*
-                 ( (s[1]>0)*1 + (s[1]==0)*0. + (s[1]<0)*(-1.) ); //v RT
-  return value;
-}
-
-//The analytic solution
-template <class Domain, class Direction>
-double uAnalytic(const Domain& x,
-                 const Direction& s)
-{
-  return fInner(x,s)*fBoundary(x,s);
-}
-
-// Optical parameter: sigma
-template <class Domain,class Direction>
-double sigma(const Domain& x,
-             const Direction& s)
-{
-  return 5.;
-}
-
-// Optical parameter: kernel
-template <class Direction>
-double kernel(const Direction& sIntegration,
-              const Direction& s)
-{
-  return 1.7;
-}
-
-// The scattering kernel computed with an analytic solution u
-// and a mid-point rule for the quadrature formula
-template <class Domain, class Direction, class Function>
-double collisionTerm(const Domain& x,
-                     const Direction& s,
-                     const Function& u,
-                     const std::vector<Direction>& sVector)
-{
-  unsigned int numS = sVector.size();
-  double sum = 0.;
-  for(unsigned int i=0; i<numS; i++)
-  {
-    sum += kernel(sVector[i],s)*u(x,sVector[i]);
-  }
-
-  return sum/numS;
-}
-
-// The right hand-side
-template <class Domain, class Direction, class Function>
-double f(const Domain& x,
-         const Direction& s,
-         const Function& u,
-         const std::vector<Direction>& sVector)
-{
-  double value = s[0]*( fInnerD0(x,s) * fBoundary(x,s) + fInner(x,s)*fBoundaryD0(x,s)) +
-                 s[1]*( fInnerD1(x,s) * fBoundary(x,s) + fInner(x,s)*fBoundaryD1(x,s)) +
-                 sigma(x,s)*u(x,s) - collisionTerm(x,s,u,sVector);
-  return value;
-}
-
-
-// The values on the incoming boundary
-template <class Domain,class Direction>
-double gFunction(const Domain& x,
-                 const Direction& s)
-{
-  return 1.5;
-}
 
 void printHelp(const char* name) {
   std::cerr << "Usage: " << name
