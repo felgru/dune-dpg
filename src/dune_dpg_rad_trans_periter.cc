@@ -297,6 +297,7 @@ int main(int argc, char** argv)
     [](const Direction& s) { return !(s[0] > 0.); };
   const double sigma = 5.;
   const double sigmaMin = sigma;
+  const double sigmaMax = sigma;
 #elif PERITER_CHECKERBOARD
   const auto f
     = [](const Domain& x, const Direction& s)
@@ -330,18 +331,19 @@ int main(int argc, char** argv)
         }
       };
   const double sigmaMin = 1.;
+  const double sigmaMax = 10.;
 #else
 #  error "Not specified which problem to solve."
 #endif
   const double domainDiameter = std::sqrt(2.);
-  // TODO: Adapt CT when sigma varies
   // Formula from Lemma 2.8 paper [DGM]
   const double CT
     = std::min(domainDiameter, std::sqrt(domainDiameter/(2*sigmaMin)));
-  // TODO: Adapt rho when sigma varies
   // Formula from Lemma 2.13 paper [DGM]
   const double rho
-    = std::min(1./sigmaMin, std::sqrt(domainDiameter/(2*sigmaMin)));
+    = std::min(sigmaMax/(sigmaMin*sigmaMin),
+        std::min((sigmaMax-sigmaMin+1.)/sigmaMin,
+          std::sqrt(domainDiameter/(2*sigmaMin))));
   assert(rho < 1.);
 
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
