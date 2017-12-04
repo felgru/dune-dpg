@@ -447,9 +447,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // ρ̄:
   const double rhobar = (1./rho > 2*rho)? (1./rho) : (2*rho);
 
-  // CT*kappa1 + (1+CT)*kappa2 + 2*kappa3 = 1.
+  // CT*kappa1 + CT*kappa2 + 2*kappa3 = 1.
   const double kappa1 = rhsIsFeFunction? 1./(2.*CT) : 1./(3.*CT);
-  const double kappa2 = rhsIsFeFunction? 0.         : 1./(3.*(1+CT));
+  const double kappa2 = rhsIsFeFunction? 0.         : 1./(3.*CT);
   const double kappa3 = rhsIsFeFunction? 1./4.      : 1./6.;
 
   ////////////////////////////////////////////
