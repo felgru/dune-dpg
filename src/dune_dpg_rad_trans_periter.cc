@@ -192,7 +192,7 @@ int main(int argc, char** argv)
         const int n=7;
         const int i = static_cast<int>(n*x[0]);
         const int j = static_cast<int>(n*x[1]);
-        const double v1 = 1.;
+        const double v1 = 2.;
         const double v2 = 10.;
         if(i<=0 or i>=6 or j<=0 or j>=6 or
             (i+j) % 2 == 0 or (i==3 and j==5)) {
@@ -201,7 +201,7 @@ int main(int argc, char** argv)
           return v2;
         }
       };
-  const double sigmaMin = 1.;
+  const double sigmaMin = 2.;
   const double sigmaMax = 10.;
 #else
 #  error "Not specified which problem to solve."
@@ -216,12 +216,14 @@ int main(int argc, char** argv)
         std::min((sigmaMax-sigmaMin+1.)/sigmaMin,
           std::sqrt(domainDiameter/(2*sigmaMin))));
   assert(rho < 1.);
+  // using Proposition 2.11 from our paper [DGM]
+  const double cB = sigmaMin - 1.;
 
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
           FeRHS>()
       .solve(*grid, f, g, homogeneous_inflow_boundary, sigma,
              HenyeyGreensteinScattering(gamma),
-             rho, CT, targetAccuracy, N, maxNumberOfInnerIterations,
+             rho, CT, cB, targetAccuracy, N, maxNumberOfInnerIterations,
              foldername, plotSolutions);
 
   return 0;
