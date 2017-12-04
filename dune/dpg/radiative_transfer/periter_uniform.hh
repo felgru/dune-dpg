@@ -414,7 +414,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // As the solution u we use for the initial scattering is 0, and the
   // formula for the accuracy contains a 1/\|u\|, we set the initial
   // accuracy to a large enough value.
-  std::vector<Direction> sVector(kernelApproximation.setAccuracy(1e5));
+  std::vector<Direction>
+    sVector(kernelApproximation.setAccuracyAndInputSize(1e5, 0));
   size_t numS = sVector.size();
 
   /////////////////////////////////////////////////////////
@@ -882,7 +883,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       std::vector<Direction>& sVector,
       const GridView& gridView,
       double accuracy) {
-  sVector = kernelApproximation.setAccuracy(accuracy);
+  sVector = kernelApproximation.setAccuracyAndInputSize(accuracy, x.size());
 
   using FEBasisInterior = std::tuple_element_t<0, SolutionSpaces>;
 

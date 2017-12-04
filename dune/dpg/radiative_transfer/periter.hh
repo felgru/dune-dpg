@@ -12,7 +12,7 @@
 #include <vector>
 
 #include <dune/common/version.hh>
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
 #include <dune/common/std/optional.hh>
 #else
 #include <dune/functions/common/optional.hh>
@@ -493,7 +493,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // As the solution u we use for the initial scattering is 0, and the
   // formula for the accuracy contains a 1/\|u\|, we set the initial
   // accuracy to a large enough value.
-  std::vector<Direction> sVector(kernelApproximation.setAccuracy(1e5));
+  std::vector<Direction>
+    sVector(kernelApproximation.setAccuracyAndInputSize(1e5, 0));
   unsigned int numS = sVector.size();
 
   std::vector<std::unique_ptr<Grid>> grids;
@@ -1124,7 +1125,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       std::vector<Direction>& sVector,
       std::vector<std::unique_ptr<Grid>>& grids,
       double accuracy) {
-  sVector = kernelApproximation.setAccuracy(accuracy);
+  sVector = kernelApproximation.setAccuracyAndInputSize(accuracy, x.size());
 
   using FEBasisInterior = std::tuple_element_t<0, SolutionSpaces>;
 
