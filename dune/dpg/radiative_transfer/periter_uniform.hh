@@ -693,7 +693,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           << errorAPosteriori << '\n'
         << "Bound global accuracy ||u - bar u_n|| (a priori + a posteriori): "
           << accuracy
-          << " (rho^{n+1} * err0 + 2eta_n)\n"
+          << " (rho * err0 + 2) * rho^n\n"
         << "Total number of DoFs: "
           << accumulatedDoFs
         << "\n\n" << std::flush;
