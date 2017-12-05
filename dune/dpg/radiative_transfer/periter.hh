@@ -780,17 +780,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                   sVector[i], sigma, rhsData[i], boundary_is_homogeneous[i],
                   bvExtension);
 
-          aposteriori_s
-            *= 2.*boost::math::constants::pi<double>()
-              / (1 << kernelApproximation.getLevel())
-              * quadWeight[i % kernelApproximation.numSperInterval];
+          aposteriori_s = std::sqrt(aposteriori_s);
 
           // TODO: Add (interpolation of) g to theta part of x[i]?
 
           ofs << "Iteration " << n << '.' << nRefinement
               << " for direction " << i << ": \n"
               << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
-              << std::sqrt(aposteriori_s)
+              << aposteriori_s
               << "\n  - Grid level: "     << grids[i]->maxLevel()
               << "\n  - Number of DOFs: " << x[i].size()
               << std::endl;
@@ -798,7 +795,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           std::cout << "\nIteration " << n << '.' << nRefinement
               << " for direction " << i << ": \n"
               << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
-              << std::sqrt(aposteriori_s)
+              << aposteriori_s
               << "\n  - Grid level: " << grids[i]->maxLevel()
               << "\n  - Number of DOFs: " << x[i].size()
               << std::endl;
@@ -806,19 +803,17 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
 
         if(++nRefinement >= maxNumberOfInnerIterations
-            || std::sqrt(aposteriori_s) <= kappa3*eta
-                                 / (1 << kernelApproximation.getLevel())) {
+            || aposteriori_s <= kappa3*eta) {
           gridIdSets[i] = saveSubGridToIdSet(*grids[i]);
 
           ofs << "\na posteriori error for current direction: "
-              << std::sqrt(aposteriori_s);
-          if (std::sqrt(aposteriori_s) <=
-                  kappa3 * eta / (1 << kernelApproximation.getLevel()))
+              << aposteriori_s;
+          if (aposteriori_s <= kappa3 * eta)
           {
             ofs << " (enough";
           } else {
             ofs << " (not enough, required "
-                << kappa3 * eta / (1 << kernelApproximation.getLevel());
+                << kappa3 * eta;
           }
           ofs << ")\n\n" << std::flush;
 
@@ -833,13 +828,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                grids[i]->leafGridView());
 
           ofs << "\na posteriori error for current direction: "
-              << std::sqrt(aposteriori_s)
+              << aposteriori_s
               << "(required "
-              << kappa3 * eta / (1 << kernelApproximation.getLevel())
+              << kappa3 * eta
               << ")\n\n" << std::flush;
         }
       } // end of spatial refinements in angular subintervals
-      aposterioriTransportGlobal += aposteriori_s;
+      aposterioriTransportGlobal = std::max(aposterioriTransportGlobal,
+                                            aposteriori_s);
 
       if(plotSolutions == PlotSolutions::plotOuterIterations) {
         //////////////////////////////////////////////////////////////////////
@@ -875,9 +871,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       }
     }
 
-    // A posteriori estimation transport solve
-    aposterioriTransportGlobal
-      = std::sqrt(aposterioriTransportGlobal/2*boost::math::constants::pi<double>());
     const size_t accumulatedDoFs = std::accumulate(x.cbegin(), x.cend(),
         static_cast<size_t>(0),
         [](size_t acc, auto vec) { return acc + vec.size(); });
