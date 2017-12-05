@@ -549,6 +549,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         // or ++nRefinement >= maxNumberOfInnerIterations
         // thus the inner loop terminates eventually.
     {
+      aposterioriTransportGlobal = 0.;
       for(unsigned int i = 0; i < numS; ++i)
       {
         std::cout << "Direction " << i
