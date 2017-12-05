@@ -893,7 +893,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     // Error bound for || u_n - \bar u_n || based on a posteriori errors
     double errorAPosteriori = 0.;
     for(size_t j=0; j < n+1; j++) {
-      accuracy += std::pow(rho,j)*aposterioriIter[n-j];
       errorAPosteriori += std::pow(rho,j)*aposterioriIter[n-j];
     }
 
