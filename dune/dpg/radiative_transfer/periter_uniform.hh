@@ -351,7 +351,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   const double fnorm = 1;
   const double err0 = fnorm / cB;
   // ρ̄:
-  const double rhobar = (1./rho > 2*rho)? (1./rho) : (2*rho);
+  const double rhobar = 2./rho;
 
   // CT*kappa1 + CT*kappa2 + 2*kappa3 = 1.
   const double kappa1 = rhsIsFeFunction? 1./(2.*CT) : 1./(3.*CT);
@@ -441,8 +441,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   /////////////////////////////////////////////////////////
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
-  // TODO: A priori estimate for the accuracy of our solution:
-  double accuracy = 1.;
+  double accuracy = err0;
   // η_n:
   double eta = 1.;
   std::vector<double> etaList(maxNumberOfIterations, 0.);
@@ -675,7 +674,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     aposterioriIter[n] = aposterioriTransportGlobal + CT * kappa1 * eta;
 
     // Error bound for || u - \bar u_n || based on a priori errors
-    accuracy = std::pow(rho,n+1)*err0 + 2*eta;
+    accuracy = (rho*err0 + 2) * std::pow(rho,n);
     // Error bound for || u_n - \bar u_n || based on a posteriori errors
     double errorAPosteriori = 0.;
     for(size_t j=0; j < n+1; j++) {
