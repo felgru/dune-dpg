@@ -69,8 +69,11 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   In the future, we might make ErrorTools a namespace instead of a class.
 * `ErrorTools::DoerflerMarking` can now be called as
   `DoerflerMarking(grid, ratio, errorEstimates)` where `errorEstimates`
-  is a `std::vector<std::tuple<EntitySeed, double>>&&` so that you can use
-  Dörfler marking with your own error estimators.
+  is a `std::vector<std::tuple<EntitySeed, double>>&&` where each entry
+  gives the seed of an element and its squared error estimate.
+  You can use Dörfler marking with your own error estimators or use the
+  function `ErrorTools::squaredCellwiseResidual` to compute the error
+  estimates.
 * `LinearFunctionalTerm` now also works with a refined solution space.
 * We now check in a static_assert that `defineCharacteristicFaces` is
   not called with refined spaces.
@@ -101,10 +104,11 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 ### Deprecated
 * The old `ErrorTools::DoerflerMarking` function which could choose between
   two residual has been deprecated. Instead use the new function described
-  in the Changed section. There is now a `ErrorTools::residual(...)` function
-  that computes the residual from the old `DoerflerMarking` function. Thus
-  you can replace your old function call with
-  `ErrorTools::DoerflerMarking(grid, ratio, ErrorTools::residual(...))`.
+  in the Changed section. There is now a function
+  `ErrorTools::squaredCellwiseResidual(...)` that computes the squared
+  residual from the old `DoerflerMarking` function. Thus you can replace
+  your old function call with `ErrorTools::DoerflerMarking(grid, ratio,
+  ErrorTools::squaredCellwiseResidual(...))`.
 
 ### Removed
 * Remove the `make_DPGLinearForm` and `make_DPG_LinearForm` functions,

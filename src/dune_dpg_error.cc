@@ -315,7 +315,7 @@ int main()
     ////////////////
     const double ratio = .2;
     ErrorTools::DoerflerMarking(*grid, ratio,
-                            ErrorTools::residual(
+                            ErrorTools::squaredCellwiseResidual(
                                bilinearForm_aposteriori,
                                innerProduct_aposteriori,
                                aPosterioriInnerProduct,
