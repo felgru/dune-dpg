@@ -260,7 +260,7 @@ int main(int argc, char** argv)
 
     std::chrono::steady_clock::time_point starterror = std::chrono::steady_clock::now();
     const double ratio = .2;
-    auto errorEstimates = ErrorTools::residual(
+    auto errorEstimates = ErrorTools::squaredCellwiseResidual(
                                      bilinearForm_aposteriori,
                                      innerProduct_aposteriori,
                                      x, rhs);
@@ -268,7 +268,8 @@ int main(int argc, char** argv)
                             + std::to_string(nelements)
                             + "_" + std::to_string(i));
     errPlotter.plot("errors", errorEstimates, gridView);
-    err = ErrorTools::DoerflerMarking(*grid, ratio, std::move(errorEstimates));
+    err = std::sqrt(
+        ErrorTools::DoerflerMarking(*grid, ratio, std::move(errorEstimates)));
 
     std::cout << "A posteriori error in iteration " << i << ": "
               << err << std::endl;

@@ -116,7 +116,7 @@ namespace Dune {
         std::tuple_element_t<0,typename BilinearForm::SolutionSpaces>
           ::GridView::template Codim<0>::Entity::EntitySeed,
         double>>
-    residual(
+    squaredCellwiseResidual(
         BilinearForm& ,
         InnerProduct& ,
         const VectorType& ,
@@ -130,7 +130,8 @@ namespace Dune {
         std::tuple_element_t<0,typename BilinearForm::SolutionSpaces>
           ::GridView::template Codim<0>::Entity::EntitySeed,
         double>>
-    residual(BilinearForm& ,
+    squaredCellwiseResidual(
+             BilinearForm& ,
              InnerProduct& ,
              APosterioriInnerProduct& ,
              LinearForm& ,
@@ -735,13 +736,11 @@ namespace Dune {
  * \f[\mathrm{err}(u_h, \mathcal M)
      \geq \mathrm{err}(u_h, \Omega_h).\f]
  *
- * \todo document \p aPosterioriInnerProduct, \p linearForm and \p splitRatio
- *
  * \param grid
  * \param ratio  the marking ratio \f$\theta \in (0,1]\f$
- * \param errorEstimates holds an error estimate for each entity
+ * \param errorEstimates holds a squared error estimate for each entity
  *
- * \return estimate for global a posteriori error
+ * \return estimate for the squared global a posteriori error
  */
   template <class Grid, class EntitySeed>
   double ErrorTools::DoerflerMarking(
@@ -775,11 +774,11 @@ namespace Dune {
       ++currElem;
     }
 
-    return std::sqrt(errorSquared);
+    return errorSquared;
   }
 
 /**
- * \brief Element-wise residual of an (ultra-)weak formulation
+ * \brief Element-wise squared residual of an (ultra-)weak formulation
  *
  * \todo document \p aPosterioriInnerProduct, \p linearForm and \p splitRatio
  *
@@ -792,7 +791,7 @@ namespace Dune {
  * \param rhs  Rhs of the problem in enriched test space
  * \param splitRatio
  *
- * \return cell-wise estimate for a posteriori error
+ * \return cell-wise estimate for the squared a posteriori error
  */
   template <class BilinearForm, class InnerProduct,
             class APosterioriInnerProduct, class LinearForm,
@@ -801,7 +800,7 @@ namespace Dune {
       std::tuple_element_t<0,typename BilinearForm::SolutionSpaces>
         ::GridView::template Codim<0>::Entity::EntitySeed,
       double>>
-  ErrorTools::residual(
+  ErrorTools::squaredCellwiseResidual(
       BilinearForm& bilinearForm,
       InnerProduct& innerProduct,
       APosterioriInnerProduct& aPosterioriInnerProduct,
@@ -880,21 +879,21 @@ namespace Dune {
   }
 
 /**
- * \brief Element-wise residual of an (ultra-)weak formulation
+ * \brief Element-wise squared residual of an (ultra-)weak formulation
  *
  * \param bilinearForm
  * \param innerProduct
  * \param solution  FE solution
  * \param rhs  Rhs of the problem in enriched test space
  *
- * \return cell-wise estimate for a posteriori error
+ * \return cell-wise estimate for the squared a posteriori error
  */
   template <class BilinearForm, class InnerProduct, class VectorType>
   std::vector<std::tuple<typename
       std::tuple_element_t<0,typename BilinearForm::SolutionSpaces>
         ::GridView::template Codim<0>::Entity::EntitySeed,
       double>>
-  ErrorTools::residual(
+  ErrorTools::squaredCellwiseResidual(
       BilinearForm& bilinearForm,
       InnerProduct& innerProduct,
       const VectorType& solution,
@@ -974,13 +973,13 @@ namespace Dune {
  * \param rhs  Rhs of the problem in enriched test space
  * \param splitRatio
  *
- * \return estimate for global a posteriori error
+ * \return estimate for the squared global a posteriori error
  */
   template <class Grid, class BilinearForm, class InnerProduct,
             class APosterioriInnerProduct, class LinearForm,
             class RhsFunction, class VectorType>
   [[deprecated("use ErrorTools::DoerflerMarking(grid, ratio, "
-               "ErrorTools::residual(...)) instead")]]
+               "ErrorTools::squaredCellwiseResidual(...)) instead")]]
   double ErrorTools::DoerflerMarking(
       Grid& grid,
       double ratio,
@@ -1000,7 +999,7 @@ namespace Dune {
         "Type mismatch between Grid and Grid of BilinearForm!");
 
     return DoerflerMarking(grid, ratio,
-        residual(
+        squaredCellwiseResidual(
             bilinearForm,
             innerProduct,
             aPosterioriInnerProduct,
