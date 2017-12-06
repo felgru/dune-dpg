@@ -1086,9 +1086,9 @@ compute_transport_solution(
   using EntitySeed
       = typename Grid::template Codim<0>::Entity::EntitySeed;
   std::vector<std::tuple<EntitySeed, double>> aposterioriCellwise
-      = ErrorTools::residual(bilinearFormEnriched,
-                            innerProductEnriched,
-                            x, rhs);
+      = ErrorTools::squaredCellwiseResidual(bilinearFormEnriched,
+                                            innerProductEnriched,
+                                            x, rhs);
   const double aposteriori_s
     = std::accumulate(
         aposterioriCellwise.cbegin(), aposterioriCellwise.cend(),
