@@ -1083,24 +1083,13 @@ compute_transport_solution(
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   }
   // - Computation of the a posteriori error
-  using EntitySeed
-      = typename Grid::template Codim<0>::Entity::EntitySeed;
-  std::vector<std::tuple<EntitySeed, double>> aposterioriCellwise
-      = ErrorTools::squaredCellwiseResidual(bilinearFormEnriched,
-                                            innerProductEnriched,
-                                            x, rhs);
-  const double aposteriori_s
-    = std::accumulate(
-        aposterioriCellwise.cbegin(), aposterioriCellwise.cend(),
-        0.,
-        [](double acc, const std::tuple<EntitySeed, double>& t)
-        {
-          return acc + std::get<1>(t);
-        });
-
-  //  - Doerfler marking
+  // - Doerfler marking
   const double ratio = .6;
-  ErrorTools::DoerflerMarking(grid, ratio, std::move(aposterioriCellwise));
+  const double aposteriori_s =
+      ErrorTools::DoerflerMarking(grid, ratio,
+            ErrorTools::squaredCellwiseResidual(bilinearFormEnriched,
+                                                innerProductEnriched,
+                                                x, rhs));
 
   return aposteriori_s;
 }
