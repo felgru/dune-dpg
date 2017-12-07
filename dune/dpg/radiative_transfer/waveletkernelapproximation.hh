@@ -691,7 +691,7 @@ namespace ScatteringKernelApproximation {
             i += 1;
             rank_err = singularValues(i) * singularValues(i);
           }
-          rank = i;
+          rank = (i>0)?i:1;
 
           size_t inLevel = level;
           level = requiredLevel(accuracy/2.,maxLevel);
@@ -1560,7 +1560,7 @@ namespace ScatteringKernelApproximation {
             i += 1;
             rank_err = singularValues(i) * singularValues(i);
           }
-          rank = i;
+          rank = (i>0)?i:1;
 
           // set level according to given accuracy
           level = requiredLevel(accuracy, maxLevel);
