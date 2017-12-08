@@ -32,12 +32,13 @@ using namespace Dune;
 
 void printHelp(const char* name) {
   std::cerr << "Usage: " << name
-            << " [-p] [-n <n>] [-o <dir>]"
+            << " [-p] [-s] [-n <n>] [-o <dir>]"
             << " <target accuracy>"
             << " <gamma>"
             << " <# of iterations>"
             << " <size of grid>\n"
             << " -p: plot solutions\n"
+            << " -s: plot scattering integral\n"
             << " -n <n>: set maximal number of inner iterations to <n>\n"
             << " -o <dir>: set output directory to <dir>, default is "
                "\"../results/\"\n";
@@ -78,10 +79,11 @@ int main(int argc, char** argv)
 
   {
     int opt;
-    while ((opt = getopt(argc,argv,"n:o:ph")) != EOF)
+    while ((opt = getopt(argc,argv,"n:o:psh")) != EOF)
       switch(opt)
       {
-        case 'p': plotSolutions = PlotSolutions::plotOuterIterations; break;
+        case 'p': plotSolutions |= PlotSolutions::plotOuterIterations; break;
+        case 's': plotSolutions |= PlotSolutions::plotScattering; break;
         case 'n': maxNumberOfInnerIterations = atoi(optarg); break;
         case 'o': basedir = optarg; break;
         default:

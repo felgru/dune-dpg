@@ -36,15 +36,11 @@
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/type_traits.hh>
 
+#include <dune/dpg/radiative_transfer/periter_common.hh>
+
 #include <boost/math/constants/constants.hpp>
 
 namespace Dune {
-
-enum class PlotSolutions {
-  doNotPlot,
-  plotOuterIterations,
-  plotLastIteration
-};
 
 /**
  * This class describes the Periter algorithm for radiative transfer problems
@@ -323,7 +319,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            unsigned int maxNumberOfInnerIterations,
            const std::string& outputfolder,
            PlotSolutions plotSolutions) {
-  if(plotSolutions == PlotSolutions::plotLastIteration) {
+  if((plotSolutions & PlotSolutions::plotLastIteration)
+      == PlotSolutions::plotLastIteration) {
     std::cerr
         << "Plotting of only the last iteration is not implemented yet!\n";
     std::exit(1);
@@ -486,6 +483,26 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     std::chrono::steady_clock::time_point endScatteringApproximation
         = std::chrono::steady_clock::now();
 
+    if((plotSolutions & PlotSolutions::plotScattering)
+        == PlotSolutions::plotScattering) {
+      std::cout << "Plot scattering:\n";
+      const auto& feBasisInterior = std::get<0>(*solutionSpaces);
+
+      for(unsigned int i = 0; i < numS; ++i)
+      {
+        std::cout << "Direction " << i << '\n';
+
+        std::string name = outputfolder
+                        + std::string("/scattering_n")
+                        + std::to_string(n)
+                        + std::string("_s")
+                        + std::to_string(i);
+        FunctionPlotter scatteringPlotter(name);
+        scatteringPlotter.plot("scattering", rhsFunctional[i],
+                               feBasisInterior, 0);
+      }
+    }
+
     {
       FEBasisInterior& feBasisInterior = std::get<0>(*solutionSpaces);
 
@@ -633,7 +650,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       }
     }
 
-    if(plotSolutions == PlotSolutions::plotOuterIterations) {
+    if((plotSolutions & PlotSolutions::plotOuterIterations)
+        == PlotSolutions::plotOuterIterations) {
       ////////////////////////////////////////////////////////////////////////
       //  Write result to VTK file
       //  We need to subsample, because VTK cannot natively display
