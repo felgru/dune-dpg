@@ -24,6 +24,10 @@ constexpr inline PlotSolutions operator&(PlotSolutions a, PlotSolutions b) {
   return static_cast<PlotSolutions>(static_cast<T>(a) & static_cast<T>(b));
 }
 
+constexpr inline PlotSolutions& operator|=(PlotSolutions& a, PlotSolutions b) {
+  return a = (a | b);
+}
+
 } // end namespace Dune
 
 #endif // DUNE_DPG_RADIATIVE_TRANSFER_PERITER_COMMON_HH
