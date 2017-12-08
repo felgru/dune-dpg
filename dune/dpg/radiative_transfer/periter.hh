@@ -48,6 +48,8 @@
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/type_traits.hh>
 
+#include <dune/dpg/radiative_transfer/periter_common.hh>
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #include <dune/subgrid/subgrid.hh>
@@ -94,12 +96,6 @@ restoreSubGridFromIdSet(
     idSetCopy(idSet);
   return restoreSubGridFromIdSet<SubGrid>(std::move(idSetCopy), hostGrid);
 }
-
-enum class PlotSolutions {
-  doNotPlot,
-  plotOuterIterations,
-  plotLastIteration
-};
 
 /**
  * This class describes the Periter algorithm for radiative transfer problems

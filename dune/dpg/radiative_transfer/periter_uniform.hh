@@ -36,15 +36,11 @@
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/type_traits.hh>
 
+#include <dune/dpg/radiative_transfer/periter_common.hh>
+
 #include <boost/math/constants/constants.hpp>
 
 namespace Dune {
-
-enum class PlotSolutions {
-  doNotPlot,
-  plotOuterIterations,
-  plotLastIteration
-};
 
 /**
  * This class describes the Periter algorithm for radiative transfer problems
