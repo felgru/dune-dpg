@@ -3,16 +3,20 @@
 #ifndef DUNE_TESTSPACECOEFFICIENTMATRIX_HH
 #define DUNE_TESTSPACECOEFFICIENTMATRIX_HH
 
-#include <tuple>
-#include <memory>
-#include <type_traits>
 #include <cassert>
+#include <memory>
+#include <tuple>
+#include <type_traits>
 
 #include <dune/common/exceptions.hh>
 
 #include <dune/dpg/assemble_helper.hh>
-#include <dune/dpg/cholesky.hh>
-#include <chrono>
+
+#if DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY
+#  include <dune/dpg/leastsquares.hh>
+#else
+#  include <dune/dpg/cholesky.hh>
+#endif
 
 namespace Dune {
 
@@ -148,8 +152,17 @@ public:
     bilinearForm.bind(localViewsTest, localViewsSolution);
     bilinearForm.getLocalMatrix(bilinearMatrix);
 
-    Cholesky<MatrixType> cholesky(stiffnessMatrix);
-    cholesky.apply(bilinearMatrix, coefficientMatrix_);
+#if DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY
+    // Solve a least-squares problem for coefficientMatrix_
+    // to make sure that it is well defined even when the Gramian of
+    // the inner product is severly ill conditioned.
+    solveLeastSquares(stiffnessMatrix, bilinearMatrix, coefficientMatrix_);
+#else
+    {
+      Cholesky<MatrixType> cholesky(stiffnessMatrix);
+      cholesky.apply(bilinearMatrix, coefficientMatrix_);
+    }
+#endif
 
     const unsigned int m = coefficientMatrix_.M();
     systemMatrix_.setSize(m, m);
