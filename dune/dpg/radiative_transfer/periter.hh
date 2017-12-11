@@ -437,15 +437,6 @@ class PeriterLogger {
         << "Periter parameters:" << '\n'
         << approximationParameters
         << "CT = "     << CT     << '\n';
-
-    if(kernelApproximation.typeApprox() == "Kernel approximation with: SVD"){
-      const std::vector<double> singularValues
-        = kernelApproximation.getSingularValues();
-      ofs << "Singular values of kernel matrix:\n";
-      for(size_t i=0; i<singularValues.size(); i++){
-        ofs << singularValues[i] << '\n';
-      }
-    }
   }
 
   void logOuterIterationHeader(const unsigned int n)
@@ -483,8 +474,13 @@ class PeriterLogger {
           << approximationParameters.scatteringAccuracy() << " (kappa1 * eta)\n"
         << "Accuracy introduced in code: "
         << accuKernel << " (kappa1 * eta / (kappaNorm * uNorm))\n"
-        << kernelApproximation.info()      << '\n'
-        << "Computing time: "
+        << kernelApproximation.info() << '\n';
+    if(kernelApproximation.typeApprox() == "Kernel approximation with: SVD")
+    {
+      ofs << "Singular values of kernel matrix:\n"
+          << kernelApproximation.getSingularValues() << '\n';
+    }
+    ofs << "Computing time: "
           << std::chrono::duration_cast<std::chrono::microseconds>
           (endScatteringApproximation - startScatteringApproximation).count()
           << "us\n" << std::flush;
@@ -799,7 +795,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // formula for the accuracy contains a 1/\|u\|, we set the initial
   // accuracy to a large enough value.
   std::vector<Direction>
-    sVector(kernelApproximation.setAccuracyAndInputSize(1e5, 0));
+    sVector(kernelApproximation.setInitialAccuracy(1e5));
   unsigned int numS = sVector.size();
 
   std::vector<std::unique_ptr<Grid>> grids;
