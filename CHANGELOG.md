@@ -34,6 +34,12 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * New `SkeletalLinearFunctionalTerm` that can be used to implement
   the second alternative for handling boundary values as given in
   Broersen, Dahmen, Stevenson Remark 3.6.
+* New option to use a least squares solver instead of Cholesky by defining
+  the preprocessor variable DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY.
+  This might help on strongly refined grids, where the Gramian in the trial
+  to test map is so ill-conditioned that we cannot compute the Cholesky
+  decomposition anymore. This has been observed when locally refining
+  the unit square domain 19 times.
 * `plot_solution.cc` now implements adaptive grid refinements. The old
   version on a fixed grid from v0.2.1 has been moved to
   `plot_solution_simple.cc`.
