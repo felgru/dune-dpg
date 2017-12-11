@@ -20,6 +20,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               integralterm_rr_impl.hh
               integralterm_ru_impl.hh
               integralterm_uu_impl.hh
+              leastsquares.hh
               linearform.hh
               linearfunctionalterm.hh
               linearintegralterm.hh
