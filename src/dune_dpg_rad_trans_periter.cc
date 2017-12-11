@@ -221,6 +221,10 @@ int main(int argc, char** argv)
   // using Proposition 2.11 from our paper [DGM]
   const double cB = sigmaMin - 1.;
 
+#if PERITER_PEAKY_BV
+#  define DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY 1
+#endif
+
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
           FeRHS>()
       .solve(*grid, f, g, homogeneous_inflow_boundary, sigma,

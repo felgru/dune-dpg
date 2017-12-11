@@ -12,7 +12,6 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/version.hh>
-#include <dune/dpg/cholesky.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/dpg/functions/refinementinterpolation.hh>
 #include <dune/dpg/integralterm.hh>
@@ -21,6 +20,12 @@
 #include <dune/geometry/referenceelements.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bvector.hh>
+
+#if DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY
+#  include <dune/dpg/leastsquares.hh>
+#else
+#  include <dune/dpg/cholesky.hh>
+#endif
 
 namespace Dune {
 
@@ -458,8 +463,14 @@ namespace detail {
           projectionRhs(subGridLocalView.size());
       computeProjectionRhs(e, cellData, subGridLocalView, hostGridLocalView,
           projectionRhs);
-      Cholesky<Matrix<FieldMatrix<double,1,1>>> cholesky(projectionMatrix);
-      cholesky.apply(projectionRhs);
+#if DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY
+      solveLeastSquares(projectionMatrix, projectionRhs);
+#else
+      {
+        Cholesky<Matrix<FieldMatrix<double,1,1>>> cholesky(projectionMatrix);
+        cholesky.apply(projectionRhs);
+      }
+#endif
       std::vector<FieldVector<double, 1>> projection(subGridLocalView.size());
       for(size_t i = 0; i < projection.size(); i++) {
         projection[i] = projectionRhs[i];
