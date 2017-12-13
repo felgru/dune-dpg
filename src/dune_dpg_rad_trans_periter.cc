@@ -1,6 +1,9 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+#if PERITER_PEAKY_BV
+#  define DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY 1
+#endif
 #include <algorithm>
 #include <chrono>
 #include <cstdlib> // for std::exit() and std::system()
@@ -220,10 +223,6 @@ int main(int argc, char** argv)
   assert(rho < 1.);
   // using Proposition 2.11 from our paper [DGM]
   const double cB = sigmaMin - 1.;
-
-#if PERITER_PEAKY_BV
-#  define DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY 1
-#endif
 
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
           FeRHS>()
