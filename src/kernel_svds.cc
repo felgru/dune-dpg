@@ -45,7 +45,7 @@ std::vector<double> angles(unsigned int wltOrder,
   // Get Gauss-Legendre quadrature in [0,1]
   const int quadOrder = 2*wltOrder+1;
   const size_t dim = 1;
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
   const QuadratureRule<double, dim>& quad =
     QuadratureRules<double, dim>::rule(GeometryTypes::line,
       quadOrder, QuadratureType::GaussLegendre);

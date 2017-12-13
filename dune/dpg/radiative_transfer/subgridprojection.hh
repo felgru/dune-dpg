@@ -106,7 +106,7 @@ namespace detail {
   hostInSubGridCellGeometry(const HostGridElement& hostGridElement,
       const SubGridElement& subGridElement)
   {
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     const auto referenceElement
         = Dune::referenceElement<double, dim>(hostGridElement.type());
 #else
@@ -729,7 +729,7 @@ public:
                       , sourceSubGeometryInReferenceElement.local(
                           geometryInFather.global(
                           targetSubGeometryInReferenceElement
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
                             .global(referenceElement<double, dim>
                               (child.type()).position(0,dim))))
 #else

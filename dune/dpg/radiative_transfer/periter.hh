@@ -618,7 +618,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               std::declval<FEBasisTest>(),
               std::declval<FEBasisHostTrace>(),
               std::declval<VectorType>()))>;
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
     std::vector<Std::optional<BVData>> bvData;
 #else
     std::vector<Functions::Optional<BVData>> bvData;
@@ -774,7 +774,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         if(!boundary_is_homogeneous[i]) {
           FEBasisTest& feBasisTest = std::get<FEBasisTest>(*testSpaces[i]);
           auto newGridData
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
               = bvData[i]->restoreDataToRefinedSubGrid(feBasisTest);
 #else
               = bvData[i].value().restoreDataToRefinedSubGrid(feBasisTest);

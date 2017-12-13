@@ -347,7 +347,7 @@ namespace ScatteringKernelApproximation {
       // Get Gauss-Legendre quadrature in [0,1]
       const int quadOrder = 2*waveletOrder+1;
       const int dim = 1;
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       const Dune::QuadratureRule<double, dim>& quad =
         Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
           quadOrder, QuadratureType::GaussLegendre);
@@ -390,7 +390,7 @@ namespace ScatteringKernelApproximation {
       // Get Gauss-Legendre quadrature in [0,1]
       const int quadOrder = 2*waveletOrder+1;
       const int dim = 1;
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       const Dune::QuadratureRule<double, dim>& quad =
         Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
           quadOrder, QuadratureType::GaussLegendre);
@@ -741,7 +741,7 @@ namespace ScatteringKernelApproximation {
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
           const int dim = 1;
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
               quadOrder, QuadratureType::GaussLegendre);
@@ -769,7 +769,7 @@ namespace ScatteringKernelApproximation {
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
           const int dim = 1;
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
               quadOrder, QuadratureType::GaussLegendre);
@@ -990,7 +990,7 @@ namespace ScatteringKernelApproximation {
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
           const int dim = 1;
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
               quadOrder, QuadratureType::GaussLegendre);
@@ -1018,7 +1018,7 @@ namespace ScatteringKernelApproximation {
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
           const int dim = 1;
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
               quadOrder, QuadratureType::GaussLegendre);
