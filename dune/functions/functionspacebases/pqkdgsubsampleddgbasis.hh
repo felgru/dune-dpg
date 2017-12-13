@@ -89,7 +89,7 @@ public:
       }
       case 2:
       {
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         quadrilateralOffset_ = dofsPerTriangle
                                * gridView_.size(GeometryTypes::triangle);
 #else
@@ -134,7 +134,7 @@ public:
         return dofsPerEdge*gridView_.size(0);
       case 2:
       {
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         return dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
                 + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
 #else
@@ -280,7 +280,7 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It>
   It indices(It it) const
   {

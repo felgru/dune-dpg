@@ -40,7 +40,7 @@ namespace Dune
     /** \todo Please doc me !
      */
     QkTraceLocalFiniteElement ()
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     { }
 #else
     {
@@ -77,7 +77,7 @@ namespace Dune
 
     /** \todo Please doc me !
      */
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     static constexpr GeometryType type ()
     {
       return GeometryTypes::cube(d);
@@ -93,7 +93,7 @@ namespace Dune
     LocalBasis basis;
     LocalCoefficients coefficients;
     LocalInterpolation interpolation;
-#if not(DUNE_VERSION_NEWER(DUNE_GRID,2,6))
+#if not(DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6))
     GeometryType gt;
 #endif
   };

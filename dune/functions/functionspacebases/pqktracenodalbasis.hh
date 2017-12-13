@@ -88,7 +88,7 @@ public:
       triangleOffset_      = edgeOffset_
                            + dofsPerEdge * gridView_.size(dim-1);
 
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       quadrilateralOffset_ = triangleOffset_
                              + dofsPerTriangle
                                * gridView_.size(GeometryTypes::triangle);
@@ -135,7 +135,7 @@ public:
         return gridView_.size(dim) + dofsPerEdge * gridView_.size(1);
       case 3:
       {
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         return gridView_.size(dim) + dofsPerEdge * gridView_.size(2)
              + dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
              + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
@@ -285,7 +285,7 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It>
   It indices(It it) const
   {
@@ -313,7 +313,7 @@ public:
         }
         else
         {
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const auto refElement
               = Dune::referenceElement<double,dim>(element.type());
 #else
@@ -345,7 +345,7 @@ public:
               "traces have no elements of codimension 0");
         } else
         {
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const auto refElement
               = Dune::referenceElement<double,dim>(element.type());
 #else

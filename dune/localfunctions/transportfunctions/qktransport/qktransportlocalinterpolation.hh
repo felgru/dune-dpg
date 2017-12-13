@@ -47,7 +47,7 @@ public:
 
         out.resize((sizeP+sizeQ-(k+1)));
 
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         const GeometryType triangle = GeometryTypes::triangle;
         const GeometryType quad = GeometryTypes::quadrilateral;
 #else

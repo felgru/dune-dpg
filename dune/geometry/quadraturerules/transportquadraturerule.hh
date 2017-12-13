@@ -47,7 +47,7 @@ private:
                 std::vector<Dune::FieldVector<ct,dim>> cornerQ(4*(dim-1));
                 setCorners(cornerT,cornerQ,beta);
 
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
                 MultiLinearGeometry<ct,2,2> part_tria(GeometryTypes::triangle, cornerT);
 #else
                 GeometryType triangle;
@@ -69,7 +69,7 @@ private:
 
 
 
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
                 MultiLinearGeometry<ct,2,2> part_quad(GeometryTypes::quadrilateral, cornerQ);
 #else
                 GeometryType quad;

@@ -23,7 +23,7 @@
 #include <dune/dpg/testspace_coefficient_matrix.hh>
 #include <dune/dpg/type_traits.hh>
 
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
 #include <boost/hana.hpp>
 #endif
 
@@ -330,7 +330,7 @@ class OptimalTestBasisNodeIndexSet
   using GV = typename TestspaceCoefficientMatrix::GridView;
   enum {dim = GV::dimension};
 
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It, typename LIS>
   static It computeIndices(It it, const LIS& localIndexSet,
                            size_t globalOffset)
@@ -436,7 +436,7 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It>
   It indices(It it) const
   {
