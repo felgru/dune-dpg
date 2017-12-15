@@ -10,9 +10,6 @@ known bugs:
   not increase the quadrature order. Thus it will only give reliable
   results when factor is a picewise constant function that is aligned
   with the grid on which the FE spaces are defined.
-* PQkTransportBasis cannot be used as a test space at the moment.
-  There are compile-time errors that are probably caused by using
-  ChooseQuadrature without specifying the transport direction β.
 * Adjust quadrature order for non-constant function (rhs term) in
   getvolumeterm_impl.hh and in linearintegralterm.hh
 
