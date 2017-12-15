@@ -17,11 +17,10 @@ namespace detail {
   template<int s, int dim>
   struct ChooseQuadratureImpl<Dune::SubsampledQuadratureRule<double, s, dim>>
   {
-    template<class Element, class DirectionType>
+    template<class Element>
     static Dune::SubsampledQuadratureRule<double, s, dim>
     Quadrature(const Element& element,
-               unsigned int quadratureOrder,
-               DirectionType lhsBeta)
+               unsigned int quadratureOrder)
     {
       const Dune::QuadratureRule<double, dim>& quadSection =
             Dune::QuadratureRules<double, dim>::rule(element.type(),
@@ -34,11 +33,10 @@ namespace detail {
   template<int dim>
   struct ChooseQuadratureImpl<const Dune::QuadratureRule<double, dim>&>
   {
-    template<class Element, class DirectionType>
+    template<class Element>
     static const Dune::QuadratureRule<double, dim>&
     Quadrature(const Element& element,
-               unsigned int quadratureOrder,
-               DirectionType lhsBeta)
+               unsigned int quadratureOrder)
     {
       const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(element.type(),
@@ -66,13 +64,11 @@ namespace detail {
           , const QuadratureRule<double, dim>&
           >::type;
 
-    template<class DirectionType>
     static type Quadrature(const Element& element,
-                           unsigned int quadratureOrder,
-                           DirectionType lhsBeta)
+                           unsigned int quadratureOrder)
     {
       return ChooseQuadratureImpl<type>
-        ::template Quadrature(element, quadratureOrder, lhsBeta);
+        ::template Quadrature(element, quadratureOrder);
     }
   };
 

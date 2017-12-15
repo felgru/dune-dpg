@@ -56,7 +56,7 @@ inline static void interiorImpl(
 
   typename detail::ChooseQuadrature<TestSpace, SolutionSpace, Element>::type quad
     = detail::ChooseQuadrature<TestSpace, SolutionSpace, Element>
-      ::Quadrature(element, quadratureOrder, nullptr);
+      ::Quadrature(element, quadratureOrder);
 
   const auto referenceGridView =
       testLocalView.tree().refinedReferenceElement().leafGridView();
@@ -221,11 +221,9 @@ faceImpl(const TestLocalView& testLocalView,
           = solutionLocalFiniteElement.localBasis().order()
             + testLocalFiniteElement.localBasis().order();
 
-      // TODO: Do we really want to have a transport quadrature rule
-      //       on the faces, if one of the FE spaces is a transport space?
       QuadratureRule<double, 1> quadFace
         = detail::ChooseQuadrature<TestSpace, SolutionSpace, Face>
-          ::Quadrature(face, quadratureOrder, beta);
+          ::Quadrature(face, quadratureOrder);
       if (type == IntegrationType::travelDistanceWeighted &&
           nOutflowFaces > 1) {
         quadFace = SplitQuadratureRule<double>(
