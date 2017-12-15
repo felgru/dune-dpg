@@ -44,9 +44,6 @@ namespace Functions {
   template<typename GV, int k, class MI>
   class PQkTraceNodeFactory;
 
-  template<typename GV, int k, class MI>
-  class PQkTransportFactory;
-
   template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
            class MI>
   class OptimalTestBasisNodeFactory;
@@ -214,26 +211,6 @@ struct numberOfSamples<Functions::DefaultGlobalBasis<
                     >::type> {};
 #endif
 
-template<typename GlobalBasis>
-struct is_TransportFiniteElement : std::false_type {};
-
-#ifndef DOXYGEN
-template<typename GV, int k>
-struct is_TransportFiniteElement<Functions::DefaultGlobalBasis<
-             Functions::PQkTransportFactory
-                 <GV, k, Functions::FlatMultiIndex<std::size_t> > > >
-           : std::true_type {};
-
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
-struct is_TransportFiniteElement<Functions::DefaultGlobalBasis<
-            Functions::OptimalTestBasisNodeFactory<
-                TestspaceCoefficientMatrix, testIndex,
-                Functions::FlatMultiIndex<std::size_t> > > >
-  : is_TransportFiniteElement<typename std::tuple_element<testIndex,
-                                typename TestspaceCoefficientMatrix::TestSpaces
-                              >::type> {};
-#endif
-
 /*****************************************
  * Change the GridView of a nodal basis
  *****************************************/
@@ -300,12 +277,6 @@ struct changeGridView<Functions::PQkTraceNodeFactory<GV, k, MI>,
                       GridView>
 {
   typedef Functions::PQkTraceNodeFactory<GridView, k, MI> type;
-};
-
-template<typename GV, int k, class MI, class GridView>
-struct changeGridView<Functions::PQkTransportFactory<GV, k, MI>, GridView>
-{
-  typedef Functions::PQkTransportFactory<GridView, k, MI> type;
 };
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex,

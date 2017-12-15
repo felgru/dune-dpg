@@ -126,6 +126,10 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   dune-localfunctions 2.6.
 * Make the auxiliary class `computeIndex` a private member.
   This should have never been a part of the public dune-dpg API.
+* Remove `PQkTransportBasis` and `TransportQuadratureRule`.
+  Our code did not work with this basis for a long time so obviously
+  nobody was using it. This allowed us to simplify the internal
+  `ChooseQuadrature` interface.
 * Remove some unused auxiliary types.
 
 ## 0.2.1 - 2016-11-07

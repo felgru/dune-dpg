@@ -63,7 +63,7 @@ private:
   getGeometryInElement(const Face& face, const Element& element) {
     const auto geometry = face.geometry();
     const auto innerGeometry = element.geometry();
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     const auto referenceElement
         = Dune::referenceElement<ctype, facedim>(face.type());
 #else

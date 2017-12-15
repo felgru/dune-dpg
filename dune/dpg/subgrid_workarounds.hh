@@ -44,7 +44,7 @@ namespace detail {
 
     static typename SubGridIntersection::GlobalCoordinate
     from(const SubGridIntersection& intersection) {
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       return intersection.unitOuterNormal(referenceElement<ctype, dim-1>
                     (intersection.type()).position(0,0));
 #else
@@ -79,7 +79,7 @@ namespace detail {
     from(const SubGridIntersection& intersection) {
       const auto geometry = intersection.geometry();
       const auto innerGeometry = intersection.inside().geometry();
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       const auto referenceElement = Dune::referenceElement(intersection);
 #else
       const auto& referenceElement

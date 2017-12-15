@@ -76,7 +76,7 @@ VectorType interpolateToUniformlyRefinedGrid(
       const AffineGeometry<double, dim, dim> subGeometry
           (subE.type(),
            globalGeometry.local(
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
              globalSubGeometry.global(referenceElement<double, dim>
                (subE.type()).position(0,dim))),
 #else

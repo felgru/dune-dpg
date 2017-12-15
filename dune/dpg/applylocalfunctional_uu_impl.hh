@@ -55,7 +55,7 @@ inline static void interiorImpl(
 
   typename detail::ChooseQuadrature<TestSpace, SolutionSpace, Element>::type quad
     = detail::ChooseQuadrature<TestSpace, SolutionSpace, Element>
-      ::Quadrature(element, quadratureOrder, nullptr);
+      ::Quadrature(element, quadratureOrder);
 
   // Loop over all quadrature points
   for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
@@ -158,11 +158,9 @@ faceImpl(const TestLocalView& testLocalView,
           + testLocalFiniteElement.localBasis().order();
 
     using Face = std::decay_t<decltype(face)>;
-    // TODO: Do we really want to have a transport quadrature rule
-    //       on the faces, if one of the FE spaces is a transport space?
     QuadratureRule<double, 1> quadFace
       = detail::ChooseQuadrature<TestSpace, SolutionSpace, Face>
-        ::Quadrature(face, quadratureOrder, beta);
+        ::Quadrature(face, quadratureOrder);
     if (type == IntegrationType::travelDistanceWeighted &&
         nOutflowFaces > 1) {
       quadFace = SplitQuadratureRule<double>(

@@ -123,7 +123,7 @@ namespace Dune {
 
       localIndexSet.bind(localView);
 
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       const unsigned int nFace
           = referenceElement<double, dim>(e.type()).size(dim-1);
       const unsigned int nVertex
@@ -276,7 +276,7 @@ namespace Dune {
 
       localIndexSet.bind(localView);
 
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       const unsigned int nFace
           = referenceElement<double, dim>(e.type()).size(dim-1);
       const unsigned int nVertex
