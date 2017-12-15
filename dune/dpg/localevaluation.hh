@@ -8,7 +8,6 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
-#include <dune/common/version.hh>
 
 #include "assemble_types.hh"
 #include "type_traits.hh"
@@ -215,11 +214,7 @@ inline double evaluateFactor(FactorType factor, PositionType)
 
 template<class FactorType, class PositionType,
          typename std::enable_if<
-#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
                     Std::is_invocable_r<double,FactorType,const PositionType&>
-#else
-                    Std::is_callable<FactorType(const PositionType&),double>
-#endif
                     ::value>::type* = nullptr >
 inline double evaluateFactor(FactorType factor, PositionType x)
 {
