@@ -157,7 +157,7 @@ namespace detail {
           = detail::ChooseQuadrature<
               typename SubGridLocalView::GlobalBasis,
               typename HostGridLocalView::GlobalBasis, Element>
-            ::Quadrature(e, quadratureOrder, nullptr);
+            ::Quadrature(e, quadratureOrder);
 
       for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
         // Position of the current quadrature point in the reference element
@@ -288,7 +288,7 @@ namespace detail {
             = detail::ChooseQuadrature<
                 typename SubGridLocalView::GlobalBasis,
                 typename HostGridLocalView::GlobalBasis, Element>
-              ::Quadrature(e, quadratureOrder, nullptr);
+              ::Quadrature(e, quadratureOrder);
 
         for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
           // Position of the current quadrature point in the reference element
