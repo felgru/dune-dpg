@@ -5,7 +5,6 @@
 
 #include <dune/geometry/quadraturerules.hh>
 #include <dune/geometry/quadraturerules/subsampledquadraturerule.hh>
-#include <dune/geometry/quadraturerules/transportquadraturerule.hh>
 
 #include "type_traits.hh"
 
@@ -33,22 +32,6 @@ namespace detail {
   };
 
   template<int dim>
-  struct ChooseQuadratureImpl<Dune::TransportQuadratureRule<double, dim>>
-  {
-    template<class Element, class DirectionType>
-    static Dune::TransportQuadratureRule<double, dim>
-    Quadrature(const Element& element,
-               unsigned int quadratureOrder,
-               DirectionType lhsBeta)
-    {
-      TransportQuadratureRule<double, dim> quad(element.type(),
-                                                quadratureOrder,
-                                                lhsBeta);
-      return quad;
-    }
-  };
-
-  template<int dim>
   struct ChooseQuadratureImpl<const Dune::QuadratureRule<double, dim>&>
   {
     template<class Element, class DirectionType>
@@ -71,10 +54,6 @@ namespace detail {
       is_SubsampledFiniteElement<LhsSpace>::value ||
       is_SubsampledFiniteElement<RhsSpace>::value;
 
-    static const bool useTransportQuadrature =
-      is_TransportFiniteElement<LhsSpace>::value ||
-      is_TransportFiniteElement<RhsSpace>::value;
-
     using Slhs = numberOfSamples<LhsSpace>;
     using Srhs = numberOfSamples<RhsSpace>;
     static const int s =
@@ -84,11 +63,7 @@ namespace detail {
         = typename std::conditional
           < useSubsampledQuadrature
           , SubsampledQuadratureRule<double, s, dim>
-          , typename std::conditional
-              < useTransportQuadrature
-              , TransportQuadratureRule<double, dim>
-              , const QuadratureRule<double, dim>&
-              >::type
+          , const QuadratureRule<double, dim>&
           >::type;
 
     template<class DirectionType>

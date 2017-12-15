@@ -211,9 +211,6 @@ struct numberOfSamples<Functions::DefaultGlobalBasis<
                     >::type> {};
 #endif
 
-template<typename GlobalBasis>
-struct is_TransportFiniteElement : std::false_type {};
-
 /*****************************************
  * Change the GridView of a nodal basis
  *****************************************/
