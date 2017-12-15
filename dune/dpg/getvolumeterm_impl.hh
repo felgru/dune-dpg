@@ -68,11 +68,9 @@ struct GetVolumeTerm_Impl<integrationType, Space, false>
 
     const unsigned int nDofs(localFiniteElementTest.localBasis().size());
 
-    // TODO: This does not work with transport elements, as we do not know
-    //       the transport direction.
     typename detail::ChooseQuadrature<TestSpace, TestSpace, Element>::type quad
       = detail::ChooseQuadrature<TestSpace, TestSpace, Element>
-        ::Quadrature(element, quadratureOrder, nullptr);
+        ::Quadrature(element, quadratureOrder);
 
 
     for ( size_t pt=0, qsize=quad.size(); pt < qsize; pt++ ) {
@@ -141,11 +139,9 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
     // Get set of shape functions for this element
     const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
 
-    // TODO: This does not work with transport elements, as we do not know
-    //       the transport direction.
     typename detail::ChooseQuadrature<TestSpace, TestSpace, Element>::type quad
       = detail::ChooseQuadrature<TestSpace, TestSpace, Element>
-        ::Quadrature(element, quadratureOrder, nullptr);
+        ::Quadrature(element, quadratureOrder);
 
 
     const auto referenceGridView =
