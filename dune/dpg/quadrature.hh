@@ -54,7 +54,7 @@ namespace detail {
 
     using Slhs = numberOfSamples<LhsSpace>;
     using Srhs = numberOfSamples<RhsSpace>;
-    static const int s =
+    static constexpr int s =
         std::conditional<Slhs::value < Srhs::value, Srhs, Slhs>::type::value;
 
     using type
