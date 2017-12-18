@@ -651,7 +651,12 @@ public:
             // This assumes that e and child share the same finite element
             // and thus the same entity type.
             auto&& localFiniteElement = node.finiteElement();
-            assert(child.father() == e);
+            if(child.father() != e) {
+              std::cerr << "e is not father of child!\n"
+                << "e.level()=" << e.level()
+                << "child.level()=" << child.level() << '\n';
+              std::exit(1);
+            }
 
             boost::hana::eval_if(
               is_RefinedFiniteElement<SubGridGlobalBasis>{},
