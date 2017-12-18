@@ -3,6 +3,7 @@
 #endif
 #if PERITER_PEAKY_BV
 #  define DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY 1
+#  define PERITER_SKELETAL_SCATTERING 1
 #endif
 #include <algorithm>
 #include <chrono>
