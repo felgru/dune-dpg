@@ -1,6 +1,7 @@
 install(FILES
         concepts.hh
         constraineddiscreteglobalbasisfunction.hh
+        discreteglobalbasisfunction.hh
         interpolate.hh
         localindexsetiteration.hh
         refinementinterpolation.hh
