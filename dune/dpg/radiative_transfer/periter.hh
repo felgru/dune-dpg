@@ -130,6 +130,10 @@ class Periter {
    *                               (whatever comes first)
    * \param plotSolutions  specifies when to create .vtu files for plotting
    *                       the solution
+   * \note By default, the scattering is computed from the inner degrees
+   *       of freedom of the SolutionSpace. To use the skeletal degrees of
+   *       freedom instead, define the preprocessor variable
+   *       PERITER_SKELETAL_SCATTERING before including periter.hh.
    */
   template<class HostGrid, class F, class G, class HB,
            class Sigma, class Kernel>
@@ -519,8 +523,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   //   Choose finite element spaces for the solution and test functions
   //////////////////////////////////////////////////////////////////////
 
-  using FEBasisInterior = Functions::LagrangeDGBasis<LeafGridView, 1>; // u
-  using FEBasisTrace = Functions::HangingNodeP2NodalBasis<LeafGridView>; // u^
+  using FEBasisInterior = Functions::LagrangeDGBasis<LeafGridView, 1>;
+  using FEBasisTrace = Functions::HangingNodeP2NodalBasis<LeafGridView>;
 
   using FEBasisTest = Functions::PQkDGRefinedDGBasis<LeafGridView, 1, 3>;
   using FEBasisTestEnriched = FEBasisTest;
@@ -605,11 +609,20 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     // To prevent division by zero.
     if(uNorm == 0.) uNorm = 1e-5;
 
+#ifdef PERITER_SKELETAL_SCATTERING
     using FEBasisHostTraceDiscontinuous
         = Functions::LagrangeDGBasis<HostGridView, 2>;
+#else
+    using FEBasisHostInterior
+        = changeGridView_t<FEBasisInterior, HostGridView>;
+#endif
     using RHSData = std::decay_t<decltype(attachDataToSubGrid(
               std::declval<FEBasisTest>(),
+#ifdef PERITER_SKELETAL_SCATTERING
               std::declval<FEBasisHostTraceDiscontinuous>(),
+#else
+              std::declval<FEBasisHostInterior>(),
+#endif
               std::declval<VectorType>()))>;
     std::vector<RHSData> rhsData;
     using FEBasisHostTrace
@@ -625,8 +638,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 #endif
     const double accuKernel = kappa1 * eta / (kappaNorm * uNorm);
     {
+#ifdef PERITER_SKELETAL_SCATTERING
       FEBasisHostTraceDiscontinuous
           hostGridGlobalBasis(hostGrid.leafGridView());
+#else
+      FEBasisHostInterior hostGridGlobalBasis(hostGrid.leafGridView());
+#endif
 
       std::vector<VectorType> rhsFunctional =
           apply_scattering (
@@ -1126,16 +1143,27 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       double accuracy) {
   sVector = kernelApproximation.setAccuracyAndInputSize(accuracy, x.size());
 
+#ifdef PERITER_SKELETAL_SCATTERING
   using FEBasisTrace = std::tuple_element_t<1, SolutionSpaces>;
+#else
+  using FEBasisInterior = std::tuple_element_t<0, SolutionSpaces>;
+#endif
 
   // Interpolate x[i] to hostGridBasis.
   std::vector<VectorType> xHost(x.size());
   for(size_t i = 0, imax = x.size(); i < imax; i++) {
+#ifdef PERITER_SKELETAL_SCATTERING
     const FEBasisTrace& feBasisTrace = std::get<1>(*solutionSpaces[i]);
     const size_t  feBasisTraceOffset = std::get<0>(*solutionSpaces[i]).size();
     interpolateFromSubGrid(
         feBasisTrace, x[i].begin() + feBasisTraceOffset,
         hostGridBasis, xHost[i]);
+#else
+    const FEBasisInterior& feBasisInterior = std::get<0>(*solutionSpaces[i]);
+    interpolateFromSubGrid(
+        feBasisInterior, x[i],
+        hostGridBasis, xHost[i]);
+#endif
   }
 
   const auto scatteringAssembler =
