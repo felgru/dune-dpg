@@ -49,13 +49,6 @@ def readData(datafile):
     globalAccAprioriPattern = re.compile(
         r'Bound global accuracy \|\|u - bar u_n\|\| \(a priori \+ a posteriori\): ([0-9]*\.?[0-9]*)')
     dofsPattern = re.compile(r'Total number of DoFs: ([0-9]*\.?[0-9]*)\n')
-    iterationIndices = list()
-    dofs = list()
-    targetAccuracies = list()
-    etas = list()
-    aposterioriErrors = list()
-    kernelTimings = list()
-    ranks = list()
     with open(datafile,"r") as errors:
         errors = errors.read()
         parametersMatch = parametersPattern.search(errors)
@@ -77,7 +70,7 @@ def readData(datafile):
             svPat = re.compile(r'([0-9]+\.?[0-9]*e?-?[0-9]*)\n', re.MULTILINE)
             singularValues = svPat.findall(singularValuesPattern.search(errors).group())
         iterationIndices = iterationIndicesPattern.findall(errors)
-        eta = etaPattern.findall(errors)
+        etas = etaPattern.findall(errors)
         wltLevel = wltLevelPattern.findall(errors)
         numS = numSPattern.findall(errors)
         svdRank = svdRankPattern.findall(errors)
@@ -93,7 +86,7 @@ def readData(datafile):
     return { 'params': parameters
            , 'singularValues': singularValues
            , 'iterationIndices': iterationIndices
-           , 'eta': eta
+           , 'eta': etas
            , 'wltLevel': wltLevel
            , 'numS': numS
            , 'svdRank': svdRank
