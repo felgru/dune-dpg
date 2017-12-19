@@ -224,4 +224,3 @@ plt.xlabel(r"$\theta$")
 
 titleSave="phi"+"-gamma_"+str(g)+".pdf"
 plt.savefig(titleSave)
-
