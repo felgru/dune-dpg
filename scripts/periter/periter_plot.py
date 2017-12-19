@@ -1,12 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
-from __future__ import (absolute_import, print_function)
+from __future__ import (absolute_import, division, print_function)
 import argparse
 import sys
 import re
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from collections import defaultdict
 
 def readData(datafile):
     parametersPattern = re.compile(
@@ -49,6 +50,15 @@ def readData(datafile):
     globalAccAprioriPattern = re.compile(
         r'Bound global accuracy \|\|u - bar u_n\|\| \(a priori \+ a posteriori\): ([0-9]*\.?[0-9]*)')
     dofsPattern = re.compile(r'Total number of DoFs: ([0-9]*\.?[0-9]*)\n')
+    innerIterationsPattern = re.compile(
+            r'Iteration ([0-9]+)\.([0-9]+) for direction [0-9]+: \n'
+            r'  - A posteriori estimation of \|\| \(u,trace u\) - '
+                  r'\(u_fem,theta\) \|\| = [0-9]*\.?[0-9]*\n'
+            r'  - Grid level: ([0-9]+)\n'
+            r'  - Number of DOFs: ([0-9]+)\n\n'
+            r'a posteriori error for current direction: [0-9]*\.?[0-9]* '
+                  r'\((enough|not enough)'
+            , re.MULTILINE)
     with open(datafile,"r") as errors:
         errors = errors.read()
         parametersMatch = parametersPattern.search(errors)
@@ -82,6 +92,13 @@ def readData(datafile):
         globalAccApost = globalAccApostPattern.findall(errors)
         globalAccApriori = globalAccAprioriPattern.findall(errors)
         dofs = dofsPattern.findall(errors)
+        innerIterationsStats = defaultdict(list)
+        for m in innerIterationsPattern.finditer(errors):
+            innerIterationsStats[m.group(1)].append(
+                    { 'numIterations': int(m.group(2))
+                    , 'maxLevel': int(m.group(3))
+                    , 'numDOFs': int(m.group(4))
+                    })
 
     return { 'params': parameters
            , 'singularValues': singularValues
@@ -98,6 +115,7 @@ def readData(datafile):
            , 'globalAccApost' : globalAccApost
            , 'globalAccApriori': globalAccApriori
            , 'dofs': dofs
+           , 'innerIterationsStats': innerIterationsStats
            }
 
 def plot_convergence(data,
@@ -488,6 +506,100 @@ def plot_kernel_matrix_info(data,
 
     plt.clf()
 
+def plot_inner_iterations(data,
+         outputfile='periter_error.pdf',
+         title=None,
+         xlabel='Outer Iteration',
+         ylabel='inner iterations',
+         xlim=None,
+         ylim=None,
+         xscale='linear',
+         yscale='linear',
+         legendlocation='upper center',
+         colorPalette=[
+            '#0063cc', '#80bdff',  # blue
+            '#33cc33', '#99e699',  # green
+            '#cc0000', '#ff5c33',  # red
+            '#b800e6', '#e580ff',  # purple
+            '#cc9900', '#ffd24d'  # yellow
+            ],
+         simple_plot=False):
+    fig, ax = plt.subplots()
+    if title != None:
+        plt.title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.ticklabel_format(style='sci', scilimits=(0,0))
+
+    rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(data['globalAccIterationApost']))]
+    errIdealIteration = []
+    for n in range(len(rhoN)):
+        t = ((np.asarray(map(float, data['eta'])))[0:n+1])[::-1]
+        errIdealIteration.append(np.sum(rhoN[0:n+1]*t))
+
+    iterationIndices = data['iterationIndices']
+    innerIterationStats = data['innerIterationsStats']
+    minNumInnerIterations = []
+    maxNumInnerIterations = []
+    avgNumInnerIterations = []
+    for oi in iterationIndices:
+        minNum = sys.maxint
+        maxNum = 0
+        sum = 0
+        for direction in innerIterationStats[oi]:
+            md = direction['numIterations']
+            minNum = min(minNum, md)
+            maxNum = max(maxNum, md)
+            sum += md
+        minNumInnerIterations.append(minNum)
+        maxNumInnerIterations.append(maxNum)
+        avgNumInnerIterations.append(sum / len(innerIterationStats[oi]))
+
+    minLine = ax.plot(iterationIndices, minNumInnerIterations,
+                      label='min. number of inner iterations')
+
+    avgLine = ax.plot(iterationIndices, avgNumInnerIterations,
+                      label='avg. number of inner iterations')
+
+    maxLine = ax.plot(iterationIndices, maxNumInnerIterations,
+                      label='max. number of inner iterations')
+
+    # plot in RWTH blue
+    plt.setp(minLine, linewidth=2.0,
+             marker='o', markersize=4.0,
+             color=colorPalette[0])
+
+    plt.setp(avgLine, linewidth=2.0,
+             marker='o', markersize=4.0,
+             color=colorPalette[1])
+
+    plt.setp(maxLine, linewidth=2.0,
+             marker='o', markersize=4.0,
+             color=colorPalette[2])
+
+    ax.set_xscale(xscale)
+    ax.set_yscale(yscale)
+    # Shrink current axis by 20%
+    if legendlocation != None:
+        lines1, labels1 = ax.get_legend_handles_labels()
+        if simple_plot:
+            plt.legend(lines1, labels1,
+                       loc=legendlocation, shadow=True,
+                       ncol=1, fancybox=True,fontsize=12)
+        else:
+            plt.legend(lines1, labels1,
+                       loc=legendlocation, shadow=True,
+                       bbox_to_anchor=(0.5, 1.9),
+                       ncol=1, fancybox=True, fontsize=12)
+    ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
+    if xlim != None:
+        plt.xlim(xlim)
+    if ylim != None:
+        plt.ylim(ylim)
+    plt.savefig(outputfile)
+
+    plt.clf()
+
 # TODO: Adapt to new version
 def print_table(data):
     if data['parameters']['adaptiveInS']:
@@ -581,4 +693,9 @@ if(data['params']['kernelApproxType'] == 'SVD'):
     plot_svd(data,
      outputfile=args.prefixOutputFile+"-svd.pdf",
      # title='a posteriori errors of Periter',
+    )
+
+plot_inner_iterations(data,
+     outputfile=args.prefixOutputFile+"-inner-iterations.pdf",
+     simple_plot=args.simple_plot
     )
