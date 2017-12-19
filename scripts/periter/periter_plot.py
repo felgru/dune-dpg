@@ -555,6 +555,22 @@ def plot_inner_iterations(data,
         maxNumInnerIterations.append(maxNum)
         avgNumInnerIterations.append(sum / len(innerIterationStats[oi]))
 
+    minLevel = []
+    maxLevel = []
+    avgLevel = []
+    for oi in iterationIndices:
+        minNum = sys.maxint
+        maxNum = 0
+        sum = 0
+        for direction in innerIterationStats[oi]:
+            md = direction['maxLevel']
+            minNum = min(minNum, md)
+            maxNum = max(maxNum, md)
+            sum += md
+        minLevel.append(minNum)
+        maxLevel.append(maxNum)
+        avgLevel.append(sum / len(innerIterationStats[oi]))
+
     minLine = ax.plot(iterationIndices, minNumInnerIterations,
                       label='min. number of inner iterations')
 
@@ -563,6 +579,15 @@ def plot_inner_iterations(data,
 
     maxLine = ax.plot(iterationIndices, maxNumInnerIterations,
                       label='max. number of inner iterations')
+
+    minLevelLine = ax.plot(iterationIndices, minLevel,
+                      label='min. grid level')
+
+    avgLevelLine = ax.plot(iterationIndices, avgLevel,
+                      label='avg. grid level')
+
+    maxLevelLine = ax.plot(iterationIndices, maxLevel,
+                      label='max. grid level')
 
     # plot in RWTH blue
     plt.setp(minLine, linewidth=2.0,
