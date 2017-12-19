@@ -863,7 +863,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
           ofs << "\na posteriori error for current direction: "
               << aposteriori_s
-              << "(required "
+              << " (required "
               << kappa3 * eta
               << ")\n\n" << std::flush;
         }
