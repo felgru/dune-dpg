@@ -24,7 +24,7 @@ attachDataToGrid(
   auto gridView = globalBasis.gridView();
   auto localView = globalBasis.localView();
 
-  size_t maxEntityDoFs = localView.maxSize();
+  const size_t maxEntityDoFs = localView.maxSize();
 
   std::vector<EntitySeed> entitySeeds(gridView.size(0));
   std::vector<typename Vector::value_type>
@@ -117,6 +117,7 @@ restoreDataToRefinedGrid(
 {
   using Element = typename GlobalBasis::LocalView::Element;
 
+  auto& [entitySeeds, entityData] = storedData;
   const auto& grid = globalBasis.gridView().grid();
   auto localView = globalBasis.localView();
 
@@ -124,9 +125,9 @@ restoreDataToRefinedGrid(
 
   std::vector<FieldVector<double, 1>> data(globalBasis.size());
 
-  auto localData = storedData.second.cbegin();
-  for(auto entitySeed = storedData.first.cbegin(),
-           entitySeedEnd = storedData.first.cend();
+  auto localData = entityData.cbegin();
+  for(auto entitySeed = entitySeeds.cbegin(),
+           entitySeedEnd = entitySeeds.cend();
       entitySeed != entitySeedEnd;
       ++entitySeed, localData += maxEntityDoFs)
   {

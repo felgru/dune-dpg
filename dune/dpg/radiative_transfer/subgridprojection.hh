@@ -865,12 +865,11 @@ private:
         "Interpolation only implemented for up to one level of"
         " local refinement!");
 
-      const auto sourceSubElementAndOffset
+      const auto [sourceSubElement, sourceSubElementOffset]
           = findSubElementContainingChild(childEmbedding, sourceLocalView);
 
-      const auto sourceSubElement = sourceSubElementAndOffset.first;
       const auto sourceLocalDataBegin = sourceLocalData.cbegin()
-                                      + sourceSubElementAndOffset.second;
+                                      + sourceSubElementOffset;
 
       const auto sourceSubGeometryInReferenceElement
           = sourceSubElement.geometry();

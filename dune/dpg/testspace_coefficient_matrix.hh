@@ -268,8 +268,8 @@ public:
   std::pair<CoefMatrices&, bool>
   operator()(const GeometryComparable<Geometry>& geometry)
   {
-    auto insert = bufferMap.emplace(geometry, CoefMatrices{});
-    return {insert.first->second, !(insert.second)};
+    auto [pos, inserted] = bufferMap.emplace(geometry, CoefMatrices{});
+    return {pos->second, !inserted};
   }
 
   unsigned int size() const
@@ -325,9 +325,9 @@ class BufferedTestspaceCoefficientMatrix
     using namespace Dune::detail;
     GeometryComparable<Geometry> newGeometry;
     newGeometry.set(e.geometry());
-    auto pair = geometryBuffer_(newGeometry);
-    coefMatrices_ = &pair.first;
-    if (!pair.second)
+    auto [coefMatrices, initialized] = geometryBuffer_(newGeometry);
+    coefMatrices_ = &coefMatrices;
+    if (!initialized)
     {
       coefMatrices_->set(e,
                          bilinearForm_,

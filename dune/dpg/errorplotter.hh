@@ -38,10 +38,10 @@ public:
     CoefficientVector elementErrors(feBasis.size());
 
     auto localView = feBasis.localView();
-    for(const auto& cellTuple : squaredErrors) {
-      const auto e = grid.entity(std::get<0>(cellTuple));
+    for(const auto& [entitySeed, squaredError] : squaredErrors) {
+      const auto e = grid.entity(entitySeed);
       localView.bind(e);
-      elementErrors[localView.index(0)] = std::sqrt(std::get<1>(cellTuple));
+      elementErrors[localView.index(0)] = std::sqrt(squaredError);
     }
 
     plot(functionname, elementErrors, feBasis);
