@@ -29,6 +29,12 @@ add_dune_suitesparse_flags(plot_solution_simple)
 add_dune_ug_flags(plot_solution_simple)
 target_link_dune_default_libraries("plot_solution_simple")
 
+add_executable("manufactured_transport_uniform"
+               manufactured_transport_uniform.cc)
+add_dune_suitesparse_flags(manufactured_transport_uniform)
+add_dune_ug_flags(manufactured_transport_uniform)
+target_link_dune_default_libraries("manufactured_transport_uniform")
+
 foreach(level 0 1 2)
   set(degree 3)
   set(profile_executable
