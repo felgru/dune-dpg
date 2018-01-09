@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdlib> // for std::exit()
 #include <iostream>
+#include <memory>
 #include <tuple>
 #include <vector>
 

@@ -4,9 +4,10 @@
 #include <iostream>
 #include <cstdlib> // for std::exit()
 
-#include <vector>
 #include <array>
+#include <memory>
 #include <tuple>
+#include <vector>
 
 #include <boost/math/constants/constants.hpp>
 

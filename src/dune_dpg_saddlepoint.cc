@@ -3,9 +3,9 @@
 #endif
 #include <iostream>
 
-#include <vector>
 #include <array>
 #include <tuple>
+#include <vector>
 
 #include <dune/common/exceptions.hh> // We use exceptions
 
