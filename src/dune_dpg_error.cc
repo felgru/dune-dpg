@@ -134,10 +134,8 @@ int main()
     //   Choose a bilinear form
     /////////////////////////////////////////////////////////
 
-    double beta0 = -1.0;
-    double beta1 = -1.0;
-    double c = 1.;
-    FieldVector<double, dim> beta = {beta0, beta1};
+    const double c = 1.;
+    const FieldVector<double, dim> beta = {-1., -1.};
     auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
             make_tuple(
                 make_IntegralTerm<0,0,IntegrationType::valueValue,
@@ -247,8 +245,8 @@ int main()
     //  Make a discrete function from the FE basis and the coefficient vector
     ////////////////////////////////////////////////////////////////////////////
 
-    size_t nFace = std::get<1>(*solutionSpaces).size();
-    size_t nInner = std::get<0>(*solutionSpaces).size();
+    const size_t nFace = std::get<1>(*solutionSpaces).size();
+    const size_t nInner = std::get<0>(*solutionSpaces).size();
     VectorType u(nInner);
     VectorType theta(nFace);
     u=0;
@@ -288,12 +286,12 @@ int main()
       = replaceTestSpaces(rightHandSide, testSpaces_aposteriori);
     rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
 
-    double aposterioriErr
+    const double aposterioriErr
         = ErrorTools::aPosterioriError(bilinearForm_aposteriori,
                                       innerProduct_aposteriori, x, rhs);
     std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = "
               << aposterioriErr << std::endl;
-    double aposterioriL2Err
+    const double aposterioriL2Err
         = ErrorTools::aPosterioriL2Error(aPosterioriInnerProduct,
                                         aPosterioriLinearForm, fieldRHS, x);
     std::cout << "A posteriori L2 error: || (u,trace u) - (u_fem,theta) || = "
