@@ -194,137 +194,140 @@ int main(int argc, char** argv)
             << " and c=" << c << "."<< std::endl
             << "Mesh size H=1/n=" << 1./nelements << std::endl;
 
-  ////////////////////////////////////////////////////////////////////
-  //   Choose finite element spaces and weak formulation of problem
-  ////////////////////////////////////////////////////////////////////
+  const size_t maxNumRefinements = 4;
+  for(size_t n = 0; n < maxNumRefinements; n++) {
+    ////////////////////////////////////////////////////////////////////
+    //   Choose finite element spaces and weak formulation of problem
+    ////////////////////////////////////////////////////////////////////
 
-  using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
-  FEBasisInterior spacePhi(gridView);
+    using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
+    FEBasisInterior spacePhi(gridView);
 
-  using FEBasisTraceLifting = Functions::PQkNodalBasis<GridView, 2>;
-  FEBasisTraceLifting spaceW(gridView);
+    using FEBasisTraceLifting = Functions::PQkNodalBasis<GridView, 2>;
+    FEBasisTraceLifting spaceW(gridView);
 
-  auto solutionSpaces
-      = make_space_tuple<FEBasisInterior, FEBasisTraceLifting>(gridView);
+    auto solutionSpaces
+        = make_space_tuple<FEBasisInterior, FEBasisTraceLifting>(gridView);
 
-  using FEBasisTest
-      = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
-  auto testSearchSpaces = make_space_tuple<FEBasisTest>(gridView);
+    using FEBasisTest
+        = Functions::PQkDGRefinedDGBasis<GridView, 2, 3>;
+    auto testSearchSpaces = make_space_tuple<FEBasisTest>(gridView);
 
-  // enriched test space for error estimation
-  using FEBasisTest_aposteriori
-      = Functions::PQkDGRefinedDGBasis<GridView, 1, 4>;
-  auto testSpaces_aposteriori
-      = make_space_tuple<FEBasisTest_aposteriori>(gridView);
+    // enriched test space for error estimation
+    using FEBasisTest_aposteriori
+        = Functions::PQkDGRefinedDGBasis<GridView, 2, 4>;
+    auto testSpaces_aposteriori
+        = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
-  auto bilinearForm = make_BilinearForm(testSearchSpaces, solutionSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(c),
-              make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                    DomainOfIntegration::interior>(-1., beta),
-              make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                    DomainOfIntegration::face>(1., beta)));
-  auto innerProduct = make_InnerProduct(testSearchSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1.),
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta)));
+    auto bilinearForm = make_BilinearForm(testSearchSpaces, solutionSpaces,
+            make_tuple(
+                make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                      DomainOfIntegration::interior>(c),
+                make_IntegralTerm<0,0,IntegrationType::gradValue,
+                                      DomainOfIntegration::interior>(-1., beta),
+                make_IntegralTerm<0,1,IntegrationType::normalVector,
+                                      DomainOfIntegration::face>(1., beta)));
+    auto innerProduct = make_InnerProduct(testSearchSpaces,
+            make_tuple(
+                make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                      DomainOfIntegration::interior>(1.),
+                make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                      DomainOfIntegration::interior>(1., beta)));
 
-  auto bilinearForm_aposteriori
-      = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
-  auto innerProduct_aposteriori
-      = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
+    auto bilinearForm_aposteriori
+        = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
+    auto innerProduct_aposteriori
+        = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
-  typedef GeometryBuffer<GridView::template Codim<0>::Geometry> GeometryBuffer;
-  GeometryBuffer geometryBuffer;
+    typedef GeometryBuffer<GridView::template Codim<0>::Geometry> GeometryBuffer;
+    GeometryBuffer geometryBuffer;
 
-  auto systemAssembler
-      = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
+    auto systemAssembler
+        = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
 
-  /////////////////////////////////////////////////////////
-  //  Assemble the system
-  /////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////
+    //  Assemble the system
+    /////////////////////////////////////////////////////////
 
-  typedef BlockVector<FieldVector<double,1> > VectorType;
-  typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
+    typedef BlockVector<FieldVector<double,1> > VectorType;
+    typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
 
-  VectorType rhsVector;
-  MatrixType stiffnessMatrix;
+    VectorType rhsVector;
+    MatrixType stiffnessMatrix;
 
-  auto rhsFunctions
-    = make_LinearForm(testSearchSpaces,
-          std::make_tuple(make_LinearIntegralTerm<0,
-                                LinearIntegrationType::valueFunction,
-                                DomainOfIntegration::interior>(
-                                  [beta](const FieldVector<double, dim>& x)
-                                  { return f(x,beta); })));
-  systemAssembler.assembleSystem(stiffnessMatrix, rhsVector, rhsFunctions);
+    auto rhsFunctions
+      = make_LinearForm(testSearchSpaces,
+            std::make_tuple(make_LinearIntegralTerm<0,
+                                  LinearIntegrationType::valueFunction,
+                                  DomainOfIntegration::interior>(
+                                    [beta](const FieldVector<double, dim>& x)
+                                    { return f(x,beta); })));
+    systemAssembler.assembleSystem(stiffnessMatrix, rhsVector, rhsFunctions);
 
-  // Determine Dirichlet dofs for w (inflow boundary)
-  {
-    std::vector<bool> dirichletNodesInflow;
-    BoundaryTools::getInflowBoundaryMask(std::get<1>(*solutionSpaces),
-                                         dirichletNodesInflow,
-                                         beta);
-    systemAssembler.applyDirichletBoundary<1>
-        (stiffnessMatrix,
-         rhsVector,
-         dirichletNodesInflow,
-         0.);
+    // Determine Dirichlet dofs for w (inflow boundary)
+    {
+      std::vector<bool> dirichletNodesInflow;
+      BoundaryTools::getInflowBoundaryMask(std::get<1>(*solutionSpaces),
+                                           dirichletNodesInflow,
+                                           beta);
+      systemAssembler.applyDirichletBoundary<1>
+          (stiffnessMatrix,
+           rhsVector,
+           dirichletNodesInflow,
+           0.);
+    }
+
+    ////////////////////////////
+    //   Compute solution
+    ////////////////////////////
+
+    VectorType x(spaceW.size()
+                 +spacePhi.size());
+    x = 0;
+
+    std::cout << "rhs size = " << rhsVector.size()
+              << " matrix size = " << stiffnessMatrix.N()
+                          << " x " << stiffnessMatrix.M()
+              << " solution size = " << x.size() << std::endl;
+
+
+    UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
+    InverseOperatorResult statistics;
+    umfPack.apply(x, rhsVector, statistics);
+
+    ///////////////////
+    // Compute errors
+    ///////////////////
+
+    // Error with respect to exact solution
+    const double l2err
+      = ErrorTools::computeL2error<2>(std::get<0>(*solutionSpaces), x,
+          [beta](const FieldVector<double, dim>& x)
+          { return uAnalytic(x, beta); });
+
+    // A posteriori error
+    // We compute the rhsVector in the form given by the projection approach
+    auto rhsAssembler_aposteriori = make_RhsAssembler(testSpaces_aposteriori);
+    auto rightHandSide_aposteriori
+      = replaceTestSpaces(rhsFunctions, testSpaces_aposteriori);
+    rhsAssembler_aposteriori.assembleRhs(rhsVector, rightHandSide_aposteriori);
+
+    const double aposterioriErr
+        = ErrorTools::aPosterioriError(bilinearForm_aposteriori,
+                                       innerProduct_aposteriori, x, rhsVector);
+
+    std::cout <<   "exact L2 error:     " << l2err
+              << "\na posteriori error: " << aposterioriErr
+              << "\nL2 / a posteriori:  " << l2err / aposterioriErr << '\n';
+
+    //////////////////////////////////////////////////////////////////
+    //  Write result to VTK files
+    //////////////////////////////////////////////////////////////////
+    // FunctionPlotter phiPlotter("transport_solution");
+    // FunctionPlotter wPlotter("transport_solution_trace");
+    // phiPlotter.plot("phi", x, spacePhi, 0, 0);
+    // wPlotter.plot("w", x, spaceW, 2, spacePhi.size());
+
+    grid->globalRefine(1);
   }
-
-  ////////////////////////////
-  //   Compute solution
-  ////////////////////////////
-
-  VectorType x(spaceW.size()
-               +spacePhi.size());
-  x = 0;
-
-  std::cout << "rhs size = " << rhsVector.size()
-            << " matrix size = " << stiffnessMatrix.N()
-                        << " x " << stiffnessMatrix.M()
-            << " solution size = " << x.size() << std::endl;
-
-
-  UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
-  InverseOperatorResult statistics;
-  umfPack.apply(x, rhsVector, statistics);
-
-  ///////////////////
-  // Compute errors
-  ///////////////////
-
-  // Error with respect to exact solution
-  const double l2err
-    = ErrorTools::computeL2error<2>(std::get<0>(*solutionSpaces), x,
-        [beta](const FieldVector<double, dim>& x)
-        { return uAnalytic(x, beta); });
-
-  // A posteriori error
-  // We compute the rhsVector in the form given by the projection approach
-  auto rhsAssembler_aposteriori = make_RhsAssembler(testSpaces_aposteriori);
-  auto rightHandSide_aposteriori
-    = replaceTestSpaces(rhsFunctions, testSpaces_aposteriori);
-  rhsAssembler_aposteriori.assembleRhs(rhsVector, rightHandSide_aposteriori);
-
-  const double aposterioriErr
-      = ErrorTools::aPosterioriError(bilinearForm_aposteriori,
-                                     innerProduct_aposteriori, x, rhsVector);
-
-  std::cout <<   "exact L2 error:     " << l2err
-            << "\na posteriori error: " << aposterioriErr << '\n';
-
-  //////////////////////////////////////////////////////////////////
-  //  Write result to VTK files
-  //////////////////////////////////////////////////////////////////
-  FunctionPlotter phiPlotter("transport_solution");
-  FunctionPlotter wPlotter("transport_solution_trace");
-  phiPlotter.plot("phi", x, spacePhi, 0, 0);
-  wPlotter.plot("w", x, spaceW, 2, spacePhi.size());
-
-
-  return 0;
 }
