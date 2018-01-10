@@ -235,7 +235,7 @@ int main(int argc, char** argv)
   }
 
   double err = ErrorTools::computeL2error<1>(std::get<0>(*solutionSpaces),
-                                         u, std::make_tuple(uAnalytic(beta)));
+                                         u, uAnalytic(beta));
 
   // We compute the a posteriori error
   auto rhsAssembler_aposteriori

@@ -274,15 +274,11 @@ int main()
     ////////////////////////////////////////////////////////////////////////////
 
     std::cout << std::endl << "******** Computation of errors *************" << std::endl;
-    // The exact solution against which we are comparing our FEM solution
-    auto uExact = std::make_tuple(fieldExact);
-    // to retrive the value out of this:
-    // std::get<0>(uExact)(x)
 
     // We build an object of type ErrorTools to study errors, residuals
     // and do hp-adaptivity
     // We compute the L2 error between the exact and the fem solutions
-    err = ErrorTools::computeL2error<1>(innerSpace, u, uExact);
+    err = ErrorTools::computeL2error<1>(innerSpace, u, fieldExact);
     std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl;
 
     // A posteriori error

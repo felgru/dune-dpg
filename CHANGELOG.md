@@ -80,6 +80,8 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   You can use Dörfler marking with your own error estimators or use the
   function `ErrorTools::squaredCellwiseResidual` to compute the error
   estimates.
+* `ErrorTools::computeL2error` now takes the exact solution directly
+  instead of having it wrapped in a `std::tuple`.
 * `LinearFunctionalTerm` now also works with a refined solution space.
 * We now check in a static_assert that `defineCharacteristicFaces` is
   not called with refined spaces.
