@@ -73,6 +73,7 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * ErrorTools: The element-wise operations are now marked as private.
 * ErrorTools: Mark all methods as static.
   In the future, we might make ErrorTools a namespace instead of a class.
+* `ErrorTools` and `BoundaryTools` are not constructible anymore.
 * `ErrorTools::DoerflerMarking` can now be called as
   `DoerflerMarking(grid, ratio, errorEstimates)` where `errorEstimates`
   is a `std::vector<std::tuple<EntitySeed, double>>&&` where each entry

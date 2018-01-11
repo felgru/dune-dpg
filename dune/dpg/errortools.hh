@@ -65,7 +65,7 @@ namespace Dune {
   class ErrorTools
   {
   public:
-    ErrorTools() {};
+    ErrorTools() = delete;
 
     template <class FEBasis>
     static double l2norm(
