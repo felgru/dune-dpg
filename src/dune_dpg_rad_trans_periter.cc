@@ -19,6 +19,7 @@
 #include <vector>
 
 #include <dune/common/exceptions.hh> // We use exceptions
+#include <dune/common/parallel/mpihelper.hh>
 
 #include <dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/uggrid.hh>
@@ -67,7 +68,7 @@ int main(int argc, char** argv)
   try{
 
   // Set up MPI, if available
-  MPIHelper::instance(argc, argv);
+  FakeMPIHelper::instance(argc, argv);
 
   ///////////////////////////////////
   // Get arguments
