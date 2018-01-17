@@ -11,7 +11,7 @@ known bugs:
   results when factor is a picewise constant function that is aligned
   with the grid on which the FE spaces are defined.
 * Adjust quadrature order for non-constant function (rhs term) in
-  getvolumeterm_impl.hh and in linearintegralterm.hh
+  locallinearterm_impl.hh and in linearintegralterm.hh
 
 proposed features:
 

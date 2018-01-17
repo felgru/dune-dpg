@@ -10,7 +10,7 @@
 #include "type_traits.hh"
 #include "quadrature.hh"
 #include "localevaluation.hh"
-#include "getvolumeterm_impl.hh"
+#include "locallinearterm_impl.hh"
 
 namespace Dune {
 
@@ -164,8 +164,8 @@ void LinearIntegralTerm<integrationType,
   /* TODO: Assuming β const. */
   const auto quadratureOrder = localView.tree().finiteElement().localBasis().order();
   if(domainOfIntegration == DomainOfIntegration::interior) {
-    detail::GetVolumeTerm_Impl<integrationType, Space>
-                ::getVolumeTerm(localView,
+    detail::GetLocalLinearTermVector<integrationType, Space>
+               ::getLocalVector(localView,
                                 elementVector,
                                 spaceOffset,
                                 quadratureOrder,

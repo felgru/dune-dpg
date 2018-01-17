@@ -1,7 +1,7 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_DPG_GETVOLUMETERM_IMPL_HH
-#define DUNE_DPG_GETVOLUMETERM_IMPL_HH
+#ifndef DUNE_DPG_LOCALLINEARTERM_IMPL_HH
+#define DUNE_DPG_LOCALLINEARTERM_IMPL_HH
 
 #include <dune/functions/common/functionconcepts.hh>
 #include <dune/istl/bvector.hh>
@@ -17,14 +17,14 @@ template <LinearIntegrationType integrationType,
           class Space,
           bool = is_RefinedFiniteElement
                  <Space>::value>
-struct GetVolumeTerm_Impl
+struct GetLocalLinearTermVector
 {
   using LocalViewTest = typename Space::LocalView;
 
   template<class VectorType,
            class FactorType,
            class DirectionType>
-  static void getVolumeTerm (const LocalViewTest& localViewTest,
+  static void getLocalVector(const LocalViewTest& localViewTest,
                              VectorType& elementVector,
                              size_t spaceOffset,
                              const unsigned int quadratureOrder,
@@ -35,14 +35,14 @@ struct GetVolumeTerm_Impl
 
 template <LinearIntegrationType integrationType,
           class Space>
-struct GetVolumeTerm_Impl<integrationType, Space, false>
+struct GetLocalLinearTermVector<integrationType, Space, false>
 {
   using LocalViewTest = typename Space::LocalView;
 
   template<class VectorType,
            class FactorType,
            class DirectionType>
-  static void getVolumeTerm (const LocalViewTest& localViewTest,
+  static void getLocalVector(const LocalViewTest& localViewTest,
                              VectorType& elementVector,
                              size_t spaceOffset,
                              const unsigned int quadratureOrder,
@@ -51,7 +51,7 @@ struct GetVolumeTerm_Impl<integrationType, Space, false>
   {
     static_assert(models<Functions::Concept::
          Function<double(const Dune::FieldVector<double, 2>&)>, FactorType>(),
-         "The factor passed to getVolumeTerm does not model the "
+         "The factor passed to getLocalVector does not model the "
          "Function concept.");
 
     using TestSpace = typename LocalViewTest::GlobalBasis;
@@ -108,14 +108,14 @@ struct GetVolumeTerm_Impl<integrationType, Space, false>
 
 template <LinearIntegrationType integrationType,
           class Space>
-struct GetVolumeTerm_Impl<integrationType, Space, true>
+struct GetLocalLinearTermVector<integrationType, Space, true>
 {
   using LocalViewTest = typename Space::LocalView;
 
   template<class VectorType,
            class FactorType,
            class DirectionType>
-  static void getVolumeTerm (const LocalViewTest& localViewTest,
+  static void getLocalVector(const LocalViewTest& localViewTest,
                              VectorType& elementVector,
                              size_t spaceOffset,
                              const unsigned int quadratureOrder,
@@ -124,7 +124,7 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
   {
     static_assert(models<Functions::Concept::
          Function<double(const Dune::FieldVector<double, 2>&)>, FactorType>(),
-         "The factor passed to getVolumeTerm does not model the "
+         "The factor passed to getLocalVector does not model the "
          "Function concept.");
 
     using TestSpace = typename LocalViewTest::GlobalBasis;
@@ -201,4 +201,4 @@ struct GetVolumeTerm_Impl<integrationType, Space, true>
 
 }} // end namespace Dune::detail
 
-#endif // DUNE_DPG_GETVOLUMETERM_IMPL_HH
+#endif // DUNE_DPG_LOCALLINEARTERM_IMPL_HH

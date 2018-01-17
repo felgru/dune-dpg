@@ -106,7 +106,7 @@ public:
   /**
    * \brief Assemble the DPG system for a given rhs function.
    *
-   * Given a tuple of right hand side functions \p volumeTerms,
+   * Given a LinearForm \p rhsLinearForm,
    * this assembles the matrix and vector of the corresponding
    * DPG system. \p matrix and \p rhs will be overwritten by this
    * function.
