@@ -99,11 +99,11 @@ void checkQuadrature(const QuadratureRule &quad)
   const Dune::GeometryType& t = quad.type();
 #endif
   FieldVector<ctype,dim> integral(0);
-  for (typename QuadratureRule::iterator qp=quad.begin(); qp!=quad.end(); ++qp)
+  for (const auto& qp : quad)
   {
     // pos of integration point
-    const FieldVector< ctype, dim > &x = qp->position();
-    const ctype weight = qp->weight();
+    const FieldVector< ctype, dim > &x = qp.position();
+    const ctype weight = qp.weight();
 
     for (unsigned int d=0; d<dim; d++)
       integral[d] += weight*std::pow(x[d],double(p));
@@ -145,13 +145,10 @@ void checkWeights(const QuadratureRule &quad)
 #else
   const Dune::GeometryType& t = quad.type();
 #endif
-  typedef typename QuadratureRule::iterator QuadIterator;
   double volume = 0;
-  QuadIterator qp = quad.begin();
-  QuadIterator qend = quad.end();
-  for (; qp!=qend; ++qp)
+  for (const auto& qp : quad)
   {
-    volume += qp->weight();
+    volume += qp.weight();
   }
 #if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
   if (std::abs(volume - Dune::referenceElement<ctype, dim>(t).volume())

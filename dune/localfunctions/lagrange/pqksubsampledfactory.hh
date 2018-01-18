@@ -74,18 +74,14 @@ namespace Dune
     PQkSubsampledLocalFiniteElementCache(
             const PQkSubsampledLocalFiniteElementCache& other)
     {
-      typename FEMap::iterator it = other.cache_.begin();
-      typename FEMap::iterator end = other.cache_.end();
-      for(; it!=end; ++it)
-        cache_[it->first] = (it->second)->clone();
+      for(const auto& entry : other.cache_)
+        cache_[entry.first] = (entry.second)->clone();
     }
 
     ~PQkSubsampledLocalFiniteElementCache()
     {
-      typename FEMap::iterator it = cache_.begin();
-      typename FEMap::iterator end = cache_.end();
-      for(; it!=end; ++it)
-        delete it->second;
+      for(auto&& entry : cache_)
+        delete entry.second;
     }
 
     //! Get local finite element for given GeometryType
