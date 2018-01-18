@@ -88,41 +88,44 @@ namespace Dune
       }
       int n=0;
       int c=0;
-      for (unsigned int j=0; j<=k; j++)
-        for (unsigned int i=0; i<=k-j; i++)
+      for (unsigned int i0=0; i0<=k; i0++)
+      {
+        for (unsigned int i1=0; i1<=k-i0; i1++)
         {
-          if (i==0 && j==0)
+          const unsigned int i2 = k-i0-i1;
+          if (i0==0 && i1==0)
           {
             li[n++] = LocalKey(0,2,0);
             continue;
           }
-          if (i==k && j==0)
+          if (i0==k && i1==0)
           {
             li[n++] = LocalKey(1,2,0);
             continue;
           }
-          if (i==0 && j==k)
+          if (i0==0 && i1==k)
           {
             li[n++] = LocalKey(2,2,0);
             continue;
           }
-          if (j==0)
+          if (i1==0)
           {
-            li[n++] = LocalKey(0,1,i-1);
+            li[n++] = LocalKey(0,1,i0-1);
             continue;
           }
-          if (i==0)
+          if (i0==0)
           {
-            li[n++] = LocalKey(1,1,j-1);
+            li[n++] = LocalKey(1,1,i1-1);
             continue;
           }
-          if (i+j==k)
+          if (i2==0)
           {
-            li[n++] = LocalKey(2,1,j-1);
+            li[n++] = LocalKey(2,1,i1-1);
             continue;
           }
           li[n++] = LocalKey(0,0,c++);
         }
+      }
     }
   };
 
