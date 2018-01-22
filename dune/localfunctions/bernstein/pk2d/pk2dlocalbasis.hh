@@ -141,6 +141,7 @@ namespace Dune
   private:
     static inline unsigned int index(std::array<unsigned int, 3> iBarycentric)
     {
+      assert(std::accumulate(iBarycentric.begin(), iBarycentric.end(), 0) == k);
       const unsigned int i = iBarycentric[0];
       const unsigned int j = iBarycentric[1];
       return (k+1)*(k+2)/2 - (k-i+1)*(k-i+2)/2 + j;
