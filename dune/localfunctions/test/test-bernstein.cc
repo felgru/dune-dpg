@@ -18,8 +18,7 @@ bool testPartitionOfUnity(const FE& fe, unsigned int order = 2)
 {
   using LB = typename FE::Traits::LocalBasisType;
   using RangeType = typename LB::Traits::RangeType;
-  const auto eps
-      = std::numeric_limits<RangeType>::epsilon();
+  const auto eps = 1e-10;
 
   bool success = true;
 
