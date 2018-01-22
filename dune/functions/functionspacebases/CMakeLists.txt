@@ -2,6 +2,7 @@ add_subdirectory(test)
 
 install(FILES
         bernsteinbasis.hh
+        bernsteindgbasis.hh
         constrainedglobalbasis.hh
         constrainedlocalindexset.hh
         hangingnodep2nodalbasis.hh
