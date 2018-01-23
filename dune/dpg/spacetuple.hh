@@ -7,6 +7,8 @@
 #include <tuple>
 #include <type_traits>
 
+#include <dune/dpg/functions/concepts.hh>
+
 namespace Dune {
 
   template<class... Spaces>
@@ -17,6 +19,22 @@ namespace Dune {
 
   template<class... Spaces>
   struct is_SpaceTuplePtr<SpaceTuplePtr<Spaces...>> : std::true_type {};
+
+  /**
+   * Create a shared_ptr to a tuple of spaces over the same GridView
+   */
+  template<class... Spaces, class GridView>
+  SpaceTuplePtr<Spaces...>
+  make_space_tuple(const GridView& gridView)
+  {
+    static_assert(Concept::tupleEntriesModel<
+        Functions::Concept::GeneralizedGlobalBasis<GridView>,
+        std::tuple<Spaces...>>(),
+        "Spaces need to model the GeneralizedGlobalBasis concept.");
+
+    return std::make_shared<typename std::tuple<Spaces...>>(
+        std::make_tuple(Spaces(gridView)...));
+  }
 
 } // end namespace Dune
 
