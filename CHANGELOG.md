@@ -41,6 +41,10 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * New `SkeletalLinearFunctionalTerm` that can be used to implement
   the second alternative for handling boundary values as given in
   Broersen, Dahmen, Stevenson Remark 3.6.
+* New `SpaceTupleView` class to use part of a tuple of spaces as a
+  space tuple pointer. This is used e.g. in our saddle point problem
+  example to define test and trial spaces as part of the same tuple
+  of spaces.
 * New option to use a least squares solver instead of Cholesky by defining
   the preprocessor variable DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY.
   This might help on strongly refined grids, where the Gramian in the trial
