@@ -35,16 +35,18 @@ template<class BilinForm, class InProduct>
 class SaddlepointSystemAssembler
 {
 public:
-  typedef typename BilinForm::TestSpaces TestSpaces;
-  typedef typename BilinForm::SolutionSpaces SolutionSpaces;
+  using TestSpaces = typename BilinForm::TestSpaces;
+  using SolutionSpaces = typename BilinForm::SolutionSpaces;
+  using TestSpacesPtr = typename BilinForm::TestSpacesPtr;
+  using SolutionSpacesPtr = typename BilinForm::SolutionSpacesPtr;
   //! tuple type for the local views of the test spaces
-  typedef detail::getLocalViews_t<TestSpaces>  TestLocalViews;
+  using TestLocalViews = detail::getLocalViews_t<TestSpaces>;
   //! tuple type for the local views of the solution spaces
-  typedef detail::getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
+  using SolutionLocalViews = detail::getLocalViews_t<SolutionSpaces>;
   //! type of the bilinear form describing this DPG system
-  typedef BilinForm BilinearForm;
+  using BilinearForm = BilinForm;
   //! type of the inner product on the test spaces
-  typedef InProduct InnerProduct;
+  using InnerProduct = InProduct;
 
 public:
   SaddlepointSystemAssembler () = delete;
@@ -175,13 +177,13 @@ public:
   /**
    * \brief Does exactly what it says on the tin.
    */
-  std::shared_ptr<TestSpaces> getTestSpaces() const
+  TestSpacesPtr getTestSpaces() const
   { return testSpaces; }
 
   /**
    * \brief Does exactly what it says on the tin.
    */
-  std::shared_ptr<SolutionSpaces> getSolutionSpaces() const
+  SolutionSpacesPtr getSolutionSpaces() const
   { return solutionSpaces; }
 
 private:
@@ -225,10 +227,10 @@ private:
   // TODO: IPIndices seems to have some type_c too much.
   using IPIndices = decltype(ipIndices());
 
-  std::shared_ptr<TestSpaces>     testSpaces;
-  std::shared_ptr<SolutionSpaces> solutionSpaces;
-  BilinearForm                    bilinearForm;
-  InnerProduct                    innerProduct;
+  TestSpacesPtr     testSpaces;
+  SolutionSpacesPtr solutionSpaces;
+  BilinearForm      bilinearForm;
+  InnerProduct      innerProduct;
 };
 
 /**

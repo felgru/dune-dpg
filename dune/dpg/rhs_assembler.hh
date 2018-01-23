@@ -29,19 +29,21 @@ namespace Dune {
 /**
  * \brief This constructs the right hand side vector of a DPG system.
  *
- * \tparam TestSpaces     tuple of test spaces
+ * \tparam TestSpacesPtr  shared_ptr to a tuple of test spaces
  */
-template<class TestSpaces>
+template<class TestSpacesPtr>
 class RhsAssembler
 {
 public:
+  using TestSpaces = typename TestSpacesPtr::element_type;
+
   RhsAssembler () = delete;
   /**
    * \brief constructor for RhsAssembler
    *
    * \note For your convenience, use make_RhsAssembler() instead.
    */
-  constexpr RhsAssembler (const std::shared_ptr<TestSpaces>& testSpaces)
+  constexpr RhsAssembler (const TestSpacesPtr& testSpaces)
              : testSpaces(testSpaces)
   { }
 
@@ -77,11 +79,11 @@ public:
   /**
    * \brief Does exactly what it says on the tin.
    */
-  std::shared_ptr<TestSpaces> getTestSpaces() const
+  TestSpacesPtr getTestSpaces() const
   { return testSpaces; }
 
 private:
-  std::shared_ptr<TestSpaces> testSpaces;
+  TestSpacesPtr testSpaces;
 };
 
 /**
@@ -90,16 +92,16 @@ private:
  *
  * \param testSpaces     a shared_ptr to a tuple of test spaces
  */
-template<class TestSpaces>
-RhsAssembler<TestSpaces>
-make_RhsAssembler(const std::shared_ptr<TestSpaces>& testSpaces)
+template<class TestSpacesPtr>
+RhsAssembler<TestSpacesPtr>
+make_RhsAssembler(const TestSpacesPtr& testSpaces)
 {
-  return RhsAssembler<TestSpaces>(testSpaces);
+  return RhsAssembler<TestSpacesPtr>(testSpaces);
 }
 
-template<class TestSpaces>
+template<class TestSpacesPtr>
 template <class LinearForm>
-void RhsAssembler<TestSpaces>::
+void RhsAssembler<TestSpacesPtr>::
 assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
             LinearForm& rhsLinearForm)
 {
@@ -152,9 +154,9 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 }
 
 
-template<class TestSpaces>
+template<class TestSpacesPtr>
 template <size_t spaceIndex, class ValueType>
-void RhsAssembler<TestSpaces>::
+void RhsAssembler<TestSpacesPtr>::
 applyDirichletBoundary(BlockVector<FieldVector<double,1> >& rhs,
                        const std::vector<bool>& dirichletNodes,
                        const ValueType& value)
