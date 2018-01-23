@@ -141,41 +141,6 @@ namespace Dune {
   };
 
 /**
- * \brief Creates a LinearForm for a saddlepoint formulation,
- *        deducing the target type from the types of arguments.
- *
- * \param testSpaces      a shared_ptr to a tuple of test spaces
- * \param solutionSpaces  a shared_ptr to a tuple of solution spaces
- * \param terms           a tuple of LinearIntegralTerm
- */
-template<class TestSpaces, class SolutionSpaces, class LinearTerms>
-auto make_Saddlepoint_LinearForm(TestSpaces      testSpaces,
-                                 SolutionSpaces  solutionSpaces,
-                                 LinearTerms     terms)
-    -> LinearForm<typename std::remove_reference<decltype(
-            std::tuple_cat(std::declval<TestSpaces>(),
-                           std::declval<SolutionSpaces>())
-            )>::type, LinearTerms>
-{
-  // TODO: This does not really make sense because
-  //       of the spaceindex in LinearTerms.
-  static_assert(std::tuple_size<SolutionSpaces>::value > 0,
-      "Use make_LinearForm and concatenate spaces");
-  using Spaces
-    = typename std::remove_reference<decltype(
-            std::tuple_cat(std::declval<TestSpaces>(),
-                           std::declval<SolutionSpaces>()
-            ))>::type;
-  return LinearForm<Spaces, LinearTerms>
-                    // TODO: Wrap concatenated tuple into a shared_ptr.
-                    //       We cannot do it here, as the LinearForm would
-                    //       then hold copies to the spaces we were giving
-                    //       here, thus making it possible to have
-                    //       inconsistent spaces after refinement.
-                    (std::tuple_cat(testSpaces, solutionSpaces), terms);
-}
-
-/**
  * \brief Creates a LinearForm (i.e. for a saddlepoint formulation),
  *        deducing the target type from the types of arguments.
  *

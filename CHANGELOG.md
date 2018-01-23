@@ -131,7 +131,8 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   ErrorTools::squaredCellwiseResidual(...))`.
 
 ### Removed
-* Remove the `make_DPGLinearForm` and `make_DPG_LinearForm` functions,
+* Remove the `make_DPGLinearForm`, `make_DPG_LinearForm` and
+  `make_Saddlepoint_LinearForm` functions,
   use `make_LinearForm` instead.
 * Remove the `refinedReferenceElement` method of refined global basis
   nodes. As a replacement, a new method `refinedReferenceElementGridView`
