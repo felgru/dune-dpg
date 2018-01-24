@@ -35,6 +35,12 @@ namespace Functions {
   template<typename GV, int level, int k, class MI>
   class PQkDGRefinedDGNodeFactory;
 
+  template<typename GV, int k, class MI>
+  class BernsteinNodeFactory;
+
+  template<typename GV, int k, class MI>
+  class BernsteinDGNodeFactory;
+
   template<typename GV, int s, int k, class MI>
   class PQkDGSubsampledDGNodeFactory;
 
@@ -256,6 +262,18 @@ struct changeGridView<Functions::PQkDGRefinedDGNodeFactory<GV, level, k, MI>,
                       GridView>
 {
   typedef Functions::PQkDGRefinedDGNodeFactory<GridView, level, k, MI> type;
+};
+
+template<typename GV, int k, class MI, class GridView>
+struct changeGridView<Functions::BernsteinNodeFactory<GV, k, MI>, GridView>
+{
+  typedef Functions::BernsteinNodeFactory<GridView, k, MI> type;
+};
+
+template<typename GV, int k, class MI, class GridView>
+struct changeGridView<Functions::BernsteinDGNodeFactory<GV, k, MI>, GridView>
+{
+  typedef Functions::BernsteinDGNodeFactory<GridView, k, MI> type;
 };
 
 template<typename GV, int s, int k, class MI, class GridView>
