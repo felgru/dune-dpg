@@ -5,6 +5,7 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
+#include <dune/common/power.hh>
 #include <dune/common/version.hh>
 #if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
 #include <dune/common/std/optional.hh>

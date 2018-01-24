@@ -5,6 +5,7 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
+#include <dune/common/power.hh>
 #include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqktracefactory.hh>
