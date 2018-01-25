@@ -75,13 +75,13 @@ int main()
   //   Generate the grid
   ///////////////////////////////////
 
-  const int dim = 2;
+  constexpr int dim = 2;
 
   using HostGrid = UGGrid<dim>;
   using Grid = SubGrid<dim, HostGrid, false>;
-  FieldVector<double,dim> lower = {0,0};
-  FieldVector<double,dim> upper = {1,1};
-  std::array<unsigned int,dim> elements = {1,1};
+  const FieldVector<double,dim> lower = {0, 0};
+  const FieldVector<double,dim> upper = {1, 1};
+  const std::array<unsigned int,dim> elements = {1, 1};
 
   // Square mesh
   //std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>::createCubeGrid(lower, upper, elements);
@@ -105,7 +105,7 @@ int main()
   }
 
   double err = 1.;
-  const double tol = 1e-10;
+  constexpr double tol = 1e-10;
   for(unsigned int i = 0; err > tol && i < 20; ++i)
   {
     using GridView = Grid::LeafGridView;

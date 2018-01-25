@@ -66,15 +66,15 @@ int main(int argc, char** argv)
   //   Generate the grid
   ///////////////////////////////////
 
-  const int dim = 2;
+  constexpr int dim = 2;
   using HostGrid = UGGrid<dim>;
   using Grid = SubGrid<dim, HostGrid, false>;
 
-  unsigned int nelements = atoi(argv[1]);
+  const unsigned int nelements = atoi(argv[1]);
 
-  FieldVector<double,dim> lower = {0,0};
-  FieldVector<double,dim> upper = {1,1};
-  std::array<unsigned int,dim> elements = {nelements,nelements};
+  const FieldVector<double,dim> lower = {0, 0};
+  const FieldVector<double,dim> upper = {1, 1};
+  const std::array<unsigned int,dim> elements = {nelements, nelements};
 
   // std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
   //                                 ::createCubeGrid(lower, upper, elements);
@@ -101,7 +101,7 @@ int main(int argc, char** argv)
   GeometryBuffer geometryBuffer;
 
   double err = 1.;
-  const double tol = 1e-10;
+  constexpr double tol = 1e-10;
   for(unsigned int i = 0; err > tol && i < 200; ++i)
   {
     std::chrono::steady_clock::time_point startiteration

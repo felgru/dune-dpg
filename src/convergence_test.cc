@@ -76,21 +76,21 @@ int main(int argc, char** argv)
   //   Generate the grid
   ///////////////////////////////////
 
-  const int dim = 2;
+  constexpr int dim = 2;
   typedef UGGrid<dim> GridType;
 
-  unsigned int nelements = atoi(argv[1]);
+  const unsigned int nelements = atoi(argv[1]);
 
-  FieldVector<double,dim> lower = {0,0};
-  FieldVector<double,dim> upper = {1,1};
-  std::array<unsigned int,dim> elements = {nelements,nelements};
+  const FieldVector<double,dim> lower = {0, 0};
+  const FieldVector<double,dim> upper = {1, 1};
+  const std::array<unsigned int,dim> elements = {nelements, nelements};
 
   // std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
   std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
   typedef GridType::LeafGridView GridView;
-  GridView gridView = grid->leafGridView();
+  const GridView gridView = grid->leafGridView();
 
   /////////////////////////////////////////////////////////
   //   Choose a finite element space
@@ -124,10 +124,10 @@ int main(int argc, char** argv)
   auto testSpaces_aposteriori
       = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
-  FieldVector<double, dim> beta
+  const FieldVector<double, dim> beta
              = {std::cos(boost::math::constants::pi<double>()/8),
                 std::sin(boost::math::constants::pi<double>()/8)};
-  double c = 0;
+  const double c = 0;
 
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
@@ -181,7 +181,7 @@ int main(int argc, char** argv)
   x = 0;
 
 #if LEVEL_SEARCH==0
-  double delta = 1e-8;
+  const double delta = 1e-8;
   systemAssembler.defineCharacteristicFaces<1>
                     (stiffnessMatrix,
                      rhs,

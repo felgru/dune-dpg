@@ -25,11 +25,11 @@ int main()
     //   Generate the grid
     // ////////////////////////////////
 
-    const int dim = 2;
+    constexpr int dim = 2;
     typedef YaspGrid<dim> GridType;
-    FieldVector<double,dim> l(1);
-    GridType grid(l, {{1,1}});
-    GridType fineGrid(l, {{10,10}});
+    const FieldVector<double,dim> l(1);
+    const GridType grid(l, {{1,1}});
+    const GridType fineGrid(l, {{10,10}});
 
     // ///////////////////////////////////////////////////////
     //   Stiffness matrix and right hand side vector
