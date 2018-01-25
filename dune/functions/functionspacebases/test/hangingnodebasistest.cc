@@ -8,7 +8,9 @@
 #include <iostream>
 
 #include <dune/common/exceptions.hh>
+#include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
+#include <dune/geometry/quadraturerules.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
@@ -16,6 +18,7 @@
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #include <dune/subgrid/subgrid.hh>
 #pragma GCC diagnostic pop
+#include <dune/dpg/subgrid_workarounds.hh>
 
 using namespace Dune;
 
@@ -53,6 +56,98 @@ bool globalIndicesFormConsecutiveRange(const GlobalBasis& feBasis)
     }
 
   return true;
+}
+
+template<class GlobalBasis>
+bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
+{
+  auto localView = feBasis.localView();
+  auto localIndexSet = feBasis.localIndexSet();
+  auto dominatedElementLocalView = feBasis.localView();
+  auto dominatedElementLocalIndexSet = feBasis.localIndexSet();
+  auto gridView = feBasis.gridView();
+
+  bool success = true;
+  constexpr double eps = 1e-10;
+
+  for (const auto& element : elements(gridView))
+  {
+    localView.bind(element);
+    localIndexSet.bind(localView);
+    for(auto&& intersection : intersections(gridView, element))
+    {
+      if(!conforming(intersection))
+        if(intersection.inside().level() < intersection.outside().level())
+          // inside dominates outside (with one level difference)
+        {
+          dominatedElementLocalView.bind(intersection.outside());
+          dominatedElementLocalIndexSet.bind(dominatedElementLocalView);
+          const auto& dominatedIndices
+              = dominatedElementLocalIndexSet.indicesLocalGlobal();
+
+          const auto geometryInDominatingElement
+              = geometryInInside(intersection);
+          const auto geometryInDominatedElement
+              = geometryInOutside(intersection);
+          const auto& quad // TODO: replace 3 with degree of basis
+              = QuadratureRules<double, 1>::rule(GeometryTypes::line, 3);
+          for(size_t pt=0; pt < quad.size(); pt++)
+          {
+            // point-wise check of continuity condition
+            const FieldVector<double,1>& quadPos = quad[pt].position();
+            const auto quadPosDominated
+                = geometryInDominatedElement.global(quadPos);
+            const auto quadPosDominating
+                = geometryInDominatingElement.global(quadPos);
+
+            std::vector<FieldVector<double,1> > valuesDominating;
+            localView.tree().finiteElement().localBasis()
+              .evaluateFunction(quadPosDominating, valuesDominating);
+            std::vector<FieldVector<double,1> > valuesDominated;
+            dominatedElementLocalView.tree().finiteElement().localBasis()
+              .evaluateFunction(quadPosDominated, valuesDominated);
+            iterateOverLocalIndexSet(
+                localIndexSet,
+                [&](size_t j, auto gj)
+                {
+                  if(std::fabs(valuesDominating[j]) > eps) {
+                    double valueDominated = 0.;
+                    iterateOverLocalIndexSet(
+                        dominatedElementLocalIndexSet,
+                        [&](size_t i, auto gi)
+                        {
+                          if(gi == gj) valueDominated += valuesDominated[i];
+                        },
+                        [](size_t i) {},
+                        [&](size_t i, auto gi, double wi)
+                        {
+                          if(gi == gj) valueDominated += wi*valuesDominated[i];
+                        });
+                    if(std::fabs(valuesDominating[j] - valueDominated) > eps)
+                    {
+                      std::cout << "Dominating FE at local index " << j
+                        << " evaluates to " << valuesDominating[j]
+                        << " but weighted sum of dominated FEs eavalutes to "
+                        << " valueDominated!\n";
+                      success = false;
+                    }
+                  }
+                },
+                [](size_t j) {},
+                [&](size_t j, auto gj, double wj)
+                {
+                  if(std::fabs(valuesDominating[j]) > eps) {
+                    DUNE_THROW(Dune::InvalidStateException,
+                      "On this edge, the indices of the dominating"
+                      " element should not be constrained.");
+                  }
+                });
+          }
+        }
+    }
+  }
+
+  return success;
 }
 
 template<class HostGrid>
@@ -109,6 +204,7 @@ int main() try
   Functions::HangingNodeP2NodalBasis<GridView> hangingNodeBasis(gridView);
 
   success &= globalIndicesFormConsecutiveRange(hangingNodeBasis);
+  success &= constraintsFulfillContinuityEquation(hangingNodeBasis);
 
   return success ? 0 : 1;
 }
