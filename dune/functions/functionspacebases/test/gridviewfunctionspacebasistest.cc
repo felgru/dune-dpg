@@ -180,7 +180,7 @@ int main (int argc, char* argv[]) try
   const GridType grid(l,elements);
 
   typedef GridType::LeafGridView GridView;
-  const GridView& gridView = grid.leafGridView();
+  const GridView gridView = grid.leafGridView();
 
   PQkTraceNodalBasis<GridView, 1> pq1Basis(gridView);
   testScalarBasis(pq1Basis);
