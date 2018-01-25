@@ -32,10 +32,9 @@ void testScalarBasis(const Basis& feBasis)
 
 
   // Test the LocalFiniteElement
-  for (auto it = gridView.template begin<0>(); it!=gridView.template end<0>(); ++it)
+  for (const auto& element : elements(gridView))
   {
-    // Bind the local FE basis view to the current element
-    localView.bind(*it);
+    localView.bind(element);
 
     // The general LocalFiniteElement unit test from dune/localfunctions/test/test-localfe.hh
     const auto& lFE = localView.tree().finiteElement();
@@ -57,16 +56,14 @@ void testScalarBasis(const Basis& feBasis)
   //  and whether each global index appears at least once.
   ///////////////////////////////////////////////////////////////////////////////////
 
-  std::vector<bool> seen(feBasis.size());
-  std::fill(seen.begin(), seen.end(), false);
+  std::vector<bool> seen(feBasis.size(), false);
 
   auto localIndexSet = feBasis.localIndexSet();
 
   // Loop over all leaf elements
-  for (auto it = gridView.template begin<0>(); it!=gridView.template end<0>(); ++it)
+  for (const auto& element : elements(gridView))
   {
-    // Bind the local FE basis view to the current element
-    localView.bind(*it);
+    localView.bind(element);
     localIndexSet.bind(localView);
 
     for (size_t i=0; i<localView.tree().size(); i++)
@@ -76,7 +73,8 @@ void testScalarBasis(const Basis& feBasis)
 
       if (localIndexSet.index(i)[0] >= seen.size())
         DUNE_THROW(Exception, "Local index " << i
-                           << " is mapped to global index " << localIndexSet.index(i)
+                           << " is mapped to global index "
+                           << localIndexSet.index(i)
                            << ", which is larger than allowed");
 
       seen[localIndexSet.index(i)[0]] = true;
@@ -95,8 +93,8 @@ void testScalarBasis(const Basis& feBasis)
 
   // TODO: Implement interpolation properly using the global basis.
   const int dim = Basis::GridView::dimension;
-  for (auto it = gridView.template begin<dim>(); it != gridView.template end<dim>(); ++it)
-    x[gridView.indexSet().index(*it)] = it->geometry().corner(0)[0];
+  for (const auto& element : elements(gridView))
+    x[gridView.indexSet().index(element)] = element.geometry().corner(0)[0];
 
   // Objects required in the local context
   auto localIndexSet2 = feBasis.localIndexSet();
@@ -104,9 +102,9 @@ void testScalarBasis(const Basis& feBasis)
 
   // Loop over elements and integrate over the function
   double integral = 0;
-  for (auto it = gridView.template begin<0>(); it != gridView.template end<0>(); ++it)
+  for (const auto& element : elements(gridView))
   {
-    localView.bind(*it);
+    localView.bind(element);
     localIndexSet.bind(localView);
     localIndexSet2.bind(localView);
 
@@ -137,7 +135,8 @@ void testScalarBasis(const Basis& feBasis)
     assert(localView.size() == tree.finiteElement().localBasis().size());
 
     // A quadrature rule
-    const QuadratureRule<double, dim>& quad = QuadratureRules<double, dim>::rule(it->type(), 1);
+    const QuadratureRule<double, dim>& quad
+        = QuadratureRules<double, dim>::rule(element.type(), 1);
 
     // Loop over all quadrature points
     for ( size_t pt=0; pt < quad.size(); pt++ ) {
@@ -146,7 +145,8 @@ void testScalarBasis(const Basis& feBasis)
       const FieldVector<double,dim>& quadPos = quad[pt].position();
 
       // The multiplicative factor in the integral transformation formula
-      const double integrationElement = it->geometry().integrationElement(quadPos);
+      const double integrationElement
+          = element.geometry().integrationElement(quadPos);
 
       // Evaluate all shape function values at this point
       std::vector<FieldVector<double,1> > shapeFunctionValues;
@@ -155,7 +155,8 @@ void testScalarBasis(const Basis& feBasis)
       // Actually compute the vector entries
       for (size_t i=0; i<localFiniteElement.localBasis().size(); i++)
       {
-        integral += coefficients[tree.localIndex(i)] * shapeFunctionValues[i] * quad[pt].weight() * integrationElement;
+        integral += coefficients[tree.localIndex(i)] * shapeFunctionValues[i]
+                    * quad[pt].weight() * integrationElement;
       }
     }
 
@@ -174,9 +175,9 @@ int main (int argc, char* argv[]) try
   // Generate grid for testing
   const int dim = 2;
   typedef YaspGrid<dim> GridType;
-  FieldVector<double,dim> l(1);
-  std::array<int,dim> elements = {{10, 10}};
-  GridType grid(l,elements);
+  const FieldVector<double,dim> l(1);
+  const std::array<int,dim> elements = {{10, 10}};
+  const GridType grid(l,elements);
 
   typedef GridType::LeafGridView GridView;
   const GridView& gridView = grid.leafGridView();
