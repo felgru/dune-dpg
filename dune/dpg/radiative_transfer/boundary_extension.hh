@@ -274,7 +274,7 @@ BlockVector<FieldVector<double,1>> harmonic_extension_of_boundary_values(
   MatrixAdapter<Matrix,Vector,Vector> op(stiffnessMatrix);
 
   // Sequential incomplete LU decomposition as the preconditioner
-  SeqILU0<Matrix,Vector,Vector> ilu0(stiffnessMatrix,1.0);
+  SeqILU<Matrix,Vector,Vector> ilu0(stiffnessMatrix,1.0);
 
   Vector extension(feBasis.size());
   extension = 0.;
