@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include <array>
+#include <memory>
 #include <tuple>
 #include <vector>
 
@@ -74,13 +75,13 @@ int main()
   //   Generate the grid
   ///////////////////////////////////
 
-  const int dim = 2;
+  constexpr int dim = 2;
 
   using HostGrid = UGGrid<dim>;
   using Grid = SubGrid<dim, HostGrid, false>;
-  FieldVector<double,dim> lower = {0,0};
-  FieldVector<double,dim> upper = {1,1};
-  std::array<unsigned int,dim> elements = {1,1};
+  const FieldVector<double,dim> lower = {0, 0};
+  const FieldVector<double,dim> upper = {1, 1};
+  const std::array<unsigned int,dim> elements = {1, 1};
 
   // Square mesh
   //std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>::createCubeGrid(lower, upper, elements);
@@ -104,7 +105,7 @@ int main()
   }
 
   double err = 1.;
-  const double tol = 1e-10;
+  constexpr double tol = 1e-10;
   for(unsigned int i = 0; err > tol && i < 20; ++i)
   {
     using GridView = Grid::LeafGridView;
@@ -133,10 +134,8 @@ int main()
     //   Choose a bilinear form
     /////////////////////////////////////////////////////////
 
-    double beta0 = -1.0;
-    double beta1 = -1.0;
-    double c = 1.;
-    FieldVector<double, dim> beta = {beta0, beta1};
+    const double c = 1.;
+    const FieldVector<double, dim> beta = {-1., -1.};
     auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
             make_tuple(
                 make_IntegralTerm<0,0,IntegrationType::valueValue,
@@ -246,8 +245,8 @@ int main()
     //  Make a discrete function from the FE basis and the coefficient vector
     ////////////////////////////////////////////////////////////////////////////
 
-    size_t nFace = std::get<1>(*solutionSpaces).size();
-    size_t nInner = std::get<0>(*solutionSpaces).size();
+    const size_t nFace = std::get<1>(*solutionSpaces).size();
+    const size_t nInner = std::get<0>(*solutionSpaces).size();
     VectorType u(nInner);
     VectorType theta(nFace);
     u=0;
@@ -273,15 +272,11 @@ int main()
     ////////////////////////////////////////////////////////////////////////////
 
     std::cout << std::endl << "******** Computation of errors *************" << std::endl;
-    // The exact solution against which we are comparing our FEM solution
-    auto uExact = std::make_tuple(fieldExact);
-    // to retrive the value out of this:
-    // std::get<0>(uExact)(x)
 
     // We build an object of type ErrorTools to study errors, residuals
     // and do hp-adaptivity
     // We compute the L2 error between the exact and the fem solutions
-    err = ErrorTools::computeL2error<1>(innerSpace, u, uExact);
+    err = ErrorTools::computeL2error<1>(innerSpace, u, fieldExact);
     std::cout << "'Exact' error u: || u - u_fem ||_L2 = " << err << std::endl;
 
     // A posteriori error
@@ -291,12 +286,12 @@ int main()
       = replaceTestSpaces(rightHandSide, testSpaces_aposteriori);
     rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
 
-    double aposterioriErr
+    const double aposterioriErr
         = ErrorTools::aPosterioriError(bilinearForm_aposteriori,
                                       innerProduct_aposteriori, x, rhs);
     std::cout << "A posteriori error: || (u,trace u) - (u_fem,theta) || = "
               << aposterioriErr << std::endl;
-    double aposterioriL2Err
+    const double aposterioriL2Err
         = ErrorTools::aPosterioriL2Error(aPosterioriInnerProduct,
                                         aPosterioriLinearForm, fieldRHS, x);
     std::cout << "A posteriori L2 error: || (u,trace u) - (u_fem,theta) || = "

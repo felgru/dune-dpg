@@ -1,7 +1,7 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_PQKSUBSAMPLED_FACTORY_HH
-#define DUNE_PQKSUBSAMPLED_FACTORY_HH
+#ifndef DUNE_BERNSTEIN_PQK_FACTORY_HH
+#define DUNE_BERNSTEIN_PQK_FACTORY_HH
 
 #include <map>
 
@@ -10,34 +10,30 @@
 #include <dune/localfunctions/common/virtualinterface.hh>
 #include <dune/localfunctions/common/virtualwrappers.hh>
 
-#include <dune/localfunctions/lagrange/qksubsampled.hh>
+#include <dune/localfunctions/bernstein/pk.hh>
 
 namespace Dune
 {
-
   /** \brief Factory to create any kind of Pk/Qk like element wrapped for the virtual interface
    *
    */
-  template<class D, class R, int dim, int s, int k>
-  struct PQkSubsampledLocalFiniteElementFactory
+  template<class D, class R, int dim, int k>
+  struct BernsteinLocalFiniteElementFactory
   {
-    typedef typename QkSubsampledLocalFiniteElement<D,R,dim,s,0>::Traits::LocalBasisType::Traits T;
+    typedef typename BernsteinPkLocalFiniteElement<D,R,dim,k>
+        ::Traits::LocalBasisType::Traits T;
     typedef LocalFiniteElementVirtualInterface<T> FiniteElementType;
-    // typedef PkLocalFiniteElement<D,R,dim,s,k> Pk;
-    typedef QkSubsampledLocalFiniteElement<D,R,dim,s,k> Qk;
+    typedef BernsteinPkLocalFiniteElement<D,R,dim,k> Pk;
 
 
     //! create finite element for given GeometryType
     static FiniteElementType* create(const GeometryType& gt)
     {
       if (gt.isSimplex())
-        // return new LocalFiniteElementVirtualImp<Pk>(Pk());
-        DUNE_THROW(Dune::NotImplemented,"No Pk/Qk like local finite element available for geometry type " << gt << ".");
+        return new LocalFiniteElementVirtualImp<Pk>(Pk());
 
-      if (gt.isCube())
-        return new LocalFiniteElementVirtualImp<Qk>(Qk());
-
-      DUNE_THROW(Dune::NotImplemented,"No Pk/Qk like local finite element available for geometry type " << gt << ".");
+      DUNE_THROW(NotImplemented,
+          "BernsteinLocalFiniteElement is only implemented for Simplices.");
     }
   };
 
@@ -51,15 +47,14 @@ namespace Dune
    * \tparam D Type used for domain coordinates
    * \tparam R Type used for shape function values
    * \tparam dim Element dimension
-   * \tparam s number of subsamples
    * \tparam k Element order
    */
-  template<class D, class R, int dim, int s, int k>
-  class PQkSubsampledLocalFiniteElementCache
+  template<class D, class R, int dim, int k>
+  class BernsteinLocalFiniteElementCache
   {
   protected:
-    typedef typename QkSubsampledLocalFiniteElement<D,R,dim,s,0>::Traits::
-                                                    LocalBasisType::Traits T;
+    typedef typename BernsteinPkLocalFiniteElement<D,R,dim,k>
+        ::Traits::LocalBasisType::Traits T;
     typedef LocalFiniteElementVirtualInterface<T> FE;
     typedef typename std::map<GeometryType,FE*> FEMap;
 
@@ -68,17 +63,16 @@ namespace Dune
     typedef FE FiniteElementType;
 
     /** \brief Default constructor */
-    PQkSubsampledLocalFiniteElementCache() {}
+    BernsteinLocalFiniteElementCache() {}
 
     /** \brief Copy constructor */
-    PQkSubsampledLocalFiniteElementCache(
-            const PQkSubsampledLocalFiniteElementCache& other)
+    BernsteinLocalFiniteElementCache(const BernsteinLocalFiniteElementCache& other)
     {
       for(const auto& entry : other.cache_)
         cache_[entry.first] = (entry.second)->clone();
     }
 
-    ~PQkSubsampledLocalFiniteElementCache()
+    ~BernsteinLocalFiniteElementCache()
     {
       for(auto&& entry : cache_)
         delete entry.second;
@@ -87,13 +81,15 @@ namespace Dune
     //! Get local finite element for given GeometryType
     const FiniteElementType& get(const GeometryType& gt) const
     {
-      typename FEMap::const_iterator it = cache_.find(gt);
+      const typename FEMap::const_iterator it = cache_.find(gt);
       if (it==cache_.end())
       {
-        FiniteElementType* fe =
-            PQkSubsampledLocalFiniteElementFactory<D,R,dim,s,k>::create(gt);
+        FiniteElementType* fe
+            = BernsteinLocalFiniteElementFactory<D,R,dim,k>::create(gt);
         if (fe==0)
-          DUNE_THROW(Dune::NotImplemented,"No Pk/Qk like local finite element available for geometry type " << gt << " and order " << k);
+          DUNE_THROW(NotImplemented,
+              "No Pk/Qk like local finite element available for geometry type "
+              << gt << " and order " << k);
 
         cache_[gt] = fe;
         return *fe;

@@ -80,7 +80,8 @@ namespace detail {
       const auto geometry = intersection.geometry();
       const auto innerGeometry = intersection.inside().geometry();
 #if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
-      const auto referenceElement = Dune::referenceElement(intersection);
+      const auto referenceElement
+          = Dune::referenceElement<ctype, dim-1>(intersection.type());
 #else
       const auto& referenceElement
           = ReferenceElements<ctype, dim-1>::general(intersection.type());
@@ -89,6 +90,49 @@ namespace detail {
       std::vector<FieldVector<ctype, dim>> vertices(numVertices);
       for(size_t i = 0; i < numVertices; i++) {
         vertices[i] = innerGeometry.local(
+                        geometry.global(
+                          referenceElement.position(i, dim-1)));
+      }
+      return LocalGeometry(referenceElement, vertices);
+    }
+  };
+
+  template<class Intersection>
+  struct GeometryInOutside
+  {
+    static typename Intersection::LocalGeometry
+    from(const Intersection& intersection) {
+      return intersection.geometryInOutside();
+    }
+  };
+
+  template<int dim, class HostGrid, bool MapIndexStorage,
+           class IntersectionImp>
+  struct GeometryInOutside
+    <Intersection<const SubGrid<dim, HostGrid, MapIndexStorage>,
+                  IntersectionImp>>
+  {
+    using SubGridIntersection
+        = Intersection<const SubGrid<dim, HostGrid, MapIndexStorage>,
+                       IntersectionImp>;
+    using ctype = typename SubGridIntersection::ctype;
+    using LocalGeometry = AffineGeometry<ctype, dim-1, dim>;
+
+    static LocalGeometry
+    from(const SubGridIntersection& intersection) {
+      const auto geometry = intersection.geometry();
+      const auto outerGeometry = intersection.outside().geometry();
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
+      const auto referenceElement
+          = Dune::referenceElement<ctype, dim-1>(intersection.type());
+#else
+      const auto& referenceElement
+          = ReferenceElements<ctype, dim-1>::general(intersection.type());
+#endif
+      const size_t numVertices = referenceElement.size(dim-1);
+      std::vector<FieldVector<ctype, dim>> vertices(numVertices);
+      for(size_t i = 0; i < numVertices; i++) {
+        vertices[i] = outerGeometry.local(
                         geometry.global(
                           referenceElement.position(i, dim-1)));
       }
@@ -134,6 +178,12 @@ auto centerUnitOuterNormal(const Intersection& intersection) {
 template<class Intersection>
 auto geometryInInside(const Intersection& intersection) {
   return detail::GeometryInInside<std::decay_t<Intersection>>::
+      from(intersection);
+}
+
+template<class Intersection>
+auto geometryInOutside(const Intersection& intersection) {
+  return detail::GeometryInOutside<std::decay_t<Intersection>>::
       from(intersection);
 }
 

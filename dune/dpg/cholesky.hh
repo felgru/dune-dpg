@@ -4,8 +4,8 @@
 #define DUNE_DPG_CHOLESKY_HH
 
 #include <dune/common/exceptions.hh>
-#include <dune/istl/bvector.hh>
 #include <dune/common/fvector.hh>
+#include <dune/istl/bvector.hh>
 
 namespace Dune {
 

@@ -50,6 +50,8 @@ namespace Dune {
     };
 
   public:
+    BoundaryTools() = delete;
+
     template <class FEBasis,class Direction>
     static void getInflowBoundaryMask(
                   const FEBasis& ,

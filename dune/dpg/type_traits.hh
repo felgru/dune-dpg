@@ -35,6 +35,15 @@ namespace Functions {
   template<typename GV, int level, int k, class MI>
   class PQkDGRefinedDGNodeFactory;
 
+  template<typename GV, int k, class MI>
+  class BernsteinNodeFactory;
+
+  template<typename GV, int k, class MI>
+  class BernsteinDGNodeFactory;
+
+  template<typename GV, int level, int k, class MI>
+  class BernsteinDGRefinedDGNodeFactory;
+
   template<typename GV, int s, int k, class MI>
   class PQkDGSubsampledDGNodeFactory;
 
@@ -117,6 +126,12 @@ struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
                Functions::PQkDGRefinedDGNodeFactory
                    <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
+
+template<typename GV, int level, int k>
+struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
+               Functions::BernsteinDGRefinedDGNodeFactory
+                   <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
+       : std::true_type {};
 #endif
 
 template <typename GlobalBasis>
@@ -146,6 +161,12 @@ struct levelOfFE : std::integral_constant<int, 0> {};
 template<class GV, int level, int k>
 struct levelOfFE<Functions::DefaultGlobalBasis<
              Functions::PQkDGRefinedDGNodeFactory
+                 <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
+       : std::integral_constant<int, level> {};
+
+template<class GV, int level, int k>
+struct levelOfFE<Functions::DefaultGlobalBasis<
+             Functions::BernsteinDGRefinedDGNodeFactory
                  <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::integral_constant<int, level> {};
 
@@ -256,6 +277,27 @@ struct changeGridView<Functions::PQkDGRefinedDGNodeFactory<GV, level, k, MI>,
                       GridView>
 {
   typedef Functions::PQkDGRefinedDGNodeFactory<GridView, level, k, MI> type;
+};
+
+template<typename GV, int k, class MI, class GridView>
+struct changeGridView<Functions::BernsteinNodeFactory<GV, k, MI>, GridView>
+{
+  typedef Functions::BernsteinNodeFactory<GridView, k, MI> type;
+};
+
+template<typename GV, int k, class MI, class GridView>
+struct changeGridView<Functions::BernsteinDGNodeFactory<GV, k, MI>, GridView>
+{
+  typedef Functions::BernsteinDGNodeFactory<GridView, k, MI> type;
+};
+
+template<typename GV, int level, int k, class MI, class GridView>
+struct changeGridView<Functions::BernsteinDGRefinedDGNodeFactory
+                                                <GV, level, k, MI>,
+                      GridView>
+{
+  typedef Functions::BernsteinDGRefinedDGNodeFactory<GridView, level, k, MI>
+      type;
 };
 
 template<typename GV, int s, int k, class MI, class GridView>

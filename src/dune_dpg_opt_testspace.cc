@@ -4,9 +4,10 @@
 #include <iostream>
 #include <cstdlib> // for std::exit()
 
-#include <vector>
 #include <array>
+#include <memory>
 #include <tuple>
+#include <vector>
 
 #include <boost/math/constants/constants.hpp>
 
@@ -53,14 +54,14 @@ int main(int argc, char** argv)
   //   Generate the grid
   ///////////////////////////////////
 
-  const int dim = 2;
+  constexpr int dim = 2;
   typedef UGGrid<dim> GridType;
 
-  unsigned int nelements = atoi(argv[1]);
+  const unsigned int nelements = atoi(argv[1]);
 
-  FieldVector<double,dim> lower = {0,0};
-  FieldVector<double,dim> upper = {1,1};
-  std::array<unsigned int,dim> elements = {nelements,nelements};
+  const FieldVector<double,dim> lower = {0, 0};
+  const FieldVector<double,dim> upper = {1, 1};
+  const std::array<unsigned int,dim> elements = {nelements, nelements};
 
   //std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
@@ -69,7 +70,7 @@ int main(int argc, char** argv)
   //std::shared_ptr<GridType> grid = std::shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh"));
 
   typedef GridType::LeafGridView GridView;
-  GridView gridView = grid->leafGridView();
+  const GridView gridView = grid->leafGridView();
 
   /////////////////////////////////////////////////////////
   //   Choose a finite element space
@@ -91,10 +92,10 @@ int main(int argc, char** argv)
   //typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;
   auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
-  FieldVector<double, dim> beta
+  const FieldVector<double, dim> beta
              = {cos(boost::math::constants::pi<double>()/8),
                 sin(boost::math::constants::pi<double>()/8)};
-  double c = 2;
+  const double c = 2;
 
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
@@ -149,7 +150,7 @@ int main(int argc, char** argv)
   x = 0;
 
 #if 0
-  double delta = 1e-8;
+  const double delta = 1e-8;
   systemAssembler.defineCharacteristicFaces<1>
                     (stiffnessMatrix,
                      rhs,
@@ -196,7 +197,7 @@ int main(int argc, char** argv)
   uhatPlotter.plot("uhat", x, feBasisTrace, 2,
                    feBasisInterior.size());
 
-    return 0;
+  return 0;
   }
   catch (Exception &e){
     std::cerr << "Dune reported error: " << e << std::endl;

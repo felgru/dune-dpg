@@ -15,7 +15,6 @@ install(FILES applylocalfunctional_ru_impl.hh
               errortools.hh
               faces.hh
               functionplotter.hh
-              getvolumeterm_impl.hh
               innerproduct.hh
               integralterm.hh
               integralterm_rr_impl.hh
@@ -26,6 +25,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               linearfunctionalterm.hh
               linearintegralterm.hh
               localevaluation.hh
+              locallinearterm_impl.hh
               quadrature.hh
               refinedfaces.hh
               rhs_assembler.hh

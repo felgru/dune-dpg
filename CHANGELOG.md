@@ -23,6 +23,13 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   Use the auxiliary functions `iterateOverLocalIndexSet` and
   `addToGlobalMatrix` to conveniently handle index sets from both
   interfaces.
+* Add a Bernstein polynomial basis under the name
+  `BernsteinPkLocalFiniteElement` with corresponding global bases
+  `BernsteinBasis`, `BernsteinDGBasis` and `BernsteinDGRefinedDGNodalBasis`.
+  They can be used as a more stable replacement for the standard
+  Lagrange basis.
+  What is still missing is a continuous Bernstein basis with hanging
+  node constraints.
 * New functions to save grid functions before adaptive refinement and to
   restore them to the refined grid, namely `attachDataToGrid` and
   `restoreDataToRefinedGrid`.
@@ -73,6 +80,7 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * ErrorTools: The element-wise operations are now marked as private.
 * ErrorTools: Mark all methods as static.
   In the future, we might make ErrorTools a namespace instead of a class.
+* `ErrorTools` and `BoundaryTools` are not constructible anymore.
 * `ErrorTools::DoerflerMarking` can now be called as
   `DoerflerMarking(grid, ratio, errorEstimates)` where `errorEstimates`
   is a `std::vector<std::tuple<EntitySeed, double>>&&` where each entry
@@ -80,6 +88,8 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   You can use Dörfler marking with your own error estimators or use the
   function `ErrorTools::squaredCellwiseResidual` to compute the error
   estimates.
+* `ErrorTools::computeL2error` now takes the exact solution directly
+  instead of having it wrapped in a `std::tuple`.
 * `LinearFunctionalTerm` now also works with a refined solution space.
 * We now check in a static_assert that `defineCharacteristicFaces` is
   not called with refined spaces.

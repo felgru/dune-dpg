@@ -1,14 +1,14 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_PQKDGREFINEDDGBASIS_HH
-#define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_PQKDGREFINEDDGBASIS_HH
+#ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_BERNSTEINDGREFINEDDGBASIS_HH
+#define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_BERNSTEINDGREFINEDDGBASIS_HH
 
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
 #include <dune/common/version.hh>
 
-#include <dune/localfunctions/lagrange/pqkfactory.hh>
+#include <dune/localfunctions/bernstein/pqkfactory.hh>
 
 #include <dune/typetree/leafnode.hh>
 
@@ -28,9 +28,9 @@ namespace Functions {
 // *****************************************************************************
 // This is the reusable part of the basis. It contains
 //
-//   PQkDGRefinedDGNodeFactory
-//   PQkDGRefinedDGNodeIndexSet
-//   PQkDGRefinedDGNode
+//   BernsteinDGRefinedDGNodeFactory
+//   BernsteinDGRefinedDGNodeIndexSet
+//   BernsteinDGRefinedDGNode
 //
 // The factory allows to create the others and is the owner of possible shared
 // state. These three components do _not_ depend on the global basis or index
@@ -38,14 +38,14 @@ namespace Functions {
 // *****************************************************************************
 
 template<typename GV, int level, int k, typename TP>
-class PQkDGRefinedDGNode;
+class BernsteinDGRefinedDGNode;
 
 template<typename GV, int level, int k, class MI, class TP>
-class PQkDGRefinedDGNodeIndexSet;
+class BernsteinDGRefinedDGNodeIndexSet;
 
 
 template<typename GV, int level, int k, class MI>
-class PQkDGRefinedDGNodeFactory
+class BernsteinDGRefinedDGNodeFactory
   : public DGRefinedNodeFactoryConstants<GV::dimension, level, k>
 {
   static const int dim = GV::dimension;
@@ -68,10 +68,10 @@ public:
 
 
   template<class TP>
-  using Node = PQkDGRefinedDGNode<GV, level, k, TP>;
+  using Node = BernsteinDGRefinedDGNode<GV, level, k, TP>;
 
   template<class TP>
-  using IndexSet = PQkDGRefinedDGNodeIndexSet<GV, level, k, MI, TP>;
+  using IndexSet = BernsteinDGRefinedDGNodeIndexSet<GV, level, k, MI, TP>;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -79,7 +79,7 @@ public:
   using SizePrefix = Dune::ReservedVector<size_type, 1>;
 
   /** \brief Constructor for a given grid view object */
-  PQkDGRefinedDGNodeFactory(const GridView& gv) :
+  BernsteinDGRefinedDGNodeFactory(const GridView& gv) :
     gridView_(gv)
   {}
 
@@ -107,7 +107,7 @@ public:
       case 3:
       {
         DUNE_THROW(Dune::NotImplemented,
-                   "PQkDGRefinedDGNodeFactory not implmented in 3d.");
+                   "BernsteinDGRefinedDGNodeFactory not implmented in 3d.");
       }
     }
   }
@@ -187,7 +187,7 @@ public:
 
 
 template<typename GV, int level, int k, typename TP>
-class PQkDGRefinedDGNode :
+class BernsteinDGRefinedDGNode :
   public LeafBasisNode<std::size_t, TP>,
   public RefinedNode < typename GV::template Codim<0>::Entity
                      , typename GV::ctype, GV::dimension, level>
@@ -198,7 +198,7 @@ class PQkDGRefinedDGNode :
   using RefinedNodeBase =
           RefinedNode < typename GV::template Codim<0>::Entity
                       , typename GV::ctype, dim, level>;
-  using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, k>;
+  using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, double, dim, k>;
 
 public:
 
@@ -207,7 +207,7 @@ public:
   using Element = typename GV::template Codim<0>::Entity;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
 
-  PQkDGRefinedDGNode(const TreePath& treePath) :
+  BernsteinDGRefinedDGNode(const TreePath& treePath) :
     Base(treePath),
     RefinedNodeBase(),
     finiteElement_(nullptr)
@@ -233,7 +233,7 @@ public:
   {
     this->element_ = &e;
     finiteElement_ = &(feCache_.get(this->element_->type()));
-    using Factory = PQkDGRefinedDGNodeFactory<GV, level, k, void>;
+    using Factory = BernsteinDGRefinedDGNodeFactory<GV, level, k, void>;
     size_type numberOfSubElements;
     if(e.type().isTriangle()) {
       numberOfSubElements = Factory::numberOfSubTriangles;
@@ -241,7 +241,7 @@ public:
       numberOfSubElements = Factory::numberOfSubQuads;
     } else {
       DUNE_THROW(Dune::NotImplemented,
-                 "PQkDGRefinedNode::bind() not implemented for element type "
+                 "BernsteinDGRefinedNode::bind() not implemented for element type "
                  << e.type().id());
     }
     this->setSize(numberOfSubElements*finiteElement_->size());
@@ -256,7 +256,7 @@ protected:
 
 
 template<typename GV, int level, int k, class MI, class TP>
-class PQkDGRefinedDGNodeIndexSet
+class BernsteinDGRefinedDGNodeIndexSet
 {
   // Cannot be an enum -- otherwise the switch statement below produces compiler warnings
   static const int dim = GV::dimension;
@@ -268,11 +268,11 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using NodeFactory = PQkDGRefinedDGNodeFactory<GV, level, k, MI>;
+  using NodeFactory = BernsteinDGRefinedDGNodeFactory<GV, level, k, MI>;
 
   using Node = typename NodeFactory::template Node<TP>;
 
-  PQkDGRefinedDGNodeIndexSet(const NodeFactory& nodeFactory) :
+  BernsteinDGRefinedDGNodeIndexSet(const NodeFactory& nodeFactory) :
     nodeFactory_(&nodeFactory)
   {}
 
@@ -386,13 +386,13 @@ protected:
 // This is the actual global basis implementation based on the reusable parts.
 // *****************************************************************************
 
-/** \brief Basis of a scalar k-th-order Lagrangean-DG finite element space
+/** \brief Basis of a scalar k-th-order Bernstein-DG finite element space
  *
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
  */
 template<typename GV, int level, int k>
-using PQkDGRefinedDGBasis = DefaultGlobalBasis<PQkDGRefinedDGNodeFactory<GV, level, k, FlatMultiIndex<std::size_t> > >;
+using BernsteinDGRefinedDGBasis = DefaultGlobalBasis<BernsteinDGRefinedDGNodeFactory<GV, level, k, FlatMultiIndex<std::size_t> > >;
 
 
 
@@ -400,4 +400,4 @@ using PQkDGRefinedDGBasis = DefaultGlobalBasis<PQkDGRefinedDGNodeFactory<GV, lev
 } // end namespace Dune
 
 
-#endif // DUNE_FUNCTIONS_FUNCTIONSPACEBASES_PQKDGREFINEDDGBASIS_HH
+#endif // DUNE_FUNCTIONS_FUNCTIONSPACEBASES_BERNSTEINDGREFINEDDGBASIS_HH

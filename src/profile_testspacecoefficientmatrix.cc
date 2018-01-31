@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdlib> // for std::exit()
 #include <iostream>
+#include <memory>
 #include <tuple>
 #include <vector>
 
@@ -62,26 +63,26 @@ int main(int argc, char** argv)
   //   Generate the grid
   ///////////////////////////////////
 
-  const int dim = 2;
+  constexpr int dim = 2;
   typedef UGGrid<dim> GridType;
 
-  unsigned int nelements = atoi(argv[1]);
+  const unsigned int nelements = atoi(argv[1]);
 
   if(nelements==0) {
     std::cerr << "n has to be nonzero." << std::endl;
     std::exit(1);
   }
 
-  FieldVector<double,dim> lower = {0,0};
-  FieldVector<double,dim> upper = {1,1};
-  std::array<unsigned int,dim> elements = {nelements,nelements};
+  const FieldVector<double,dim> lower = {0, 0};
+  const FieldVector<double,dim> upper = {1, 1};
+  const std::array<unsigned int,dim> elements = {nelements, nelements};
 
   // std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
   std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
   typedef GridType::LeafGridView GridView;
-  GridView gridView = grid->leafGridView();
+  const GridView gridView = grid->leafGridView();
 
   ////////////////////////////////////////////////////
   //   Direction of propagation beta and coefficient c
@@ -207,7 +208,7 @@ int main(int argc, char** argv)
               << "us.\n";
 
 #if LEVEL_SEARCH==0
-    double delta = 1e-8;
+    const double delta = 1e-8;
     unbufferedSystemAssembler.defineCharacteristicFaces<1>
                       (stiffnessMatrix,
                        rhsVector,

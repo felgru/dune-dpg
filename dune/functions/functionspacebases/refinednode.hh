@@ -3,6 +3,7 @@
 #ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_REFINEDNODE_HH
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_REFINEDNODE_HH
 
+#include <dune/common/power.hh>
 #include <dune/functions/functionspacebases/referencerefinementfactory.hh>
 
 namespace Dune {

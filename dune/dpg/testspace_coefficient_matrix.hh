@@ -264,19 +264,13 @@ class GeometryBuffer
   typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
   typedef CoefficientMatrices<MatrixType> CoefMatrices;
 public:
-  GeometryBuffer() :
-  bufferMap()
-  {
-    bufferMap.clear();
-  }
+  GeometryBuffer() : bufferMap() {}
 
-  std::pair<CoefMatrices&, bool> operator()(const GeometryComparable<Geometry>& geometry)
+  std::pair<CoefMatrices&, bool>
+  operator()(const GeometryComparable<Geometry>& geometry)
   {
-    CoefMatrices nullmatrix;
-    auto insert = bufferMap.insert(std::pair<const GeometryComparable<Geometry>,
-                                        CoefMatrices>(geometry, nullmatrix)
-                             );
-    return std::pair<CoefMatrices&, bool>(insert.first->second, !(insert.second));
+    auto insert = bufferMap.insert({geometry, CoefMatrices()});
+    return {insert.first->second, !(insert.second)};
   }
 
   unsigned int size() const

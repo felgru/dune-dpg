@@ -48,7 +48,7 @@ public:
   /**
    * \brief Assemble the rhs vector of a DPG system for a given rhs function.
    *
-   * Given a tuple of right hand side functions \p volumeTerms,
+   * Given a LinearForm \p rhsLinearForm,
    * this assembles the right hand side vector of the corresponding
    * DPG system. \p rhs will be overwritten by this function.
    *

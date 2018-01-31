@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include <array>
+#include <memory>
 #include <tuple>
 #include <vector>
 
@@ -25,9 +26,9 @@
 #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/bernsteinbasis.hh>
+#include <dune/functions/functionspacebases/bernsteindgbasis.hh>
+#include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
@@ -63,26 +64,26 @@ int main(int argc, char** argv)
   //   Generate the grid
   ///////////////////////////////////
 
-  const int dim = 2;
+  constexpr int dim = 2;
   typedef UGGrid<dim> GridType;
 
-  unsigned int nelements = atoi(argv[1]);
+  const unsigned int nelements = atoi(argv[1]);
 
   if(nelements==0) {
     std::cerr << "n has to be nonzero." << std::endl;
     std::exit(1);
   }
 
-  FieldVector<double,dim> lower = {0,0};
-  FieldVector<double,dim> upper = {1,1};
-  std::array<unsigned int,dim> elements = {nelements,nelements};
+  const FieldVector<double,dim> lower = {0, 0};
+  const FieldVector<double,dim> upper = {1, 1};
+  const std::array<unsigned int,dim> elements = {nelements, nelements};
 
   // std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
   std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
   typedef GridType::LeafGridView GridView;
-  GridView gridView = grid->leafGridView();
+  const GridView gridView = grid->leafGridView();
 
   ////////////////////////////////////////////////////
   //   Direction of propagation beta and coefficient c
@@ -122,17 +123,17 @@ int main(int argc, char** argv)
   //   Choose finite element spaces and weak formulation of problem
   ////////////////////////////////////////////////////////////////////
 
-  using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
-  FEBasisInterior spacePhi(gridView);
-
-  using FEBasisTraceLifting = Functions::PQkNodalBasis<GridView, 2>;
-  FEBasisTraceLifting spaceW(gridView);
+  using FEBasisInterior = Functions::BernsteinDGBasis<GridView, 1>;
+  using FEBasisTraceLifting = Functions::BernsteinBasis<GridView, 2>;
 
   auto solutionSpaces
       = make_space_tuple<FEBasisInterior, FEBasisTraceLifting>(gridView);
 
+  FEBasisInterior& spacePhi = std::get<0>(*solutionSpaces);
+  FEBasisTraceLifting& spaceW = std::get<1>(*solutionSpaces);
+
   using FEBasisTest
-      = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
+      = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
   auto testSearchSpaces = make_space_tuple<FEBasisTest>(gridView);
 
   auto bilinearForm = make_BilinearForm(testSearchSpaces, solutionSpaces,
@@ -176,10 +177,9 @@ int main(int argc, char** argv)
   // Determine Dirichlet dofs for w (inflow boundary)
   {
     std::vector<bool> dirichletNodesInflow;
-    BoundaryTools boundaryTools = BoundaryTools();
-    boundaryTools.getInflowBoundaryMask(std::get<1>(*solutionSpaces),
-                                        dirichletNodesInflow,
-                                        beta);
+    BoundaryTools::getInflowBoundaryMask(std::get<1>(*solutionSpaces),
+                                         dirichletNodesInflow,
+                                         beta);
     systemAssembler.applyDirichletBoundary<1>
         (stiffnessMatrix,
          rhsVector,

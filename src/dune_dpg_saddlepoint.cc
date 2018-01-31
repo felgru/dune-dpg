@@ -3,9 +3,9 @@
 #endif
 #include <iostream>
 
-#include <vector>
 #include <array>
 #include <tuple>
+#include <vector>
 
 #include <dune/common/exceptions.hh> // We use exceptions
 
@@ -42,15 +42,15 @@ int main(int argc, char** argv)
   //   Generate the grid
   ///////////////////////////////////
 
-  const int dim = 2;
+  constexpr int dim = 2;
   typedef YaspGrid<dim> GridType;
-  FieldVector<double,dim> l(1);
-  std::array<int,dim> elements = {5, 5};
-  GridType grid(l,elements);
+  const FieldVector<double,dim> l(1);
+  const std::array<int,dim> elements = {5, 5};
+  const GridType grid(l, elements);
 
   typedef GridType::LeafGridView GridView;
-  GridView gridView = grid.leafGridView();
-  FieldVector<double,dim> beta={1.,0.5};
+  const GridView gridView = grid.leafGridView();
+  const FieldVector<double,dim> beta = {1., 0.5};
 
   /////////////////////////////////////////////////////////
   //   Choose finite element spaces
@@ -169,8 +169,8 @@ int main(int argc, char** argv)
   //////////////////////////////////////////////////////////////////
   //  Write result to VTK file
   //////////////////////////////////////////////////////////////////
-  size_t nTest = std::get<0>(*testSpaces).size();
-  size_t nFace = std::get<0>(*solutionSpaces).size();
+  const size_t nTest = std::get<0>(*testSpaces).size();
+  const size_t nFace = std::get<0>(*solutionSpaces).size();
 
   FunctionPlotter uPlotter("solution_transport");
   uPlotter.plot("u", x, std::get<1>(*solutionSpaces), 2, nTest+nFace);

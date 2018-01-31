@@ -65,18 +65,18 @@ namespace Dune {
   class ErrorTools
   {
   public:
-    ErrorTools() {};
+    ErrorTools() = delete;
 
     template <class FEBasis>
     static double l2norm(
         const FEBasis& ,
         const BlockVector<FieldVector<double,1> >& );
 
-    template <unsigned int subsamples, class FEBasis, class VolumeTerms>
+    template <unsigned int subsamples, class FEBasis, class Function>
     static
     double computeL2error(const FEBasis& ,
                           const BlockVector<FieldVector<double,1> >& ,
-                          VolumeTerms&&,
+                          Function&&,
                           unsigned int = 5);
 
     template <class InnerProduct, class LinearForm,
@@ -151,11 +151,11 @@ namespace Dune {
         const LocalView& ,
         const BlockVector<FieldVector<double,1> >& );
 
-    template <unsigned int subsamples, class LocalView, class VolumeTerms>
+    template <unsigned int subsamples, class LocalView, class Function>
     static double computeL2errorSquareElement(
         const LocalView& ,
         const BlockVector<FieldVector<double,1> >& ,
-        VolumeTerms&&,
+        Function&&,
         unsigned int = 5);
 
     template <class InnerProduct, class LinearForm,
@@ -294,11 +294,11 @@ namespace Dune {
  *                      element, the polynomial degree of the local finite
  *                      element (x2) will be used instead.
  */
-  template <unsigned int subsamples, class LocalView, class VolumeTerms>
+  template <unsigned int subsamples, class LocalView, class Function>
   double ErrorTools::computeL2errorSquareElement(
       const LocalView& localView,
       const BlockVector<FieldVector<double,1> >& u,
-      VolumeTerms&& uRef,
+      Function&& uRef,
       unsigned int quadOrder)
   {
 
@@ -350,7 +350,7 @@ namespace Dune {
       }
 
       // Value of uRef at mapQuadPos
-      double uExactQuad = std::get<0>(uRef)(mapQuadPos);
+      const double uExactQuad = uRef(mapQuadPos);
 
       // we add the squared error at the quadrature point
       errSquare += (uQuad - uExactQuad)*(uQuad - uExactQuad)
@@ -377,11 +377,11 @@ namespace Dune {
  *                      element, the polynomial degree of the local finite
  *                      element (x2) will be used instead.
  */
-  template <unsigned int subsamples, class FEBasis, class VolumeTerms>
+  template <unsigned int subsamples, class FEBasis, class Function>
   double ErrorTools::computeL2error(
       const FEBasis& feBasis,
       const BlockVector<FieldVector<double,1> >& u,
-      VolumeTerms&& uRef,
+      Function&& uRef,
       unsigned int quadratureOrder)
   {
     // Get the grid view from the finite element basis
