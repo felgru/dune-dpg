@@ -79,7 +79,8 @@ namespace detail {
       const auto geometry = intersection.geometry();
       const auto innerGeometry = intersection.inside().geometry();
 #if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
-      const auto referenceElement = Dune::referenceElement(intersection);
+      const auto referenceElement
+          = Dune::referenceElement<ctype, dim-1>(intersection.type());
 #else
       const auto& referenceElement
           = ReferenceElements<ctype, dim-1>::general(intersection.type());
