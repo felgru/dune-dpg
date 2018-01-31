@@ -26,9 +26,9 @@
 #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/bernsteinbasis.hh>
+#include <dune/functions/functionspacebases/bernsteindgbasis.hh>
+#include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
@@ -123,17 +123,17 @@ int main(int argc, char** argv)
   //   Choose finite element spaces and weak formulation of problem
   ////////////////////////////////////////////////////////////////////
 
-  using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
-  FEBasisInterior spacePhi(gridView);
-
-  using FEBasisTraceLifting = Functions::PQkNodalBasis<GridView, 2>;
-  FEBasisTraceLifting spaceW(gridView);
+  using FEBasisInterior = Functions::BernsteinDGBasis<GridView, 1>;
+  using FEBasisTraceLifting = Functions::BernsteinBasis<GridView, 2>;
 
   auto solutionSpaces
       = make_space_tuple<FEBasisInterior, FEBasisTraceLifting>(gridView);
 
+  FEBasisInterior& spacePhi = std::get<0>(*solutionSpaces);
+  FEBasisTraceLifting& spaceW = std::get<1>(*solutionSpaces);
+
   using FEBasisTest
-      = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
+      = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
   auto testSearchSpaces = make_space_tuple<FEBasisTest>(gridView);
 
   auto bilinearForm = make_BilinearForm(testSearchSpaces, solutionSpaces,

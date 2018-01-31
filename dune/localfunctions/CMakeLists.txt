@@ -1,3 +1,4 @@
+add_subdirectory(bernstein)
 add_subdirectory(lagrange)
 add_subdirectory(optimaltestfunctions)
 
