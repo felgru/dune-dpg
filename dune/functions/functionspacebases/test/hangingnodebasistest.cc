@@ -82,8 +82,6 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
         {
           dominatedElementLocalView.bind(intersection.outside());
           dominatedElementLocalIndexSet.bind(dominatedElementLocalView);
-          const auto& dominatedIndices
-              = dominatedElementLocalIndexSet.indicesLocalGlobal();
 
           const auto geometryInDominatingElement
               = geometryInInside(intersection);
