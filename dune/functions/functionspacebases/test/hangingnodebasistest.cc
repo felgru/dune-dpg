@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include <dune/common/exceptions.hh>
+#include <dune/common/version.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
 #include <dune/geometry/quadraturerules.hh>
@@ -82,15 +83,20 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
         {
           dominatedElementLocalView.bind(intersection.outside());
           dominatedElementLocalIndexSet.bind(dominatedElementLocalView);
-          const auto& dominatedIndices
-              = dominatedElementLocalIndexSet.indicesLocalGlobal();
 
           const auto geometryInDominatingElement
               = geometryInInside(intersection);
           const auto geometryInDominatedElement
               = geometryInOutside(intersection);
+#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const auto& quad // TODO: replace 3 with degree of basis
               = QuadratureRules<double, 1>::rule(GeometryTypes::line, 3);
+#else
+          GeometryType line;
+          line.makeLine();
+          const auto& quad // TODO: replace 3 with degree of basis
+              = QuadratureRules<double, 1>::rule(line, 3);
+#endif
           for(size_t pt=0; pt < quad.size(); pt++)
           {
             // point-wise check of continuity condition
