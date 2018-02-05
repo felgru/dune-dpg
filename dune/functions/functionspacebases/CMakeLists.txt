@@ -1,3 +1,4 @@
+add_subdirectory(normalizedbasisadaptor)
 add_subdirectory(test)
 
 install(FILES
@@ -7,6 +8,7 @@ install(FILES
         constrainedglobalbasis.hh
         constrainedlocalindexset.hh
         hangingnodep2nodalbasis.hh
+        normalizedbasisadaptor.hh
         optimaltestbasis.hh
         pqkdgrefineddgnodalbasis.hh
         pqksubsampleddgbasis.hh
