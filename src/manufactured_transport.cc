@@ -27,9 +27,9 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
+#include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
 #include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
@@ -200,12 +200,12 @@ int main(int argc, char** argv)
       = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
     // v search space
-    using FEBasisTest = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
+    using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
     auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
-        = Functions::PQkDGRefinedDGBasis<GridView, 1, 4>;
+        = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 4>;
     auto testSpaces_aposteriori
         = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
