@@ -163,9 +163,10 @@ void testScalarBasis(const Basis& feBasis)
     localView.unbind();
   }
 
-  std::cout << "Computed integral is " << integral << std::endl;
-  if (std::abs(integral-0.5) > 1e-10)
-    std::cerr << "Warning: integral value is wrong!" << std::endl;
+  if (std::abs(integral-0.5) > 1e-10) {
+    DUNE_THROW(Exception,
+        "Computed integral is " << integral << " but should be 0.5!");
+  }
 }
 
 int main (int argc, char* argv[]) try
