@@ -19,13 +19,8 @@ using namespace Dune;
 using namespace Dune::Functions;
 
 template <typename Basis>
-void testScalarBasis(const Basis& feBasis)
+void testLocalFeForEachElement(const Basis& feBasis)
 {
-  /////////////////////////////////////////////////////////////////////
-  //  Run the dune-localfunctions test for the LocalFiniteElement of
-  //  each grid element
-  /////////////////////////////////////////////////////////////////////
-
   typedef typename Basis::GridView GridView;
   const GridView gridView = feBasis.gridView();
 
@@ -46,19 +41,19 @@ void testScalarBasis(const Basis& feBasis)
       DUNE_THROW(Exception,
           "Size of leaf node and finite element do not coincide");
   }
+}
 
-
-  // Check whether the basis exports a type 'MultiIndex'
-  typedef typename Basis::MultiIndex MultiIndex;
-
-  // And this type must be indexable
-  static_assert(is_indexable<MultiIndex>(),
-      "MultiIndex must support operator[]");
-
+template <typename Basis>
+void checkRangeOfGlobalIndices(const Basis& feBasis)
+{
   /////////////////////////////////////////////////////////////////////
   //  Check whether the global indices are in the correct range,
   //  and whether each global index appears at least once.
   /////////////////////////////////////////////////////////////////////
+
+  const auto gridView = feBasis.gridView();
+
+  typename Basis::LocalView localView(feBasis);
 
   std::vector<bool> seen(feBasis.size(), false);
 
@@ -87,7 +82,16 @@ void testScalarBasis(const Basis& feBasis)
 
   for (size_t i=0; i<seen.size(); i++)
     if (! seen[i])
-      DUNE_THROW(Exception, "Index [" << i << "] does not exist as global basis vector");
+      DUNE_THROW(Exception,
+          "Index [" << i << "] does not exist as global basis vector");
+}
+
+template <typename Basis>
+void checkIntegralOverLinearFunction(const Basis& feBasis)
+{
+  const auto gridView = feBasis.gridView();
+  typename Basis::LocalView localView(feBasis);
+  auto localIndexSet = feBasis.localIndexSet();
 
   // Sample the function f(x,y) = x on the grid vertices
   // If we use that as the coefficients of a finite element function,
@@ -167,6 +171,22 @@ void testScalarBasis(const Basis& feBasis)
     DUNE_THROW(Exception,
         "Computed integral is " << integral << " but should be 0.5!");
   }
+}
+
+template <typename Basis>
+void testScalarBasis(const Basis& feBasis)
+{
+  testLocalFeForEachElement(feBasis);
+
+  // Check whether the basis exports a type 'MultiIndex'
+  typedef typename Basis::MultiIndex MultiIndex;
+
+  // And this type must be indexable
+  static_assert(is_indexable<MultiIndex>(),
+      "MultiIndex must support operator[]");
+
+  checkRangeOfGlobalIndices(feBasis);
+  checkIntegralOverLinearFunction(feBasis);
 }
 
 int main (int argc, char* argv[]) try
