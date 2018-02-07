@@ -1,4 +1,4 @@
-dune_add_test(SOURCES gridviewfunctionspacebasistest.cc
+dune_add_test(SOURCES pqktracenodalbasistest.cc
               LINK_LIBRARIES dunecommon dunegeometry)
 
 if(dune-subgrid_FOUND)
