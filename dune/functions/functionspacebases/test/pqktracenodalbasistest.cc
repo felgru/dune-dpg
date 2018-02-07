@@ -7,8 +7,6 @@
 #include <dune/common/exceptions.hh>
 #include <dune/common/typetraits.hh>
 
-#include <dune/geometry/quadraturerules.hh>
-
 #include <dune/grid/yaspgrid.hh>
 
 #include <dune/localfunctions/test/test-localfe.hh>
