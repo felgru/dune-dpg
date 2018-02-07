@@ -21,12 +21,13 @@ using namespace Dune::Functions;
 template <typename Basis>
 void testScalarBasis(const Basis& feBasis)
 {
-  //////////////////////////////////////////////////////////////////////////////////////
-  //  Run the dune-localfunctions test for the LocalFiniteElement of each grid element
-  //////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////
+  //  Run the dune-localfunctions test for the LocalFiniteElement of
+  //  each grid element
+  /////////////////////////////////////////////////////////////////////
 
   typedef typename Basis::GridView GridView;
-  GridView gridView = feBasis.gridView();
+  const GridView gridView = feBasis.gridView();
 
   typename Basis::LocalView localView(feBasis);
 
@@ -36,12 +37,14 @@ void testScalarBasis(const Basis& feBasis)
   {
     localView.bind(element);
 
-    // The general LocalFiniteElement unit test from dune/localfunctions/test/test-localfe.hh
+    // The general LocalFiniteElement unit test from
+    // dune/localfunctions/test/test-localfe.hh
     const auto& lFE = localView.tree().finiteElement();
     testFE(lFE);
 
     if (lFE.size() != localView.size())
-      DUNE_THROW(Exception, "Size of leaf node and finite element do not coincide");
+      DUNE_THROW(Exception,
+          "Size of leaf node and finite element do not coincide");
   }
 
 
@@ -49,12 +52,13 @@ void testScalarBasis(const Basis& feBasis)
   typedef typename Basis::MultiIndex MultiIndex;
 
   // And this type must be indexable
-  static_assert(is_indexable<MultiIndex>(), "MultiIndex must support operator[]");
+  static_assert(is_indexable<MultiIndex>(),
+      "MultiIndex must support operator[]");
 
-  ///////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////
   //  Check whether the global indices are in the correct range,
   //  and whether each global index appears at least once.
-  ///////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////
 
   std::vector<bool> seen(feBasis.size(), false);
 
@@ -124,7 +128,6 @@ void testScalarBasis(const Basis& feBasis)
       coefficients[i] = x[localIndexSet.index(i)[0]];
     }
 
-    // get access to the finite element
     typedef typename Basis::LocalView::Tree Tree;
     const Tree& tree = localView.tree();
 
@@ -134,13 +137,10 @@ void testScalarBasis(const Basis& feBasis)
     assert(localView.size() == tree.size());
     assert(localView.size() == tree.finiteElement().localBasis().size());
 
-    // A quadrature rule
     const QuadratureRule<double, dim>& quad
         = QuadratureRules<double, dim>::rule(element.type(), 1);
 
-    // Loop over all quadrature points
     for ( size_t pt=0; pt < quad.size(); pt++ ) {
-
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
 
@@ -148,7 +148,6 @@ void testScalarBasis(const Basis& feBasis)
       const double integrationElement
           = element.geometry().integrationElement(quadPos);
 
-      // Evaluate all shape function values at this point
       std::vector<FieldVector<double,1> > shapeFunctionValues;
       localFiniteElement.localBasis().evaluateFunction(quadPos, shapeFunctionValues);
 
@@ -160,7 +159,6 @@ void testScalarBasis(const Basis& feBasis)
       }
     }
 
-    // unbind
     localIndexSet.unbind();
     localView.unbind();
   }
