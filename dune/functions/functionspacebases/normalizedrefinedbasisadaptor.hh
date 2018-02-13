@@ -9,7 +9,7 @@
 #include <dune/dpg/assemble_helper.hh>
 
 #include <dune/functions/functionspacebases/nodes.hh>
-#include <dune/functions/functionspacebases/defaultglobalbasis.hh>
+#include <dune/functions/functionspacebases/refinedglobalbasis.hh>
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
 #include <dune/functions/functionspacebases/refinednode.hh>
 
@@ -164,6 +164,7 @@ public:
   using size_type = std::size_t;
   using TreePath = TP;
   using Element = typename WrappedNode::Element;
+  using SubElement = typename WrappedNode::SubElement;
   using FiniteElement
       = ScaledLocalFiniteElement<typename WrappedNode::FiniteElement>;
   using RefinementGrid = typename WrappedNode::RefinementGrid;
@@ -216,6 +217,11 @@ public:
   const WrappedNode& wrappedBasisNode() const
   {
     return wrappedNode_;
+  }
+
+  void bindSubElement(const SubElement& se)
+  {
+    wrappedNode_.bindSubElement(se);
   }
 
 protected:
@@ -297,7 +303,7 @@ protected:
  */
 template<typename InnerProduct>
 using NormalizedRefinedBasis
-    = DefaultGlobalBasis<NormalizedRefinedPreBasis<InnerProduct>>;
+    = RefinedGlobalBasis<NormalizedRefinedPreBasis<InnerProduct>>;
 
 
 

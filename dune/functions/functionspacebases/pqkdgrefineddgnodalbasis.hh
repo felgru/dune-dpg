@@ -12,9 +12,8 @@
 #include <dune/typetree/leafnode.hh>
 
 #include <dune/functions/functionspacebases/nodes.hh>
-#include <dune/functions/functionspacebases/defaultglobalbasis.hh>
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
-#include <dune/functions/functionspacebases/refinednode.hh>
+#include <dune/functions/functionspacebases/refinedglobalbasis.hh>
 
 
 
@@ -193,6 +192,7 @@ public:
   using size_type = std::size_t;
   using TreePath = TP;
   using Element = typename GV::template Codim<0>::Entity;
+  using SubElement = typename RefinedNodeBase::SubElement;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
 
   PQkDGRefinedDGNode(const TreePath& treePath) :
@@ -213,20 +213,28 @@ public:
   //! Bind to element.
   void bind(const Element& e)
   {
+    // TODO: We assume that all subElements are of the same geometry type
+    //       which is the same as for e.
     this->element_ = &e;
     finiteElement_ = &(feCache_.get(this->element_->type()));
-    using Factory = PQkDGRefinedDGPreBasis<GV, level, k, void>;
+    using PreBasis = PQkDGRefinedDGPreBasis<GV, level, k, void>;
     size_type numberOfSubElements;
     if(e.type().isTriangle()) {
-      numberOfSubElements = Factory::numberOfSubTriangles;
+      numberOfSubElements = PreBasis::numberOfSubTriangles;
     } else if(e.type().isQuadrilateral()) {
-      numberOfSubElements = Factory::numberOfSubQuads;
+      numberOfSubElements = PreBasis::numberOfSubQuads;
     } else {
       DUNE_THROW(Dune::NotImplemented,
                  "PQkDGRefinedNode::bind() not implemented for element type "
                  << e.type().id());
     }
     this->setSize(numberOfSubElements*finiteElement_->size());
+  }
+
+  void bindSubElement(const SubElement& se)
+  {
+    this->subElement_ = &se;
+    assert(this->element_->type() == this->subElement_->type());
   }
 
 protected:
@@ -344,7 +352,7 @@ protected:
  * \tparam k The order of the basis
  */
 template<typename GV, int level, int k>
-using PQkDGRefinedDGBasis = DefaultGlobalBasis<PQkDGRefinedDGPreBasis<GV, level, k, FlatMultiIndex<std::size_t> > >;
+using PQkDGRefinedDGBasis = RefinedGlobalBasis<PQkDGRefinedDGPreBasis<GV, level, k, FlatMultiIndex<std::size_t> > >;
 
 
 
