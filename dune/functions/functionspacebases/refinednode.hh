@@ -28,6 +28,12 @@ public:
     return refinementCache_.get(element_->type());
   }
 
+  //! Return current element, throw if unbound
+  const Element& element() const
+  {
+    return *element_;
+  }
+
 protected:
 
   static RefinementCache refinementCache_;
