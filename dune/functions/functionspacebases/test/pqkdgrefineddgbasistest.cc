@@ -35,7 +35,7 @@ void testLocalFeForEachElement(const Basis& feBasis)
     testFE(lFE);
 
     const size_t numSubElements =
-        localView.tree().refinedReferenceElement().leafGridView().size(0);
+        localView.tree().refinedReferenceElementGridView().size(0);
     if (lFE.size() * numSubElements != localView.size())
       DUNE_THROW(Exception,
           "Size of leaf node and finite element do not coincide");

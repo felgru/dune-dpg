@@ -129,6 +129,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 ### Removed
 * Remove the `make_DPGLinearForm` and `make_DPG_LinearForm` functions,
   use `make_LinearForm` instead.
+* Remove the `refinedReferenceElement` method of refined global basis
+  nodes. As a replacement, a new method `refinedReferenceElementGridView`
+  has been added that directly returns the leafGridView.
 * Remove the `update` method from `BufferedTestspaceCoefficientMatrix`
   and `UnbufferedTestspaceCoefficientMatrix`.
 * Remove the `clone` method from all local bases. This method was never

@@ -145,7 +145,7 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
 
 
     const auto referenceGridView =
-        localViewTest.tree().refinedReferenceElement().leafGridView();
+        localViewTest.tree().refinedReferenceElementGridView();
 
     const unsigned int subElementStride =
         (is_DGRefinedFiniteElement<Space>::value) ?

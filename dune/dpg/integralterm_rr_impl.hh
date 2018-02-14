@@ -41,7 +41,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
       ::Quadrature(element, quadratureOrder);
 
   const auto referenceGridView =
-      lhsLocalView.tree().refinedReferenceElement().leafGridView();
+      lhsLocalView.tree().refinedReferenceElementGridView();
 
   const unsigned int lhsSubElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?
@@ -153,7 +153,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
   const auto referenceGridView =
-      lhsLocalView.tree().refinedReferenceElement().leafGridView();
+      lhsLocalView.tree().refinedReferenceElementGridView();
 
   const unsigned int lhsSubElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?

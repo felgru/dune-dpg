@@ -18,14 +18,15 @@ class RefinedNode
 public:
 
   using RefinementGrid = GridType;
+  using RefinementGridView = typename RefinementGrid::LeafGridView;
 
   RefinedNode() :
     element_(nullptr)
   {}
 
-  const RefinementGrid& refinedReferenceElement() const
+  RefinementGridView refinedReferenceElementGridView() const
   {
-    return refinementCache_.get(element_->type());
+    return refinementCache_.get(element_->type()).leafGridView();
   }
 
   //! Return current element, throw if unbound
