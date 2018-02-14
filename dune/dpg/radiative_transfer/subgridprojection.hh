@@ -253,7 +253,7 @@ namespace detail {
     const auto& hostGrid = hostGridLocalView.globalBasis().gridView().grid();
 
     const auto referenceGridView =
-        subGridLocalView.tree().refinedReferenceElement().leafGridView();
+        subGridLocalView.tree().refinedReferenceElementGridView();
 
     const auto& subGridLocalFiniteElement
         = subGridLocalView.tree().finiteElement();
@@ -398,8 +398,7 @@ namespace detail {
                   interpolatedLocalData(subGridLocalView.size());
 
               const auto referenceGridView =
-                  subGridLocalView.tree().refinedReferenceElement()
-                                         .leafGridView();
+                  subGridLocalView.tree().refinedReferenceElementGridView();
 
               const unsigned int subElementStride =
                   (is_DGRefinedFiniteElement<SubGridGlobalBasis>::value) ?
@@ -674,8 +673,7 @@ public:
                     childLocalData(localView.size());
 
                 const auto referenceGridView =
-                    localView.tree().refinedReferenceElement()
-                                           .leafGridView();
+                    localView.tree().refinedReferenceElementGridView();
 
                 const unsigned int subElementStride =
                     (is_DGRefinedFiniteElement<SubGridGlobalBasis>::value) ?
