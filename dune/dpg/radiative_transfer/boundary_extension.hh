@@ -67,7 +67,7 @@ void getLocalMatrix(const LocalView& localView, Matrix& elementMatrix)
   using Element = typename LocalView::Element;
   const Element& element = localView.element();
 
-  const int dim = Element::dimension;
+  constexpr int dim = Element::dimension;
   const auto geometry = element.geometry();
 
   // Get set of shape functions for this element

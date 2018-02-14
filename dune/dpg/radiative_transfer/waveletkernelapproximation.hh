@@ -346,7 +346,7 @@ namespace ScatteringKernelApproximation {
     {
       // Get Gauss-Legendre quadrature in [0,1]
       const int quadOrder = 2*waveletOrder+1;
-      const int dim = 1;
+      constexpr int dim = 1;
 #if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       const Dune::QuadratureRule<double, dim>& quad =
         Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
@@ -389,7 +389,7 @@ namespace ScatteringKernelApproximation {
     {
       // Get Gauss-Legendre quadrature in [0,1]
       const int quadOrder = 2*waveletOrder+1;
-      const int dim = 1;
+      constexpr int dim = 1;
 #if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       const Dune::QuadratureRule<double, dim>& quad =
         Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
@@ -635,7 +635,7 @@ namespace ScatteringKernelApproximation {
     class SVD {
 
       public:
-        enum : unsigned int { dim = 2 };
+        static constexpr int dim = 2;
         using Direction = FieldVector<double, dim>;
 
         // This is the number of quadrature points per interval.
@@ -740,7 +740,7 @@ namespace ScatteringKernelApproximation {
 
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
-          const int dim = 1;
+          constexpr int dim = 1;
 #if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
@@ -768,7 +768,7 @@ namespace ScatteringKernelApproximation {
         std::vector<double> getQuadWeightSubinterval() const {
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
-          const int dim = 1;
+          constexpr int dim = 1;
 #if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
@@ -899,7 +899,7 @@ namespace ScatteringKernelApproximation {
     class MatrixTH {
 
       public:
-        enum : unsigned int { dim = 2 };
+        static constexpr unsigned int dim = 2;
         using Direction = FieldVector<double, dim>;
 
         // This is the number of quadrature points per interval.
@@ -989,7 +989,7 @@ namespace ScatteringKernelApproximation {
 
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
-          const int dim = 1;
+          constexpr int dim = 1;
 #if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
@@ -1017,7 +1017,7 @@ namespace ScatteringKernelApproximation {
         std::vector<double> getQuadWeightSubinterval() const {
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
-          const int dim = 1;
+          constexpr int dim = 1;
 #if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
@@ -1308,9 +1308,6 @@ namespace ScatteringKernelApproximation {
           const Eigen::VectorXd& y, const Eigen::VectorXd& yValues,
           double quadweighty
           ) {
-        enum : unsigned int { dim = 2 };
-
-        // evaluate the kernel function
         const size_t nquadx = x.size();
         const size_t nquady = y.size();
         const double quadweight = quadweighty * quadweightx;
@@ -1454,10 +1451,10 @@ namespace ScatteringKernelApproximation {
 
       class MatrixCompression {
       public:
-        enum : unsigned int { dim = 2 };
+        static constexpr unsigned int dim = 2;
         using Direction = FieldVector<double, dim>;
 
-        enum : unsigned int { numSperInterval = 1 };
+        static constexpr unsigned int numSperInterval = 1;
 
         MatrixCompression() = delete;
         MatrixCompression(const MatrixCompression&) = delete;
@@ -1520,10 +1517,10 @@ namespace ScatteringKernelApproximation {
 
       class SVD {
       public:
-        enum : unsigned int { dim = 2 };
+        static constexpr unsigned int dim = 2;
         using Direction = FieldVector<double, dim>;
 
-        enum : unsigned int { numSperInterval = 1 };
+        static constexpr unsigned int numSperInterval = 1;
 
         SVD() = delete;
         SVD(const SVD&) = delete;

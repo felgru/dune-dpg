@@ -40,7 +40,7 @@ Eigen::MatrixXd stiffnessMatrix(InnerProduct& innerProduct,
 }
 
 int main() {
-  const int dim = 2;
+  constexpr int dim = 2;
   using Grid = UGGrid<dim>;
 
   const double theta = 1.;

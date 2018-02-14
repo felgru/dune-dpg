@@ -139,7 +139,7 @@ namespace detail {
               HostGridLocalView::GlobalBasis>::value,
               "computeProjectionRhs only defined for unrefined HostGrid basis");
     projectionRhs = 0;
-    const int dim = Element::mydimension;
+    constexpr int dim = Element::mydimension;
     const auto& hostGrid = hostGridLocalView.globalBasis().gridView().grid();
 
     for(const auto& hostCellData : cellData) {
@@ -249,7 +249,7 @@ namespace detail {
     using SubGridSpace = typename SubGridLocalView::GlobalBasis;
 
     projectionRhs = 0;
-    const int dim = Element::mydimension;
+    constexpr int dim = Element::mydimension;
     const auto& hostGrid = hostGridLocalView.globalBasis().gridView().grid();
 
     const auto referenceGridView =

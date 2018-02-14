@@ -129,7 +129,7 @@ int main(int argc, char** argv)
   //   Generate the grid
   ///////////////////////////////////
 
-  const int dim = 2;
+  constexpr int dim = 2;
   typedef UGGrid<dim> GridType;
 
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
