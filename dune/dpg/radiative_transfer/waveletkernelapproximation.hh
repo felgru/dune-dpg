@@ -1326,14 +1326,14 @@ namespace ScatteringKernelApproximation {
 
       std::tuple<Eigen::VectorXd, double> computeQuadPoints(
           size_t jx, size_t kx, double r, size_t maxLevel) {
-        double xmin = r *   kx   * std::exp2(-(double)jx+1) - r;
-        double xmax = r * (kx+1) * std::exp2(-(double)jx+1) - r;
+        const double xmin = r *   kx   * std::exp2(-(double)jx+1) - r;
+        const double xmax = r * (kx+1) * std::exp2(-(double)jx+1) - r;
         size_t nquad = 1 << (maxLevel - jx);
         Eigen::VectorXd x(nquad);
         for(size_t i=0; i < nquad; i++) {
           x[i] = xmin + (2*i+1)/(2.*nquad) * (xmax - xmin);
         }
-        double quadweight = (xmax - xmin) / nquad;
+        const double quadweight = (xmax - xmin) / nquad;
         return std::make_tuple(x, quadweight);
       }
 
@@ -1344,8 +1344,8 @@ namespace ScatteringKernelApproximation {
         Eigen::VectorXd tmp(data.size());
         for(size_t len = data.size() >> 1; len > 0; len >>=1) {
           for(size_t i = 0; i < len; i++) {
-            double sum  = data[2*i] + data[2*i+1];
-            double diff = data[2*i] - data[2*i+1];
+            const double sum  = data[2*i] + data[2*i+1];
+            const double diff = data[2*i] - data[2*i+1];
             tmp[i]     = .5 * sum;
             tmp[len+i] = .5 * diff;
           }
@@ -1370,11 +1370,11 @@ namespace ScatteringKernelApproximation {
           scaling_factor *= sqrt(2);
           data.segment(len, len) *= scaling_factor;
         }
-        size_t max_len = data.size();
+        const size_t max_len = data.size();
         for(size_t len = 1; len < max_len; len <<=1) {
           for(size_t i = 0; i < len; i++) {
-            double sum  = data[i] + data[len+i];
-            double diff = data[i] - data[len+i];
+            const double sum  = data[i] + data[len+i];
+            const double diff = data[i] - data[len+i];
             tmp[2*i]   = sum;
             tmp[2*i+1] = diff;
           }
