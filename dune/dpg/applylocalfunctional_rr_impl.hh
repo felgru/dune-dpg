@@ -29,7 +29,7 @@ inline static void interiorImpl(
 {
   static_assert(is_DGRefinedFiniteElement<SolutionSpace>::value,
       "ApplyLocalFunctional only implemented for DG refined SolutionSpace.");
-  const int dim = Element::mydimension;
+  constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
@@ -137,7 +137,7 @@ faceImpl(const TestLocalView& testLocalView,
          const FactorType& factor,
          const DirectionType& beta)
 {
-  const int dim = Element::mydimension;
+  constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
   BlockVector<FieldVector<double,1>>

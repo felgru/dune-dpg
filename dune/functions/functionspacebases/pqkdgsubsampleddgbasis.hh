@@ -48,7 +48,7 @@ class PQkDGSubsampledDGNodeFactory;
 template<typename GV, int s, int k, class MI>
 class PQkDGSubsampledDGNodeFactory
 {
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
 public:
 
@@ -58,9 +58,9 @@ public:
 
 
   // Precompute the number of dofs per entity type
-  const int dofsPerEdge        = s*(k+1);
-  const int dofsPerTriangle    = s*s*((k+1)*(k+2))/2;
-  const int dofsPerQuad        = s*s*(k+1)*(k+1);
+  static constexpr int dofsPerEdge        = s*(k+1);
+  static constexpr int dofsPerTriangle    = s*s*((k+1)*(k+2))/2;
+  static constexpr int dofsPerQuad        = s*s*(k+1)*(k+1);
 
 
   template<class TP>
@@ -183,7 +183,7 @@ template<typename GV, int s, int k, typename TP>
 class PQkDGSubsampledDGNode :
   public LeafBasisNode<std::size_t, TP>
 {
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
   using Base = LeafBasisNode<std::size_t, TP>;
   using FiniteElementCache

@@ -27,7 +27,7 @@ inline static void interiorImpl(
     const Element& element,
     const FunctionalVector& functionalVector)
 {
-  const int dim = Element::mydimension;
+  constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
@@ -130,7 +130,7 @@ faceImpl(const TestLocalView& testLocalView,
          const FactorType& factor,
          const DirectionType& beta)
 {
-  const int dim = Element::mydimension;
+  constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
   // Get set of shape functions for this element

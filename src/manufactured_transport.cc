@@ -144,7 +144,7 @@ int main(int argc, char** argv)
   //   Generate the grid
   ///////////////////////////////////
 
-  const int dim = 2;
+  constexpr int dim = 2;
   using HostGrid = UGGrid<dim>;
   using Grid = SubGrid<dim, HostGrid, false>;
 

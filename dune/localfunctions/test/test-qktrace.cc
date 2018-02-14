@@ -13,7 +13,7 @@ int main(int argc, char** argv) try
 {
   bool success = true;
 
-  const int dim = 3;
+  constexpr int dim = 3;
 
   std::cout << "Testing QkTraceLocalFiniteElement on 3d"
             << " hexagonal elements with double precision" << std::endl;

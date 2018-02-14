@@ -93,7 +93,7 @@ class OptimalTestBasisNodeFactory
                      typename TestspaceCoefficientMatrix::TestSpaces
                >::type>
 {
-  static const int dim =
+  static constexpr int dim =
       TestspaceCoefficientMatrix::GridView::dimension;
 
 public:
@@ -227,7 +227,7 @@ public:
 
 private:
   using GV = typename TestspaceCoefficientMatrix::GridView;
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
   using Base = LeafBasisNode<std::size_t, TP>;
   using TestSearchFiniteElement

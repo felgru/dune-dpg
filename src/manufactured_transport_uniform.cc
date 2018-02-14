@@ -142,7 +142,7 @@ int main(int argc, char** argv)
   //   Generate the grid
   ///////////////////////////////////
 
-  const int dim = 2;
+  constexpr int dim = 2;
   typedef UGGrid<dim> GridType;
 
   unsigned int nelements = atoi(argv[1]);

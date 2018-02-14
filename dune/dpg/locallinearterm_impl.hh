@@ -60,7 +60,7 @@ struct GetLocalLinearTermVector<integrationType, Space, false>
     typedef typename LocalViewTest::Element Element;
     const Element& element = localViewTest.element();
 
-    const int dim = Element::mydimension;
+    constexpr int dim = Element::mydimension;
     const auto geometry = element.geometry();
 
     // Get set of shape functions for this element
@@ -133,7 +133,7 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
     typedef typename LocalViewTest::Element Element;
     const Element& element = localViewTest.element();
 
-    const int dim = Element::mydimension;
+    constexpr int dim = Element::mydimension;
     const auto geometry = element.geometry();
 
     // Get set of shape functions for this element

@@ -48,7 +48,7 @@ template<typename GV, int level, int k, class MI>
 class PQkDGRefinedDGNodeFactory
   : public DGRefinedNodeFactoryConstants<GV::dimension, level, k>
 {
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
 public:
 
@@ -59,12 +59,15 @@ public:
   using RefinementConstants = DGRefinedNodeFactoryConstants<dim, level, k>;
 
   // Precompute the number of dofs per entity type
-  const static int dofsPerEdge     = RefinementConstants::numberOfSubEdges
-                                   * RefinementConstants::dofsPerSubEdge;
-  const static int dofsPerTriangle = RefinementConstants::numberOfSubTriangles
-                                   * RefinementConstants::dofsPerSubTriangle;
-  const static int dofsPerQuad     = RefinementConstants::numberOfSubQuads
-                                   * RefinementConstants::dofsPerSubQuad;
+  constexpr static int dofsPerEdge
+      = RefinementConstants::numberOfSubEdges
+      * RefinementConstants::dofsPerSubEdge;
+  constexpr static int dofsPerTriangle
+      = RefinementConstants::numberOfSubTriangles
+      * RefinementConstants::dofsPerSubTriangle;
+  constexpr static int dofsPerQuad
+      = RefinementConstants::numberOfSubQuads
+      * RefinementConstants::dofsPerSubQuad;
 
 
   template<class TP>
@@ -192,7 +195,7 @@ class PQkDGRefinedDGNode :
   public RefinedNode < typename GV::template Codim<0>::Entity
                      , typename GV::ctype, GV::dimension, level>
 {
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
   using Base = LeafBasisNode<std::size_t, TP>;
   using RefinedNodeBase =
@@ -259,7 +262,7 @@ template<typename GV, int level, int k, class MI, class TP>
 class PQkDGRefinedDGNodeIndexSet
 {
   // Cannot be an enum -- otherwise the switch statement below produces compiler warnings
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
 public:
 

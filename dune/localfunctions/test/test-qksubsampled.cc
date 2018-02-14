@@ -28,7 +28,7 @@ int main(int argc, char** argv) try
 {
   bool success = true;
 
-  const int dim = 2;
+  constexpr int dim = 2;
 
   std::cout << "Testing QkDGLocalFiniteElement on 2d"
             << " quadrilateral elements with double precision" << std::endl;

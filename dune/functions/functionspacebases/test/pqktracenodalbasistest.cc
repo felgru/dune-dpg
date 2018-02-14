@@ -140,7 +140,7 @@ void testScalarBasis(const Basis& feBasis)
 int main (int argc, char* argv[]) try
 {
   // Generate grid for testing
-  const int dim = 2;
+  constexpr int dim = 2;
   typedef YaspGrid<dim> GridType;
   const FieldVector<double,dim> l(1);
   const std::array<int,dim> elements = {{10, 10}};
