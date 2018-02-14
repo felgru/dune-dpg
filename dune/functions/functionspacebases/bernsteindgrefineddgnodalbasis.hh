@@ -216,12 +216,6 @@ public:
     finiteElement_(nullptr)
   {}
 
-  //! Return current element, throw if unbound
-  const Element& element() const
-  {
-    return *(this->element_);
-  }
-
   /** \brief Return the LocalFiniteElement for the element we are bound to
    *
    * The LocalFiniteElement implements the corresponding interfaces of the dune-localfunctions module

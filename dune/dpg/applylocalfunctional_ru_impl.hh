@@ -57,7 +57,7 @@ inline static void interiorImpl(
       ::Quadrature(element, quadratureOrder);
 
   const auto referenceGridView =
-      testLocalView.tree().refinedReferenceElement().leafGridView();
+      testLocalView.tree().refinedReferenceElementGridView();
 
   assert(element.type().isTriangle() || element.type().isQuadrilateral());
   const size_t subElementStride =
@@ -153,7 +153,7 @@ faceImpl(const TestLocalView& testLocalView,
   );
 
   const auto referenceGridView =
-      testLocalView.tree().refinedReferenceElement().leafGridView();
+      testLocalView.tree().refinedReferenceElementGridView();
 
   const unsigned int subElementStride =
       (is_DGRefinedFiniteElement<TestSpace>::value) ?
