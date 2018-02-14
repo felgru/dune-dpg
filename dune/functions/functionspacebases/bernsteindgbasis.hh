@@ -42,7 +42,7 @@ class BernsteinDGNodeIndexSet;
 template<typename GV, int k, class MI>
 class BernsteinDGNodeFactory
 {
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
 public:
 
@@ -52,13 +52,13 @@ public:
 
 
   // Precompute the number of dofs per entity type
-  const static int dofsPerEdge        = k+1;
-  const static int dofsPerTriangle    = (k+1)*(k+2)/2;
-  const static int dofsPerQuad        = (k+1)*(k+1);
-  const static int dofsPerTetrahedron = (k+1)*(k+2)*(k+3)/6;
-  const static int dofsPerPrism       = (k+1)*(k+1)*(k+2)/2;
-  const static int dofsPerHexahedron  = (k+1)*(k+1)*(k+1);
-  const static int dofsPerPyramid     = (k+1)*(k+2)*(2*k+3)/6;
+  constexpr static int dofsPerEdge        = k+1;
+  constexpr static int dofsPerTriangle    = (k+1)*(k+2)/2;
+  constexpr static int dofsPerQuad        = (k+1)*(k+1);
+  constexpr static int dofsPerTetrahedron = (k+1)*(k+2)*(k+3)/6;
+  constexpr static int dofsPerPrism       = (k+1)*(k+1)*(k+2)/2;
+  constexpr static int dofsPerHexahedron  = (k+1)*(k+1)*(k+1);
+  constexpr static int dofsPerPyramid     = (k+1)*(k+2)*(2*k+3)/6;
 
 
   template<class TP>
@@ -191,9 +191,8 @@ public:
   //! Return number possible values for next position in multi index
   size_type size(const SizePrefix prefix) const
   {
-    if (prefix.size() == 0)
-      return size();
-    assert(false);
+    assert(prefix.size() == 0 || prefix.size() == 1);
+    return (prefix.size() == 0) ? size() : 0;
   }
 
   /** \todo This method has been added to the interface without prior discussion. */
@@ -222,7 +221,7 @@ template<typename GV, int k, class MI, class TP>
 class BernsteinDGNodeIndexSet
 {
   // Cannot be an enum -- otherwise the switch statement below produces compiler warnings
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
 public:
 

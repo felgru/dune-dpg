@@ -65,7 +65,7 @@ class HangingNodeP2NodeFactory;
 template<typename GV, class MI>
 class HangingNodeP2NodeFactory
 {
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
 public:
 
@@ -333,7 +333,7 @@ template<typename GV, typename TP>
 class HangingNodeP2Node :
   public LeafBasisNode<std::size_t, TP>
 {
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
   using Base = LeafBasisNode<std::size_t,TP>;
   using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;

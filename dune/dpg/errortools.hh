@@ -201,7 +201,7 @@ namespace Dune {
     typedef typename LocalView::Element Element;
     const Element& element = localView.element();
 
-    const int dim = Element::mydimension;
+    constexpr int dim = Element::mydimension;
     const auto geometry = element.geometry();
 
     const auto& localBasis = localView.tree().finiteElement().localBasis();
@@ -306,7 +306,7 @@ namespace Dune {
     typedef typename LocalView::Element Element;
     const Element& element = localView.element();
 
-    const int dim = Element::mydimension;
+    constexpr int dim = Element::mydimension;
     const auto geometry = element.geometry();
 
     // Get set of shape functions for this element
@@ -495,7 +495,7 @@ namespace Dune {
     auto element = std::get<0>(solutionLocalViews).element();
     const auto geometry = element.geometry();
     typedef decltype(element) Element;
-    const int dim = Element::mydimension;
+    constexpr int dim = Element::mydimension;
     const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(element.type(),
                                                      quadratureOrder);

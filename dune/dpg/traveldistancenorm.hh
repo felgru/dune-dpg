@@ -61,7 +61,7 @@ namespace detail {
     if(fabs(referenceBeta[0]) < tol * referenceBetaNorm) referenceBeta[0] = 0.;
     if(fabs(referenceBeta[1]) < tol * referenceBetaNorm) referenceBeta[1] = 0.;
 
-    auto corner = faceGeometryInElement.global({0});
+    const auto corner = faceGeometryInElement.global({0});
     if(referenceBeta[0] > 0) {
       if((corner
           - FieldVector<double,2>{0.,0.}).two_norm() < tol)

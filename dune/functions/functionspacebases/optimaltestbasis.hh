@@ -45,6 +45,12 @@ public:
     element_(nullptr)
   {}
 
+  //! Return current element, throw if unbound
+  const Element& element() const
+  {
+    return *element_;
+  }
+
 protected:
 
   const Element* element_;
@@ -93,7 +99,7 @@ class OptimalTestBasisNodeFactory
                      typename TestspaceCoefficientMatrix::TestSpaces
                >::type>
 {
-  static const int dim =
+  static constexpr int dim =
       TestspaceCoefficientMatrix::GridView::dimension;
 
 public:
@@ -227,7 +233,7 @@ public:
 
 private:
   using GV = typename TestspaceCoefficientMatrix::GridView;
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
   using Base = LeafBasisNode<std::size_t, TP>;
   using TestSearchFiniteElement
@@ -271,12 +277,6 @@ public:
     localViewsTest(Dune::detail::getLocalViews(*testCoeffMat.bilinearForm()
                                                     .getTestSpaces()))
   {}
-
-  //! Return current element, throw if unbound
-  const Element& element() const
-  {
-    return *this->element_;
-  }
 
   /** \brief Return the LocalFiniteElement for the element we are bound to
    *

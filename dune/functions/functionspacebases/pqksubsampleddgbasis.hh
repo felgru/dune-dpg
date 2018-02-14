@@ -48,7 +48,7 @@ class PQkSubsampledDGNodeFactory;
 template<typename GV, int s, int k, class MI>
 class PQkSubsampledDGNodeFactory
 {
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
 public:
 
@@ -58,13 +58,13 @@ public:
 
 
   // Precompute the number of dofs per entity type
-  const int dofsPerEdge        = s*k+1;
-  const int dofsPerTriangle    = ((s*k+1)*(s*k+2))/2;
-  const int dofsPerQuad        = (s*k+1)*(s*k+1);
-  const int dofsPerTetrahedron = (s*k+1)*(s*k+2)*(s*k+3)/6;
-  const int dofsPerPrism       = ((s*k+1)*(s*k+1)*(s*k+2))/2;
-  const int dofsPerHexahedron  = (s*k+1)*(s*k+1)*(s*k+1);
-  const int dofsPerPyramid     = ((s*k+1)*(s*k+2)*(2*s*k+3))/6;
+  static constexpr int dofsPerEdge        = s*k+1;
+  static constexpr int dofsPerTriangle    = ((s*k+1)*(s*k+2))/2;
+  static constexpr int dofsPerQuad        = (s*k+1)*(s*k+1);
+  static constexpr int dofsPerTetrahedron = (s*k+1)*(s*k+2)*(s*k+3)/6;
+  static constexpr int dofsPerPrism       = ((s*k+1)*(s*k+1)*(s*k+2))/2;
+  static constexpr int dofsPerHexahedron  = (s*k+1)*(s*k+1)*(s*k+1);
+  static constexpr int dofsPerPyramid     = ((s*k+1)*(s*k+2)*(2*s*k+3))/6;
 
 
   template<class TP>
@@ -240,7 +240,7 @@ template<typename GV, int s, int k, typename TP>
 class PQkSubsampledDGNode :
   public LeafBasisNode<std::size_t, TP>
 {
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
   using Base = LeafBasisNode<std::size_t, TP>;
   using FiniteElementCache

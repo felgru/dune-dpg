@@ -26,7 +26,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                                 const DirectionType& lhsBeta,
                                 const DirectionType& rhsBeta)
 {
-  const int dim = Element::mydimension;
+  constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
@@ -41,7 +41,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
       ::Quadrature(element, quadratureOrder);
 
   const auto referenceGridView =
-      lhsLocalView.tree().refinedReferenceElement().leafGridView();
+      lhsLocalView.tree().refinedReferenceElementGridView();
 
   const unsigned int subElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?
@@ -132,7 +132,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
          const DirectionType& lhsBeta,
          const DirectionType& rhsBeta)
 {
-  const int dim = Element::mydimension;
+  constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
@@ -143,7 +143,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
   const auto referenceGridView =
-      lhsLocalView.tree().refinedReferenceElement().leafGridView();
+      lhsLocalView.tree().refinedReferenceElementGridView();
 
   const unsigned int subElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?

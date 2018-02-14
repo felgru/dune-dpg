@@ -17,7 +17,7 @@ void evaluateBasisFunctions(
           const GridView& fineGridView,
           std::vector<BlockVector<FieldVector<double,1> > >& basisEvaluations)
 {
-    const int dim = GridView::dimension;
+    constexpr int dim = GridView::dimension;
 
     // The index set gives you indices for each element, edge, face, vertex, etc.
     const typename GridView::IndexSet& indexSet = fineGridView.indexSet();

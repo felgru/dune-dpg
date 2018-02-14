@@ -27,7 +27,7 @@ inline static void interiorImpl(
     const Element& element,
     const FunctionalVector& functionalVector)
 {
-  const int dim = Element::mydimension;
+  constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
@@ -57,7 +57,7 @@ inline static void interiorImpl(
       ::Quadrature(element, quadratureOrder);
 
   const auto referenceGridView =
-      testLocalView.tree().refinedReferenceElement().leafGridView();
+      testLocalView.tree().refinedReferenceElementGridView();
 
   assert(element.type().isTriangle() || element.type().isQuadrilateral());
   const size_t subElementStride =
@@ -130,7 +130,7 @@ faceImpl(const TestLocalView& testLocalView,
          const FactorType& factor,
          const DirectionType& beta)
 {
-  const int dim = Element::mydimension;
+  constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
@@ -153,7 +153,7 @@ faceImpl(const TestLocalView& testLocalView,
   );
 
   const auto referenceGridView =
-      testLocalView.tree().refinedReferenceElement().leafGridView();
+      testLocalView.tree().refinedReferenceElementGridView();
 
   const unsigned int subElementStride =
       (is_DGRefinedFiniteElement<TestSpace>::value) ?

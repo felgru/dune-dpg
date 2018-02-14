@@ -384,7 +384,7 @@ struct localToGlobalCopier
           return elementMatrix[i+testLocalOffset][j+solutionLocalOffset];
         },
         [&](TestMultiIndex gi, SolutionMultiIndex gj)
-        -> FieldMatrix<double, 1, 1>&
+        -> typename GlobalMatrix::block_type&
         {
           const auto row = gi[0] + testGlobalOffset;
           const auto col = gj[0] + solutionGlobalOffset;
@@ -400,7 +400,7 @@ struct localToGlobalCopier
             return elementMatrix[i+testLocalOffset][j+solutionLocalOffset];
           },
           [&](TestMultiIndex gi, SolutionMultiIndex gj)
-          -> FieldMatrix<double, 1, 1>&
+          -> typename GlobalMatrix::block_type&
           {
             const auto row = gi[0] + testGlobalOffset;
             const auto col = gj[0] + solutionGlobalOffset;

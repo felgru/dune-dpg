@@ -58,7 +58,7 @@ class BernsteinNodeFactory;
 template<typename GV, int k, class MI>
 class BernsteinNodeFactory
 {
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
 public:
 
@@ -74,21 +74,21 @@ private:
   friend class BernsteinNodeIndexSet;
 
   // Precompute the number of dofs per entity type
-  const static size_type dofsPerVertex =
+  constexpr static size_type dofsPerVertex =
       k == 0 ? (dim == 0 ? 1 : 0) : 1;
-  const static size_type dofsPerEdge =
+  constexpr static size_type dofsPerEdge =
       k == 0 ? (dim == 1 ? 1 : 0) : k-1;
-  const static size_type dofsPerTriangle =
+  constexpr static size_type dofsPerTriangle =
       k == 0 ? (dim == 2 ? 1 : 0) : (k-1)*(k-2)/2;
-  const static size_type dofsPerQuad =
+  constexpr static size_type dofsPerQuad =
       k == 0 ? (dim == 2 ? 1 : 0) : (k-1)*(k-1);
-  const static size_type dofsPerTetrahedron =
+  constexpr static size_type dofsPerTetrahedron =
       k == 0 ? (dim == 3 ? 1 : 0) : (k-3)*(k-2)*(k-1)/6;
-  const static size_type dofsPerPrism =
+  constexpr static size_type dofsPerPrism =
       k == 0 ? (dim == 3 ? 1 : 0) : (k-1)*(k-1)*(k-2)/2;
-  const static size_type dofsPerHexahedron =
+  constexpr static size_type dofsPerHexahedron =
       k == 0 ? (dim == 3 ? 1 : 0) : (k-1)*(k-1)*(k-1);
-  const static size_type dofsPerPyramid =
+  constexpr static size_type dofsPerPyramid =
       k == 0 ? (dim == 3 ? 1 : 0) : (k-2)*(k-1)*(2*k-3)/6;
 
 public:
@@ -298,7 +298,7 @@ template<typename GV, int k, typename TP>
 class BernsteinNode :
   public LeafBasisNode<std::size_t, TP>
 {
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
   static const int maxSize = StaticPower<(k+1),GV::dimension>::power;
 
   using Base = LeafBasisNode<std::size_t,TP>;

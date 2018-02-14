@@ -47,8 +47,8 @@ namespace detail {
 
   template<class LhsSpace, class RhsSpace, typename Element>
   struct ChooseQuadrature {
-    static const int dim = Element::mydimension;
-    static const bool useSubsampledQuadrature =
+    static constexpr int dim = Element::mydimension;
+    static constexpr bool useSubsampledQuadrature =
       is_SubsampledFiniteElement<LhsSpace>::value ||
       is_SubsampledFiniteElement<RhsSpace>::value;
 

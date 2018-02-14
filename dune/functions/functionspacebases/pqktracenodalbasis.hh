@@ -48,7 +48,7 @@ class PQkTraceNodeFactory;
 template<typename GV, int k, class MI>
 class PQkTraceNodeFactory
 {
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
 public:
 
@@ -58,9 +58,9 @@ public:
 
 
   // Precompute the number of dofs per entity type
-  const static int dofsPerEdge        = k-1;
-  const static int dofsPerTriangle    = (k-1)*(k-2)/2;
-  const static int dofsPerQuad        = (k-1)*(k-1);
+  static constexpr int dofsPerEdge     = k-1;
+  static constexpr int dofsPerTriangle = (k-1)*(k-2)/2;
+  static constexpr int dofsPerQuad     = (k-1)*(k-1);
 
 
   template<class TP>
@@ -189,7 +189,7 @@ template<typename GV, int k, typename TP>
 class PQkTraceNode :
   public LeafBasisNode<std::size_t, TP>
 {
-  static const int dim = GV::dimension;
+  static constexpr int dim = GV::dimension;
 
   using Base = LeafBasisNode<std::size_t, TP>;
   using FiniteElementCache = typename Dune::PQkTraceLocalFiniteElementCache

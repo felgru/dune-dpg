@@ -47,7 +47,9 @@ namespace Dune
 
     RefinedOptimalTestLocalBasis
         (const TestSearchLocalBasis& testSearchLocalBasis,
-         const GeometryType& gt, MatrixType& coeffMat, size_t offset)
+         const GeometryType& gt,
+         const MatrixType& coeffMat,
+         size_t offset)
         : testSearchLocalBasis(testSearchLocalBasis),
           coefficientMatrix(coeffMat),
           offset(offset),
@@ -156,7 +158,7 @@ namespace Dune
     }
   private:
     const TestSearchLocalBasis& testSearchLocalBasis;
-    MatrixType& coefficientMatrix;
+    const MatrixType& coefficientMatrix;
     size_t offset;
     size_t numTestSearchDOFs;
     size_t subElementSize;
