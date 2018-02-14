@@ -60,7 +60,7 @@ namespace Dune {
      */
     template <class LocalView,
               class VectorType>
-    void getLocalVector(const LocalView& localView,
+    void getLocalVector(LocalView& localView,
                         VectorType& elementVector,
                         size_t spaceOffset) const;
 
@@ -138,7 +138,7 @@ void LinearIntegralTerm<integrationType,
                         domainOfIntegration,
                         LocalCoefficients>
      ::getLocalVector(
-        const LocalView& localView,
+        LocalView& localView,
         VectorType& elementVector,
         const size_t spaceOffset) const
 {

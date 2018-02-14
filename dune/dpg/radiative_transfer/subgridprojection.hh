@@ -137,7 +137,7 @@ namespace detail {
               SubGridLocalView::GlobalBasis>::value>::type* = nullptr>
   void computeProjectionRhs(const Element& e,
       const CellData& cellData,
-      const SubGridLocalView& subGridLocalView,
+      SubGridLocalView& subGridLocalView,
       const HostGridLocalView& hostGridLocalView,
       BlockVector<FieldVector<double,1>>& projectionRhs)
   {
@@ -245,7 +245,7 @@ namespace detail {
               SubGridLocalView::GlobalBasis>::value>::type* = nullptr>
   void computeProjectionRhs(const Element& e,
       const CellData& cellData,
-      const SubGridLocalView& subGridLocalView,
+      SubGridLocalView& subGridLocalView,
       const HostGridLocalView& hostGridLocalView,
       BlockVector<FieldVector<double,1>>& projectionRhs)
   {
@@ -261,15 +261,13 @@ namespace detail {
     const auto referenceGridView =
         subGridLocalView.tree().refinedReferenceElementGridView();
 
-    const auto& subGridLocalFiniteElement
-        = subGridLocalView.tree().finiteElement();
-    const unsigned int subElementStride =
-        (is_DGRefinedFiniteElement<SubGridSpace>::value) ?
-          subGridLocalFiniteElement.size() : 0;
-
     unsigned int subElementOffset = 0;
     unsigned int subElementIndex = 0;
     for(const auto& subElement : elements(referenceGridView)) {
+      subGridLocalView.bindSubElement(subElement);
+      const auto& subGridLocalFiniteElement
+          = subGridLocalView.tree().finiteElement();
+
       const auto subGeometryInReferenceElement = subElement.geometry();
       const PointInTriangleTest
           subElementTriangle(subGeometryInReferenceElement);
@@ -345,7 +343,7 @@ namespace detail {
         }
       }
       if(is_DGRefinedFiniteElement<SubGridSpace>::value)
-        subElementOffset += subElementStride;
+        subElementOffset += subGridLocalFiniteElement.size();
       subElementIndex++;
     }
   }
@@ -366,8 +364,6 @@ namespace detail {
     subGridLocalView.bind(e);
     auto hostGridLocalView = hostGridGlobalBasis.localView();
     hostGridLocalView.bind(eHost);
-    auto&& subGridLocalFiniteElement
-        = subGridLocalView.tree().finiteElement();
     auto&& hostGridLocalFiniteElement
         = hostGridLocalView.tree().finiteElement();
     static_assert(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value,
@@ -379,14 +375,14 @@ namespace detail {
     const auto referenceGridView =
         subGridLocalView.tree().refinedReferenceElementGridView();
 
-    const unsigned int subElementStride =
-        (is_DGRefinedFiniteElement<SubGridGlobalBasis>::value) ?
-          subGridLocalFiniteElement.size() : 0;
-
     std::vector<FieldVector<double, 1>> interpolatedSubGridLocalData;
     unsigned int subElementOffset = 0;
     unsigned int subElementIndex = 0;
     for(const auto& subElement : elements(referenceGridView)) {
+      subGridLocalView.bindSubElement(subElement);
+      auto&& subGridLocalFiniteElement
+          = subGridLocalView.tree().finiteElement();
+
       const auto subGeometryInReferenceElement
           = subElement.geometry();
       auto hostGridFunction
@@ -403,7 +399,7 @@ namespace detail {
                 interpolatedLocalData.begin() + subElementOffset);
 
       if(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
-        subElementOffset += subElementStride;
+        subElementOffset += subGridLocalFiniteElement.size();
       subElementIndex++;
     }
     return interpolatedLocalData;
@@ -722,9 +718,6 @@ public:
             localIndexSet.bind(localView);
 #endif
 
-            // This assumes that e and child share the same finite element
-            // and thus the same entity type.
-            auto&& localFiniteElement = localView.tree().finiteElement();
             if(child.father() != e) {
               std::cerr << "e is not father of child!\n"
                 << "e.level()=" << e.level()
@@ -732,6 +725,8 @@ public:
               std::exit(1);
             }
 
+            // This assumes that e and child share the same finite element
+            // and thus the same entity type.
             boost::hana::eval_if(
               is_RefinedFiniteElement<SubGridGlobalBasis>{},
               [&](auto id)
@@ -752,10 +747,6 @@ public:
                 const auto referenceGridView =
                     id(localView).tree().refinedReferenceElementGridView();
 
-                const unsigned int subElementStride =
-                    (is_DGRefinedFiniteElement<SubGridGlobalBasis>::value) ?
-                      localFiniteElement.size() : 0;
-
                 using SubElement
                     = typename decltype(referenceGridView)
                           ::template Codim<0>::Entity;
@@ -768,6 +759,9 @@ public:
                 SubElement sourceSubElement;
                 for(const auto& sourceSubElement_
                     : elements(referenceGridView)) {
+                  id(localView).bindSubElement(sourceSubElement_);
+                  auto&& localFiniteElement = localView.tree().finiteElement();
+
                   const SubGeometryInReferenceElement
                     sourceSubGeometryInReferenceElement
                       = sourceSubElement_.geometry();
@@ -786,7 +780,7 @@ public:
                   }
 
                   if(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
-                    sourceSubElementOffset += subElementStride;
+                    sourceSubElementOffset += localFiniteElement.size();
                 }
                 assert(sourceSubElement != SubElement{});
 
@@ -797,6 +791,9 @@ public:
                 unsigned int targetSubElementOffset = 0;
                 for(const auto& targetSubElement
                     : elements(referenceGridView)) {
+                  id(localView).bindSubElement(targetSubElement);
+                  auto&& localFiniteElement = localView.tree().finiteElement();
+
                   const auto targetSubGeometryInReferenceElement
                       = targetSubElement.geometry();
 
@@ -841,7 +838,7 @@ public:
                             childLocalData.begin() + targetSubElementOffset);
 
                   if(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
-                    targetSubElementOffset += subElementStride;
+                    targetSubElementOffset += localFiniteElement.size();
                 }
 
                 gridData.insert(currentData,
@@ -850,12 +847,14 @@ public:
               },
               [&](auto id)
               {
+                auto&& localFiniteElement = localView.tree().finiteElement();
+
                 auto oldGridFunction = detail::RestoreDataToRefinedGridFunction
                   <SubGridGlobalBasis,
                    typename SubGridElement::LocalGeometry,
                    LocalData>(
-                      id(localFiniteElement),
-                      child.geometryInFather(),
+                      localFiniteElement,
+                      id(child).geometryInFather(),
                       localData);
                 std::vector<FieldVector<double, 1>> childLocalData;
                 localFiniteElement.localInterpolation().interpolate(

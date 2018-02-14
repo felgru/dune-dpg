@@ -14,7 +14,7 @@ using RhsLocalView = typename RhsSpace::LocalView;
 template <class MatrixType,
           class Element,
           class LocalCoefficients>
-inline static void interiorImpl(const LhsLocalView& lhsLocalView,
+inline static void interiorImpl(LhsLocalView& lhsLocalView,
                                 const RhsLocalView& rhsLocalView,
                                 MatrixType& elementMatrix,
                                 size_t lhsSpaceOffset,
@@ -27,11 +27,9 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
   const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
-  const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
   const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
 
-  const unsigned int nLhs(lhsLocalFiniteElement.size());
-  const unsigned int nRhs(rhsLocalFiniteElement.size());
+  const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
   typename detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>::type quad
     = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
@@ -40,13 +38,13 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
   const auto referenceGridView =
       lhsLocalView.tree().refinedReferenceElementGridView();
 
-  const unsigned int subElementStride =
-      (is_DGRefinedFiniteElement<LhsSpace>::value) ?
-        lhsLocalFiniteElement.size() : 0;
-
   unsigned int subElementOffset = 0;
   unsigned int subElementIndex = 0;
   for(const auto& subElement : elements(referenceGridView)) {
+    lhsLocalView.bindSubElement(subElement);
+    const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
+    const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
+
     const auto subGeometryInReferenceElement = subElement.geometry();
     for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
 
@@ -100,7 +98,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
       }
     }
     if(is_DGRefinedFiniteElement<LhsSpace>::value)
-      subElementOffset += subElementStride;
+      subElementOffset += lhsLocalFiniteElement.size();
     subElementIndex++;
   }
 }
@@ -110,7 +108,7 @@ template <class MatrixType,
           class Element,
           class LocalCoefficients>
 inline static void
-faceImpl(const LhsLocalView& lhsLocalView,
+faceImpl(LhsLocalView& lhsLocalView,
          const RhsLocalView& rhsLocalView,
          MatrixType& elementMatrix,
          size_t lhsSpaceOffset,
@@ -123,18 +121,12 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
-  const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
   const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
 
-  const unsigned int nLhs(lhsLocalFiniteElement.size());
-  const unsigned int nRhs(rhsLocalFiniteElement.size());
+  const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
   const auto referenceGridView =
       lhsLocalView.tree().refinedReferenceElementGridView();
-
-  const unsigned int subElementStride =
-      (is_DGRefinedFiniteElement<LhsSpace>::value) ?
-        lhsLocalFiniteElement.size() : 0;
 
   const auto direction = localCoefficients.localDirection()({0.5,0.5});
 
@@ -143,6 +135,11 @@ faceImpl(const LhsLocalView& lhsLocalView,
   for(const auto& subElement : elements(referenceGridView))
   {
     using SubElement = std::decay_t<decltype(subElement)>;
+
+    lhsLocalView.bindSubElement(subElement);
+    const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
+    const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
+
     const auto subGeometryInReferenceElement = subElement.geometry();
 
     unsigned int nOutflowFaces = 0;
@@ -278,7 +275,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
       }
     }
     if(is_DGRefinedFiniteElement<LhsSpace>::value)
-      subElementOffset += subElementStride;
+      subElementOffset += lhsLocalFiniteElement.size();
     subElementIndex++;
   }
 }

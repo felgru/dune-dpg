@@ -77,7 +77,7 @@ namespace Dune {
      */
     template <class LocalView,
               class VectorType>
-    void getLocalVector(const LocalView& localView,
+    void getLocalVector(LocalView& localView,
                         VectorType& elementVector,
                         size_t spaceOffset) const;
 
@@ -91,7 +91,7 @@ namespace Dune {
 
   private:
     const FunctionalVector& functionalVector;
-    SolutionLocalView solutionLocalView;
+    mutable SolutionLocalView solutionLocalView;
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     SolutionLocalIndexSet solutionLocalIndexSet;
 #endif
@@ -140,7 +140,7 @@ template <class SolutionSpace,
 template <class LocalView,
           class VectorType>
 void LinearFunctionalTerm<SolutionSpace, FunctionalVector>::
-getLocalVector(const LocalView& localView,
+getLocalVector(LocalView& localView,
                VectorType& elementVector,
                const size_t spaceOffset) const
 {
@@ -229,7 +229,7 @@ getLocalVector(const LocalView& localView,
      */
     template <class LocalView,
               class VectorType>
-    void getLocalVector(const LocalView& localView,
+    void getLocalVector(LocalView& localView,
                         VectorType& elementVector,
                         size_t spaceOffset) const;
 
@@ -245,7 +245,7 @@ getLocalVector(const LocalView& localView,
   private:
     LocalCoefficients localCoefficients;
     const FunctionalVector& functionalVector;
-    SolutionLocalView solutionLocalView;
+    mutable SolutionLocalView solutionLocalView;
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     SolutionLocalIndexSet solutionLocalIndexSet;
 #endif
@@ -298,7 +298,7 @@ template <class LocalView,
           class VectorType>
 void SkeletalLinearFunctionalTerm<type, SolutionSpace, FunctionalVector,
                                   Factor, Direction>::
-getLocalVector(const LocalView& localView,
+getLocalVector(LocalView& localView,
                VectorType& elementVector,
                size_t spaceOffset) const
 {

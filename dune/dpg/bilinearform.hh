@@ -118,7 +118,7 @@ namespace Dune {
      *
      * \pre The given localViews have to be bound to the same element.
      */
-    void bind(const TestLocalViews& tlv, const SolutionLocalViews& slv)
+    void bind(TestLocalViews& tlv, SolutionLocalViews& slv)
     {
       testLocalViews     = std::addressof(tlv);
       solutionLocalViews = std::addressof(slv);
@@ -182,8 +182,8 @@ namespace Dune {
     size_t localTotalTestSize,
            localTotalSolutionSize;
 
-    const TestLocalViews*     testLocalViews;
-    const SolutionLocalViews* solutionLocalViews;
+    TestLocalViews*     testLocalViews;
+    SolutionLocalViews* solutionLocalViews;
   };
 
 /**
