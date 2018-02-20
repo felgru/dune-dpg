@@ -197,7 +197,8 @@ std::unique_ptr<SubGrid> copySubGrid(const SubGrid& subGrid) {
   std::unique_ptr<SubGrid> gr
       = std::make_unique<SubGrid>(subGrid.getHostGrid());
   gr->createBegin();
-  for(const auto& e : elements(subGrid.leafGridView())) {
+  const auto gridView = subGrid.leafGridView();
+  for(const auto& e : elements(gridView)) {
     gr->insert(subGrid.template getHostEntity<0>(e));
   }
   gr->createEnd();

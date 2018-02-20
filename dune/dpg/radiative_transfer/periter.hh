@@ -330,10 +330,11 @@ namespace detail {
         auto localView = feBasisInterior.localView();
         auto localIndexSet = feBasisInterior.localIndexSet();
 
+        const auto gridView = feBasisInterior->gridView();
         double rhsError_i = 0.;
         std::vector<std::tuple<EntitySeed, double>> errorEstimates;
-        errorEstimates.reserve(feBasisInterior->gridView().size(0));
-        for(const auto& e : elements(feBasisInterior->gridView())) {
+        errorEstimates.reserve(gridView.size(0));
+        for(const auto& e : elements(gridView)) {
           localView.bind(e);
           localIndexSet.bind(localView);
           localGExact.bind(e);
@@ -1192,7 +1193,8 @@ std::unique_ptr<SubGrid> intersectSubGrids(const SubGrid& subGrid1,
   gr->createBegin();
   for(int level=0; level <= subGrid1.maxLevel(); ++level)
   {
-    for (auto&& e : elements(subGrid1.levelGridView(level)))
+    const auto levelGridView = subGrid1.levelGridView(level);
+    for (auto&& e : elements(levelGridView))
     {
       const auto eHost = subGrid1.template getHostEntity<0>(e);
       if(subGrid2.template contains<0>(eHost))

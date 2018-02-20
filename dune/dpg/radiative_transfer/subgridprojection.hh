@@ -514,8 +514,9 @@ public:
 
     const unsigned int maxHostGridLevel =
         hostGridGlobalBasis.gridView().grid().maxLevel();
-    const auto& subGrid = subGridGlobalBasis.gridView().grid();
-    for(const auto& e : elements(subGridGlobalBasis.gridView()))
+    const auto subGridView = subGridGlobalBasis.gridView();
+    const auto& subGrid = subGridView.grid();
+    for(const auto& e : elements(subGridView))
     {
       CellData cellData;
       const auto eHost = subGrid.template getHostEntity<0>(e);

@@ -411,7 +411,8 @@ namespace Dune {
                                                 feBasis.gridView()));
     std::vector<double> out;
 
-    for(const auto& e : elements(feBasis.gridView()))
+    const auto gridView = feBasis.gridView();
+    for(const auto& e : elements(gridView))
     {
       localView.bind(e);
       localIndexSet.bind(localView);
