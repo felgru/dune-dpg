@@ -54,6 +54,7 @@
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #include <dune/subgrid/subgrid.hh>
 #pragma GCC diagnostic pop
+#include <dune/dpg/subgrid_workarounds.hh>
 
 #include <boost/math/constants/constants.hpp>
 
