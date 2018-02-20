@@ -19,7 +19,6 @@
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #include <dune/subgrid/subgrid.hh>
 #pragma GCC diagnostic pop
-#include <dune/dpg/subgrid_workarounds.hh>
 
 using namespace Dune;
 
@@ -85,9 +84,9 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
           dominatedElementLocalIndexSet.bind(dominatedElementLocalView);
 
           const auto geometryInDominatingElement
-              = geometryInInside(intersection);
+              = intersection.geometryInInside();
           const auto geometryInDominatedElement
-              = geometryInOutside(intersection);
+              = intersection.geometryInOutside();
 #if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const auto& quad // TODO: replace 3 with degree of basis
               = QuadratureRules<double, 1>::rule(GeometryTypes::line, 3);

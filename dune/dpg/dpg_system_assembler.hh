@@ -28,7 +28,6 @@
 #include "quadrature.hh"
 #include "linearform.hh"
 #include "localevaluation.hh"
-#include "subgrid_workarounds.hh"
 #include "testspace_coefficient_matrix.hh"
 
 
@@ -839,7 +838,7 @@ applyWeakBoundaryCondition
 
             // position of the quadrature point within the element
             const FieldVector<double,dim> elementQuadPos
-                = geometryInInside(intersection).global(quadFacePos);
+                = intersection.geometryInInside().global(quadFacePos);
 
             // values of the shape functions
             std::vector<FieldVector<double,1> > solutionValues;
