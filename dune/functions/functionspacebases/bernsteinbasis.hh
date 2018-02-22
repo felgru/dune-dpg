@@ -24,11 +24,11 @@ namespace Functions {
 // *****************************************************************************
 // This is the reusable part of the basis. It contains
 //
-//   BernsteinNodeFactory
+//   BernsteinPreBasis
 //   BernsteinNodeIndexSet
 //   BernsteinNode
 //
-// The factory allows to create the others and is the owner of possible shared
+// The pre-basis allows to create the others and is the owner of possible shared
 // state. These three components do _not_ depend on the global basis or index
 // set and can be used without a global basis.
 // *****************************************************************************
@@ -40,12 +40,12 @@ template<typename GV, int k, class MI, class TP>
 class BernsteinNodeIndexSet;
 
 template<typename GV, int k, class MI>
-class BernsteinNodeFactory;
+class BernsteinPreBasis;
 
 
 
 /**
- * \brief A factory for PQ Bernstein bases with given order
+ * \brief A pre-basis for PQ Bernstein bases with given order
  *
  * \ingroup FunctionSpaceBasesImplementations
  *
@@ -56,7 +56,7 @@ class BernsteinNodeFactory;
  * \note This only works for 2d simplex grids.
  */
 template<typename GV, int k, class MI>
-class BernsteinNodeFactory
+class BernsteinPreBasis
 {
   static constexpr int dim = GV::dimension;
 
@@ -108,7 +108,7 @@ public:
   using SizePrefix = Dune::ReservedVector<size_type, 1>;
 
   //! Constructor for a given grid view object
-  BernsteinNodeFactory(const GridView& gv) :
+  BernsteinPreBasis(const GridView& gv) :
     gridView_(gv)
   {}
 
@@ -361,12 +361,12 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using NodeFactory = BernsteinNodeFactory<GV, k, MI>;
+  using PreBasis = BernsteinPreBasis<GV, k, MI>;
 
-  using Node = typename NodeFactory::template Node<TP>;
+  using Node = typename PreBasis::template Node<TP>;
 
-  BernsteinNodeIndexSet(const NodeFactory& nodeFactory) :
-    nodeFactory_(&nodeFactory),
+  BernsteinNodeIndexSet(const PreBasis& preBasis) :
+    preBasis_(&preBasis),
     node_(nullptr)
   {}
 
@@ -404,7 +404,7 @@ public:
     for (size_type i = 0, end = node_->finiteElement().size() ; i < end ; ++it, ++i)
       {
         Dune::LocalKey localKey = node_->finiteElement().localCoefficients().localKey(i);
-        const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+        const auto& gridIndexSet = preBasis_->gridView().indexSet();
         const auto& element = node_->element();
 
         // The dimension of the entity that the current dof is related to
@@ -419,8 +419,8 @@ public:
           {  // edge dof
             if (dim==1)  // element dof -- any local numbering is fine
               {
-                *it = {{ nodeFactory_->edgeOffset_
-                         + nodeFactory_->dofsPerEdge * ((size_type)gridIndexSet.subIndex(element,0,0))
+                *it = {{ preBasis_->edgeOffset_
+                         + preBasis_->dofsPerEdge * ((size_type)gridIndexSet.subIndex(element,0,0))
                          + localKey.index() }};
                 continue;
               }
@@ -435,11 +435,11 @@ public:
                 auto v1 = (size_type)gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
                 bool flip = (v0 > v1);
                 *it = {{ (flip)
-                         ? nodeFactory_->edgeOffset_
-                         + nodeFactory_->dofsPerEdge*((size_type)gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
-                         + (nodeFactory_->dofsPerEdge-1)-localKey.index()
-                         : nodeFactory_->edgeOffset_
-                         + nodeFactory_->dofsPerEdge*((size_type)gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
+                         ? preBasis_->edgeOffset_
+                         + preBasis_->dofsPerEdge*((size_type)gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
+                         + (preBasis_->dofsPerEdge-1)-localKey.index()
+                         : preBasis_->edgeOffset_
+                         + preBasis_->dofsPerEdge*((size_type)gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
                          + localKey.index() }};
                 continue;
               }
@@ -452,13 +452,13 @@ public:
                 if (element.type().isTriangle())
                   {
                     const int interiorLagrangeNodesPerTriangle = (k-1)*(k-2)/2;
-                    *it = {{ nodeFactory_->triangleOffset_ + interiorLagrangeNodesPerTriangle*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+                    *it = {{ preBasis_->triangleOffset_ + interiorLagrangeNodesPerTriangle*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
                     continue;
                   }
                 else if (element.type().isQuadrilateral())
                   {
                     const int interiorLagrangeNodesPerQuadrilateral = (k-1)*(k-1);
-                    *it = {{ nodeFactory_->quadrilateralOffset_ + interiorLagrangeNodesPerQuadrilateral*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+                    *it = {{ preBasis_->quadrilateralOffset_ + interiorLagrangeNodesPerQuadrilateral*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
                     continue;
                   }
                 else
@@ -474,7 +474,7 @@ public:
                 if (k==3 and !refElement.type(localKey.subEntity(), localKey.codim()).isTriangle())
                   DUNE_THROW(Dune::NotImplemented, "BernsteinBasis for 3D grids with k==3 is only implemented if the grid is a simplex grid");
 
-                *it = {{ nodeFactory_->triangleOffset_ + ((size_type)gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())) }};
+                *it = {{ preBasis_->triangleOffset_ + ((size_type)gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())) }};
                 continue;
               }
           }
@@ -485,22 +485,22 @@ public:
               {
                 if (element.type().isTetrahedron())
                   {
-                    *it = {{ nodeFactory_->tetrahedronOffset_ + NodeFactory::dofsPerTetrahedron*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+                    *it = {{ preBasis_->tetrahedronOffset_ + PreBasis::dofsPerTetrahedron*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
                     continue;
                   }
                 else if (element.type().isHexahedron())
                   {
-                    *it = {{ nodeFactory_->hexahedronOffset_ + NodeFactory::dofsPerHexahedron*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+                    *it = {{ preBasis_->hexahedronOffset_ + PreBasis::dofsPerHexahedron*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
                     continue;
                   }
                 else if (element.type().isPrism())
                   {
-                    *it = {{ nodeFactory_->prismOffset_ + NodeFactory::dofsPerPrism*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+                    *it = {{ preBasis_->prismOffset_ + PreBasis::dofsPerPrism*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
                     continue;
                   }
                 else if (element.type().isPyramid())
                   {
-                    *it = {{ nodeFactory_->pyramidOffset_ + NodeFactory::dofsPerPyramid*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+                    *it = {{ preBasis_->pyramidOffset_ + PreBasis::dofsPerPyramid*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
                     continue;
                   }
                 else
@@ -517,7 +517,7 @@ public:
   {
     assert(node_ != nullptr);
     Dune::LocalKey localKey = node_->finiteElement().localCoefficients().localKey(i);
-    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& gridIndexSet = preBasis_->gridView().indexSet();
     const auto& element = node_->element();
 
     // The dimension of the entity that the current dof is related to
@@ -530,8 +530,8 @@ public:
     if (dofDim==1)
     {  // edge dof
       if (dim==1)  // element dof -- any local numbering is fine
-        return {{ nodeFactory_->edgeOffset_
-            + nodeFactory_->dofsPerEdge * ((size_type)gridIndexSet.subIndex(element,0,0))
+        return {{ preBasis_->edgeOffset_
+            + preBasis_->dofsPerEdge * ((size_type)gridIndexSet.subIndex(element,0,0))
             + localKey.index() }};
       else
       {
@@ -544,11 +544,11 @@ public:
         auto v1 = (size_type)gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
         bool flip = (v0 > v1);
         return {{ (flip)
-              ? nodeFactory_->edgeOffset_
-                + nodeFactory_->dofsPerEdge*((size_type)gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
-                + (nodeFactory_->dofsPerEdge-1)-localKey.index()
-              : nodeFactory_->edgeOffset_
-                + nodeFactory_->dofsPerEdge*((size_type)gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
+              ? preBasis_->edgeOffset_
+                + preBasis_->dofsPerEdge*((size_type)gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
+                + (preBasis_->dofsPerEdge-1)-localKey.index()
+              : preBasis_->edgeOffset_
+                + preBasis_->dofsPerEdge*((size_type)gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
                 + localKey.index() }};
       }
     }
@@ -560,12 +560,12 @@ public:
         if (element.type().isTriangle())
         {
           const int interiorLagrangeNodesPerTriangle = (k-1)*(k-2)/2;
-          return {{ nodeFactory_->triangleOffset_ + interiorLagrangeNodesPerTriangle*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+          return {{ preBasis_->triangleOffset_ + interiorLagrangeNodesPerTriangle*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
         }
         else if (element.type().isQuadrilateral())
         {
           const int interiorLagrangeNodesPerQuadrilateral = (k-1)*(k-1);
-          return {{ nodeFactory_->quadrilateralOffset_ + interiorLagrangeNodesPerQuadrilateral*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+          return {{ preBasis_->quadrilateralOffset_ + interiorLagrangeNodesPerQuadrilateral*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
         }
         else
           DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");
@@ -580,7 +580,7 @@ public:
         if (k==3 and !refElement.type(localKey.subEntity(), localKey.codim()).isTriangle())
           DUNE_THROW(Dune::NotImplemented, "PQkNodalBasis for 3D grids with k==3 is only implemented if the grid is a simplex grid");
 
-        return {{ nodeFactory_->triangleOffset_ + ((size_type)gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())) }};
+        return {{ preBasis_->triangleOffset_ + ((size_type)gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())) }};
       }
     }
 
@@ -589,13 +589,13 @@ public:
       if (dim==3)   // element dof -- any local numbering is fine
       {
         if (element.type().isTetrahedron())
-          return {{ nodeFactory_->tetrahedronOffset_ + NodeFactory::dofsPerTetrahedron*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+          return {{ preBasis_->tetrahedronOffset_ + PreBasis::dofsPerTetrahedron*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
         else if (element.type().isHexahedron())
-          return {{ nodeFactory_->hexahedronOffset_ + NodeFactory::dofsPerHexahedron*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+          return {{ preBasis_->hexahedronOffset_ + PreBasis::dofsPerHexahedron*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
         else if (element.type().isPrism())
-          return {{ nodeFactory_->prismOffset_ + NodeFactory::dofsPerPrism*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+          return {{ preBasis_->prismOffset_ + PreBasis::dofsPerPrism*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
         else if (element.type().isPyramid())
-          return {{ nodeFactory_->pyramidOffset_ + NodeFactory::dofsPerPyramid*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+          return {{ preBasis_->pyramidOffset_ + PreBasis::dofsPerPyramid*((size_type)gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
         else
           DUNE_THROW(Dune::NotImplemented, "3d elements have to be tetrahedra, hexahedra, prisms, or pyramids");
       } else
@@ -606,7 +606,7 @@ public:
 #endif
 
 protected:
-  const NodeFactory* nodeFactory_;
+  const PreBasis* preBasis_;
 
   const Node* node_;
 };
@@ -624,7 +624,7 @@ struct BernsteinNodeFactoryBuilder
 
   template<class MultiIndex, class GridView>
   auto build(const GridView& gridView)
-    -> BernsteinNodeFactory<GridView, k, MultiIndex>
+    -> BernsteinPreBasis<GridView, k, MultiIndex>
   {
     return {gridView};
   }
@@ -635,7 +635,7 @@ struct BernsteinNodeFactoryBuilder
 
 
 /**
- * \brief Create a factory builder that can build a BernsteinNodeFactory
+ * \brief Create a factory builder that can build a BernsteinPreBasis
  *
  * \ingroup FunctionSpaceBasesImplementations
  *
@@ -665,13 +665,13 @@ Imp::BernsteinNodeFactoryBuilder<k> bernstein()
  * - If k is 3, then the grid can be 3d *if* it is a simplex grid
  *
  * All arguments passed to the constructor will be forwarded to the constructor
- * of BernsteinNodeFactory.
+ * of BernsteinPreBasis.
  *
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
  */
 template<typename GV, int k>
-using BernsteinBasis = DefaultGlobalBasis<BernsteinNodeFactory<GV, k, FlatMultiIndex<std::size_t>> >;
+using BernsteinBasis = DefaultGlobalBasis<BernsteinPreBasis<GV, k, FlatMultiIndex<std::size_t>> >;
 
 
 

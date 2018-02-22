@@ -23,11 +23,11 @@ namespace Functions {
 // *****************************************************************************
 // This is the reusable part of the basis. It contains
 //
-//   BernsteinDGNodeFactory
+//   BernsteinDGPreBasis
 //   BernsteinDGNodeIndexSet
 //   BernsteinDGNode
 //
-// The factory allows to create the others and is the owner of possible shared
+// The pre-basis allows to create the others and is the owner of possible shared
 // state. These three components do _not_ depend on the global basis or index
 // set and can be used without a global basis.
 // *****************************************************************************
@@ -40,7 +40,7 @@ class BernsteinDGNodeIndexSet;
 
 
 template<typename GV, int k, class MI>
-class BernsteinDGNodeFactory
+class BernsteinDGPreBasis
 {
   static constexpr int dim = GV::dimension;
 
@@ -73,7 +73,7 @@ public:
   using SizePrefix = Dune::ReservedVector<size_type, 2>;
 
   /** \brief Constructor for a given grid view object */
-  BernsteinDGNodeFactory(const GridView& gv) :
+  BernsteinDGPreBasis(const GridView& gv) :
     gridView_(gv)
   {}
 
@@ -230,12 +230,12 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using NodeFactory = BernsteinDGNodeFactory<GV, k, MI>;
+  using PreBasis = BernsteinDGPreBasis<GV, k, MI>;
 
-  using Node = typename NodeFactory::template Node<TP>;
+  using Node = typename PreBasis::template Node<TP>;
 
-  BernsteinDGNodeIndexSet(const NodeFactory& nodeFactory) :
-    nodeFactory_(&nodeFactory)
+  BernsteinDGNodeIndexSet(const PreBasis& preBasis) :
+    preBasis_(&preBasis)
   {}
 
   /** \brief Bind the view to a grid element
@@ -267,7 +267,7 @@ public:
   template<typename It>
   It indices(It it) const
   {
-    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& gridIndexSet = preBasis_->gridView().indexSet();
     const auto& element = node_->element();
 
     for (size_type i = 0, end = size() ; i < end ; ++i, ++it)
@@ -276,19 +276,19 @@ public:
           {
           case 1:
             {
-              *it = {nodeFactory_->dofsPerEdge*gridIndexSet.subIndex(element,0,0) + i};
+              *it = {preBasis_->dofsPerEdge*gridIndexSet.subIndex(element,0,0) + i};
               continue;
             }
           case 2:
             {
               if (element.type().isTriangle())
                 {
-                  *it = {nodeFactory_->dofsPerTriangle*gridIndexSet.subIndex(element,0,0) + i};
+                  *it = {preBasis_->dofsPerTriangle*gridIndexSet.subIndex(element,0,0) + i};
                   continue;
                 }
               else if (element.type().isQuadrilateral())
                 {
-                  *it = { nodeFactory_->quadrilateralOffset_ + nodeFactory_->dofsPerQuad*gridIndexSet.subIndex(element,0,0) + i};
+                  *it = { preBasis_->quadrilateralOffset_ + preBasis_->dofsPerQuad*gridIndexSet.subIndex(element,0,0) + i};
                   continue;
                 }
               else
@@ -298,22 +298,22 @@ public:
             {
               if (element.type().isTetrahedron())
                 {
-                  *it = {nodeFactory_->dofsPerTetrahedron*gridIndexSet.subIndex(element,0,0) + i};
+                  *it = {preBasis_->dofsPerTetrahedron*gridIndexSet.subIndex(element,0,0) + i};
                   continue;
                 }
               else if (element.type().isPrism())
                 {
-                  *it = { nodeFactory_->prismOffset_ + nodeFactory_->dofsPerPrism*gridIndexSet.subIndex(element,0,0) + i};
+                  *it = { preBasis_->prismOffset_ + preBasis_->dofsPerPrism*gridIndexSet.subIndex(element,0,0) + i};
                   continue;
                 }
               else if (element.type().isHexahedron())
                 {
-                  *it = { nodeFactory_->hexahedronOffset_ + nodeFactory_->dofsPerHexahedron*gridIndexSet.subIndex(element,0,0) + i};
+                  *it = { preBasis_->hexahedronOffset_ + preBasis_->dofsPerHexahedron*gridIndexSet.subIndex(element,0,0) + i};
                   continue;
                 }
               else if (element.type().isPyramid())
                 {
-                  *it = { nodeFactory_->pyramidOffset_ + nodeFactory_->dofsPerPyramid*gridIndexSet.subIndex(element,0,0) + i};
+                  *it = { preBasis_->pyramidOffset_ + preBasis_->dofsPerPyramid*gridIndexSet.subIndex(element,0,0) + i};
                   continue;
                 }
               else
@@ -327,24 +327,24 @@ public:
 #else
   MultiIndex index(size_type i) const
   {
-    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& gridIndexSet = preBasis_->gridView().indexSet();
     const auto& element = node_->element();
 
     switch (dim)
     {
       case 1:
       {
-        return {nodeFactory_->dofsPerEdge*gridIndexSet.subIndex(element,0,0) + i};
+        return {preBasis_->dofsPerEdge*gridIndexSet.subIndex(element,0,0) + i};
       }
       case 2:
       {
         if (element.type().isTriangle())
         {
-          return {nodeFactory_->dofsPerTriangle*gridIndexSet.subIndex(element,0,0) + i};
+          return {preBasis_->dofsPerTriangle*gridIndexSet.subIndex(element,0,0) + i};
         }
         else if (element.type().isQuadrilateral())
         {
-          return { nodeFactory_->quadrilateralOffset_ + nodeFactory_->dofsPerQuad*gridIndexSet.subIndex(element,0,0) + i};
+          return { preBasis_->quadrilateralOffset_ + preBasis_->dofsPerQuad*gridIndexSet.subIndex(element,0,0) + i};
         }
         else
           DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");
@@ -353,19 +353,19 @@ public:
       {
         if (element.type().isTetrahedron())
         {
-          return {nodeFactory_->dofsPerTetrahedron*gridIndexSet.subIndex(element,0,0) + i};
+          return {preBasis_->dofsPerTetrahedron*gridIndexSet.subIndex(element,0,0) + i};
         }
         else if (element.type().isPrism())
         {
-          return { nodeFactory_->prismOffset_ + nodeFactory_->dofsPerPrism*gridIndexSet.subIndex(element,0,0) + i};
+          return { preBasis_->prismOffset_ + preBasis_->dofsPerPrism*gridIndexSet.subIndex(element,0,0) + i};
         }
         else if (element.type().isHexahedron())
         {
-          return { nodeFactory_->hexahedronOffset_ + nodeFactory_->dofsPerHexahedron*gridIndexSet.subIndex(element,0,0) + i};
+          return { preBasis_->hexahedronOffset_ + preBasis_->dofsPerHexahedron*gridIndexSet.subIndex(element,0,0) + i};
         }
         else if (element.type().isPyramid())
         {
-          return { nodeFactory_->pyramidOffset_ + nodeFactory_->dofsPerPyramid*gridIndexSet.subIndex(element,0,0) + i};
+          return { preBasis_->pyramidOffset_ + preBasis_->dofsPerPyramid*gridIndexSet.subIndex(element,0,0) + i};
         }
         else
           DUNE_THROW(Dune::NotImplemented, "3d elements have to be tetrahedrons, prisms, hexahedrons or pyramids");
@@ -376,7 +376,7 @@ public:
 #endif
 
 protected:
-  const NodeFactory* nodeFactory_;
+  const PreBasis* preBasis_;
 
   const Node* node_;
 };
@@ -395,7 +395,7 @@ protected:
  * \tparam k The order of the basis
  */
 template<typename GV, int k>
-using BernsteinDGBasis = DefaultGlobalBasis<BernsteinDGNodeFactory<GV, k, FlatMultiIndex<std::size_t>> >;
+using BernsteinDGBasis = DefaultGlobalBasis<BernsteinDGPreBasis<GV, k, FlatMultiIndex<std::size_t>> >;
 
 
 

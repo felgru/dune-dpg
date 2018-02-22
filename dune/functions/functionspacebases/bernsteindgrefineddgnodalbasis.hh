@@ -28,11 +28,11 @@ namespace Functions {
 // *****************************************************************************
 // This is the reusable part of the basis. It contains
 //
-//   BernsteinDGRefinedDGNodeFactory
+//   BernsteinDGRefinedDGPreBasis
 //   BernsteinDGRefinedDGNodeIndexSet
 //   BernsteinDGRefinedDGNode
 //
-// The factory allows to create the others and is the owner of possible shared
+// The pre-basis allows to create the others and is the owner of possible shared
 // state. These three components do _not_ depend on the global basis or index
 // set and can be used without a global basis.
 // *****************************************************************************
@@ -45,8 +45,8 @@ class BernsteinDGRefinedDGNodeIndexSet;
 
 
 template<typename GV, int level, int k, class MI>
-class BernsteinDGRefinedDGNodeFactory
-  : public DGRefinedNodeFactoryConstants<GV::dimension, level, k>
+class BernsteinDGRefinedDGPreBasis
+  : public DGRefinedPreBasisConstants<GV::dimension, level, k>
 {
   static constexpr int dim = GV::dimension;
 
@@ -56,7 +56,7 @@ public:
   using GridView = GV;
   using size_type = std::size_t;
 
-  using RefinementConstants = DGRefinedNodeFactoryConstants<dim, level, k>;
+  using RefinementConstants = DGRefinedPreBasisConstants<dim, level, k>;
 
   // Precompute the number of dofs per entity type
   constexpr static int dofsPerEdge
@@ -82,7 +82,7 @@ public:
   using SizePrefix = Dune::ReservedVector<size_type, 1>;
 
   /** \brief Constructor for a given grid view object */
-  BernsteinDGRefinedDGNodeFactory(const GridView& gv) :
+  BernsteinDGRefinedDGPreBasis(const GridView& gv) :
     gridView_(gv)
   {}
 
@@ -110,7 +110,7 @@ public:
       case 3:
       {
         DUNE_THROW(Dune::NotImplemented,
-                   "BernsteinDGRefinedDGNodeFactory not implmented in 3d.");
+                   "BernsteinDGRefinedDGPreBasis not implmented in 3d.");
       }
     }
   }
@@ -230,7 +230,7 @@ public:
   {
     this->element_ = &e;
     finiteElement_ = &(feCache_.get(this->element_->type()));
-    using Factory = BernsteinDGRefinedDGNodeFactory<GV, level, k, void>;
+    using Factory = BernsteinDGRefinedDGPreBasis<GV, level, k, void>;
     size_type numberOfSubElements;
     if(e.type().isTriangle()) {
       numberOfSubElements = Factory::numberOfSubTriangles;
@@ -265,12 +265,12 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using NodeFactory = BernsteinDGRefinedDGNodeFactory<GV, level, k, MI>;
+  using PreBasis = BernsteinDGRefinedDGPreBasis<GV, level, k, MI>;
 
-  using Node = typename NodeFactory::template Node<TP>;
+  using Node = typename PreBasis::template Node<TP>;
 
-  BernsteinDGRefinedDGNodeIndexSet(const NodeFactory& nodeFactory) :
-    nodeFactory_(&nodeFactory)
+  BernsteinDGRefinedDGNodeIndexSet(const PreBasis& preBasis) :
+    preBasis_(&preBasis)
   {}
 
   /** \brief Bind the view to a grid element
@@ -304,7 +304,7 @@ public:
   It indices(It it) const
   {
     assert(node_ != nullptr);
-    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& gridIndexSet = preBasis_->gridView().indexSet();
     const auto& element = node_->element();
 
     for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
@@ -313,7 +313,7 @@ public:
       {
         case 1:
         {
-          *it = {{ nodeFactory_->dofsPerEdge
+          *it = {{ preBasis_->dofsPerEdge
                    * gridIndexSet.subIndex(element,0,0) + i }};
           continue;
         }
@@ -321,14 +321,14 @@ public:
         {
           if (element.type().isTriangle())
           {
-            *it = {{ nodeFactory_->dofsPerTriangle
+            *it = {{ preBasis_->dofsPerTriangle
                      * gridIndexSet.subIndex(element,0,0) + i }};
             continue;
           }
           else if (element.type().isQuadrilateral())
           {
-            *it = {{ nodeFactory_->quadrilateralOffset_
-                     + nodeFactory_->dofsPerQuad
+            *it = {{ preBasis_->quadrilateralOffset_
+                     + preBasis_->dofsPerQuad
                        * gridIndexSet.subIndex(element,0,0) + i }};
             continue;
           }
@@ -344,24 +344,24 @@ public:
 #else
   MultiIndex index(size_type i) const
   {
-    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& gridIndexSet = preBasis_->gridView().indexSet();
     const auto& element = node_->element();
 
     switch (dim)
     {
       case 1:
       {
-        return {nodeFactory_->dofsPerEdge*gridIndexSet.subIndex(element,0,0) + i};
+        return {preBasis_->dofsPerEdge*gridIndexSet.subIndex(element,0,0) + i};
       }
       case 2:
       {
         if (element.type().isTriangle())
         {
-          return {nodeFactory_->dofsPerTriangle*gridIndexSet.subIndex(element,0,0) + i};
+          return {preBasis_->dofsPerTriangle*gridIndexSet.subIndex(element,0,0) + i};
         }
         else if (element.type().isQuadrilateral())
         {
-          return { nodeFactory_->quadrilateralOffset_ + nodeFactory_->dofsPerQuad*gridIndexSet.subIndex(element,0,0) + i};
+          return { preBasis_->quadrilateralOffset_ + preBasis_->dofsPerQuad*gridIndexSet.subIndex(element,0,0) + i};
         }
         else
           DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");
@@ -372,7 +372,7 @@ public:
 #endif
 
 protected:
-  const NodeFactory* nodeFactory_;
+  const PreBasis* preBasis_;
 
   const Node* node_;
 };
@@ -389,7 +389,7 @@ protected:
  * \tparam k The order of the basis
  */
 template<typename GV, int level, int k>
-using BernsteinDGRefinedDGBasis = DefaultGlobalBasis<BernsteinDGRefinedDGNodeFactory<GV, level, k, FlatMultiIndex<std::size_t> > >;
+using BernsteinDGRefinedDGBasis = DefaultGlobalBasis<BernsteinDGRefinedDGPreBasis<GV, level, k, FlatMultiIndex<std::size_t> > >;
 
 
 
