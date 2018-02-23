@@ -179,7 +179,11 @@ template<class GridView, class PreBasisFactory>
 auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFactory)
 {
   using MultiIndex = typename Dune::ReservedVector<std::size_t, PreBasisFactory::requiredMultiIndexSize>;
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
   auto preBasis = preBasisFactory.template makePreBasis<MultiIndex>(gridView);
+#else
+  auto preBasis = preBasisFactory.template build<MultiIndex>(gridView);
+#endif
   using PreBasis = std::decay_t<decltype(preBasis)>;
 
   return ConstrainedGlobalBasis<PreBasis>(std::move(preBasis));
@@ -188,7 +192,11 @@ auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFa
 template<class MultiIndex, class GridView, class PreBasisFactory>
 auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFactory)
 {
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
   auto preBasis = preBasisFactory.template makePreBasis<MultiIndex>(gridView);
+#else
+  auto preBasis = preBasisFactory.template build<MultiIndex>(gridView);
+#endif
   using PreBasis = std::decay_t<decltype(preBasis)>;
 
   return ConstrainedGlobalBasis<PreBasis>(std::move(preBasis));
