@@ -20,16 +20,16 @@ namespace Concept {
 using namespace Dune::Concept;
 
 
-template<class NodeFactory>
+template<class PreBasis>
 struct ConstrainedNodeIndexSet
 {
   template<class I>
   auto require(const I& indexSet) -> decltype(
     requireType<typename I::size_type>(),
     requireType<typename I::MultiIndex>(),
-    requireType<typename I::NodeFactory>(),
+    requireType<typename I::PreBasis>(),
     requireType<typename I::Node>(),
-    requireSameType<typename I::NodeFactory, NodeFactory>(),
+    requireSameType<typename I::PreBasis, PreBasis>(),
     const_cast<I&>(indexSet).bind(std::declval<typename I::Node>()),
     const_cast<I&>(indexSet).unbind(),
     requireConvertible<typename I::size_type>(indexSet.size()),
@@ -67,9 +67,8 @@ struct ConstrainedLocalIndexSet
 };
 
 
-// Concept for a NodeFactory
 template<class GridView>
-struct ConstrainedNodeFactory
+struct ConstrainedPreBasis
 {
   using RootTreePath = decltype(TypeTree::hybridTreePath());
 

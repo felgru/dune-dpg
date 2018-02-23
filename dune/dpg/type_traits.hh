@@ -5,6 +5,7 @@
 
 #include <type_traits>
 #include <dune/common/tupleutility.hh>
+#include <dune/common/version.hh>
 
 #ifndef DOXYGEN
 namespace std {
@@ -20,45 +21,53 @@ namespace Functions {
   template<class size_type>
   class FlatMultiIndex;
 
-  template<class NF>
+  template<class PB>
   class DefaultGlobalBasis;
 
-  template<class NF>
+  template<class PB>
   class ConstrainedGlobalBasis;
 
   template<typename GV, int k, class MI>
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
+  class PQkPreBasis;
+#else
   class PQkNodeFactory;
+#endif
 
   template<typename GV, int k, class MI>
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
+  class LagrangeDGPreBasis;
+#else
   class LagrangeDGNodeFactory;
+#endif
 
   template<typename GV, int level, int k, class MI>
-  class PQkDGRefinedDGNodeFactory;
+  class PQkDGRefinedDGPreBasis;
 
   template<typename GV, int k, class MI>
-  class BernsteinNodeFactory;
+  class BernsteinPreBasis;
 
   template<typename GV, int k, class MI>
-  class BernsteinDGNodeFactory;
+  class BernsteinDGPreBasis;
 
   template<typename GV, int level, int k, class MI>
-  class BernsteinDGRefinedDGNodeFactory;
+  class BernsteinDGRefinedDGPreBasis;
 
   template<typename GV, int s, int k, class MI>
-  class PQkDGSubsampledDGNodeFactory;
+  class PQkDGSubsampledDGPreBasis;
 
   template<typename GV, int s, int k, class MI>
-  class PQkSubsampledDGNodeFactory;
+  class PQkSubsampledDGPreBasis;
 
   template<typename GV, int k, class MI>
-  class PQkTraceNodeFactory;
+  class PQkTracePreBasis;
 
   template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
            class MI>
-  class OptimalTestBasisNodeFactory;
+  class OptimalTestBasisPreBasis;
 
   template<typename GV, class MI>
-  class HangingNodeP2NodeFactory;
+  class HangingNodeP2PreBasis;
 
   template<typename BilinForm, typename InnerProd>
   class TestspaceCoefficientMatrix;
@@ -108,7 +117,7 @@ struct is_OptimalTestSpace : std::false_type {};
 #ifndef DOXYGEN
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct is_OptimalTestSpace<Functions::DefaultGlobalBasis<
-            Functions::OptimalTestBasisNodeFactory<
+            Functions::OptimalTestBasisPreBasis<
                 TestspaceCoefficientMatrix, testIndex,
                 Functions::FlatMultiIndex<std::size_t> > > >
   : std::true_type {};
@@ -123,13 +132,13 @@ struct is_DGRefinedFiniteElement : std::false_type {};
 #ifndef DOXYGEN
 template<typename GV, int level, int k>
 struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
-               Functions::PQkDGRefinedDGNodeFactory
+               Functions::PQkDGRefinedDGPreBasis
                    <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
 
 template<typename GV, int level, int k>
 struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
-               Functions::BernsteinDGRefinedDGNodeFactory
+               Functions::BernsteinDGRefinedDGPreBasis
                    <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
 #endif
@@ -140,7 +149,7 @@ struct is_ContinuouslyRefinedFiniteElement : std::false_type {};
 #ifndef DOXYGEN
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct is_ContinuouslyRefinedFiniteElement<Functions::DefaultGlobalBasis<
-            Functions::OptimalTestBasisNodeFactory<
+            Functions::OptimalTestBasisPreBasis<
                 TestspaceCoefficientMatrix, testIndex,
                 Functions::FlatMultiIndex<std::size_t> > > >
   : is_RefinedFiniteElement<typename std::tuple_element<testIndex,
@@ -160,19 +169,19 @@ struct levelOfFE : std::integral_constant<int, 0> {};
 #ifndef DOXYGEN
 template<class GV, int level, int k>
 struct levelOfFE<Functions::DefaultGlobalBasis<
-             Functions::PQkDGRefinedDGNodeFactory
+             Functions::PQkDGRefinedDGPreBasis
                  <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::integral_constant<int, level> {};
 
 template<class GV, int level, int k>
 struct levelOfFE<Functions::DefaultGlobalBasis<
-             Functions::BernsteinDGRefinedDGNodeFactory
+             Functions::BernsteinDGRefinedDGPreBasis
                  <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::integral_constant<int, level> {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct levelOfFE<Functions::DefaultGlobalBasis<
-            Functions::OptimalTestBasisNodeFactory<
+            Functions::OptimalTestBasisPreBasis<
                 TestspaceCoefficientMatrix, testIndex,
                 Functions::FlatMultiIndex<std::size_t> > > >
   : levelOfFE<typename std::tuple_element<testIndex,
@@ -186,19 +195,19 @@ struct is_SubsampledFiniteElement : std::false_type {};
 #ifndef DOXYGEN
 template<class GV, int s, int k>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
-             Functions::PQkDGSubsampledDGNodeFactory
+             Functions::PQkDGSubsampledDGPreBasis
                  <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
 
 template<class GV, int s, int k>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
-             Functions::PQkSubsampledDGNodeFactory
+             Functions::PQkSubsampledDGPreBasis
                  <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
-            Functions::OptimalTestBasisNodeFactory<
+            Functions::OptimalTestBasisPreBasis<
                 TestspaceCoefficientMatrix, testIndex,
                 Functions::FlatMultiIndex<std::size_t> > > >
   : is_SubsampledFiniteElement<typename std::tuple_element<testIndex,
@@ -212,19 +221,19 @@ struct numberOfSamples : std::integral_constant<int, 1> {};
 #ifndef DOXYGEN
 template<class GV, int s, int k>
 struct numberOfSamples<Functions::DefaultGlobalBasis<
-             Functions::PQkDGSubsampledDGNodeFactory
+             Functions::PQkDGSubsampledDGPreBasis
                  <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::integral_constant<int, s> {};
 
 template<class GV, int s, int k>
 struct numberOfSamples<Functions::DefaultGlobalBasis<
-             Functions::PQkSubsampledDGNodeFactory
+             Functions::PQkSubsampledDGPreBasis
                  <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::integral_constant<int, s> {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct numberOfSamples<Functions::DefaultGlobalBasis<
-            Functions::OptimalTestBasisNodeFactory<
+            Functions::OptimalTestBasisPreBasis<
                 TestspaceCoefficientMatrix, testIndex,
                 Functions::FlatMultiIndex<std::size_t> > > >
   : numberOfSamples<typename std::tuple_element<testIndex,
@@ -247,95 +256,111 @@ template<class T, class GridView>
 using changeGridView_t = typename changeGridView<T, GridView>::type;
 
 #ifndef DOXYGEN
-template<class NF, class GridView>
-struct changeGridView<Functions::DefaultGlobalBasis<NF>, GridView>
+template<class PB, class GridView>
+struct changeGridView<Functions::DefaultGlobalBasis<PB>, GridView>
 {
-  typedef Functions::DefaultGlobalBasis<changeGridView_t<NF, GridView>> type;
+  typedef Functions::DefaultGlobalBasis<changeGridView_t<PB, GridView>> type;
 };
 
-template<class NF, class GridView>
-struct changeGridView<Functions::ConstrainedGlobalBasis<NF>, GridView>
+template<class PB, class GridView>
+struct changeGridView<Functions::ConstrainedGlobalBasis<PB>, GridView>
 {
-  typedef Functions::ConstrainedGlobalBasis<changeGridView_t<NF, GridView>>
+  typedef Functions::ConstrainedGlobalBasis<changeGridView_t<PB, GridView>>
         type;
 };
 
 template<typename GV, int k, class MI, class GridView>
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
+struct changeGridView<Functions::PQkPreBasis<GV, k, MI>, GridView>
+#else
 struct changeGridView<Functions::PQkNodeFactory<GV, k, MI>, GridView>
+#endif
 {
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
+  typedef Functions::PQkPreBasis<GridView, k, MI> type;
+#else
   typedef Functions::PQkNodeFactory<GridView, k, MI> type;
+#endif
 };
 
 template<typename GV, int k, class MI, class GridView>
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
+struct changeGridView<Functions::LagrangeDGPreBasis<GV, k, MI>, GridView>
+#else
 struct changeGridView<Functions::LagrangeDGNodeFactory<GV, k, MI>, GridView>
+#endif
 {
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
+  typedef Functions::LagrangeDGPreBasis<GridView, k, MI> type;
+#else
   typedef Functions::LagrangeDGNodeFactory<GridView, k, MI> type;
+#endif
 };
 
 template<typename GV, int level, int k, class MI, class GridView>
-struct changeGridView<Functions::PQkDGRefinedDGNodeFactory<GV, level, k, MI>,
+struct changeGridView<Functions::PQkDGRefinedDGPreBasis<GV, level, k, MI>,
                       GridView>
 {
-  typedef Functions::PQkDGRefinedDGNodeFactory<GridView, level, k, MI> type;
+  typedef Functions::PQkDGRefinedDGPreBasis<GridView, level, k, MI> type;
 };
 
 template<typename GV, int k, class MI, class GridView>
-struct changeGridView<Functions::BernsteinNodeFactory<GV, k, MI>, GridView>
+struct changeGridView<Functions::BernsteinPreBasis<GV, k, MI>, GridView>
 {
-  typedef Functions::BernsteinNodeFactory<GridView, k, MI> type;
+  typedef Functions::BernsteinPreBasis<GridView, k, MI> type;
 };
 
 template<typename GV, int k, class MI, class GridView>
-struct changeGridView<Functions::BernsteinDGNodeFactory<GV, k, MI>, GridView>
+struct changeGridView<Functions::BernsteinDGPreBasis<GV, k, MI>, GridView>
 {
-  typedef Functions::BernsteinDGNodeFactory<GridView, k, MI> type;
+  typedef Functions::BernsteinDGPreBasis<GridView, k, MI> type;
 };
 
 template<typename GV, int level, int k, class MI, class GridView>
-struct changeGridView<Functions::BernsteinDGRefinedDGNodeFactory
+struct changeGridView<Functions::BernsteinDGRefinedDGPreBasis
                                                 <GV, level, k, MI>,
                       GridView>
 {
-  typedef Functions::BernsteinDGRefinedDGNodeFactory<GridView, level, k, MI>
+  typedef Functions::BernsteinDGRefinedDGPreBasis<GridView, level, k, MI>
       type;
 };
 
 template<typename GV, int s, int k, class MI, class GridView>
-struct changeGridView<Functions::PQkDGSubsampledDGNodeFactory<GV, s, k, MI>,
+struct changeGridView<Functions::PQkDGSubsampledDGPreBasis<GV, s, k, MI>,
                       GridView>
 {
-  typedef Functions::PQkDGSubsampledDGNodeFactory<GridView, s, k, MI> type;
+  typedef Functions::PQkDGSubsampledDGPreBasis<GridView, s, k, MI> type;
 };
 
 template<typename GV, int s, int k, class MI, class GridView>
-struct changeGridView<Functions::PQkSubsampledDGNodeFactory<GV, s, k, MI>,
+struct changeGridView<Functions::PQkSubsampledDGPreBasis<GV, s, k, MI>,
                       GridView>
 {
-  typedef Functions::PQkSubsampledDGNodeFactory<GridView, s, k, MI> type;
+  typedef Functions::PQkSubsampledDGPreBasis<GridView, s, k, MI> type;
 };
 
 template<typename GV, int k, class MI, class GridView>
-struct changeGridView<Functions::PQkTraceNodeFactory<GV, k, MI>,
+struct changeGridView<Functions::PQkTracePreBasis<GV, k, MI>,
                       GridView>
 {
-  typedef Functions::PQkTraceNodeFactory<GridView, k, MI> type;
+  typedef Functions::PQkTracePreBasis<GridView, k, MI> type;
 };
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
          class MI, class GridView>
-struct changeGridView<Functions::OptimalTestBasisNodeFactory
+struct changeGridView<Functions::OptimalTestBasisPreBasis
                        <TestspaceCoefficientMatrix,
                         testIndex, MI>, GridView>
 {
-  typedef Functions::OptimalTestBasisNodeFactory<
+  typedef Functions::OptimalTestBasisPreBasis<
     changeGridView_t<TestspaceCoefficientMatrix, GridView>,
     testIndex, MI>   type;
 };
 
 template<typename GV, class MI, class GridView>
-struct changeGridView<Functions::HangingNodeP2NodeFactory<GV, MI>, GridView>
+struct changeGridView<Functions::HangingNodeP2PreBasis<GV, MI>, GridView>
 {
-  typedef Functions::HangingNodeP2NodeFactory<GridView, MI> type;
+  typedef Functions::HangingNodeP2PreBasis<GridView, MI> type;
 };
 
 template<typename BilinForm, typename InnerProd, class GridView>

@@ -59,11 +59,9 @@ inline static void interiorImpl(
   const auto referenceGridView =
       testLocalView.tree().refinedReferenceElementGridView();
 
-  assert(element.type().isTriangle() || element.type().isQuadrilateral());
   const size_t subElementStride =
-    (element.type().isTriangle())
-    ? testLocalView.globalBasis().nodeFactory().dofsPerSubTriangle
-    : testLocalView.globalBasis().nodeFactory().dofsPerSubQuad;
+      (is_DGRefinedFiniteElement<TestSpace>::value) ?
+        testLocalFiniteElement.localBasis().size() : 0;
 
   unsigned int subElementOffset = 0;
   unsigned int subElementIndex = 0;

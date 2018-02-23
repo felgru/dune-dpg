@@ -24,11 +24,11 @@ namespace Functions {
 // *****************************************************************************
 // This is the reusable part of the basis. It contains
 //
-//   PQkFaceNodeFactory
+//   PQkFacePreBasis
 //   PQkFaceNodeIndexSet
 //   PQkFaceNode
 //
-// The factory allows to create the others and is the owner of possible shared
+// The pre-basis allows to create the others and is the owner of possible shared
 // state. These three components do _not_ depend on the global basis or index
 // set and can be used without a global basis.
 // *****************************************************************************
@@ -40,12 +40,12 @@ template<typename GV, int k, class MI, class TP>
 class PQkFaceNodeIndexSet;
 
 template<typename GV, int k, class MI>
-class PQkFaceNodeFactory;
+class PQkFacePreBasis;
 
 
 
 template<typename GV, int k, class MI>
-class PQkFaceNodeFactory
+class PQkFacePreBasis
 {
   static constexpr int dim = GV::dimension;
 
@@ -74,7 +74,7 @@ public:
   using SizePrefix = Dune::ReservedVector<size_type, 1>;
 
   /** \brief Constructor for a given grid view object */
-  PQkFaceNodeFactory(const GridView& gv) :
+  PQkFacePreBasis(const GridView& gv) :
     gridView_(gv)
   {}
 
@@ -249,12 +249,15 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using NodeFactory = PQkFaceNodeFactory<GV, k, MI>;
+  using PreBasis = PQkFacePreBasis<GV, k, MI>;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
+  using NodeFactory = PreBasis;
+#endif
 
-  using Node = typename NodeFactory::template Node<TP>;
+  using Node = typename PreBasis::template Node<TP>;
 
-  PQkFaceNodeIndexSet(const NodeFactory& nodeFactory) :
-    nodeFactory_(&nodeFactory)
+  PQkFaceNodeIndexSet(const PreBasis& preBasis) :
+    preBasis_(&preBasis)
   {}
 
   /** \brief Bind the view to a grid element
@@ -288,7 +291,7 @@ public:
   It indices(It it) const
   {
     assert(node_ != nullptr);
-    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& gridIndexSet = preBasis_->gridView().indexSet();
     const auto& element = node_->element();
 
     for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
@@ -325,10 +328,10 @@ public:
           size_t v1 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
           bool flip = (v0 > v1);
           *it = {{ (flip)
-                   ? nodeFactory_->edgeOffset_
+                   ? preBasis_->edgeOffset_
                      + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())
                      + k-localKey.index()
-                   : nodeFactory_->edgeOffset_
+                   : preBasis_->edgeOffset_
                      + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())
                      + localKey.index() }};
           continue;
@@ -356,7 +359,7 @@ public:
   MultiIndex index(size_type i) const
   {
     Dune::LocalKey localKey = node_->finiteElement().localCoefficients().localKey(i);
-    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& gridIndexSet = preBasis_->gridView().indexSet();
     const auto& element = node_->element();
 
     // The dimension of the entity that the current dof is related to
@@ -382,8 +385,8 @@ public:
         size_t v1 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
         bool flip = (v0 > v1);
         return { (flip)
-          ? nodeFactory_->edgeOffset_ + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + k-localKey.index()
-              : nodeFactory_->edgeOffset_ + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + localKey.index() };
+          ? preBasis_->edgeOffset_ + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + k-localKey.index()
+              : preBasis_->edgeOffset_ + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + localKey.index() };
       }
     }
 
@@ -405,7 +408,7 @@ public:
 #endif
 
 protected:
-  const NodeFactory* nodeFactory_;
+  const PreBasis* preBasis_;
 
   const Node* node_;
 };
@@ -417,24 +420,27 @@ namespace BasisBuilder {
 namespace Imp {
 
 template<std::size_t k>
-struct PQkFaceNodeFactoryBuilder
+struct PQkFacePreBasisFactory
 {
-  static const std::size_t requiredMultiIndexSize=1;
+  static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView, class size_type=std::size_t>
-  auto build(const GridView& gridView)
-    -> PQkFaceNodeFactory<GridView, k, MultiIndex>
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
+  auto makePreBasis(const GridView& gridView) const
+#else
+  auto build(const GridView& gridView) const
+#endif
   {
-    return {gridView};
+    return PQkFacePreBasis<GridView, k, MultiIndex>(gridView);
   }
 };
 
 } // end namespace BasisBuilder::Imp
 
 template<std::size_t k>
-Imp::PQkFaceNodeFactoryBuilder<k> pqFace()
+auto pqFace()
 {
-  return{};
+  return Imp::PQkFacePreBasisFactory<k>();
 }
 
 } // end namespace BasisBuilder
@@ -457,7 +463,7 @@ Imp::PQkFaceNodeFactoryBuilder<k> pqFace()
  * \tparam k The order of the basis
  */
 template<typename GV, int k>
-using PQkFaceNodalBasis = DefaultGlobalBasis<PQkFaceNodeFactory<GV, k, FlatMultiIndex<std::size_t> > >;
+using PQkFaceNodalBasis = DefaultGlobalBasis<PQkFacePreBasis<GV, k, FlatMultiIndex<std::size_t> > >;
 
 
 
