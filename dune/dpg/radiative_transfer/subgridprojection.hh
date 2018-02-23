@@ -373,18 +373,16 @@ namespace detail {
         {
           // Different global bases on host and sub grid.
           // → Interpolate from hostGridGlobalBasis to subGridGlobalBasis.
-          //   (we assume the subGridGlobalBasis to be superset of
+          //   (we assume the subGridGlobalBasis to be a superset of
           //   the hostGridGlobalBasis on the same level.)
-          auto subGridGlobalBasisNode = subGridGlobalBasis.nodeFactory()
-              .node(Dune::TypeTree::hybridTreePath());
-          subGridGlobalBasisNode.bind(e);
-          auto hostGridGlobalBasisNode = hostGridGlobalBasis.nodeFactory()
-              .node(Dune::TypeTree::hybridTreePath());
-          hostGridGlobalBasisNode.bind(eHost);
+          auto subGridLocalView = subGridGlobalBasis.localView();
+          subGridLocalView.bind(e);
+          auto hostGridLocalView = hostGridGlobalBasis.localView();
+          hostGridLocalView.bind(eHost);
           auto&& subGridLocalFiniteElement
-              = subGridGlobalBasisNode.finiteElement();
+              = subGridLocalView.tree().finiteElement();
           auto&& hostGridLocalFiniteElement
-              = hostGridGlobalBasisNode.finiteElement();
+              = hostGridLocalView.tree().finiteElement();
           return boost::hana::eval_if(
             is_RefinedFiniteElement<SubGridGlobalBasis>{},
             [&](auto _)
@@ -392,8 +390,6 @@ namespace detail {
               static_assert(is_DGRefinedFiniteElement<SubGridGlobalBasis>{},
                 "Interpolation not implemented for continuously refined"
                 " finite elements!");
-              auto subGridLocalView = subGridGlobalBasis.localView();
-              subGridLocalView.bind(e);
               std::vector<FieldVector<double, 1>>
                   interpolatedLocalData(subGridLocalView.size());
 
@@ -594,8 +590,6 @@ public:
     auto& subGrid = subGridView.grid();
     auto localView = subGridGlobalBasis.localView();
     auto localIndexSet = subGridGlobalBasis.localIndexSet();
-    auto node = subGridGlobalBasis.nodeFactory()
-                  .node(Dune::TypeTree::hybridTreePath());
 
     HostGridGlobalBasis hostGridGlobalBasis(
         subGrid.getHostGrid().leafGridView());
@@ -644,13 +638,12 @@ public:
           const LocalData& localData = std::get<1>(*currentData);
           for (const auto& child : descendantElements(e, subGrid.maxLevel()))
           {
-            node.bind(child);
             localView.bind(child);
             localIndexSet.bind(localView);
 
             // This assumes that e and child share the same finite element
             // and thus the same entity type.
-            auto&& localFiniteElement = node.finiteElement();
+            auto&& localFiniteElement = localView.tree().finiteElement();
             if(child.father() != e) {
               std::cerr << "e is not father of child!\n"
                 << "e.level()=" << e.level()

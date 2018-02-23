@@ -95,10 +95,8 @@ public:
     subGridLocalView.bind(element);
     auto hostGridLocalView = hostGridBasis.localView();
     hostGridLocalView.bind(hostElement);
-    auto hostGridNode = hostGridBasis.nodeFactory()
-      .node(Dune::TypeTree::hybridTreePath());
-    hostGridNode.bind(hostElement);
-    const auto& hostGridFiniteElement = hostGridNode.finiteElement();
+    const auto& hostGridFiniteElement
+        = hostGridLocalView.tree().finiteElement();
     std::vector<double> localHostGridCoefficients;
     subGridFunction.bind(element, hostElement);
     hostGridFiniteElement.localInterpolation().interpolate(subGridFunction,
