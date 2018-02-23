@@ -28,14 +28,14 @@ namespace Functions {
   class ConstrainedGlobalBasis;
 
   template<typename GV, int k, class MI>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   class PQkPreBasis;
 #else
   class PQkNodeFactory;
 #endif
 
   template<typename GV, int k, class MI>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   class LagrangeDGPreBasis;
 #else
   class LagrangeDGNodeFactory;
@@ -270,13 +270,13 @@ struct changeGridView<Functions::ConstrainedGlobalBasis<PB>, GridView>
 };
 
 template<typename GV, int k, class MI, class GridView>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
 struct changeGridView<Functions::PQkPreBasis<GV, k, MI>, GridView>
 #else
 struct changeGridView<Functions::PQkNodeFactory<GV, k, MI>, GridView>
 #endif
 {
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   typedef Functions::PQkPreBasis<GridView, k, MI> type;
 #else
   typedef Functions::PQkNodeFactory<GridView, k, MI> type;
@@ -284,13 +284,13 @@ struct changeGridView<Functions::PQkNodeFactory<GV, k, MI>, GridView>
 };
 
 template<typename GV, int k, class MI, class GridView>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
 struct changeGridView<Functions::LagrangeDGPreBasis<GV, k, MI>, GridView>
 #else
 struct changeGridView<Functions::LagrangeDGNodeFactory<GV, k, MI>, GridView>
 #endif
 {
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   typedef Functions::LagrangeDGPreBasis<GridView, k, MI> type;
 #else
   typedef Functions::LagrangeDGNodeFactory<GridView, k, MI> type;

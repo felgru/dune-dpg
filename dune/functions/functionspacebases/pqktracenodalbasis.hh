@@ -253,7 +253,7 @@ public:
   using MultiIndex = MI;
 
   using PreBasis = PQkTracePreBasis<GV, k, MI>;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
   using NodeFactory = PreBasis;
 #endif
 
@@ -445,7 +445,7 @@ struct PQkTracePreBasisFactory
   static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   auto makePreBasis(const GridView& gridView) const
 #else
   auto build(const GridView& gridView) const

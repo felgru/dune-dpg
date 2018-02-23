@@ -231,7 +231,7 @@ public:
   using MultiIndex = MI;
 
   using PreBasis = BernsteinDGPreBasis<GV, k, MI>;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
   using NodeFactory = PreBasis;
 #endif
 
