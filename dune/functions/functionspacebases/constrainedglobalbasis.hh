@@ -45,7 +45,7 @@ public:
 
   //! Pre-basis providing the implementation details
   using PreBasis = PB;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
   using NodeFactory = PreBasis;
 #endif
 
@@ -105,7 +105,7 @@ public:
     return preBasis_;
   }
 
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
   const NodeFactory& nodeFactory() const
   {
     return preBasis();
@@ -179,7 +179,7 @@ template<class GridView, class PreBasisFactory>
 auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFactory)
 {
   using MultiIndex = typename Dune::ReservedVector<std::size_t, PreBasisFactory::requiredMultiIndexSize>;
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   auto preBasis = preBasisFactory.template makePreBasis<MultiIndex>(gridView);
 #else
   auto preBasis = preBasisFactory.template build<MultiIndex>(gridView);
@@ -192,7 +192,7 @@ auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFa
 template<class MultiIndex, class GridView, class PreBasisFactory>
 auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFactory)
 {
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   auto preBasis = preBasisFactory.template makePreBasis<MultiIndex>(gridView);
 #else
   auto preBasis = preBasisFactory.template build<MultiIndex>(gridView);
