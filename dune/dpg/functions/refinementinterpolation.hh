@@ -117,7 +117,6 @@ restoreDataToRefinedGrid(
   auto& grid = gridView.grid();
   auto localView = globalBasis.localView();
   auto localIndexSet = globalBasis.localIndexSet();
-  auto node = globalBasis.nodeFactory().node(Dune::TypeTree::hybridTreePath());
 
   size_t maxEntityDoFs = localView.maxSize();
 
@@ -146,13 +145,12 @@ restoreDataToRefinedGrid(
       std::vector<FieldVector<double, 1>> childLocalData;
       for (const auto& child : descendantElements(e, grid.maxLevel()))
       {
-        node.bind(child);
         localView.bind(child);
         localIndexSet.bind(localView);
 
         // This assumes that e and child share the same finite element
         // and thus the same entity type.
-        auto&& localFiniteElement = node.finiteElement();
+        auto&& localFiniteElement = localView.tree().finiteElement();
         assert(child.father() == e);
         auto oldGridFunction = detail::RestoreDataToRefinedGridFunction
           <GlobalBasis, typename Element::LocalGeometry, decltype(localData)>(
