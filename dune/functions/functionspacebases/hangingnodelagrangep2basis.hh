@@ -484,11 +484,7 @@ struct HangingNodeLagrangeP2PreBasisFactory
   static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   auto makePreBasis(const GridView& gridView) const
-#else
-  auto build(const GridView& gridView) const
-#endif
   {
     return HangingNodeLagrangeP2PreBasis<GridView, MultiIndex>(gridView);
   }
