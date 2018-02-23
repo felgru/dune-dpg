@@ -49,7 +49,11 @@ class NormalizedRefinedPreBasis
 {
   using Basis = std::tuple_element_t<0, typename InnerProduct::TestSpaces>;
   static const int dim = Basis::GridView::dim;
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   using WrappedPreBasis = typename Basis::PreBasis;
+#else
+  using WrappedPreBasis = typename Basis::NodeFactory;
+#endif
 
 public:
 
@@ -73,7 +77,11 @@ public:
 
   /** \brief Constructor for a given grid view object */
   NormalizedRefinedPreBasis(const InnerProduct& ip) :
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
     wrappedPreBasis_(std::get<0>(*ip.getTestSpaces()).preBasis()),
+#else
+    wrappedPreBasis_(std::get<0>(*ip.getTestSpaces()).nodeFactory()),
+#endif
     innerProduct_(ip)
   {}
 
@@ -156,9 +164,16 @@ class NormalizedRefinedNode :
   static const int dim = Basis::GridView::dimension;
 
   using Base = LeafBasisNode<std::size_t, TP>;
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   using WrappedPreBasis = typename Basis::PreBasis;
+#else
+  using WrappedPreBasis = typename Basis::NodeFactory;
+#endif
   using WrappedNode = typename WrappedPreBasis::template Node<TP>;
   using PreBasis = NormalizedRefinedPreBasis<InnerProduct>;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
+  using NodeFactory = PreBasis;
+#endif
 
 public:
 
@@ -254,7 +269,11 @@ class NormalizedRefinedNodeIndexSet
   // Cannot be an enum -- otherwise the switch statement below produces compiler warnings
   static const int dim = Basis::GridView::dimension;
 
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   using WrappedIndexSet = typename Basis::PreBasis::template IndexSet<TP>;
+#else
+  using WrappedIndexSet = typename Basis::NodeFactory::template IndexSet<TP>;
+#endif
 
 public:
 
@@ -264,6 +283,9 @@ public:
   using MultiIndex = typename Basis::MultiIndex;
 
   using PreBasis = PB;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
+  using NodeFactory = PreBasis;
+#endif
 
   using Node = typename PreBasis::template Node<TP>;
 
