@@ -373,25 +373,23 @@ namespace BasisBuilder {
 namespace Imp {
 
 template<std::size_t s, std::size_t k>
-struct PQkDGSubsampledDGNodeFactoryBuilder
+struct PQkDGSubsampledDGPreBasisFactory
 {
-  static const std::size_t requiredMultiIndexSize=1;
+  static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView>
-  auto build(const GridView& gridView)
-    -> PQkDGSubsampledDGPreBasis<GridView, s, k, MultiIndex>
+  auto makePreBasis(const GridView& gridView) const
   {
-    return {gridView};
+    return PQkDGSubsampledDGPreBasis<GridView, s, k, MultiIndex>(gridView);
   }
 };
 
 } // end namespace BasisBuilder::Imp
 
 template<std::size_t s, std::size_t k>
-Imp::PQkDGSubsampledDGNodeFactoryBuilder<s, k>
-pqDGSubsampledDG()
+auto pqDGSubsampledDG()
 {
-  return{};
+  return Imp::PQkDGSubsampledDGPreBasisFactory<s, k>();
 }
 
 } // end namespace BasisBuilder

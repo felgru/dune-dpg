@@ -618,15 +618,14 @@ namespace BasisBuilder {
 namespace Imp {
 
 template<std::size_t k>
-struct BernsteinNodeFactoryBuilder
+struct BernsteinPreBasisFactory
 {
-  static const std::size_t requiredMultiIndexSize=1;
+  static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView>
-  auto build(const GridView& gridView)
-    -> BernsteinPreBasis<GridView, k, MultiIndex>
+  auto makePreBasis(const GridView& gridView) const
   {
-    return {gridView};
+    return BernsteinPreBasis<GridView, k, MultiIndex>(gridView);
   }
 };
 
@@ -635,16 +634,16 @@ struct BernsteinNodeFactoryBuilder
 
 
 /**
- * \brief Create a factory builder that can build a BernsteinPreBasis
+ * \brief Create a pre-basis factory that can build a Bernstein pre-basis
  *
  * \ingroup FunctionSpaceBasesImplementations
  *
  * \tparam k   The polynomial order of ansatz functions
  */
 template<std::size_t k>
-Imp::BernsteinNodeFactoryBuilder<k> bernstein()
+auto bernstein()
 {
-  return{};
+  return Imp::BernsteinPreBasisFactory<k>();
 }
 
 } // end namespace BasisBuilder

@@ -417,24 +417,23 @@ namespace BasisBuilder {
 namespace Imp {
 
 template<std::size_t k>
-struct PQkFaceNodeFactoryBuilder
+struct PQkFacePreBasisFactory
 {
-  static const std::size_t requiredMultiIndexSize=1;
+  static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView, class size_type=std::size_t>
-  auto build(const GridView& gridView)
-    -> PQkFacePreBasis<GridView, k, MultiIndex>
+  auto makePreBasis(const GridView& gridView) const
   {
-    return {gridView};
+    return PQkFacePreBasis<GridView, k, MultiIndex>(gridView);
   }
 };
 
 } // end namespace BasisBuilder::Imp
 
 template<std::size_t k>
-Imp::PQkFaceNodeFactoryBuilder<k> pqFace()
+auto pqFace()
 {
-  return{};
+  return Imp::PQkFacePreBasisFactory<k>();
 }
 
 } // end namespace BasisBuilder

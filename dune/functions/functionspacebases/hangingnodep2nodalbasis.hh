@@ -478,15 +478,14 @@ namespace BasisBuilder {
 
 namespace Imp {
 
-struct HangingNodeP2NodeFactoryBuilder
+struct HangingNodeP2PreBasisFactory
 {
-  static const std::size_t requiredMultiIndexSize=1;
+  static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView>
-  auto build(const GridView& gridView)
-    -> HangingNodeP2PreBasis<GridView, MultiIndex>
+  auto makePreBasis(const GridView& gridView) const
   {
-    return {gridView};
+    return HangingNodeP2PreBasis<GridView, MultiIndex>(gridView);
   }
 };
 
@@ -495,13 +494,13 @@ struct HangingNodeP2NodeFactoryBuilder
 
 
 /**
- * \brief Create a factory builder that can build a HangingNodeP2PreBasis
+ * \brief Create a pre-basis builder that can build a hanging node P_2 pre-basis
  *
  * \ingroup FunctionSpaceBasesImplementations
  */
-Imp::HangingNodeP2NodeFactoryBuilder hangingNodeP2()
+auto hangingNodeP2()
 {
-  return{};
+  return Imp::HangingNodeP2PreBasisFactory();
 }
 
 } // end namespace BasisBuilder

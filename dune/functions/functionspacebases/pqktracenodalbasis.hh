@@ -437,24 +437,23 @@ namespace BasisBuilder {
 namespace Imp {
 
 template<std::size_t k>
-struct PQkTraceNodeFactoryBuilder
+struct PQkTracePreBasisFactory
 {
-  static const std::size_t requiredMultiIndexSize=1;
+  static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView>
-  auto build(const GridView& gridView)
-    -> PQkTracePreBasis<GridView, k, MultiIndex>
+  auto makePreBasis(const GridView& gridView) const
   {
-    return {gridView};
+    return PQkTracePreBasis<GridView, k, MultiIndex>(gridView);
   }
 };
 
 } // end namespace BasisBuilder::Imp
 
 template<std::size_t k>
-Imp::PQkTraceNodeFactoryBuilder<k> pqTrace()
+auto pqTrace()
 {
-  return{};
+  return Imp::PQkTracePreBasisFactory<k>();
 }
 
 } // end namespace BasisBuilder
