@@ -6,6 +6,7 @@
 #include <dune/common/reservedvector.hh>
 #include <dune/common/typeutilities.hh>
 #include <dune/common/concept.hh>
+#include <dune/common/version.hh>
 
 #include <dune/functions/common/type_traits.hh>
 #include <dune/functions/functionspacebases/constrainedlocalindexset.hh>
@@ -20,51 +21,54 @@ namespace Functions {
 
 
 /**
- * \brief Global basis for given node factory
+ * \brief Constrained global basis for given pre-basis
  *
  * This class implements the interface of a constrained global basis
- * using the details from a given node factory.
+ * using the details from a given pre-basis.
  *
  * If you want to implement your own constrained global basis, it may be
- * better to implement a node factory instead. On the one hand
+ * better to implement a pre-basis instead. On the one hand
  * this needs less boiler-plate code. On the other hand
  * it makes your implementation composable and thus much
- * more flexible. That is, you can reuse your factory
+ * more flexible. That is, you can reuse your pre-basis
  * as one part in a larger product space by plugging it
- * e.g. into a CompositeNodeFactory or PowerNodeFactory.
- * The actual global basis for your FooNodeFactory is
- * then obtained by using ConstrainedGlobalBasis<FooNodeFactory>.
+ * e.g. into a CompositePreBasis or PowerPreBasis.
+ * The actual global basis for your FooPreBasis is
+ * then obtained by using ConstrainedGlobalBasis<FooPreBasis>.
  *
- * \tparam NF  Node factory providing the implementation details
+ * \tparam PB  Pre-basis providing the implementation details
  */
-template<class NF>
+template<class PB>
 class ConstrainedGlobalBasis
 {
 public:
 
-  //! Node factory providing the implementation details
-  using NodeFactory = NF;
+  //! Pre-basis providing the implementation details
+  using PreBasis = PB;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
+  using NodeFactory = PreBasis;
+#endif
 
   //! The empty prefix path that identifies the root in the local ansatz tree
   using PrefixPath = TypeTree::HybridTreePath<>;
 
   //! The grid view that the FE space is defined on
-  using GridView = typename NodeFactory::GridView;
+  using GridView = typename PreBasis::GridView;
 
   //! Type used for global numbering of the basis vectors
-  using MultiIndex = typename NodeFactory::MultiIndex;
+  using MultiIndex = typename PreBasis::MultiIndex;
 
   //! Type used for indices and size information
   using size_type = std::size_t;
 
   //! Type of the local view on the restriction of the basis to a single element
-  using LocalView = DefaultLocalView<ConstrainedGlobalBasis<NodeFactory>>;
+  using LocalView = DefaultLocalView<ConstrainedGlobalBasis<PreBasis>>;
 
-  //! Node index set provided by NodeFactory
-  using NodeIndexSet = typename NodeFactory::template IndexSet<PrefixPath>;
+  //! Node index set provided by PreBasis
+  using NodeIndexSet = typename PreBasis::template IndexSet<PrefixPath>;
 
   //! Type used for prefixes handed to the size() method
-  using SizePrefix = typename NodeFactory::SizePrefix;
+  using SizePrefix = typename PreBasis::SizePrefix;
 
   //! Type of local indixes set exported by localIndexSet()
   using LocalIndexSet = ConstrainedLocalIndexSet<LocalView, NodeIndexSet>;
@@ -73,33 +77,40 @@ public:
   /**
    * \brief Constructor
    *
-   * \tparam T Argument list for NodeFactory
-   * \param t Argument list for NodeFactory
+   * \tparam T Argument list for PreBasis
+   * \param t Argument list for PreBasis
    *
-   * This will forward all arguments to the constructor of NodeFactory
+   * This will forward all arguments to the constructor of PreBasis
    */
   template<class... T,
     disableCopyMove<ConstrainedGlobalBasis, T...> = 0,
-    enableIfConstructible<NodeFactory, T...> = 0>
+    enableIfConstructible<PreBasis, T...> = 0>
   ConstrainedGlobalBasis(T&&... t) :
-    nodeFactory_(std::forward<T>(t)...),
+    preBasis_(std::forward<T>(t)...),
     prefixPath_()
   {
-    static_assert(models<Concept::ConstrainedNodeFactory<GridView>, NodeFactory>(), "Type passed to ConstrainedGlobalBasis does not model the ConstrainedNodeFactory concept.");
-    nodeFactory_.initializeIndices();
+    static_assert(models<Concept::ConstrainedPreBasis<GridView>, PreBasis>(), "Type passed to ConstrainedGlobalBasis does not model the ConstrainedPreBasis concept.");
+    preBasis_.initializeIndices();
   }
 
   //! Obtain the grid view that the basis is defined on
   const GridView& gridView() const
   {
-    return nodeFactory_.gridView();
+    return preBasis_.gridView();
   }
 
-  //! Obtain the node factory providing the implementation details
+  //! Obtain the pre-basis providing the implementation details
+  const PreBasis& preBasis() const
+  {
+    return preBasis_;
+  }
+
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   const NodeFactory& nodeFactory() const
   {
-    return nodeFactory_;
+    return preBasis();
   }
+#endif
 
   /**
    * \brief Update the stored grid view
@@ -109,26 +120,26 @@ public:
    */
   void update(const GridView & gv)
   {
-    nodeFactory_.update(gv);
-    nodeFactory_.initializeIndices();
+    preBasis_.update(gv);
+    preBasis_.initializeIndices();
   }
 
   //! Get the total dimension of the space spanned by this basis
   size_type dimension() const
   {
-    return nodeFactory_.dimension();
+    return preBasis_.dimension();
   }
 
   //! Return number of possible values for next position in empty multi index
   size_type size() const
   {
-    return nodeFactory_.size();
+    return preBasis_.size();
   }
 
   //! Return number of possible values for next position in multi index
   size_type size(const SizePrefix& prefix) const
   {
-    return nodeFactory_.size(prefix);
+    return preBasis_.size(prefix);
   }
 
   //! Return local view for basis
@@ -140,7 +151,7 @@ public:
   //! Return local index set for basis
   LocalIndexSet localIndexSet() const
   {
-    return LocalIndexSet(nodeFactory_.template indexSet<PrefixPath>());
+    return LocalIndexSet(preBasis_.template indexSet<PrefixPath>());
   }
 
   //! Return *this because we are not embedded in a larger basis
@@ -156,7 +167,7 @@ public:
   }
 
 protected:
-  NodeFactory nodeFactory_;
+  PreBasis preBasis_;
   PrefixPath prefixPath_;
 };
 
@@ -164,19 +175,31 @@ protected:
 
 namespace BasisBuilder {
 
-template<class GridView, class FactoryTag>
-auto makeConstrainedBasis(const GridView& gridView, FactoryTag&& factoryTag)
-  -> ConstrainedGlobalBasis<decltype(factoryTag.template build<typename Dune::ReservedVector<std::size_t, FactoryTag::requiredMultiIndexSize> >(gridView))>
+template<class GridView, class PreBasisFactory>
+auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFactory)
 {
-  using MultiIndex = typename Dune::ReservedVector<std::size_t, FactoryTag::requiredMultiIndexSize>;
-  return {factoryTag.template build<MultiIndex>(gridView)};
+  using MultiIndex = typename Dune::ReservedVector<std::size_t, PreBasisFactory::requiredMultiIndexSize>;
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+  auto preBasis = preBasisFactory.template makePreBasis<MultiIndex>(gridView);
+#else
+  auto preBasis = preBasisFactory.template build<MultiIndex>(gridView);
+#endif
+  using PreBasis = std::decay_t<decltype(preBasis)>;
+
+  return ConstrainedGlobalBasis<PreBasis>(std::move(preBasis));
 }
 
-template<class MultiIndex, class GridView, class FactoryTag>
-auto makeConstrainedBasis(const GridView& gridView, FactoryTag&& factoryTag)
-  -> ConstrainedGlobalBasis<decltype(factoryTag.template build<MultiIndex>(gridView))>
+template<class MultiIndex, class GridView, class PreBasisFactory>
+auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFactory)
 {
-  return {factoryTag.template build<MultiIndex>(gridView)};
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+  auto preBasis = preBasisFactory.template makePreBasis<MultiIndex>(gridView);
+#else
+  auto preBasis = preBasisFactory.template build<MultiIndex>(gridView);
+#endif
+  using PreBasis = std::decay_t<decltype(preBasis)>;
+
+  return ConstrainedGlobalBasis<PreBasis>(std::move(preBasis));
 }
 
 } // end namespace BasisBuilder

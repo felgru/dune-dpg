@@ -25,11 +25,11 @@ namespace Functions {
 // *****************************************************************************
 // This is the reusable part of the basis. It contains
 //
-//   PQkTraceNodeFactory
+//   PQkTracePreBasis
 //   PQkTraceNodeIndexSet
 //   PQkTraceNode
 //
-// The factory allows to create the others and is the owner of possible shared
+// The pre-basis allows to create the others and is the owner of possible shared
 // state. These three components do _not_ depend on the global basis or index
 // set and can be used without a global basis.
 // *****************************************************************************
@@ -41,12 +41,12 @@ template<typename GV, int k, class MI, class TP>
 class PQkTraceNodeIndexSet;
 
 template<typename GV, int k, class MI>
-class PQkTraceNodeFactory;
+class PQkTracePreBasis;
 
 
 
 template<typename GV, int k, class MI>
-class PQkTraceNodeFactory
+class PQkTracePreBasis
 {
   static constexpr int dim = GV::dimension;
 
@@ -75,7 +75,7 @@ public:
   using SizePrefix = Dune::ReservedVector<size_type, 1>;
 
   /** \brief Constructor for a given grid view object */
-  PQkTraceNodeFactory(const GridView& gv) :
+  PQkTracePreBasis(const GridView& gv) :
     gridView_(gv)
   {}
 
@@ -252,12 +252,15 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using NodeFactory = PQkTraceNodeFactory<GV, k, MI>;
+  using PreBasis = PQkTracePreBasis<GV, k, MI>;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
+  using NodeFactory = PreBasis;
+#endif
 
-  using Node = typename NodeFactory::template Node<TP>;
+  using Node = typename PreBasis::template Node<TP>;
 
-  PQkTraceNodeIndexSet(const NodeFactory& nodeFactory) :
-    nodeFactory_(&nodeFactory)
+  PQkTraceNodeIndexSet(const PreBasis& preBasis) :
+    preBasis_(&preBasis)
   {}
 
   /** \brief Bind the view to a grid element
@@ -291,7 +294,7 @@ public:
   It indices(It it) const
   {
     assert(node_ != nullptr);
-    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& gridIndexSet = preBasis_->gridView().indexSet();
     const auto& element = node_->element();
 
     for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
@@ -328,10 +331,10 @@ public:
           size_t v1 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
           bool flip = (v0 > v1);
           *it = {{ (flip)
-                   ? nodeFactory_->edgeOffset_
+                   ? preBasis_->edgeOffset_
                      + (k-1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())
                      + (k-2)-localKey.index()
-                   : nodeFactory_->edgeOffset_
+                   : preBasis_->edgeOffset_
                      + (k-1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())
                      + localKey.index() }};
           continue;
@@ -358,7 +361,7 @@ public:
               or k>3)
             DUNE_THROW(Dune::NotImplemented, "PQkTraceNodalBasis for 3D grids is only implemented if k<=3 and if the grid is a simplex grid");
 
-          *it = {{ nodeFactory_->triangleOffset_
+          *it = {{ preBasis_->triangleOffset_
                    + gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) }};
           continue;
         }
@@ -372,7 +375,7 @@ public:
   MultiIndex index(size_type i) const
   {
     Dune::LocalKey localKey = node_->finiteElement().localCoefficients().localKey(i);
-    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& gridIndexSet = preBasis_->gridView().indexSet();
     const auto& element = node_->element();
 
     // The dimension of the entity that the current dof is related to
@@ -398,8 +401,8 @@ public:
         size_t v1 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
         bool flip = (v0 > v1);
         return { (flip)
-          ? nodeFactory_->edgeOffset_ + (k-1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + (k-2)-localKey.index()
-              : nodeFactory_->edgeOffset_ + (k-1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + localKey.index() };
+          ? preBasis_->edgeOffset_ + (k-1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + (k-2)-localKey.index()
+              : preBasis_->edgeOffset_ + (k-1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + localKey.index() };
       }
     }
 
@@ -417,7 +420,7 @@ public:
             or k>3)
           DUNE_THROW(Dune::NotImplemented, "PQkTraceNodalBasis for 3D grids is only implemented if k<=3 and if the grid is a simplex grid");
 
-        return { nodeFactory_->triangleOffset_ + gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) };
+        return { preBasis_->triangleOffset_ + gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) };
       }
     }
     DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the PQkTraceNodalBasis");
@@ -425,7 +428,7 @@ public:
 #endif
 
 protected:
-  const NodeFactory* nodeFactory_;
+  const PreBasis* preBasis_;
 
   const Node* node_;
 };
@@ -437,24 +440,27 @@ namespace BasisBuilder {
 namespace Imp {
 
 template<std::size_t k>
-struct PQkTraceNodeFactoryBuilder
+struct PQkTracePreBasisFactory
 {
-  static const std::size_t requiredMultiIndexSize=1;
+  static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView>
-  auto build(const GridView& gridView)
-    -> PQkTraceNodeFactory<GridView, k, MultiIndex>
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+  auto makePreBasis(const GridView& gridView) const
+#else
+  auto build(const GridView& gridView) const
+#endif
   {
-    return {gridView};
+    return PQkTracePreBasis<GridView, k, MultiIndex>(gridView);
   }
 };
 
 } // end namespace BasisBuilder::Imp
 
 template<std::size_t k>
-Imp::PQkTraceNodeFactoryBuilder<k> pqTrace()
+auto pqTrace()
 {
-  return{};
+  return Imp::PQkTracePreBasisFactory<k>();
 }
 
 } // end namespace BasisBuilder
@@ -477,7 +483,7 @@ Imp::PQkTraceNodeFactoryBuilder<k> pqTrace()
  * \tparam k The order of the basis
  */
 template<typename GV, int k>
-using PQkTraceNodalBasis = DefaultGlobalBasis<PQkTraceNodeFactory<GV, k, FlatMultiIndex<std::size_t> > >;
+using PQkTraceNodalBasis = DefaultGlobalBasis<PQkTracePreBasis<GV, k, FlatMultiIndex<std::size_t> > >;
 
 
 

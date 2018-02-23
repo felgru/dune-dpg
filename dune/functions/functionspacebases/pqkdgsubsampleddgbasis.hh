@@ -25,11 +25,11 @@ namespace Functions {
 // *****************************************************************************
 // This is the reusable part of the basis. It contains
 //
-//   PQkDGSubsampledDGNodeFactory
+//   PQkDGSubsampledDGPreBasis
 //   PQkDGSubsampledDGNodeIndexSet
 //   PQkDGSubsampledDGNode
 //
-// The factory allows to create the others and is the owner of possible shared
+// The pre-basis allows to create the others and is the owner of possible shared
 // state. These three components do _not_ depend on the global basis or index
 // set and can be used without a global basis.
 // *****************************************************************************
@@ -41,12 +41,12 @@ template<typename GV, int s, int k, class MI, class TP>
 class PQkDGSubsampledDGNodeIndexSet;
 
 template<typename GV, int s, int k, class MI>
-class PQkDGSubsampledDGNodeFactory;
+class PQkDGSubsampledDGPreBasis;
 
 
 
 template<typename GV, int s, int k, class MI>
-class PQkDGSubsampledDGNodeFactory
+class PQkDGSubsampledDGPreBasis
 {
   static constexpr int dim = GV::dimension;
 
@@ -75,7 +75,7 @@ public:
   using SizePrefix = Dune::ReservedVector<size_type, 1>;
 
   /** \brief Constructor for a given grid view object */
-  PQkDGSubsampledDGNodeFactory(const GridView& gv) :
+  PQkDGSubsampledDGPreBasis(const GridView& gv) :
     gridView_(gv)
   {}
 
@@ -247,12 +247,15 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using NodeFactory = PQkDGSubsampledDGNodeFactory<GV, s, k, MI>;
+  using PreBasis = PQkDGSubsampledDGPreBasis<GV, s, k, MI>;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
+  using NodeFactory = PreBasis;
+#endif
 
-  using Node = typename NodeFactory::template Node<TP>;
+  using Node = typename PreBasis::template Node<TP>;
 
-  PQkDGSubsampledDGNodeIndexSet(const NodeFactory& nodeFactory) :
-    nodeFactory_(&nodeFactory)
+  PQkDGSubsampledDGNodeIndexSet(const PreBasis& preBasis) :
+    preBasis_(&preBasis)
   {}
 
   /** \brief Bind the view to a grid element
@@ -286,7 +289,7 @@ public:
   It indices(It it) const
   {
     assert(node_ != nullptr);
-    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& gridIndexSet = preBasis_->gridView().indexSet();
     const auto& element = node_->element();
 
     for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
@@ -295,7 +298,7 @@ public:
       {
         case 1:
         {
-          *it = {{ nodeFactory_->dofsPerEdge
+          *it = {{ preBasis_->dofsPerEdge
                    * gridIndexSet.subIndex(element,0,0) + i }};
           continue;
         }
@@ -303,14 +306,14 @@ public:
         {
           if (element.type().isTriangle())
           {
-            *it = {{ nodeFactory_->dofsPerTriangle
+            *it = {{ preBasis_->dofsPerTriangle
                      * gridIndexSet.subIndex(element,0,0) + i }};
             continue;
           }
           else if (element.type().isQuadrilateral())
           {
-            *it = {{ nodeFactory_->quadrilateralOffset_
-                     + nodeFactory_->dofsPerQuad
+            *it = {{ preBasis_->quadrilateralOffset_
+                     + preBasis_->dofsPerQuad
                        * gridIndexSet.subIndex(element,0,0) + i }};
             continue;
           }
@@ -327,27 +330,27 @@ public:
 #else
   MultiIndex index(size_type i) const
   {
-    const auto& gridIndexSet = nodeFactory_->gridView().indexSet();
+    const auto& gridIndexSet = preBasis_->gridView().indexSet();
     const auto& element = node_->element();
 
     switch (dim)
     {
       case 1:
       {
-        return {nodeFactory_->dofsPerEdge
+        return {preBasis_->dofsPerEdge
                 * gridIndexSet.subIndex(element,0,0) + i};
       }
       case 2:
       {
         if (element.type().isTriangle())
         {
-          return {nodeFactory_->dofsPerTriangle
+          return {preBasis_->dofsPerTriangle
                   * gridIndexSet.subIndex(element,0,0) + i};
         }
         else if (element.type().isQuadrilateral())
         {
-          return {nodeFactory_->quadrilateralOffset_
-                  + nodeFactory_->dofsPerQuad
+          return {preBasis_->quadrilateralOffset_
+                  + preBasis_->dofsPerQuad
                     * gridIndexSet.subIndex(element,0,0) + i};
         }
         else
@@ -361,7 +364,7 @@ public:
 #endif
 
 protected:
-  const NodeFactory* nodeFactory_;
+  const PreBasis* preBasis_;
 
   const Node* node_;
 };
@@ -373,25 +376,27 @@ namespace BasisBuilder {
 namespace Imp {
 
 template<std::size_t s, std::size_t k>
-struct PQkDGSubsampledDGNodeFactoryBuilder
+struct PQkDGSubsampledDGPreBasisFactory
 {
-  static const std::size_t requiredMultiIndexSize=1;
+  static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView>
-  auto build(const GridView& gridView)
-    -> PQkDGSubsampledDGNodeFactory<GridView, s, k, MultiIndex>
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+  auto makePreBasis(const GridView& gridView) const
+#else
+  auto build(const GridView& gridView) const
+#endif
   {
-    return {gridView};
+    return PQkDGSubsampledDGPreBasis<GridView, s, k, MultiIndex>(gridView);
   }
 };
 
 } // end namespace BasisBuilder::Imp
 
 template<std::size_t s, std::size_t k>
-Imp::PQkDGSubsampledDGNodeFactoryBuilder<s, k>
-pqDGSubsampledDG()
+auto pqDGSubsampledDG()
 {
-  return{};
+  return Imp::PQkDGSubsampledDGPreBasisFactory<s, k>();
 }
 
 } // end namespace BasisBuilder
@@ -413,7 +418,7 @@ pqDGSubsampledDG()
  * \tparam k The order of the basis
  */
 template<typename GV, int s, int k>
-using PQkDGSubsampledDGNodalBasis = DefaultGlobalBasis<PQkDGSubsampledDGNodeFactory<GV, s, k, FlatMultiIndex<std::size_t> > >;
+using PQkDGSubsampledDGNodalBasis = DefaultGlobalBasis<PQkDGSubsampledDGPreBasis<GV, s, k, FlatMultiIndex<std::size_t> > >;
 
 
 

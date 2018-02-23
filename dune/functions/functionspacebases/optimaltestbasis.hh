@@ -56,17 +56,17 @@ protected:
   const Element* element_;
 };
 
-struct EmptyNodeFactoryConstants {};
+struct EmptyPreBasisConstants {};
 
 
 // *****************************************************************************
 // This is the reusable part of the basis. It contains
 //
-//   OptimalTestBasisNodeFactory
+//   OptimalTestBasisPreBasis
 //   OptimalTestBasisNodeIndexSet
 //   OptimalTestBasisNode
 //
-// The factory allows to create the others and is the owner of possible shared
+// The pre-basis allows to create the others and is the owner of possible shared
 // state. These three components do _not_ depend on the global basis or index
 // set and can be used without a global basis.
 // *****************************************************************************
@@ -78,22 +78,22 @@ template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, c
 class OptimalTestBasisNodeIndexSet;
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
-class OptimalTestBasisNodeFactory;
+class OptimalTestBasisPreBasis;
 
 
 template<typename Space>
-struct RefinementConstants : public EmptyNodeFactoryConstants {};
+struct RefinementConstants : public EmptyPreBasisConstants {};
 
 template<class GV, int level, int k>
 struct RefinementConstants
        < DefaultGlobalBasis<
-             PQkDGRefinedDGNodeFactory
+             PQkDGRefinedDGPreBasis
              <GV, level, k, FlatMultiIndex<std::size_t> > > >
-  : public PQkDGRefinedDGNodeFactory<GV, level, k, FlatMultiIndex<std::size_t> >
+  : public PQkDGRefinedDGPreBasis<GV, level, k, FlatMultiIndex<std::size_t> >
            ::RefinementConstants {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
-class OptimalTestBasisNodeFactory
+class OptimalTestBasisPreBasis
   : public RefinementConstants<
                typename std::tuple_element<testIndex,
                      typename TestspaceCoefficientMatrix::TestSpaces
@@ -125,7 +125,7 @@ public:
 
 
   /** \brief Constructor for a given test coefficient matrix */
-  OptimalTestBasisNodeFactory(TestspaceCoefficientMatrix& testCoeffMat) :
+  OptimalTestBasisPreBasis(TestspaceCoefficientMatrix& testCoeffMat) :
     testspaceCoefficientMatrix_(testCoeffMat)
   {}
 
@@ -190,7 +190,7 @@ public:
     return Hybrid::accumulate(*testspaceCoefficientMatrix_.bilinearForm()
                               .getSolutionSpaces(), 0,
                               [&](size_type acc, const auto& s) {
-                                return acc + s.nodeFactory().maxNodeSize();
+                                return acc + s.preBasis().maxNodeSize();
                               });
   }
 
@@ -383,18 +383,21 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using NodeFactory = OptimalTestBasisNodeFactory<TestspaceCoefficientMatrix, testIndex, MI>;
+  using PreBasis = OptimalTestBasisPreBasis<TestspaceCoefficientMatrix, testIndex, MI>;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
+  using NodeFactory = PreBasis;
+#endif
 
-  using Node = typename NodeFactory::template Node<TP>;
+  using Node = typename PreBasis::template Node<TP>;
 
   typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
   typedef Dune::detail::getLocalIndexSets_t<SolutionSpaces>
       SolutionLocalIndexSets;
 
-  OptimalTestBasisNodeIndexSet(const NodeFactory& nodeFactory) :
-    nodeFactory_(&nodeFactory),
+  OptimalTestBasisNodeIndexSet(const PreBasis& preBasis) :
+    preBasis_(&preBasis),
     solutionLocalIndexSets_(Dune::detail::getLocalIndexSets(
-                      *nodeFactory.testspaceCoefficientMatrix_
+                      *preBasis.testspaceCoefficientMatrix_
                           .bilinearForm().getSolutionSpaces()))
   {}
 
@@ -449,7 +452,7 @@ public:
               [&](It it, auto i) {
                 return computeIndices(it,
                   std::get<i>(solutionLocalIndexSets_),
-                  nodeFactory_->globalOffsets[i]);
+                  preBasis_->globalOffsets[i]);
               });
   }
 #else
@@ -463,13 +466,13 @@ public:
                     computeIndex(space_index, index_result, index_found));
 
     MultiIndex result;
-    result[0]=(nodeFactory_->globalOffsets[space_index]+index_result);
+    result[0]=(preBasis_->globalOffsets[space_index]+index_result);
     return result;
   }
 #endif
 
 protected:
-  const NodeFactory* nodeFactory_;
+  const PreBasis* preBasis_;
 
   const Node* node_;
 
@@ -494,7 +497,7 @@ protected:
  * \tparam testIndex  index of the optimal test space in the test space tuple
  */
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex = 0>
-using OptimalTestBasis = DefaultGlobalBasis<OptimalTestBasisNodeFactory<TestspaceCoefficientMatrix, testIndex, FlatMultiIndex<std::size_t> > >;
+using OptimalTestBasis = DefaultGlobalBasis<OptimalTestBasisPreBasis<TestspaceCoefficientMatrix, testIndex, FlatMultiIndex<std::size_t> > >;
 
 
 

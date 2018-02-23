@@ -46,10 +46,10 @@ ReferenceRefinementCache<ctype, dim, level>
     RefinedNode<Element, ctype, dim, level>::refinementCache_{};
 
 template<int dim, int level, int k>
-struct DGRefinedNodeFactoryConstants {};
+struct DGRefinedPreBasisConstants {};
 
 template<int level, int k>
-struct DGRefinedNodeFactoryConstants<2, level, k>
+struct DGRefinedPreBasisConstants<2, level, k>
 {
   const static int dofsPerSubEdge        = k+1;
   const static int dofsPerSubTriangle    = (k+1)*(k+2)/2;
