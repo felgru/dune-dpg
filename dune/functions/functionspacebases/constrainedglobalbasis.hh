@@ -6,7 +6,6 @@
 #include <dune/common/reservedvector.hh>
 #include <dune/common/typeutilities.hh>
 #include <dune/common/concept.hh>
-#include <dune/common/version.hh>
 
 #include <dune/functions/common/type_traits.hh>
 #include <dune/functions/functionspacebases/constrainedlocalindexset.hh>
@@ -45,9 +44,6 @@ public:
 
   //! Pre-basis providing the implementation details
   using PreBasis = PB;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   //! The empty prefix path that identifies the root in the local ansatz tree
   using PrefixPath = TypeTree::HybridTreePath<>;
@@ -104,13 +100,6 @@ public:
   {
     return preBasis_;
   }
-
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  const NodeFactory& nodeFactory() const
-  {
-    return preBasis();
-  }
-#endif
 
   /**
    * \brief Update the stored grid view
