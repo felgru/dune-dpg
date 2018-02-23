@@ -248,6 +248,9 @@ public:
   using MultiIndex = MI;
 
   using PreBasis = PQkDGSubsampledDGPreBasis<GV, s, k, MI>;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
+  using NodeFactory = PreBasis;
+#endif
 
   using Node = typename PreBasis::template Node<TP>;
 
