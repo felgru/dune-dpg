@@ -73,8 +73,8 @@ void getLocalMatrix(const LocalView& localView, Matrix& elementMatrix)
   // Get set of shape functions for this element
   const auto& localFiniteElement = localView.tree().finiteElement();
 
-  elementMatrix.setSize(localFiniteElement.localBasis().size(),
-                        localFiniteElement.localBasis().size());
+  elementMatrix.setSize(localFiniteElement.size(),
+                        localFiniteElement.size());
   elementMatrix = 0;      // fills the entire matrix with zeroes
 
   // TODO: This quadrature order seems way too large.

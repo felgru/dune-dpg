@@ -259,7 +259,7 @@ namespace detail {
         = subGridLocalView.tree().finiteElement();
     const unsigned int subElementStride =
         (is_DGRefinedFiniteElement<SubGridSpace>::value) ?
-          subGridLocalFiniteElement.localBasis().size() : 0;
+          subGridLocalFiniteElement.size() : 0;
 
     unsigned int subElementOffset = 0;
     unsigned int subElementIndex = 0;
@@ -398,7 +398,7 @@ namespace detail {
 
               const unsigned int subElementStride =
                   (is_DGRefinedFiniteElement<SubGridGlobalBasis>::value) ?
-                    subGridLocalFiniteElement.localBasis().size() : 0;
+                    subGridLocalFiniteElement.size() : 0;
 
               std::vector<FieldVector<double, 1>> interpolatedSubGridLocalData;
               unsigned int subElementOffset = 0;
@@ -671,7 +671,7 @@ public:
 
                 const unsigned int subElementStride =
                     (is_DGRefinedFiniteElement<SubGridGlobalBasis>::value) ?
-                      localFiniteElement.localBasis().size() : 0;
+                      localFiniteElement.size() : 0;
 
                 using SubElement
                     = typename SubGridGlobalBasis::LocalView::Tree
