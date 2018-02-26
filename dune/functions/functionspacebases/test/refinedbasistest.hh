@@ -16,7 +16,7 @@ void testLocalFeForEachElement(const Basis& feBasis)
   typedef typename Basis::GridView GridView;
   const GridView gridView = feBasis.gridView();
 
-  typename Basis::LocalView localView(feBasis);
+  typename Basis::LocalView localView = feBasis.localView();
 
 
   for (const auto& element : elements(gridView))
@@ -32,7 +32,9 @@ void testLocalFeForEachElement(const Basis& feBasis)
         localView.tree().refinedReferenceElementGridView().size(0);
     if (lFE.size() * numSubElements != localView.size())
       DUNE_THROW(Exception,
-          "Size of leaf node and finite element do not coincide");
+          "Size of leaf node and finite element do not coincide: "
+          << lFE.size() << " * " << numSubElements
+          << " != " << localView.size());
   }
 }
 
