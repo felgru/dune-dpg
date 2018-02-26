@@ -806,7 +806,7 @@ applyWeakBoundaryCondition
     const unsigned int quadratureOrder
         = 2*localFiniteElement.localBasis().order();
 
-    size_t n = localFiniteElement.localBasis().size();
+    const size_t n = localFiniteElement.size();
 
     Matrix<FieldMatrix<double,1,1> > elementMatrix;
     // Set all matrix entries to zero
@@ -902,7 +902,7 @@ defineCharacteristicFaces_impl(
 
     const auto& localFiniteElement = solutionLocalView.tree().finiteElement();
 
-    size_t n = localFiniteElement.localBasis().size();
+    const size_t n = localFiniteElement.size();
 
     std::vector<bool>  characteristicFaces(e.subEntities(1), false);
     bool characteristicFound = false;
@@ -1047,7 +1047,7 @@ defineCharacteristicFaces_impl(
 
     const auto& localFiniteElement = solutionLocalView.tree().finiteElement();
 
-    size_t n = localFiniteElement.localBasis().size();
+    const size_t n = localFiniteElement.size();
 
     std::vector<bool>  characteristicFaces(e.subEntities(1), false);
     bool characteristicFound = false;
@@ -1209,7 +1209,7 @@ applyMinimization
     const auto& localFiniteElement
         = std::get<spaceIndex>(solutionLocalViews).tree().finiteElement();
 
-    size_t n = localFiniteElement.localBasis().size();
+    const size_t n = localFiniteElement.size();
 
     Matrix<FieldMatrix<double,1,1> > elementMatrix;
 

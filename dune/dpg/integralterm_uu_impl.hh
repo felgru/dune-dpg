@@ -33,8 +33,8 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
   const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
 
-  const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
-  const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
+  const unsigned int nLhs(lhsLocalFiniteElement.size());
+  const unsigned int nRhs(rhsLocalFiniteElement.size());
 
   typename detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>::type quad
     = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
@@ -117,8 +117,8 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
   const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
 
-  const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
-  const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
+  const unsigned int nLhs(lhsLocalFiniteElement.size());
+  const unsigned int nRhs(rhsLocalFiniteElement.size());
 
   unsigned int nOutflowFaces = 0;
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)

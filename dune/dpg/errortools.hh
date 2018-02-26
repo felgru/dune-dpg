@@ -204,7 +204,7 @@ namespace Dune {
     constexpr int dim = Element::mydimension;
     const auto geometry = element.geometry();
 
-    const auto& localBasis = localView.tree().finiteElement().localBasis();
+    auto&& localBasis = localView.tree().finiteElement().localBasis();
 
     // take 2*order since we integrate u^2
     const unsigned int quadratureOrder
@@ -310,7 +310,7 @@ namespace Dune {
     const auto geometry = element.geometry();
 
     // Get set of shape functions for this element
-    const auto& localBasis = localView.tree().finiteElement().localBasis();
+    auto&& localBasis = localView.tree().finiteElement().localBasis();
 
     // taking twice the quadrature order as we integrate over a square
     const unsigned int quadratureOrder
