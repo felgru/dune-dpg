@@ -66,7 +66,7 @@ struct GetLocalLinearTermVector<integrationType, Space, false>
     // Get set of shape functions for this element
     const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
 
-    const unsigned int nDofs(localFiniteElementTest.localBasis().size());
+    const unsigned int nDofs(localFiniteElementTest.size());
 
     typename detail::ChooseQuadrature<TestSpace, TestSpace, Element>::type quad
       = detail::ChooseQuadrature<TestSpace, TestSpace, Element>
@@ -149,7 +149,7 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
 
     const unsigned int subElementStride =
         (is_DGRefinedFiniteElement<Space>::value) ?
-          localFiniteElementTest.localBasis().size() : 0;
+          localFiniteElementTest.size() : 0;
 
     unsigned int subElementOffset = 0;
     unsigned int subElementIndex = 0;

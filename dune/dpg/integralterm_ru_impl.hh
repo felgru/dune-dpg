@@ -33,8 +33,8 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
   const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
 
-  const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
-  const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
+  const unsigned int nLhs(lhsLocalFiniteElement.size());
+  const unsigned int nRhs(rhsLocalFiniteElement.size());
 
   typename detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>::type quad
     = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
@@ -45,7 +45,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
 
   const unsigned int subElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?
-        lhsLocalFiniteElement.localBasis().size() : 0;
+        lhsLocalFiniteElement.size() : 0;
 
   unsigned int subElementOffset = 0;
   unsigned int subElementIndex = 0;
@@ -139,15 +139,15 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
   const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
 
-  const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
-  const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
+  const unsigned int nLhs(lhsLocalFiniteElement.size());
+  const unsigned int nRhs(rhsLocalFiniteElement.size());
 
   const auto referenceGridView =
       lhsLocalView.tree().refinedReferenceElementGridView();
 
   const unsigned int subElementStride =
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?
-        lhsLocalFiniteElement.localBasis().size() : 0;
+        lhsLocalFiniteElement.size() : 0;
 
   unsigned int subElementOffset = 0;
   unsigned int subElementIndex = 0;

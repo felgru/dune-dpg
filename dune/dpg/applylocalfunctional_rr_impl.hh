@@ -64,10 +64,10 @@ inline static void interiorImpl(
   assert(element.type().isTriangle() || element.type().isQuadrilateral());
   const unsigned int testSubElementStride =
       (is_DGRefinedFiniteElement<TestSpace>::value) ?
-        testLocalFiniteElement.localBasis().size() : 0;
+        testLocalFiniteElement.size() : 0;
   const unsigned int solutionSubElementStride =
       (is_DGRefinedFiniteElement<SolutionSpace>::value) ?
-        solutionLocalFiniteElement.localBasis().size() : 0;
+        solutionLocalFiniteElement.size() : 0;
 
   unsigned int testSubElementOffset = 0;
   unsigned int solutionSubElementOffset = 0;
@@ -106,8 +106,7 @@ inline static void interiorImpl(
             shapeFunctionValues.begin(), shapeFunctionValues.end(),
             localFunctionalVector.begin() + solutionSubElementOffset, 0.)
           * integrationWeight;
-      for (size_t i=0, i_max=testLocalFiniteElement.localBasis().size();
-           i<i_max; i++) {
+      for (size_t i=0, i_max=testLocalFiniteElement.size(); i<i_max; i++) {
         elementVector[i+spaceOffset+testSubElementOffset]
             += functionalValue * testShapeFunctionValues[i];
       }
@@ -166,10 +165,10 @@ faceImpl(const TestLocalView& testLocalView,
 
   const unsigned int testSubElementStride =
       (is_DGRefinedFiniteElement<TestSpace>::value) ?
-        testLocalFiniteElement.localBasis().size() : 0;
+        testLocalFiniteElement.size() : 0;
   const unsigned int solutionSubElementStride =
       (is_DGRefinedFiniteElement<SolutionSpace>::value) ?
-        solutionLocalFiniteElement.localBasis().size() : 0;
+        solutionLocalFiniteElement.size() : 0;
 
   unsigned int testSubElementOffset = 0;
   unsigned int solutionSubElementOffset = 0;
