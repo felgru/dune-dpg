@@ -28,6 +28,7 @@
 #include "quadrature.hh"
 #include "linearform.hh"
 #include "localevaluation.hh"
+#include "subgrid_workarounds.hh"
 #include "testspace_coefficient_matrix.hh"
 
 
@@ -817,7 +818,7 @@ applyWeakBoundaryCondition
       if (intersection.boundary())
       { // the intersection is at the (physical) boundary of the domain
         const FieldVector<double,dim>& centerOuterNormal =
-               intersection.centerUnitOuterNormal();
+               centerUnitOuterNormal(intersection);
 
         if ((beta*centerOuterNormal) > -1e-10)
         { // everywhere except inflow boundary
@@ -838,7 +839,7 @@ applyWeakBoundaryCondition
 
             // position of the quadrature point within the element
             const FieldVector<double,dim> elementQuadPos
-                = intersection.geometryInInside().global(quadFacePos);
+                = geometryInInside(intersection).global(quadFacePos);
 
             // values of the shape functions
             std::vector<FieldVector<double,1> > solutionValues;
@@ -909,7 +910,7 @@ defineCharacteristicFaces_impl(
     for (auto&& intersection : intersections(gridView, e))
     {
       const bool characteristic =
-          fabs(beta * intersection.centerUnitOuterNormal()) < delta;
+          fabs(beta * centerUnitOuterNormal(intersection)) < delta;
       characteristicFaces[intersection.indexInInside()] = characteristic;
       characteristicFound = characteristicFound || characteristic;
     }
@@ -1053,9 +1054,9 @@ defineCharacteristicFaces_impl(
 
     for (auto&& intersection : intersections(gridView, e))
     {
-      if (intersection.conforming()) {
+      if (conforming(intersection)) {
         const bool characteristic =
-            fabs(beta * intersection.centerUnitOuterNormal()) < delta;
+            fabs(beta * centerUnitOuterNormal(intersection)) < delta;
         characteristicFaces[intersection.indexInInside()] = characteristic;
         characteristicFound = characteristicFound || characteristic;
       }
@@ -1220,7 +1221,7 @@ applyMinimization
     for (auto&& intersection : intersections(gridView, e))
     {
       const FieldVector<double,dim>& centerOuterNormal =
-             intersection.centerUnitOuterNormal();
+             centerUnitOuterNormal(intersection);
       //set relevant faces for almost characteristic faces
       relevantFaces[intersection.indexInInside()]
           = (std::abs(beta*centerOuterNormal) < delta);

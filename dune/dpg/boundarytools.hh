@@ -11,6 +11,7 @@
 #include <dune/common/version.hh>
 
 #include <dune/dpg/functions/localindexsetiteration.hh>
+#include <dune/dpg/subgrid_workarounds.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
@@ -154,7 +155,7 @@ namespace Dune {
 
         // outer normal vector in the center of the face
         const FieldVector<double,dim>& centerOuterNormal =
-               intersection.centerUnitOuterNormal();
+               centerUnitOuterNormal(intersection);
 
         // n.beta
         const double scalarProd = centerOuterNormal * beta;

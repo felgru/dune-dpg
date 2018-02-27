@@ -21,6 +21,8 @@
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
 #include <dune/functions/functionspacebases/nodes.hh>
 
+#include <dune/dpg/subgrid_workarounds.hh>
+
 
 namespace Dune {
 namespace Functions {
@@ -118,7 +120,7 @@ public:
     size_t nextEdgeDof = gridView_.size(dim); // edges start after vertices
     for(const auto& e : elements(gridView_)) {
       for (auto&& intersection : intersections(gridView_, e)) {
-        if (!intersection.conforming()) {
+        if (!conforming(intersection)) {
           if(intersection.inside().level() < intersection.outside().level()) {
             // inside dominates outside with one level difference
             assert(intersection.outside().level()
