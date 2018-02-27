@@ -19,11 +19,9 @@ namespace Dune
 
     using Traits = typename LocalBasis::Traits;
 
-    ScaledLocalBasis () = delete;
-
-    ScaledLocalBasis (const std::vector<double>& scalingWeights) :
+    ScaledLocalBasis () :
       wrappedBasis_(nullptr),
-      scalingWeights(scalingWeights) {}
+      weightsBegin_() {}
 
     //! \brief number of shape functions
     unsigned int size () const
@@ -35,7 +33,7 @@ namespace Dune
                                   std::vector<typename Traits::RangeType>& out) const
     {
       wrappedBasis_->evaluateFunction(x, out);
-      auto weight = scalingWeights.begin();
+      auto weight = weightsBegin_;
       std::for_each(std::begin(out), std::end(out),
           [&](typename Traits::RangeType& o)
           {
@@ -49,7 +47,7 @@ namespace Dune
                       std::vector<typename Traits::JacobianType>& out) const
     {
       wrappedBasis_->evaluateJacobian(x, out);
-      auto weight = scalingWeights.begin();
+      auto weight = weightsBegin_;
       std::for_each(std::begin(out), std::end(out),
           [&](typename Traits::JacobianType& o)
           {
@@ -63,7 +61,7 @@ namespace Dune
                  std::vector<typename Traits::RangeType>& out) const
     {
       wrappedBasis_->partial(order, in, out);
-      auto weight = scalingWeights.begin();
+      auto weight = weightsBegin_;
       std::for_each(std::begin(out), std::end(out),
           [&](typename Traits::RangeType& o)
           {
@@ -78,14 +76,17 @@ namespace Dune
       return wrappedBasis_->order();
     }
 
-    void setWrappedBasis (const LocalBasis& wrappedBasis)
+    void setWrappedBasisAndWeights(
+        const LocalBasis& wrappedBasis,
+        typename std::vector<double>::const_iterator weightsBegin)
     {
       wrappedBasis_ = &wrappedBasis;
+      weightsBegin_ = std::move(weightsBegin);
     }
 
   private:
     const LocalBasis* wrappedBasis_;
-    const std::vector<double>& scalingWeights;
+    typename std::vector<double>::const_iterator weightsBegin_;
   };
 
   template<class LocalInterpolation>
@@ -93,16 +94,15 @@ namespace Dune
   {
   public:
 
-    ScaledLocalInterpolation() = delete;
-    ScaledLocalInterpolation(const std::vector<double>& scalingWeights) :
+    ScaledLocalInterpolation() :
       wrappedInterpolation_(nullptr),
-      scalingWeights(scalingWeights) {};
+      weightsBegin_() {};
 
     template<typename F, typename C>
     void interpolate (const F& f, std::vector<C>& out) const
     {
       wrappedInterpolation_->interpolate(f, out);
-      auto weight = scalingWeights.begin();
+      auto weight = weightsBegin_;
       std::for_each(std::begin(out), std::end(out),
           [&](C& o)
           {
@@ -111,14 +111,17 @@ namespace Dune
           });
     }
 
-    void setWrappedInterpolation(const LocalInterpolation& wrappedInterpolation)
+    void setWrappedInterpolationAndWeights(
+        const LocalInterpolation& wrappedInterpolation,
+        typename std::vector<double>::const_iterator weightsBegin)
     {
       wrappedInterpolation_ = &wrappedInterpolation;
+      weightsBegin_ = std::move(weightsBegin);
     }
 
   private:
     const LocalInterpolation* wrappedInterpolation_;
-    const std::vector<double>& scalingWeights;
+    typename std::vector<double>::const_iterator weightsBegin_;
   };
 
   template<class LocalFiniteElement>
@@ -136,17 +139,19 @@ namespace Dune
     // TODO: replace double with more appropriate type
     ScaledLocalFiniteElement (const std::vector<double>& scalingWeights) :
       wrappedFiniteElement_(nullptr),
-      scalingWeights_(scalingWeights),
-      localBasis_{scalingWeights_},
-      localInterpolation_{scalingWeights_}
+      localBasis_(),
+      localInterpolation_()
     {}
 
-    void setWrappedFiniteElement (const LocalFiniteElement& newFiniteElement)
+    void setWrappedFiniteElementAndWeights(
+        const LocalFiniteElement& newFiniteElement,
+        const typename std::vector<double>::const_iterator weightsBegin)
     {
       wrappedFiniteElement_ = &newFiniteElement;
-      localBasis_.setWrappedBasis(wrappedFiniteElement_->localBasis());
-      localInterpolation_.setWrappedInterpolation(
-          wrappedFiniteElement_->localInterpolation());
+      localBasis_.setWrappedBasisAndWeights
+          (wrappedFiniteElement_->localBasis(), weightsBegin);
+      localInterpolation_.setWrappedInterpolationAndWeights(
+          wrappedFiniteElement_->localInterpolation(), weightsBegin);
     }
 
     const typename Traits::LocalBasisType& localBasis () const
@@ -177,7 +182,6 @@ namespace Dune
 
   private:
     const LocalFiniteElement* wrappedFiniteElement_;
-    const std::vector<double>& scalingWeights_;
     typename Traits::LocalBasisType localBasis_;
     typename Traits::LocalInterpolationType localInterpolation_;
   };

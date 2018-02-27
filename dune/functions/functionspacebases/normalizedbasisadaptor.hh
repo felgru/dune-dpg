@@ -196,24 +196,6 @@ public:
     scalingWeights_.reserve(preBasis.maxNodeSize());
   }
 
-  NormalizedRefinedNode(const NormalizedRefinedNode& other)
-    : wrappedNode_(other.wrappedNode_)
-    , innerProduct_(other.innerProduct_)
-    , localViews_(Dune::detail::getLocalViews(*innerProduct_.getTestSpaces()))
-    , scalingWeights_(other.scalingWeights_)
-    , finiteElement_(scalingWeights_)
-  {
-    scalingWeights_.reserve(other.scalingWeights_.capacity());
-  }
-
-  NormalizedRefinedNode(NormalizedRefinedNode&& other)
-    : wrappedNode_(std::move(other.wrappedNode_))
-    , innerProduct_(std::move(other.innerProduct_))
-    , localViews_(Dune::detail::getLocalViews(*innerProduct_.getTestSpaces()))
-    , scalingWeights_(std::move(other.scalingWeights_))
-    , finiteElement_(scalingWeights_)
-  {}
-
   const Element& element() const
   {
     return wrappedNode_.element();
@@ -238,7 +220,8 @@ public:
     for(size_t i = 0, size = scalingWeights_.size(); i < size; i++)
       scalingWeights_[i] = 1./localGramian[i][i];
 
-    finiteElement_.setWrappedFiniteElement(wrappedNode_.finiteElement());
+    finiteElement_.setWrappedFiniteElementAndWeights(
+        wrappedNode_.finiteElement(), scalingWeights_.begin());
   }
 
   const RefinementGridView refinedReferenceElementGridView() const
