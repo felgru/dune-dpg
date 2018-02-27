@@ -37,6 +37,7 @@
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/functionplotter.hh>
+#include <dune/dpg/functions/normedspaces.hh>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -200,18 +201,34 @@ int main(int argc, char** argv)
 
     // v search space
     using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
-    auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
+    auto unnormalizedTestSpaces = make_space_tuple<FEBasisTest>(gridView);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
         = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 4>;
-    auto testSpaces_aposteriori
+    auto unnormalizedTestSpaces_aposteriori
         = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
     FieldVector<double, dim> beta
                = {std::cos(boost::math::constants::pi<double>()/8),
                   std::sin(boost::math::constants::pi<double>()/8)};
     const double c = sigma;
+    auto unnormalizedInnerProduct = make_InnerProduct(unnormalizedTestSpaces,
+        make_tuple(
+             make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                   DomainOfIntegration::interior>(1., beta),
+             make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                   DomainOfIntegration::face>(1., beta)));
+    auto testSpaces = make_normalized_space_tuple(unnormalizedInnerProduct);
+    auto unnormalizedInnerProduct_aposteriori
+        = replaceTestSpaces(unnormalizedInnerProduct,
+                            unnormalizedTestSpaces_aposteriori);
+    auto testSpaces_aposteriori
+        = make_normalized_space_tuple(unnormalizedInnerProduct_aposteriori);
+    auto innerProduct
+        = replaceTestSpaces(unnormalizedInnerProduct, testSpaces);
+    auto innerProduct_aposteriori
+       = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
     auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
             make_tuple(
@@ -223,14 +240,6 @@ int main(int argc, char** argv)
                                       DomainOfIntegration::face>(1., beta)));
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
-     auto innerProduct = make_InnerProduct(testSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta),
-              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                    DomainOfIntegration::face>(1., beta)));
-     auto innerProduct_aposteriori
-        = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
     //  System assembler without geometry buffer
     //auto systemAssembler
