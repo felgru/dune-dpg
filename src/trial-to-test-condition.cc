@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <dune/common/fmatrix.hh>
+#include <dune/dpg/functions/normedspaces.hh>
 #include <dune/dpg/innerproduct.hh>
 #include <dune/dpg/testspace_coefficient_matrix.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
@@ -15,6 +16,8 @@
 
 #include <Eigen/Core>
 #include <Eigen/SVD>
+
+#include <unistd.h>
 
 using namespace Dune;
 
@@ -57,14 +60,39 @@ double conditionOnFirstElement(InnerProduct& innerProduct)
   }
 }
 
-int main() {
+void printHelp(const char* name) {
+  std::cerr << "Usage: " << name << " [-n] [-l m]\n"
+               "Compute condition number of trial to test map for elements "
+               "of decreasing size\n\n"
+               " -n: normalize test functions\n"
+               " -l m: maximal grid refinement level (default: 30)\n";
+  exit(0);
+}
+
+int main(int argc, char *argv[]) {
+  bool normalized = false;
+  int numLevels = 30;
+  int opt;
+  while ((opt = getopt(argc,argv,"nl:h")) != EOF)
+    switch(opt)
+    {
+      case 'n': normalized = true; break;
+      case 'l': numLevels = atoi(optarg); break;
+      default:
+      case 'h':
+      case '?':
+        printHelp(argv[0]);
+    }
+  if(optind != argc) {
+    printHelp(argv[0]);
+  }
+
   constexpr int dim = 2;
   using Grid = UGGrid<dim>;
 
   const double theta = 1.;
   const FieldVector<double, dim> s = {std::cos(theta), std::sin(theta)};
 
-  const int numLevels = 30;
   std::vector<std::shared_ptr<Grid>> grids;
   grids.reserve(numLevels);
   for(int level = 0; level < numLevels; level++) {
@@ -83,19 +111,25 @@ int main() {
     const LeafGridView gridView = grid->leafGridView();
 
     using FEBasisTest = Functions::PQkDGRefinedDGBasis<LeafGridView, 1, 3>;
-    auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
+    auto unnormalizedTestSpaces = make_space_tuple<FEBasisTest>(gridView);
 
-    auto innerProduct =
-      make_InnerProduct(testSpaces,
+    auto unnormalizedInnerProduct =
+      make_InnerProduct(unnormalizedTestSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                     DomainOfIntegration::interior>(1., s),
               make_IntegralTerm<0,0,
                                 IntegrationType::travelDistanceWeighted,
                                 DomainOfIntegration::face>(1., s)));
-    std::cout << level
-              << ": "
-              << conditionOnFirstElement(innerProduct)
-              << '\n';
+    double condition;
+    if(normalized) {
+      auto testSpaces = make_normalized_space_tuple(unnormalizedInnerProduct);
+      auto innerProduct
+          = replaceTestSpaces(unnormalizedInnerProduct, testSpaces);
+      condition = conditionOnFirstElement(innerProduct);
+    } else {
+      condition = conditionOnFirstElement(unnormalizedInnerProduct);
+    }
+    std::cout << level << ": " << condition << '\n';
   }
 }
