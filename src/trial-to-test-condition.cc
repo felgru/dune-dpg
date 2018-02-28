@@ -9,7 +9,7 @@
 #include <dune/dpg/functions/normedspaces.hh>
 #include <dune/dpg/innerproduct.hh>
 #include <dune/dpg/testspace_coefficient_matrix.hh>
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 #include <dune/istl/matrix.hh>
@@ -110,7 +110,8 @@ int main(int argc, char *argv[]) {
     using LeafGridView = typename Grid::LeafGridView;
     const LeafGridView gridView = grid->leafGridView();
 
-    using FEBasisTest = Functions::PQkDGRefinedDGBasis<LeafGridView, 1, 3>;
+    using FEBasisTest
+        = Functions::BernsteinDGRefinedDGBasis<LeafGridView, 1, 3>;
     auto unnormalizedTestSpaces = make_space_tuple<FEBasisTest>(gridView);
 
     auto unnormalizedInnerProduct =
