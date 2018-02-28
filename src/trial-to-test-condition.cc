@@ -39,6 +39,24 @@ Eigen::MatrixXd stiffnessMatrix(InnerProduct& innerProduct,
   return stiffnessMatrix;
 }
 
+template<class InnerProduct>
+double conditionOnFirstElement(InnerProduct& innerProduct)
+{
+  auto testSpaces = innerProduct.getTestSpaces();
+  auto testLocalViews = Dune::detail::getLocalViews(*testSpaces);
+  const auto gridView = std::get<0>(*testSpaces).gridView();
+  for(const auto& e : elements(gridView)) {
+    Eigen::MatrixXd ip
+        = stiffnessMatrix(innerProduct, testLocalViews, e);
+    Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner>
+        svd(ip);
+
+    // only visit first element
+    return svd.singularValues()(0)
+         / svd.singularValues()(ip.rows()-1);
+  }
+}
+
 int main() {
   constexpr int dim = 2;
   using Grid = UGGrid<dim>;
@@ -66,8 +84,6 @@ int main() {
 
     using FEBasisTest = Functions::PQkDGRefinedDGBasis<LeafGridView, 1, 3>;
     auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
-    using namespace Dune::detail;
-    auto testLocalViews = getLocalViews(*testSpaces);
 
     auto innerProduct =
       make_InnerProduct(testSpaces,
@@ -77,19 +93,9 @@ int main() {
               make_IntegralTerm<0,0,
                                 IntegrationType::travelDistanceWeighted,
                                 DomainOfIntegration::face>(1., s)));
-    for(const auto& e : elements(gridView)) {
-      Eigen::MatrixXd ip
-          = stiffnessMatrix(innerProduct, testLocalViews, e);
-      Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner>
-          svd(ip);
-      std::cout << level
-                << ": "
-                // compute condition of ip
-                << svd.singularValues()(0)
-                    / svd.singularValues()(ip.rows()-1)
-                << '\n';
-
-      break; // only visit first element
-    }
+    std::cout << level
+              << ": "
+              << conditionOnFirstElement(innerProduct)
+              << '\n';
   }
 }
