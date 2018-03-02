@@ -226,13 +226,23 @@ inline double evaluateFactor(FactorType factor, PositionType x)
   return factor(x);
 }
 
-template<class FactorType, class PositionType,
+
+template<class BoundaryValue, class Index,
          typename std::enable_if<
-                    is_vector<std::decay_t<FactorType>>::value>
+                    std::is_arithmetic<std::decay_t<BoundaryValue>>::value>
                               ::type* = nullptr >
-inline double evaluateFactor(const FactorType& factor, PositionType x)
+inline double evaluateBoundary(BoundaryValue boundary, Index)
 {
-  return factor[x];
+  return boundary;
+}
+
+template<class BoundaryValue, class Index,
+         typename std::enable_if<
+                    is_vector<std::decay_t<BoundaryValue>>::value>
+                              ::type* = nullptr >
+inline double evaluateBoundary(const BoundaryValue& boundary, Index i)
+{
+  return boundary[i];
 }
 
 }}

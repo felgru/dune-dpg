@@ -700,7 +700,7 @@ applyDirichletBoundaryToRhs
     if (dirichletNodes[i])
     {
       /* TODO: Needs adaptation when value is a function. */
-      rhs[globalOffset+i] = detail::evaluateFactor(boundaryValue,i);
+      rhs[globalOffset+i] = detail::evaluateBoundary(boundaryValue,i);
     }
   }
 
