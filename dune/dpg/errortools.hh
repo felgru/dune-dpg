@@ -332,7 +332,7 @@ namespace Dune {
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
       // Position of the current quadrature point in the current element
-      const FieldVector<double,dim>& mapQuadPos = geometry.global(quadPos);
+      const FieldVector<double,dim> globalQuadPos = geometry.global(quadPos);
 
       // The multiplicative factor in the integral transformation formula
       const double integrationElement = geometry.integrationElement(quadPos);
@@ -342,15 +342,15 @@ namespace Dune {
       std::vector<FieldVector<double,1> > shapeFunctionValues;
       localBasis.evaluateFunction(quadPos, shapeFunctionValues);
 
-      // Evaluation of u at the point mapQuadPos, which is quadPos
+      // Evaluation of u at the point globalQuadPos, which is quadPos
       // mapped to the physical domain
       for(unsigned int i=0; i<shapeFunctionValues.size(); i++)
       {
         uQuad += shapeFunctionValues[i]*u[i];
       }
 
-      // Value of uRef at mapQuadPos
-      const double uExactQuad = uRef(mapQuadPos);
+      // Value of uRef at globalQuadPos
+      const double uExactQuad = uRef(globalQuadPos);
 
       // we add the squared error at the quadrature point
       errSquare += (uQuad - uExactQuad)*(uQuad - uExactQuad)
@@ -503,7 +503,7 @@ namespace Dune {
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
       // Global position of the current quadrature point
-      const FieldVector<double,dim>& globalQuadPos
+      const FieldVector<double,dim> globalQuadPos
           = geometry.global(quadPos);
       tmpValue+= geometry.integrationElement(quadPos)
                  * quad[pt].weight()
