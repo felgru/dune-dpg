@@ -204,29 +204,6 @@ struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad, true> {
 };
 
 
-template<class FactorType, class PositionType,
-         typename std::enable_if<
-                    std::is_arithmetic<std::decay_t<FactorType>>::value>
-                              ::type* = nullptr >
-inline double evaluateFactor(FactorType factor, PositionType)
-{
-  return factor;
-}
-
-template<class FactorType, class PositionType,
-         typename std::enable_if<
-#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
-                    Std::is_invocable_r<double,FactorType,const PositionType&>
-#else
-                    Std::is_callable<FactorType(const PositionType&),double>
-#endif
-                    ::value>::type* = nullptr >
-inline double evaluateFactor(FactorType factor, PositionType x)
-{
-  return factor(x);
-}
-
-
 template<class BoundaryValue, class Index,
          typename std::enable_if<
                     std::is_arithmetic<std::decay_t<BoundaryValue>>::value>

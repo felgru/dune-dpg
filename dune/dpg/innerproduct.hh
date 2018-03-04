@@ -104,6 +104,9 @@ namespace Dune {
 
       /* set up local offsets */
       localTotalTestSize = detail::computeOffsets(localTestSpaceOffsets, tlv);
+
+      const auto& e = std::get<0>(tlv).element();
+      Hybrid::forEach(terms, [&](auto& t) { std::get<2>(t).bind(e); });
     }
 
     /**

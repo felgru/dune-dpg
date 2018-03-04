@@ -61,7 +61,8 @@ namespace Dune {
      * The local integrals will be added with the given offsets
      * to \p elementVector.
      *
-     * \note Not thread-safe!
+     * \pre The localView has to be bound to the same element as the
+     *      LinearFunctionalTerm.
      *
      * \param[in]     localView       local view of the test space
      * \param[in,out] elementVector   the local rhs vector
@@ -73,10 +74,16 @@ namespace Dune {
                         VectorType& elementVector,
                         size_t spaceOffset) const;
 
+    void bind(const Element& element)
+    {
+      solutionLocalView.bind(element);
+      solutionLocalIndexSet.bind(solutionLocalView);
+    }
+
   private:
     const FunctionalVector& functionalVector;
-    mutable SolutionLocalView solutionLocalView;
-    mutable SolutionLocalIndexSet solutionLocalIndexSet;
+    SolutionLocalView solutionLocalView;
+    SolutionLocalIndexSet solutionLocalIndexSet;
   };
 
 /**
@@ -164,9 +171,6 @@ getLocalVector(const LocalView& localView,
                VectorType& elementVector,
                const size_t spaceOffset) const
 {
-  solutionLocalView.bind(localView.element());
-  solutionLocalIndexSet.bind(solutionLocalView);
-
   // Now get the local contribution to the right-hand side vector
   detail::ApplyLocalFunctional
     < IntegrationType::valueValue
@@ -195,15 +199,15 @@ getLocalVector(const LocalView& localView,
    *                        the test functions get integrated
    * \tparam FunctionalVector  the coefficient vector for aforementioned
    *                           function
-   * \tparam FactorType     the type of the factor with which
+   * \tparam Factor     the type of the factor with which
    *                        we multiply the integrand
-   * \tparam DirectionType  the type of the transport directions
+   * \tparam Direction  the type of the transport directions
    */
   template <IntegrationType type,
             class SolutionSpace,
             class FunctionalVector,
-            class FactorType,
-            class DirectionType = FieldVector<double, 2> >
+            class Factor,
+            class Direction = FieldVector<double, 2> >
   class SkeletalLinearFunctionalTerm
   {
     using SolutionLocalView = typename SolutionSpace::LocalView;
@@ -220,9 +224,10 @@ getLocalVector(const LocalView& localView,
      */
     SkeletalLinearFunctionalTerm (const FunctionalVector& functionalVector,
                                   const SolutionSpace& solutionSpace,
-                                  FactorType factor = 1,
-                                  DirectionType beta = {1., 1.})
-        : factor(factor)
+                                  Factor coefficient,
+                                  Direction beta = {1., 1.})
+        : factor(coefficient)
+        , localFactor(localFunction(factor))
         , beta(beta)
         , functionalVector(functionalVector)
         , solutionLocalView(solutionSpace.localView())
@@ -235,7 +240,8 @@ getLocalVector(const LocalView& localView,
      * The local integrals will be added with the given offsets
      * to \p elementVector.
      *
-     * \note Not thread-safe!
+     * \pre The localView has to be bound to the same element as the
+     *      LinearFunctionalTerm.
      *
      * \param[in]     localView       local view of the test space
      * \param[in,out] elementVector   the local rhs vector
@@ -247,12 +253,19 @@ getLocalVector(const LocalView& localView,
                         VectorType& elementVector,
                         size_t spaceOffset) const;
 
+    void bind(const Element& element)
+    {
+      solutionLocalView.bind(element);
+      solutionLocalIndexSet.bind(solutionLocalView);
+    }
+
   private:
-    FactorType factor;
-    DirectionType beta;
+    Factor factor;
+    LocalFactor localFactor;
+    Direction beta;
     const FunctionalVector& functionalVector;
-    mutable SolutionLocalView solutionLocalView;
-    mutable SolutionLocalIndexSet solutionLocalIndexSet;
+    SolutionLocalView solutionLocalView;
+    SolutionLocalIndexSet solutionLocalIndexSet;
   };
 
 /**
@@ -271,7 +284,7 @@ template<size_t spaceIndex,
          IntegrationType integrationType,
          class SolutionSpace,
          class FunctionalVector,
-         class FactorType, class DirectionType,
+         class Factor, class Direction,
          typename std::enable_if<
                      integrationType == IntegrationType::normalVector
                   || integrationType == IntegrationType::travelDistanceWeighted
@@ -281,21 +294,21 @@ template<size_t spaceIndex,
 auto make_SkeletalLinearFunctionalTerm(
     const FunctionalVector& functionalVector,
     const SolutionSpace& solutionSpace,
-    FactorType c, DirectionType beta)
+    Factor c, Direction beta)
     -> std::tuple<std::integral_constant<size_t, spaceIndex>,
                   SkeletalLinearFunctionalTerm<integrationType,
                                                SolutionSpace,
                                                FunctionalVector,
-                                               FactorType,
-                                               DirectionType> >
+                                               Factor,
+                                               Direction> >
 {
   return std::make_tuple(
               std::integral_constant<size_t, spaceIndex>(),
               SkeletalLinearFunctionalTerm<integrationType,
                                            SolutionSpace,
                                            FunctionalVector,
-                                           FactorType,
-                                           DirectionType>
+                                           Factor,
+                                           Direction>
                 (functionalVector, solutionSpace, c, beta));
 }
 
@@ -303,19 +316,16 @@ auto make_SkeletalLinearFunctionalTerm(
 template <IntegrationType type,
           class SolutionSpace,
           class FunctionalVector,
-          class FactorType,
-          class DirectionType>
+          class Factor,
+          class Direction>
 template <class LocalView,
           class VectorType>
 void SkeletalLinearFunctionalTerm<type, SolutionSpace, FunctionalVector,
-                                  FactorType, DirectionType>::
+                                  Factor, Direction>::
 getLocalVector(const LocalView& localView,
                VectorType& elementVector,
                size_t spaceOffset) const
 {
-  solutionLocalView.bind(localView.element());
-  solutionLocalIndexSet.bind(solutionLocalView);
-
   // Now get the local contribution to the right-hand side vector
   detail::ApplyLocalFunctional
     < type
@@ -329,7 +339,7 @@ getLocalVector(const LocalView& localView,
           solutionLocalIndexSet,
           localView.element(),
           functionalVector,
-          factor,
+          localFactor,
           beta);
 }
 

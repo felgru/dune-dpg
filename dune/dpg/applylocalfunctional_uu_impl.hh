@@ -91,7 +91,7 @@ inline static void interiorImpl(
 template <class VectorType,
           class Element,
           class FunctionalVector,
-          class FactorType,
+          class LocalFactor,
           class DirectionType>
 inline static void
 faceImpl(const TestLocalView& testLocalView,
@@ -101,7 +101,7 @@ faceImpl(const TestLocalView& testLocalView,
          const SolutionLocalIndexSet& solutionLocalIndexSet,
          const Element& element,
          const FunctionalVector& functionalVector,
-         const FactorType& factor,
+         const LocalFactor& localFactor,
          const DirectionType& beta)
 {
   constexpr int dim = Element::mydimension;
@@ -179,9 +179,6 @@ faceImpl(const TestLocalView& testLocalView,
       const FieldVector<double,dim> elementQuadPos =
               faceComputations.faceToElementPosition(quadFacePos);
 
-      const FieldVector<double,dim> globalQuadPos =
-              geometry.global(elementQuadPos);
-
       // The multiplicative factor in the integral transformation
       // formula multiplied with outer normal
       const FieldVector<double,dim> integrationOuterNormal =
@@ -192,7 +189,7 @@ faceImpl(const TestLocalView& testLocalView,
       double integrationWeight;
       if(type == IntegrationType::normalVector ||
          type == IntegrationType::travelDistanceWeighted) {
-        integrationWeight = detail::evaluateFactor(factor, globalQuadPos)
+        integrationWeight = localFactor(elementQuadPos)
                           * quadFace[pt].weight();
         if(type == IntegrationType::travelDistanceWeighted)
         {
@@ -227,7 +224,7 @@ faceImpl(const TestLocalView& testLocalView,
         }
 
         integrationWeight = sign
-                          * detail::evaluateFactor(factor, globalQuadPos)
+                          * localFactor(elementQuadPos)
                           * quadFace[pt].weight() * integrationElement;
       }
 

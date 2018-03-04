@@ -21,15 +21,15 @@ struct GetLocalLinearTermVector
 {
   using LocalViewTest = typename Space::LocalView;
 
-  template<class VectorType,
-           class FactorType,
-           class DirectionType>
+  template<class Vector,
+           class LocalFactor,
+           class Direction>
   static void getLocalVector(const LocalViewTest& localViewTest,
-                             VectorType& elementVector,
+                             Vector& elementVector,
                              size_t spaceOffset,
                              const unsigned int quadratureOrder,
-                             const FactorType& factor,
-                             const DirectionType& beta);
+                             const LocalFactor& localFactor,
+                             const Direction& beta);
 };
 
 
@@ -39,19 +39,19 @@ struct GetLocalLinearTermVector<integrationType, Space, false>
 {
   using LocalViewTest = typename Space::LocalView;
 
-  template<class VectorType,
-           class FactorType,
-           class DirectionType>
+  template<class Vector,
+           class LocalFactor,
+           class Direction>
   static void getLocalVector(const LocalViewTest& localViewTest,
-                             VectorType& elementVector,
+                             Vector& elementVector,
                              size_t spaceOffset,
                              const unsigned int quadratureOrder,
-                             const FactorType& factor,
-                             const DirectionType& beta)
+                             const LocalFactor& localFactor,
+                             const Direction& beta)
   {
     static_assert(models<Functions::Concept::
-         Function<double(const Dune::FieldVector<double, 2>&)>, FactorType>(),
-         "The factor passed to getLocalVector does not model the "
+         Function<double(const Dune::FieldVector<double, 2>&)>, LocalFactor>(),
+         "The localFactor passed to getLocalVector does not model the "
          "Function concept.");
 
     using TestSpace = typename LocalViewTest::GlobalBasis;
@@ -77,14 +77,11 @@ struct GetLocalLinearTermVector<integrationType, Space, false>
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
-      // Global position of the current quadrature point
-      const FieldVector<double,dim> globalQuadPos
-          = geometry.global(quadPos);
 
       // The multiplicative factor in the integral transformation formula
       const double integrationWeight = geometry.integrationElement(quadPos)
                                        * quad[pt].weight()
-                                       * factor(globalQuadPos);
+                                       * localFactor(quadPos);
 
      constexpr auto evaluationType = (integrationType ==
                                       LinearIntegrationType::valueFunction)
@@ -112,19 +109,19 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
 {
   using LocalViewTest = typename Space::LocalView;
 
-  template<class VectorType,
-           class FactorType,
-           class DirectionType>
+  template<class Vector,
+           class LocalFactor,
+           class Direction>
   static void getLocalVector(const LocalViewTest& localViewTest,
-                             VectorType& elementVector,
+                             Vector& elementVector,
                              size_t spaceOffset,
                              const unsigned int quadratureOrder,
-                             const FactorType& factor,
-                             const DirectionType& beta)
+                             const LocalFactor& localFactor,
+                             const Direction& beta)
   {
     static_assert(models<Functions::Concept::
-         Function<double(const Dune::FieldVector<double, 2>&)>, FactorType>(),
-         "The factor passed to getLocalVector does not model the "
+         Function<double(const Dune::FieldVector<double, 2>&)>, LocalFactor>(),
+         "The localFactor passed to getLocalVector does not model the "
          "Function concept.");
 
     using TestSpace = typename LocalViewTest::GlobalBasis;
@@ -159,14 +156,13 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
 
         // Position of the current quadrature point in the reference element
         const FieldVector<double,dim>& quadPos = quad[pt].position();
-        const FieldVector<double,dim> globalQuadPos
-            = geometry.global(subGeometryInReferenceElement.global(quadPos));
+        const FieldVector<double,dim> elementQuadPos
+            = subGeometryInReferenceElement.global(quadPos);
 
         // The multiplicative factor in the integral transformation formula
         const double weightedfunctionValue
-          = factor(globalQuadPos)
-          * geometry.integrationElement(subGeometryInReferenceElement
-                                                        .global(quadPos))
+          = localFactor(elementQuadPos)
+          * geometry.integrationElement(elementQuadPos)
           * subGeometryInReferenceElement.integrationElement(quadPos)
           * quad[pt].weight();
 
