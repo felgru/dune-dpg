@@ -31,12 +31,15 @@
 #include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
 #include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 
+#include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
+
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errorplotter.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/functionplotter.hh>
+#include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/functions/normedspaces.hh>
 
 #pragma GCC diagnostic push
@@ -136,10 +139,11 @@ template<typename FEBasisInterior, typename FEBasisTrace>
 auto make_solution_spaces(const typename FEBasisInterior::GridView& gridView)
 {
   auto interiorSpace = make_space_tuple<FEBasisInterior>(gridView);
+  auto oneFunc = Functions::make_GridViewFunction(1., gridView);
   auto l2InnerProduct = make_InnerProduct(interiorSpace,
        make_tuple(
            make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                 DomainOfIntegration::interior>(1.)));
+                                 DomainOfIntegration::interior>(oneFunc)));
   using InnerProduct = decltype(l2InnerProduct);
   using WrappedSpaces = typename InnerProduct::TestSpaces;
   using NormedSpace = std::conditional_t<
@@ -231,12 +235,18 @@ int main(int argc, char** argv)
                = {std::cos(boost::math::constants::pi<double>()/8),
                   std::sin(boost::math::constants::pi<double>()/8)};
     const double c = sigma;
+
+    auto cFunc = Functions::make_GridViewFunction(c, gridView);
+
+    auto oneFunc = Functions::make_GridViewFunction(1., gridView);
+    auto minusOneFunc = Functions::make_GridViewFunction(-1., gridView);
+
     auto unnormalizedInnerProduct = make_InnerProduct(unnormalizedTestSpaces,
         make_tuple(
              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                   DomainOfIntegration::interior>(1., beta),
+                                   DomainOfIntegration::interior>(oneFunc, beta),
              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                   DomainOfIntegration::face>(1., beta)));
+                                   DomainOfIntegration::face>(oneFunc, beta)));
     auto testSpaces = make_normalized_space_tuple(unnormalizedInnerProduct);
     auto unnormalizedInnerProduct_aposteriori
         = replaceTestSpaces(unnormalizedInnerProduct,
@@ -251,11 +261,11 @@ int main(int argc, char** argv)
     auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
             make_tuple(
                 make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                      DomainOfIntegration::interior>(c),
+                                      DomainOfIntegration::interior>(cFunc),
                 make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                      DomainOfIntegration::interior>(-1., beta),
+                                      DomainOfIntegration::interior>(minusOneFunc, beta),
                 make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                      DomainOfIntegration::face>(1., beta)));
+                                      DomainOfIntegration::face>(oneFunc, beta)));
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
 
@@ -280,13 +290,16 @@ int main(int argc, char** argv)
     /////////////////////////////////////////////////////////
     //  Assemble the system
     /////////////////////////////////////////////////////////
+    auto rhsLambda
+      = [beta](const FieldVector<double, 2>& x){ return f(x, beta); };
+    auto rhsFunc
+      = Functions::makeAnalyticGridViewFunction(rhsLambda, gridView);
     auto rightHandSide
       = make_LinearForm(testSpaces,
                         std::make_tuple(make_LinearIntegralTerm<0,
                                             LinearIntegrationType::valueFunction,
                                             DomainOfIntegration::interior>(
-                                   [beta](const FieldVector<double, 2>& x)
-                                   { return f(x, beta); })));
+                                              rhsFunc)));
 
     const auto startsystemassembler = std::chrono::steady_clock::now();
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
