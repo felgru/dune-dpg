@@ -35,18 +35,21 @@ template<class BilinForm, class InProduct>
 class SaddlepointSystemAssembler
 {
 public:
-  typedef typename BilinForm::TestSpaces TestSpaces;
-  typedef typename BilinForm::SolutionSpaces SolutionSpaces;
+  using TestSpaces = typename BilinForm::TestSpaces;
+  using SolutionSpaces = typename BilinForm::SolutionSpaces;
+  using TestSpacesPtr = typename BilinForm::TestSpacesPtr;
+  using SolutionSpacesPtr = typename BilinForm::SolutionSpacesPtr;
+  using SpacesPtr = typename TestSpaces::SpaceTuplePtr;
+  using Spaces = typename SpacesPtr::element_type;
   //! tuple type for the local views of the test spaces
-  typedef detail::getLocalViews_t<TestSpaces>  TestLocalViews;
+  using TestLocalViews = detail::getLocalViews_t<TestSpaces>;
   //! tuple type for the local views of the solution spaces
-  typedef detail::getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
+  using SolutionLocalViews = detail::getLocalViews_t<SolutionSpaces>;
   //! type of the bilinear form describing this DPG system
-  typedef BilinForm BilinearForm;
+  using BilinearForm = BilinForm;
   //! type of the inner product on the test spaces
-  typedef InProduct InnerProduct;
+  using InnerProduct = InProduct;
 
-public:
   SaddlepointSystemAssembler () = delete;
 
   /**
@@ -61,7 +64,19 @@ public:
                solutionSpaces(bilinearForm.getSolutionSpaces()),
                bilinearForm(bilinearForm),
                innerProduct(innerProduct)
-  { }
+  {
+    static_assert(std::is_same<typename BilinForm::TestSpaces,
+                               typename InProduct::TestSpaces>::value,
+        "BilinearForm and InnerProduct need to be defined over the same"
+        " test space!");
+    static_assert(std::is_same<typename TestSpaces::SpaceTuplePtr,
+                               typename SolutionSpaces::SpaceTuplePtr>::value,
+        "Test and solution spaces in saddle point problem have to have"
+        " the same underlying space tuple!");
+    static_assert(std::is_same<std::tuple_element_t<0,TestSpaces>,
+                               std::tuple_element_t<0,Spaces>>::value,
+        "Test spaces have to be at the beginning of the space tuple!");
+  }
 
   /**
    * \brief Assemble the Saddlepoint DPG system for a given rhs function.
@@ -175,13 +190,13 @@ public:
   /**
    * \brief Does exactly what it says on the tin.
    */
-  std::shared_ptr<TestSpaces> getTestSpaces() const
+  TestSpacesPtr getTestSpaces() const
   { return testSpaces; }
 
   /**
    * \brief Does exactly what it says on the tin.
    */
-  std::shared_ptr<SolutionSpaces> getSolutionSpaces() const
+  SolutionSpacesPtr getSolutionSpaces() const
   { return solutionSpaces; }
 
 private:
@@ -225,10 +240,10 @@ private:
   // TODO: IPIndices seems to have some type_c too much.
   using IPIndices = decltype(ipIndices());
 
-  std::shared_ptr<TestSpaces>     testSpaces;
-  std::shared_ptr<SolutionSpaces> solutionSpaces;
-  BilinearForm                    bilinearForm;
-  InnerProduct                    innerProduct;
+  TestSpacesPtr     testSpaces;
+  SolutionSpacesPtr solutionSpaces;
+  BilinearForm      bilinearForm;
+  InnerProduct      innerProduct;
 };
 
 /**
@@ -268,8 +283,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
   constexpr bool isSaddlepoint = true;
 
-  typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(*testSpaces).gridView();
+  const auto gridView = std::get<0>(*testSpaces).gridView();
 
   /* set up global offsets */
   size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
@@ -277,16 +291,14 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   const size_t globalTotalTestSize = computeOffsets(globalTestSpaceOffsets,
                                                     *testSpaces);
 
-  const size_t globalTotalSolutionSize =
+  const size_t globalTotalSpaceSize =
       computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces,
-                     globalTotalTestSize) - globalTotalTestSize;
-
-  const auto n = globalTotalSolutionSize + globalTotalTestSize;
+                     globalTotalTestSize);
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // They are not particularly efficient, but simple to use.
   MatrixIndexSet occupationPattern;
-  occupationPattern.resize(n, n);
+  occupationPattern.resize(globalTotalSpaceSize, globalTotalSpaceSize);
   bilinearForm.template getOccupationPattern<isSaddlepoint>
                (occupationPattern,
                 0, globalTotalTestSize);
@@ -294,7 +306,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
   /* Add the diagonal of the matrix, since we need it for the
    * interpolation of boundary values. */
-  for (size_t i=0; i<n; i++)
+  for (size_t i=0; i<globalTotalSpaceSize; i++)
   {
     occupationPattern.add(i, i);
   }
@@ -366,15 +378,15 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 {
   using namespace Dune::detail;
 
-  typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(*testSpaces).gridView();
+  // Test and solution spaces
+  auto spaces = testSpaces->getSpaceTuplePtr();
+
+  const auto gridView = std::get<0>(*spaces).gridView();
 
   /* set up global offsets */
-  size_t globalSpaceOffsets[std::tuple_size<TestSpaces>::value
-                            + std::tuple_size<SolutionSpaces>::value];
+  size_t globalSpaceOffsets[std::tuple_size<Spaces>::value];
   const size_t globalTotalSpaceSize =
-      computeOffsets(globalSpaceOffsets,
-                     std::tuple_cat(*testSpaces, *solutionSpaces));
+      computeOffsets(globalSpaceOffsets, *spaces);
 
   // set rhs to correct length -- the total number of basis vectors in the bases
   rhs.resize(globalTotalSpaceSize);
@@ -382,12 +394,10 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   // Set all entries to zero
   rhs = 0;
 
-  // Views on the FE bases on a single element
-  auto localViews
-        = getLocalViews(std::tuple_cat(*testSpaces, *solutionSpaces));
+  // Views on the FE bases of test and solution spaces on a single element
+  auto localViews = getLocalViews(*spaces);
 
-  auto localIndexSets
-        = getLocalIndexSets(std::tuple_cat(*testSpaces, *solutionSpaces));
+  auto localIndexSets = getLocalIndexSets(*spaces);
 
 
   for(const auto& e : elements(gridView)) {

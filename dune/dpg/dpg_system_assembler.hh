@@ -65,6 +65,8 @@ public:
   using TestspaceCoefficientMatrix
     = typename BufferPolicy::template
         TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
+  using TestSearchSpacesPtr = typename BilinearForm::TestSpacesPtr;
+  using SolutionSpacesPtr = typename BilinearForm::SolutionSpacesPtr;
   using TestSearchSpaces = typename BilinearForm::TestSpaces;
   using SolutionSpaces = typename BilinearForm::SolutionSpaces;
 
@@ -243,22 +245,22 @@ public:
   /**
    * \brief Does exactly what it says on the tin.
    */
-  std::shared_ptr<TestSearchSpaces> getTestSearchSpaces() const
+  TestSearchSpacesPtr getTestSearchSpaces() const
   { return testSearchSpaces_; }
 
   /**
    * \brief Does exactly what it says on the tin.
    */
-  std::shared_ptr<SolutionSpaces> getSolutionSpaces() const
+  SolutionSpacesPtr getSolutionSpaces() const
   { return solutionSpaces_; }
 
 private:
   template<size_t spaceIndex, int dim,
     typename std::enable_if<models<Functions::Concept::GlobalBasis<typename
-                        std::tuple_element_t<spaceIndex, typename
-                            BilinearForm::SolutionSpaces>::GridView>,
-                  std::tuple_element_t<spaceIndex, typename
-                        BilinearForm::SolutionSpaces>>()>::type* = nullptr>
+                        std::tuple_element_t<spaceIndex,
+                                             SolutionSpaces>::GridView>,
+                  std::tuple_element_t<spaceIndex,
+                                       SolutionSpaces>>()>::type* = nullptr>
   void defineCharacteristicFaces_impl(
       BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       BlockVector<FieldVector<double,1> >& rhs,
@@ -267,20 +269,20 @@ private:
 
   template<size_t spaceIndex, int dim,
     typename std::enable_if<models<Functions::Concept::ConstrainedGlobalBasis<
-                      typename std::tuple_element_t<spaceIndex, typename
-                          BilinearForm::SolutionSpaces>::GridView>,
-                  std::tuple_element_t<spaceIndex, typename
-                        BilinearForm::SolutionSpaces>>()>::type* = nullptr>
+                      typename std::tuple_element_t<spaceIndex,
+                                                    SolutionSpaces>::GridView>,
+                  std::tuple_element_t<spaceIndex,
+                                       SolutionSpaces>>()>::type* = nullptr>
   void defineCharacteristicFaces_impl(
       BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       BlockVector<FieldVector<double,1> >& rhs,
       const FieldVector<double,dim>& beta,
       double delta);
 
-  std::shared_ptr<TestSearchSpaces> testSearchSpaces_;
-  std::shared_ptr<SolutionSpaces>   solutionSpaces_;
-  BilinearForm&                     bilinearForm_;
-  TestspaceCoefficientMatrix        testspaceCoefficientMatrix_;
+  TestSearchSpacesPtr         testSearchSpaces_;
+  SolutionSpacesPtr           solutionSpaces_;
+  BilinearForm&               bilinearForm_;
+  TestspaceCoefficientMatrix  testspaceCoefficientMatrix_;
 };
 
 

@@ -9,28 +9,12 @@
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/std/memory.hh>
 #include <dune/common/tupleutility.hh>
-#include <dune/dpg/functions/concepts.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
+#include <dune/dpg/spacetuple.hh>
 #include <dune/istl/matrixindexset.hh>
 #include <boost/hana.hpp>
 
 namespace Dune {
-
-/**
- * Create a shared_ptr to a tuple of spaces over the same GridView
- */
-template<class... Spaces, class GridView>
-std::shared_ptr<std::tuple<Spaces...>>
-make_space_tuple(const GridView& gridView)
-{
-  static_assert(Concept::tupleEntriesModel<
-      Functions::Concept::GeneralizedGlobalBasis<GridView>,
-      std::tuple<Spaces...>>(),
-      "Spaces need to model the GeneralizedGlobalBasis concept.");
-
-  return std::make_shared<typename std::tuple<Spaces...>>(
-      std::make_tuple(Spaces(gridView)...));
-}
 
 namespace detail {
 
@@ -56,7 +40,7 @@ using getLocalIndexSets_t
 
 template<class Spaces>
 inline getLocalIndexSets_t<Spaces> getLocalIndexSets(const Spaces& spaces) {
-  return genericTransformTuple(spaces, getLocalIndexSetFunctor());
+  return genericTransformSpaceTuple(spaces, getLocalIndexSetFunctor());
 }
 
 struct getLocalViewFunctor
@@ -81,7 +65,7 @@ using getLocalViews_t
 
 template<class Spaces>
 inline getLocalViews_t<Spaces> getLocalViews(const Spaces& spaces) {
-  return genericTransformTuple(spaces, getLocalViewFunctor());
+  return genericTransformSpaceTuple(spaces, getLocalViewFunctor());
 }
 
 template<class LocalViews, class Element>
