@@ -6,6 +6,9 @@
 #include <memory>
 #include <tuple>
 #include <type_traits>
+#include <utility>
+
+#include <dune/common/tupleutility.hh>
 
 #include <dune/dpg/functions/concepts.hh>
 
@@ -113,6 +116,20 @@ namespace Dune {
     return SpaceTupleView<SpaceTuplePtr, offset, count>(spaces);
   }
 
+  namespace detail {
+    template<template <class> class TE,
+             class View, class Indices>
+    struct SpaceTupleViewForEachImpl;
+
+    template<template <class> class TE,
+             class View, std::size_t... I>
+    struct SpaceTupleViewForEachImpl<TE, View, std::index_sequence<I...>>
+    {
+      using Type
+          = std::tuple<typename TE<std::tuple_element_t<I, View>>::Type...>;
+    };
+  }
+
 } // end namespace Dune
 
 namespace std {
@@ -173,5 +190,72 @@ namespace std {
     return get<I+offset>(spaces.getSpaceTuple());
   }
 } // end namespace std
+
+namespace Dune {
+  template<template <class> class TE,
+           std::size_t offset, std::size_t count, class SpaceTuplePtr>
+  class ForEachType<TE, SpaceTupleView<SpaceTuplePtr, offset, count>>
+  {
+    using View = SpaceTupleView<SpaceTuplePtr, offset, count>;
+    using Indices = std::make_index_sequence<count>;
+
+  public:
+    using Type
+        = typename detail::SpaceTupleViewForEachImpl<TE, View, Indices>::Type;
+  };
+
+#ifndef DOXYGEN
+  template<class Tuple, class Functor, std::size_t... I>
+  inline auto genericTransformSpaceTupleBackendImpl(
+      Tuple& t, Functor& f, const Std::index_sequence<I...>& )
+    -> std::tuple<decltype(f(std::get<I>(t)))...>
+  {
+    return std::tuple<decltype(f(std::get<I>(t)))...>(f(std::get<I>(t))...);
+  }
+
+  template<std::size_t offset, std::size_t count, class SpaceTuplePtr,
+           class Functor>
+  auto genericTransformSpaceTupleBackend(
+      SpaceTupleView<SpaceTuplePtr, offset, count>& t, Functor& f)
+  -> decltype(genericTransformSpaceTupleBackendImpl(t, f,
+                                  std::make_index_sequence<count>{}))
+  {
+    return genericTransformSpaceTupleBackendImpl(t, f,
+                                  std::make_index_sequence<count>{});
+  }
+
+  template<std::size_t offset, std::size_t count, class SpaceTuplePtr,
+           class Functor>
+  auto genericTransformSpaceTupleBackend(
+      const SpaceTupleView<SpaceTuplePtr, offset, count>& t, Functor& f)
+  -> decltype(genericTransformSpaceTupleBackendImpl(t, f,
+                                  std::make_index_sequence<count>{}))
+  {
+    return genericTransformSpaceTupleBackendImpl(t, f,
+                                  std::make_index_sequence<count>{});
+  }
+
+  template<class... Args, class Functor>
+  auto genericTransformSpaceTupleBackend(std::tuple<Args...>& t, Functor& f) ->
+    decltype(genericTransformSpaceTupleBackendImpl(t, f,Std::index_sequence_for<Args...>{}))
+  {
+    return genericTransformSpaceTupleBackendImpl(t, f,Std::index_sequence_for<Args...>{});
+  }
+
+  template<class... Args, class Functor>
+  auto genericTransformSpaceTupleBackend(const std::tuple<Args...>& t, Functor& f) ->
+    decltype(genericTransformSpaceTupleBackendImpl(t, f, Std::index_sequence_for<Args...>{}))
+  {
+    return genericTransformSpaceTupleBackendImpl(t, f, Std::index_sequence_for<Args...>{});
+  }
+#endif
+
+  template<class SpaceTuple, class Functor>
+  auto genericTransformSpaceTuple(SpaceTuple&& t, Functor&& f) ->
+    decltype(genericTransformSpaceTupleBackend(t, f))
+  {
+    return genericTransformSpaceTupleBackend(t, f);
+  }
+} // End namespace Dune
 
 #endif
