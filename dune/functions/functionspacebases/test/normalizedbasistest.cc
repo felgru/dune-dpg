@@ -41,7 +41,7 @@ void testNormedAdaptorOn(const typename Basis::GridView gridView)
   testRefinedScalarBasis(normedBasis);
 }
 
-int main (int argc, char* argv[]) try
+int main () try
 {
   // Generate grid for testing
   const int dim = 2;

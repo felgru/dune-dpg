@@ -61,7 +61,7 @@ namespace detail {
   {
     template<class DomainType, class OutputIterator>
     static void fillVectorOfEvaluations
-        (const DomainType& x, OutputIterator&& out)
+        (const DomainType& /* x */, OutputIterator&& out)
     {
       *out = 1;
     }
@@ -73,7 +73,7 @@ namespace detail {
   {
     template<class DomainType, class OutputIterator>
     static void fillVectorOfEvaluations
-        (const DomainType& x, OutputIterator&& out)
+        (const DomainType& /* x */, OutputIterator&& out)
     {
       *out = 0;
     }

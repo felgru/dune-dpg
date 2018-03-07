@@ -137,7 +137,7 @@ void testScalarBasis(const Basis& feBasis)
   checkConsistencyOfLocalViewAndIndexSet(feBasis);
 }
 
-int main (int argc, char* argv[]) try
+int main () try
 {
   // Generate grid for testing
   constexpr int dim = 2;

@@ -460,7 +460,7 @@ public:
     return (*constraintIndicator_)[i];
   }
 
-  const ConstraintWeights& constraintWeights(size_type i) const
+  const ConstraintWeights& constraintWeights(size_type /* i */) const
   {
     assert(node_ != nullptr);
     return preBasis_->constraint;

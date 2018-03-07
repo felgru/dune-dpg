@@ -24,7 +24,7 @@ bool testDGSubsampled2D()
   return success;
 }
 
-int main(int argc, char** argv) try
+int main() try
 {
   bool success = true;
 

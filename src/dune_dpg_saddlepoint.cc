@@ -35,7 +35,7 @@ using namespace Dune;
 
 
 
-int main(int argc, char** argv)
+int main()
 {
   ///////////////////////////////////
   //   Generate the grid

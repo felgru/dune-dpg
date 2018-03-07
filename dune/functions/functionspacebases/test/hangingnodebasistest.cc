@@ -124,7 +124,7 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
                         {
                           if(gi == gj) valueDominated += valuesDominated[i];
                         },
-                        [](size_t i) {},
+                        [](size_t /* i */) {},
                         [&](size_t i, auto gi, double wi)
                         {
                           if(gi == gj) valueDominated += wi*valuesDominated[i];
@@ -139,8 +139,8 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
                     }
                   }
                 },
-                [](size_t j) {},
-                [&](size_t j, auto gj, double wj)
+                [](size_t /* j */) {},
+                [&](size_t j, auto /* gj */, double /* wj */)
                 {
                   if(std::fabs(valuesDominating[j]) > eps) {
                     DUNE_THROW(Dune::InvalidStateException,

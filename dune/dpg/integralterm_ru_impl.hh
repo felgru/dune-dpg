@@ -130,7 +130,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
          const Element& element,
          const FactorType& factor,
          const DirectionType& lhsBeta,
-         const DirectionType& rhsBeta)
+         const DirectionType& /* rhsBeta */)
 {
   constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();

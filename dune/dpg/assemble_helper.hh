@@ -235,7 +235,7 @@ struct getOccupationPatternHelper
             class solutionSpaceIndex>
   void operator()
          (const boost::hana::tuple<testSpaceIndex,
-                                   solutionSpaceIndex>& indexTuple)
+                                   solutionSpaceIndex>&)
   {
     const auto& testLIS =
         std::get<testSpaceIndex::value>(testLocalIndexSets);
@@ -266,7 +266,7 @@ struct getOccupationPatternHelper
           iterateOverLocalIndexSet(
               solutionLIS,
               fillOccupationPatternInner,
-              [](size_t j){},
+              [](size_t /* j */){},
               [&](size_t j, SolutionMultiIndex gj, double /* wj */)
               {
                 fillOccupationPatternInner(j, gj);
@@ -276,7 +276,7 @@ struct getOccupationPatternHelper
     iterateOverLocalIndexSet(
         testLIS,
         fillOccupationPattern,
-        [](size_t i){},
+        [](size_t /* i */){},
         [&](size_t i, TestMultiIndex gi, double /* wi */)
         {
           fillOccupationPattern(i, gi);
@@ -342,7 +342,7 @@ struct localToGlobalCopier
             class solutionSpaceIndex>
   void operator()
          (const boost::hana::tuple<testSpaceIndex,
-                                   solutionSpaceIndex>& indexTuple)
+                                   solutionSpaceIndex>&)
   {
     const auto& testLocalIndexSet
         = std::get<testSpaceIndex::value>(testLocalIndexSets);
@@ -480,7 +480,7 @@ struct localToGlobalRHSCopier
         testGlobalOffsets(testGlobalOffsets) {}
 
   template <class TestSpaceIndex>
-  void operator() (const TestSpaceIndex& index) const
+  void operator() (const TestSpaceIndex&) const
   {
     constexpr auto testSpaceIndex = TestSpaceIndex::type::value;
     const auto& testLocalIndexSet
@@ -498,7 +498,7 @@ struct localToGlobalRHSCopier
           rhs[gi[0] + testGlobalOffset]
               += localRhs[i+testLocalOffset];
         },
-        [](size_t i){},
+        [](size_t /* i */){},
         [&](size_t i, MultiIndex gi, double wi)
         {
           rhs[gi[0] + testGlobalOffset]
