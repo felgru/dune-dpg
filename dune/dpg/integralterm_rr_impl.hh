@@ -77,7 +77,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                                 type == IntegrationType::valueGrad)
                                ? EvaluationType::value : EvaluationType::grad;
 
-      std::vector<FieldVector<double,1> > lhsValues =
+      const std::vector<FieldVector<double,1> > lhsValues =
           detail::LocalRefinedFunctionEvaluation
                   <dim, lhsType,
                    is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>()
@@ -95,7 +95,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                                 type == IntegrationType::gradValue)
                                ? EvaluationType::value : EvaluationType::grad;
 
-      std::vector<FieldVector<double,1> > rhsValues =
+      const std::vector<FieldVector<double,1> > rhsValues =
           detail::LocalRefinedFunctionEvaluation
                   <dim, rhsType,
                    is_ContinuouslyRefinedFiniteElement<RhsSpace>::value>()
@@ -278,7 +278,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
         //////////////////////////////
         // Left Hand Side Functions //
         //////////////////////////////
-        std::vector<FieldVector<double,1> > lhsValues =
+        const std::vector<FieldVector<double,1> > lhsValues =
           detail::LocalRefinedFunctionEvaluation
                   <dim, EvaluationType::value,
                    is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>()
@@ -292,7 +292,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
         ///////////////////////////////
         // Right Hand Side Functions //
         ///////////////////////////////
-        std::vector<FieldVector<double,1> > rhsValues =
+        const std::vector<FieldVector<double,1> > rhsValues =
           detail::LocalRefinedFunctionEvaluation
                   <dim, EvaluationType::value,
                    is_ContinuouslyRefinedFiniteElement<RhsSpace>::value>()

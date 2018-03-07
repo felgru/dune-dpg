@@ -61,7 +61,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                               type == IntegrationType::valueGrad)
                              ? EvaluationType::value : EvaluationType::grad;
 
-    std::vector<FieldVector<double,1> > lhsValues =
+    const std::vector<FieldVector<double,1> > lhsValues =
         detail::LocalFunctionEvaluation<dim, lhsType>()
                       (lhsLocalFiniteElement,
                        quadPos,
@@ -75,7 +75,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                               type == IntegrationType::gradValue)
                              ? EvaluationType::value : EvaluationType::grad;
 
-    std::vector<FieldVector<double,1> > rhsValues =
+    const std::vector<FieldVector<double,1> > rhsValues =
         detail::LocalFunctionEvaluation<dim, rhsType>()
                       (rhsLocalFiniteElement,
                        quadPos,
