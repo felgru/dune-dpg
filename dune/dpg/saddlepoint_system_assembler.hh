@@ -130,16 +130,13 @@ public:
    *
    * \param[in,out] matrix      the matrix of the DPG system
    * \param[in] dirichletNodes  true marks the dofs in the Dirichlet boundary
-   * \param[in] value           the Dirichlet boundary value
    * \tparam spaceIndex  the index of the test space on which we apply
    *                     the boundary data
-   * \tparam ValueType   we take either constants or functions for \p value
    */
-  template <size_t spaceIndex, class ValueType>
+  template <size_t spaceIndex>
   void applyDirichletBoundaryToMatrix(
                               BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
-                              const std::vector<bool>& dirichletNodes,
-                              const ValueType& value);
+                              const std::vector<bool>& dirichletNodes);
 
   /**
    * \brief Apply Dirichlet boundary values to a solution space
@@ -449,18 +446,17 @@ applyDirichletBoundary
                        const ValueType& boundaryValue)
 {
   applyDirichletBoundaryToMatrix<spaceIndex>
-          (matrix, dirichletNodes, boundaryValue);
+          (matrix, dirichletNodes);
   applyDirichletBoundaryToRhs<spaceIndex>
           (rhs,    dirichletNodes, boundaryValue);
 }
 
 template<class BilinearForm, class InnerProduct>
-template <size_t spaceIndex, class ValueType>
+template <size_t spaceIndex>
 void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 applyDirichletBoundaryToMatrix
                       (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
-                       const std::vector<bool>& dirichletNodes,
-                       const ValueType& boundaryValue)
+                       const std::vector<bool>& dirichletNodes)
 {
   const size_t spaceSize =
         std::get<spaceIndex>(*solutionSpaces).size();

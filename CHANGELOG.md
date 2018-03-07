@@ -101,6 +101,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   was recently added to dune-functions. This should give faster access
   to global indices, especially if you are using the `OptimalTestBasis`
   class.
+* The boundaryValue argument of the `applyDirichletBoundaryToMatrix`
+  method of DPGAssembler and SaddlepointAssembler has been removed as
+  it was never used in this method.
 * README, INSTALL: Mention dune-uggrid instead of ug.
 * Remove some noise from the API documentation and add some more
   documentation for previously undocumented things.
