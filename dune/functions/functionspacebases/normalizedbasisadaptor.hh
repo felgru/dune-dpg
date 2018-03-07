@@ -191,7 +191,7 @@ public:
     innerProduct_(preBasis.innerProduct()),
     localViews_(Dune::detail::getLocalViews(*innerProduct_.getTestSpaces())),
     scalingWeights_(),
-    finiteElement_(scalingWeights_)
+    finiteElement_()
   {
     scalingWeights_.reserve(preBasis.maxNodeSize());
   }
