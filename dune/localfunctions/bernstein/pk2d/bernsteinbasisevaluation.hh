@@ -67,17 +67,5 @@ namespace detail {
     }
   };
 
-  // TODO: we might need a specialization for k==-1, but k is unsigned
-  template<class D, class R>
-  struct Pk2DBernsteinBasis<D, R, -1>
-  {
-    template<class DomainType, class OutputIterator>
-    static void fillVectorOfEvaluations
-        (const DomainType& /* x */, OutputIterator&& out)
-    {
-      *out = 0;
-    }
-  };
-
 }} // end namespace Dune::detail
 #endif
