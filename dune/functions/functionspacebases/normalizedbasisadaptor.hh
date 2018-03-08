@@ -48,7 +48,6 @@ template<typename InnerProduct>
 class NormalizedRefinedPreBasis
 {
   using Basis = std::tuple_element_t<0, typename InnerProduct::TestSpaces>;
-  static const int dim = Basis::GridView::dim;
 #if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   using WrappedPreBasis = typename Basis::PreBasis;
 #else
@@ -161,7 +160,6 @@ class NormalizedRefinedNode :
   using Basis = std::tuple_element_t<0, typename InnerProduct::TestSpaces>;
   using LocalViews
       = Dune::detail::getLocalViews_t<typename InnerProduct::TestSpaces>;
-  static const int dim = Basis::GridView::dimension;
 
   using Base = LeafBasisNode<std::size_t, TP>;
 #if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
@@ -249,8 +247,6 @@ template<typename PB, class TP>
 class NormalizedRefinedNodeIndexSet
 {
   using Basis = typename PB::WrappedBasis;
-  // Cannot be an enum -- otherwise the switch statement below produces compiler warnings
-  static const int dim = Basis::GridView::dimension;
 
 #if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   using WrappedIndexSet = typename Basis::PreBasis::template IndexSet<TP>;
