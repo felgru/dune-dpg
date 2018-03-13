@@ -1,5 +1,8 @@
 if(dune-subgrid_FOUND)
-  dune_add_test(SOURCES hangingnodebasistest.cc
+  dune_add_test(SOURCES hangingnodelagrangebasistest.cc
+                LINK_LIBRARIES ${DUNE_LIBS})
+
+  dune_add_test(SOURCES hangingnodebernsteinbasistest.cc
                 LINK_LIBRARIES ${DUNE_LIBS})
 endif()
 

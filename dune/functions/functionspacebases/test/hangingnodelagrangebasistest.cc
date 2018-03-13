@@ -42,7 +42,7 @@ int main() try
 
   bool success = true;
 
-  std::cout << "Testing HangingNodeP2DNodalBasis on 2d"
+  std::cout << "Testing HangingNodeP2NodalBasis on 2d"
             << " triangular grid." << std::endl;
 
   Functions::HangingNodeP2NodalBasis<GridView> hangingNodeBasis(gridView);
