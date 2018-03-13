@@ -107,29 +107,45 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
             std::vector<FieldVector<double,1> > valuesDominated;
             dominatedElementLocalView.tree().finiteElement().localBasis()
               .evaluateFunction(quadPosDominated, valuesDominated);
+            const auto& localCoefficientsDominating
+              = localView.tree().finiteElement().localCoefficients();
             iterateOverLocalIndexSet(
                 localIndexSet,
                 [&](size_t j, auto gj)
                 {
                   if(std::fabs(valuesDominating[j]) > eps) {
                     double valueDominated = 0.;
+                    std::vector<std::pair<size_t, double>> constraints;
                     iterateOverLocalIndexSet(
                         dominatedElementLocalIndexSet,
                         [&](size_t i, auto gi)
                         {
-                          if(gi == gj) valueDominated += valuesDominated[i];
+                          if(gi == gj) {
+                            valueDominated += valuesDominated[i];
+                            constraints.emplace_back(j, 1.);
+                          }
                         },
                         [](size_t /* i */) {},
                         [&](size_t i, auto gi, double wi)
                         {
-                          if(gi == gj) valueDominated += wi*valuesDominated[i];
+                          if(gi == gj) {
+                            valueDominated += wi*valuesDominated[i];
+                            constraints.emplace_back(j, wi);
+                          }
                         });
                     if(std::fabs(valuesDominating[j] - valueDominated) > eps)
                     {
                       std::cout << "Dominating FE at local index " << j
                         << " evaluates to " << valuesDominating[j]
                         << " but weighted sum of dominated FEs eavalutes to "
-                        << " valueDominated!\n";
+                        << valueDominated << "!\n";
+                      std::cout << "It is a DoF of codim "
+                        << localCoefficientsDominating.localKey(j).codim()
+                        << '\n';
+                      std::cout << "dominated weigths:\n";
+                      for(const auto& c: constraints) {
+                        std::cout << c.first << ": " << c.second << '\n';
+                      }
                       success = false;
                     }
                   }
