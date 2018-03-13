@@ -115,14 +115,14 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
                 {
                   if(std::fabs(valuesDominating[j]) > eps) {
                     double valueDominated = 0.;
-                    std::vector<std::pair<size_t, double>> constraints;
+                    std::vector<std::pair<double, double>> constraints;
                     iterateOverLocalIndexSet(
                         dominatedElementLocalIndexSet,
                         [&](size_t i, auto gi)
                         {
                           if(gi == gj) {
                             valueDominated += valuesDominated[i];
-                            constraints.emplace_back(j, 1.);
+                            constraints.emplace_back(1., valuesDominated[i]);
                           }
                         },
                         [](size_t /* i */) {},
@@ -130,7 +130,7 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
                         {
                           if(gi == gj) {
                             valueDominated += wi*valuesDominated[i];
-                            constraints.emplace_back(j, wi);
+                            constraints.emplace_back(wi, valuesDominated[i]);
                           }
                         });
                     if(std::fabs(valuesDominating[j] - valueDominated) > eps)
@@ -142,9 +142,9 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
                       std::cout << "It is a DoF of codim "
                         << localCoefficientsDominating.localKey(j).codim()
                         << '\n';
-                      std::cout << "dominated weigths:\n";
+                      std::cout << "weights * dominated basis evaluations:\n";
                       for(const auto& c: constraints) {
-                        std::cout << c.first << ": " << c.second << '\n';
+                        std::cout << c.first << " * " << c.second << '\n';
                       }
                       success = false;
                     }
