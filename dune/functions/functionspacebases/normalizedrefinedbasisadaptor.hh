@@ -1,7 +1,7 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_NORMALIZEDBASISADAPTOR_HH
-#define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_NORMALIZEDBASISADAPTOR_HH
+#ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_NORMALIZEDREFINEDBASISADAPTOR_HH
+#define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_NORMALIZEDREFINEDBASISADAPTOR_HH
 
 #include <array>
 #include <dune/common/version.hh>
@@ -11,6 +11,7 @@
 #include <dune/functions/functionspacebases/nodes.hh>
 #include <dune/functions/functionspacebases/defaultglobalbasis.hh>
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
+#include <dune/functions/functionspacebases/refinednode.hh>
 
 #include <dune/istl/matrix.hh>
 
@@ -27,9 +28,9 @@ namespace Functions {
 // *****************************************************************************
 // This is the reusable part of the basis. It contains
 //
-//   NormalizedPreBasis
-//   NormalizedNodeIndexSet
-//   NormalizedNode
+//   NormalizedRefinedPreBasis
+//   NormalizedRefinedNodeIndexSet
+//   NormalizedRefinedNode
 //
 // The pre-basis allows to create the others and is the owner of possible shared
 // state. These three components do _not_ depend on the global basis or index
@@ -37,14 +38,14 @@ namespace Functions {
 // *****************************************************************************
 
 template<typename InnerProduct, typename TP>
-class NormalizedNode;
+class NormalizedRefinedNode;
 
 template<typename Basis, class TP>
-class NormalizedNodeIndexSet;
+class NormalizedRefinedNodeIndexSet;
 
 
 template<typename InnerProduct>
-class NormalizedPreBasis
+class NormalizedRefinedPreBasis
 {
   using Basis = std::tuple_element_t<0, typename InnerProduct::TestSpaces>;
 #if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
@@ -62,11 +63,11 @@ public:
   using WrappedBasis = Basis;
 
   template<class TP>
-  using Node = NormalizedNode<InnerProduct, TP>;
+  using Node = NormalizedRefinedNode<InnerProduct, TP>;
 
   template<class TP>
-  using IndexSet = NormalizedNodeIndexSet<
-                      NormalizedPreBasis<InnerProduct>, TP>;
+  using IndexSet = NormalizedRefinedNodeIndexSet<
+                      NormalizedRefinedPreBasis<InnerProduct>, TP>;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = typename Basis::MultiIndex;
@@ -74,7 +75,7 @@ public:
   using SizePrefix = Dune::ReservedVector<size_type, 1>;
 
   /** \brief Constructor for a given grid view object */
-  NormalizedPreBasis(const InnerProduct& ip) :
+  NormalizedRefinedPreBasis(const InnerProduct& ip) :
 #if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
     wrappedPreBasis_(std::get<0>(*ip.getTestSpaces()).preBasis()),
 #else
@@ -153,7 +154,7 @@ protected:
 
 
 template<typename InnerProduct, typename TP>
-class NormalizedNode :
+class NormalizedRefinedNode :
   public LeafBasisNode<std::size_t, TP>
 {
   using Basis = std::tuple_element_t<0, typename InnerProduct::TestSpaces>;
@@ -167,7 +168,7 @@ class NormalizedNode :
   using WrappedPreBasis = typename Basis::NodeFactory;
 #endif
   using WrappedNode = typename WrappedPreBasis::template Node<TP>;
-  using PreBasis = NormalizedPreBasis<InnerProduct>;
+  using PreBasis = NormalizedRefinedPreBasis<InnerProduct>;
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
   using NodeFactory = PreBasis;
 #endif
@@ -179,9 +180,11 @@ public:
   using Element = typename WrappedNode::Element;
   using FiniteElement
       = ScaledLocalFiniteElement<typename WrappedNode::FiniteElement>;
+  using RefinementGrid = typename WrappedNode::RefinementGrid;
+  using RefinementGridView = typename WrappedNode::RefinementGridView;
 
-  NormalizedNode(const PreBasis& preBasis,
-                 const TreePath& treePath) :
+  NormalizedRefinedNode(const PreBasis& preBasis,
+                        const TreePath& treePath) :
     wrappedNode_(treePath),
     innerProduct_(preBasis.innerProduct()),
     localViews_(Dune::detail::getLocalViews(*innerProduct_.getTestSpaces())),
@@ -219,6 +222,11 @@ public:
         wrappedNode_.finiteElement(), scalingWeights_.begin());
   }
 
+  const RefinementGridView refinedReferenceElementGridView() const
+  {
+    return wrappedNode_.refinedReferenceElementGridView();
+  }
+
   const WrappedNode& wrappedBasisNode() const
   {
     return wrappedNode_;
@@ -236,7 +244,7 @@ protected:
 
 
 template<typename PB, class TP>
-class NormalizedNodeIndexSet
+class NormalizedRefinedNodeIndexSet
 {
   using Basis = typename PB::WrappedBasis;
 
@@ -260,7 +268,7 @@ public:
 
   using Node = typename PreBasis::template Node<TP>;
 
-  NormalizedNodeIndexSet(const PreBasis& preBasis) :
+  NormalizedRefinedNodeIndexSet(const PreBasis& preBasis) :
     wrappedIndexSet_(preBasis.wrappedPreBasis())
   {}
 
@@ -316,8 +324,8 @@ protected:
  *         wrt given inner product
  */
 template<typename InnerProduct>
-using NormalizedBasis
-    = DefaultGlobalBasis<NormalizedPreBasis<InnerProduct>>;
+using NormalizedRefinedBasis
+    = DefaultGlobalBasis<NormalizedRefinedPreBasis<InnerProduct>>;
 
 
 
@@ -325,4 +333,4 @@ using NormalizedBasis
 } // end namespace Dune
 
 
-#endif // DUNE_FUNCTIONS_FUNCTIONSPACEBASES_NORMALIZEDBASISADAPTOR_HH
+#endif // DUNE_FUNCTIONS_FUNCTIONSPACEBASES_NORMALIZEDREFINEDBASISADAPTOR_HH

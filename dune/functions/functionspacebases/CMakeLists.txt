@@ -9,6 +9,7 @@ install(FILES
         constrainedlocalindexset.hh
         hangingnodep2nodalbasis.hh
         normalizedbasisadaptor.hh
+        normalizedrefinedbasisadaptor.hh
         optimaltestbasis.hh
         pqkdgrefineddgnodalbasis.hh
         pqksubsampleddgbasis.hh

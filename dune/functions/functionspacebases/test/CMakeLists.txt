@@ -6,6 +6,9 @@ endif()
 dune_add_test(SOURCES normalizedbasistest.cc
               LINK_LIBRARIES ${DUNE_LIBS})
 
+dune_add_test(SOURCES normalizedrefinedbasistest.cc
+              LINK_LIBRARIES ${DUNE_LIBS})
+
 dune_add_test(SOURCES pqkdgrefineddgbasistest.cc
               LINK_LIBRARIES ${DUNE_LIBS})
 
