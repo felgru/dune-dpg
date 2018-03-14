@@ -14,7 +14,7 @@
 
 #include <dune/grid/yaspgrid.hh>
 
-#include <dune/functions/functionspacebases/normalizedbasisadaptor.hh>
+#include <dune/functions/functionspacebases/normalizedrefinedbasisadaptor.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
 #include "refinedbasistest.hh"

@@ -4,7 +4,7 @@
 #include <memory>
 #include <tuple>
 
-#include <dune/functions/functionspacebases/normalizedbasisadaptor.hh>
+#include <dune/functions/functionspacebases/normalizedrefinedbasisadaptor.hh>
 
 namespace Dune {
 
