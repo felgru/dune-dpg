@@ -243,7 +243,7 @@ public:
       }
       localToGlobal.shrink_to_fit();
       constraintOffsets.shrink_to_fit();
-      size_t elementIndex = gridIndexSet.subIndex(e, 0, 0);
+      size_t elementIndex = gridIndexSet.index(e);
       std::swap(indicesLocalGlobal[elementIndex], localToGlobal);
       std::swap(constraintIndicator[elementIndex], constraintOffsets);
     }
@@ -419,7 +419,7 @@ public:
   {
     node_ = &node;
     const auto& gridIndexSet = preBasis_->gridView().indexSet();
-    size_t elementIndex = gridIndexSet.subIndex(node_->element(), 0, 0);
+    size_t elementIndex = gridIndexSet.index(node_->element());
     indicesLocalGlobal_ = &preBasis_->indicesLocalGlobal[elementIndex];
     constraintIndicator_ = &preBasis_->constraintIndicator[elementIndex];
   }
