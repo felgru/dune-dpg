@@ -53,10 +53,6 @@ int main () try
   typedef GridType::LeafGridView GridView;
   const GridView gridView = grid.leafGridView();
 
-  typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
-  //typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;
-  auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
-
   testNormedAdaptorOn<PQkDGRefinedDGBasis<GridView, 1, 2>>(gridView);
 
   return 0;
