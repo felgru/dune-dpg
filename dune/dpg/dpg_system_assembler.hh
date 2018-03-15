@@ -234,7 +234,7 @@ public:
   template <size_t spaceIndex, class MinInnerProduct, int dim>
   void applyMinimization(
                       BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
-                      MinInnerProduct minInnerProduct,
+                      MinInnerProduct& minInnerProduct,
                       FieldVector<double, dim> beta,
                       double delta = 10e-10,
                       double epsilon = 0);
@@ -334,12 +334,12 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 {
   using namespace Dune::detail;
 
-  auto gridView = std::get<0>(*testSearchSpaces_).gridView();
+  const auto gridView = std::get<0>(*testSearchSpaces_).gridView();
 
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
 
-  size_t globalTotalSolutionSize =
+  const size_t globalTotalSolutionSize =
       computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces_);
 
   // Views on the FE bases on a single element
@@ -462,7 +462,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 {
   using namespace Dune::detail;
 
-  auto gridView = std::get<0>(*testSearchSpaces_).gridView();
+  const auto gridView = std::get<0>(*testSearchSpaces_).gridView();
 
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -540,7 +540,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 {
   using namespace Dune::detail;
 
-  auto gridView = std::get<0>(*testSearchSpaces_).gridView();
+  const auto gridView = std::get<0>(*testSearchSpaces_).gridView();
 
   /* set up global offsets */
   size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -783,10 +783,10 @@ template <size_t spaceIndex, int dim>
 void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
 applyWeakBoundaryCondition
                     (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
-                     FieldVector<double, dim> beta,
-                     double mu)
+                     const FieldVector<double, dim> beta,
+                     const double mu)
 {
-  auto gridView = std::get<0>(*solutionSpaces_).gridView();
+  const auto gridView = std::get<0>(*solutionSpaces_).gridView();
 
   const size_t globalOffset =
         detail::computeOffset<spaceIndex>(*solutionSpaces_);
@@ -883,9 +883,9 @@ defineCharacteristicFaces_impl(
     BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     BlockVector<FieldVector<double,1> >& rhs,
     const FieldVector<double,dim>& beta,
-    double delta)
+    const double delta)
 {
-  auto gridView = std::get<spaceIndex>(*solutionSpaces_).gridView();
+  const auto gridView = std::get<spaceIndex>(*solutionSpaces_).gridView();
 
   const size_t globalOffset =
         detail::computeOffset<spaceIndex>(*solutionSpaces_);
@@ -1028,9 +1028,9 @@ defineCharacteristicFaces_impl(
     BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     BlockVector<FieldVector<double,1> >& rhs,
     const FieldVector<double,dim>& beta,
-    double delta)
+    const double delta)
 {
-  auto gridView = std::get<spaceIndex>(*solutionSpaces_).gridView();
+  const auto gridView = std::get<spaceIndex>(*solutionSpaces_).gridView();
 
   const size_t globalOffset =
         detail::computeOffset<spaceIndex>(*solutionSpaces_);
@@ -1143,7 +1143,7 @@ void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
 defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                           BlockVector<FieldVector<double,1> >& rhs,
                           const FieldVector<double,dim>& beta,
-                          double delta)
+                          const double delta)
 {
   // make sure that the test search spaces are unrefined
   {
@@ -1173,14 +1173,14 @@ template <size_t spaceIndex, class MinInnerProduct, int dim>
 void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
 applyMinimization
             (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
-             MinInnerProduct minInnerProduct,
-             FieldVector<double, dim> beta,
-             double delta,
-             double epsilon)
+             MinInnerProduct& minInnerProduct,
+             const FieldVector<double, dim> beta,
+             const double delta,
+             const double epsilon)
 {
   using namespace Dune::detail;
 
-  auto gridView = std::get<spaceIndex>(*solutionSpaces_).gridView();
+  const auto gridView = std::get<spaceIndex>(*solutionSpaces_).gridView();
 
   //const size_t globalOffset = computeOffset<spaceIndex>(*solutionSpaces_);
   const size_t globalOffset = 0;
@@ -1194,7 +1194,7 @@ applyMinimization
   auto localIndexSet = std::get<spaceIndex>(*solutionSpaces_).localIndexSet();
   using LocalIndexSet = decltype(localIndexSet);
 
-  const bool epsilonSmallerDelta(epsilon<delta);
+  const bool epsilonSmallerDelta = epsilon<delta;
 
   for(const auto& e : elements(gridView))
   {

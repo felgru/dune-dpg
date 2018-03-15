@@ -165,7 +165,7 @@ getOccupationPattern(MatrixIndexSet& nb) const
   auto testLocalIndexSets = getLocalIndexSets(*testSpaces);
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(*testSpaces).gridView();
+  const GridView gridView = std::get<0>(*testSpaces).gridView();
 
   /* create set of index pairs from innerProductTerms to loop over. */
   namespace hana = boost::hana;

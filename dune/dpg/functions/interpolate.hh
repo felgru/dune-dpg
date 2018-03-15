@@ -105,7 +105,7 @@ VectorType interpolateToUniformlyRefinedGrid(
 
       for (size_t i=0, nFine=fineLocalView.size(); i<nFine; i++)
       {
-        auto row = fineLocalIndexSet.index(i)[0];
+        const auto row = fineLocalIndexSet.index(i)[0];
         v_fine[row] = interpolationValues[i];
       }
     }

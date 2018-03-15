@@ -162,7 +162,7 @@ template <class LocalView,
 void LinearFunctionalTerm<SolutionSpace, FunctionalVector>::
 getLocalVector(const LocalView& localView,
                VectorType& elementVector,
-               size_t spaceOffset) const
+               const size_t spaceOffset) const
 {
   solutionLocalView.bind(localView.element());
   solutionLocalIndexSet.bind(solutionLocalView);

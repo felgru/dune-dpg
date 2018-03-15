@@ -218,7 +218,9 @@ auto replaceTestSpaces(
 template<class TestSpacesPtr, class SolutionSpacesPtr, class BilinearTerms>
 template<bool mirror>
 void BilinearForm<TestSpacesPtr, SolutionSpacesPtr, BilinearTerms>::
-getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift) const
+getOccupationPattern(MatrixIndexSet& nb,
+                     const size_t testShift,
+                     const size_t solutionShift) const
 {
   using namespace Dune::detail;
 
@@ -236,7 +238,7 @@ getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift)
   auto testLocalIndexSets = getLocalIndexSets(*testSpaces);
 
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
-  GridView gridView = std::get<0>(*testSpaces).gridView();
+  const GridView gridView = std::get<0>(*testSpaces).gridView();
 
   /* create set of index pairs from bilinearTerms to loop over. */
   namespace hana = boost::hana;

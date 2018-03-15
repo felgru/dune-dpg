@@ -531,7 +531,7 @@ void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 defineCharacteristicFaces(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                           BlockVector<FieldVector<double,1> >& rhs,
                           const FieldVector<double,dim>& beta,
-                          double delta)
+                          const double delta)
 {
   static_assert(std::is_same<BilinearForm, TestSpaces>::value,
                 "defineCharacteristicFaces not implemented "
@@ -545,9 +545,9 @@ void SaddlepointSystemAssembler<BilinearForm, InnerProduct>::
 applyMinimization
             (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
              MinInnerProduct minInnerProduct,
-             FieldVector<double, dim> beta,
-             double delta,
-             double epsilon)
+             const FieldVector<double, dim> beta,
+             const double delta,
+             const double epsilon)
 {
   static_assert(std::is_same<BilinearForm, TestSpaces>::value,
                 "applyMinimization not implemented "

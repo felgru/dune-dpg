@@ -299,7 +299,7 @@ namespace Dune {
       const LocalView& localView,
       const BlockVector<FieldVector<double,1> >& u,
       Function&& uRef,
-      unsigned int quadOrder)
+      const unsigned int quadOrder)
   {
 
     // Get the grid element from the local FE basis view
@@ -382,7 +382,7 @@ namespace Dune {
       const FEBasis& feBasis,
       const BlockVector<FieldVector<double,1> >& u,
       Function&& uRef,
-      unsigned int quadratureOrder)
+      const unsigned int quadratureOrder)
   {
     // Get the grid view from the finite element basis
     typedef typename FEBasis::GridView GridView;
