@@ -85,7 +85,7 @@ VectorType interpolateToUniformlyRefinedGrid(
 #endif
            globalSubGeometry.jacobianTransposed({})
              .leftmultiply(globalGeometry.jacobianTransposed({})));
-      auto localF = [&subGeometry, &coarseLocalBasis, local_v_coarse]
+      auto localF = [&subGeometry, &coarseLocalBasis, &local_v_coarse]
                     (const LocalDomain& x) {
         auto xCoarse = subGeometry.global(x);
 
