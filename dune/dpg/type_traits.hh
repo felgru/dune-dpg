@@ -67,7 +67,10 @@ namespace Functions {
   class OptimalTestBasisPreBasis;
 
   template<typename GV, class MI>
-  class HangingNodeP2PreBasis;
+  class HangingNodeBernsteinP2PreBasis;
+
+  template<typename GV, class MI>
+  class HangingNodeLagrangeP2PreBasis;
 
   template<typename InnerProduct>
   class NormalizedPreBasis;
@@ -375,9 +378,17 @@ struct changeGridView<Functions::OptimalTestBasisPreBasis
 };
 
 template<typename GV, class MI, class GridView>
-struct changeGridView<Functions::HangingNodeP2PreBasis<GV, MI>, GridView>
+struct changeGridView<Functions::HangingNodeBernsteinP2PreBasis<GV, MI>,
+                      GridView>
 {
-  typedef Functions::HangingNodeP2PreBasis<GridView, MI> type;
+  typedef Functions::HangingNodeBernsteinP2PreBasis<GridView, MI> type;
+};
+
+template<typename GV, class MI, class GridView>
+struct changeGridView<Functions::HangingNodeLagrangeP2PreBasis<GV, MI>,
+                      GridView>
+{
+  typedef Functions::HangingNodeLagrangeP2PreBasis<GridView, MI> type;
 };
 
 template<typename InnerProduct, class GridView>
