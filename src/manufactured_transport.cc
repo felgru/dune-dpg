@@ -28,7 +28,7 @@
 #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
-#include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
+#include <dune/functions/functionspacebases/hangingnodelagrangep2basis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
 #include <dune/dpg/boundarytools.hh>
@@ -163,7 +163,7 @@ int main(int argc, char** argv)
 
   // We use a SubGrid as it will automatically make sure that we do
   // not have more than difference 1 in the levels of neighboring
-  // elements. This is necessary since HangingNodeP2NodalBasis does
+  // elements. This is necessary since HangingNodeLagrangeP2Basis does
   // not implement higher order hanging nodes constraints.
   std::unique_ptr<Grid> grid = std::make_unique<Grid>(*hostGrid);
   {
@@ -193,7 +193,7 @@ int main(int argc, char** argv)
     using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
 
     // bulk term corresponding to theta
-    using FEBasisTrace = Functions::HangingNodeP2NodalBasis<GridView>;
+    using FEBasisTrace = Functions::HangingNodeLagrangeP2Basis<GridView>;
 
     auto solutionSpaces
       = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);

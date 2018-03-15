@@ -8,7 +8,7 @@ install(FILES
         constrainedglobalbasis.hh
         constrainedlocalindexset.hh
         hangingnodebernsteinp2basis.hh
-        hangingnodep2nodalbasis.hh
+        hangingnodelagrangep2basis.hh
         normalizedbasisadaptor.hh
         normalizedrefinedbasisadaptor.hh
         optimaltestbasis.hh

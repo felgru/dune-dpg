@@ -9,7 +9,7 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
-#include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
+#include <dune/functions/functionspacebases/hangingnodelagrangep2basis.hh>
 #include <dune/geometry/quadraturerules.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
@@ -32,7 +32,7 @@ int main() try
 
   // We use a SubGrid as it will automatically make sure that we do
   // not have more than difference 1 in the levels of neighboring
-  // elements. This is necessary since HangingNodeP2NodalBasis does
+  // elements. This is necessary since HangingNodeLagrangeP2Basis does
   // not implement higher order hanging nodes constraints.
 
   const auto grid = createHangingNodeRefinedSubGrid(*hostGrid);
@@ -42,10 +42,10 @@ int main() try
 
   bool success = true;
 
-  std::cout << "Testing HangingNodeP2NodalBasis on 2d"
+  std::cout << "Testing HangingNodeLagrangeP2Basis on 2d"
             << " triangular grid." << std::endl;
 
-  Functions::HangingNodeP2NodalBasis<GridView> hangingNodeBasis(gridView);
+  Functions::HangingNodeLagrangeP2Basis<GridView> hangingNodeBasis(gridView);
 
   success &= globalIndicesFormConsecutiveRange(hangingNodeBasis);
   success &= constraintsFulfillContinuityEquation(hangingNodeBasis);
