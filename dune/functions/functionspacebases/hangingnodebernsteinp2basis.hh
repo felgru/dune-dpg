@@ -1,9 +1,11 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODEP2NODALBASIS_HH
-#define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODEP2NODALBASIS_HH
+#ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODEBERNSTEINP2BASIS_HH
+#define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODEBERNSTEINP2BASIS_HH
 
 #include <array>
+#include <utility>
+
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
 #include <dune/common/version.hh>
@@ -13,7 +15,7 @@
 #include <dune/functions/common/optional.hh>
 #endif
 
-#include <dune/localfunctions/lagrange/pqkfactory.hh>
+#include <dune/localfunctions/bernstein/pqkfactory.hh>
 
 #include <dune/typetree/leafnode.hh>
 
@@ -32,9 +34,9 @@ namespace Functions {
 // *****************************************************************************
 // This is the reusable part of the basis. It contains
 //
-//   HangingNodeP2PreBasis
-//   HangingNodeP2NodeIndexSet
-//   HangingNodeP2Node
+//   HangingNodeBernsteinP2PreBasis
+//   HangingNodeBernsteinP2NodeIndexSet
+//   HangingNodeBernsteinP2Node
 //
 // The pre-basis allows to create the others and is the owner of possible shared
 // state. These three components do _not_ depend on the global basis or index
@@ -42,13 +44,13 @@ namespace Functions {
 // *****************************************************************************
 
 template<typename GV, typename TP>
-class HangingNodeP2Node;
+class HangingNodeBernsteinP2Node;
 
 template<typename GV, class MI, class TP>
-class HangingNodeP2NodeIndexSet;
+class HangingNodeBernsteinP2NodeIndexSet;
 
 template<typename GV, class MI>
-class HangingNodeP2PreBasis;
+class HangingNodeBernsteinP2PreBasis;
 
 
 
@@ -63,7 +65,7 @@ class HangingNodeP2PreBasis;
  * \note This only works on 2d grids
  */
 template<typename GV, class MI>
-class HangingNodeP2PreBasis
+class HangingNodeBernsteinP2PreBasis
 {
   static constexpr int dim = GV::dimension;
 
@@ -78,19 +80,19 @@ public:
 private:
 
   template<typename, class, class>
-  friend class HangingNodeP2NodeIndexSet;
+  friend class HangingNodeBernsteinP2NodeIndexSet;
 
-  using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;
+  using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;
 
 public:
 
   //! Template mapping root tree path to type of created tree node
   template<class TP>
-  using Node = HangingNodeP2Node<GV, TP>;
+  using Node = HangingNodeBernsteinP2Node<GV, TP>;
 
   //! Template mapping root tree path to type of created tree node index set
   template<class TP>
-  using IndexSet = HangingNodeP2NodeIndexSet<GV, MI, TP>;
+  using IndexSet = HangingNodeBernsteinP2NodeIndexSet<GV, MI, TP>;
 
   //! Type used for global numbering of the basis vectors
   using MultiIndex = MI;
@@ -99,11 +101,14 @@ public:
   using SizePrefix = Dune::ReservedVector<size_type, 1>;
 
   //! Constructor for a given grid view object
-  HangingNodeP2PreBasis(const GridView& gv) :
+  HangingNodeBernsteinP2PreBasis(const GridView& gv) :
     gridView_(gv),
-    constraint{3./8, 3./4, -1./8}
+    constraintWeights{{{   1.,    0.,    0.},
+                       {1./2., 1./2.,    0.},
+                       {1./4., 1./2., 1./4.}}}
   {
-    static_assert(dim==2, "HangingNodeP2GlobalBasis only defined in 2D!");
+    static_assert(dim==2,
+        "HangingNodeBernsteinP2GlobalBasis only defined in 2D!");
   }
 
   //! Initialize the global indices
@@ -117,6 +122,12 @@ public:
     std::vector<Optional<std::array<size_t,3>>>
 #endif
         edgeConstraints(edgeDofs.size());
+#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
+    std::vector<Dune::Std::optional<std::array<size_t,3>>>
+#else
+    std::vector<Optional<std::array<size_t,3>>>
+#endif
+        vertexConstraints(gridView_.size(2));
     size_t nextEdgeDof = gridView_.size(dim); // edges start after vertices
     for(const auto& e : elements(gridView_)) {
       for (auto&& intersection : intersections(gridView_, e)) {
@@ -185,6 +196,8 @@ public:
             edgeDofs[gridIndexSet.subIndex(e, edgeInside, 1)] = midVertex;
             edgeConstraints[gridIndexSet.subIndex(outsideElement,edgeOutside,1)]
                 = std::array<size_t,3>{commonVertex, midVertex, farVertex};
+            vertexConstraints[midVertex]
+                = std::array<size_t,3>{commonVertex, midVertex, farVertex};
           } else {
             // Nothing to be done here, as the edge DoF from this face
             // is constrained by the larger neighboring element.
@@ -207,24 +220,37 @@ public:
       auto& finiteElement = feCache.get(e.type());
       if(!e.type().isTriangle ()) {
         DUNE_THROW(Dune::NotImplemented,
-                   "HangingNodeP2PreBasis only implemented on triangles.");
+                   "HangingNodeBernsteinP2PreBasis only implemented on triangles.");
       }
       const unsigned short numDofs = finiteElement.size();
       std::vector<MultiIndex> localToGlobal;
       localToGlobal.reserve(numDofs);
-      std::vector<size_t> constraintOffsets;
+      std::vector<std::pair<size_t,size_t>> constraintOffsets;
       unsigned short preceedingUnconstrainedIndices = 0;
       for(unsigned short i = 0; i < numDofs; i++) {
         LocalKey localKey = finiteElement.localCoefficients().localKey(i);
         const auto dofCodim = localKey.codim();
         const size_type subIndex =
             gridIndexSet.subIndex(e, localKey.subEntity(), dofCodim);
-        if(dofCodim == 2) {
-          localToGlobal.emplace_back(MultiIndex{subIndex});
-          ++preceedingUnconstrainedIndices;
-        } else { // dofCodim == 1, since P2 does not have inner dofs
+        if(dofCodim == 2) { // dof is vertex
+          if(vertexConstraints[subIndex]) {
+            constraintOffsets.push_back({preceedingUnconstrainedIndices, 2});
+            preceedingUnconstrainedIndices = 0;
+#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
+            for(size_type idx : *vertexConstraints[subIndex])
+#else
+            for(size_type idx : vertexConstraints[subIndex].value())
+#endif
+            {
+              localToGlobal.push_back(MultiIndex{idx});
+            }
+          } else {
+            localToGlobal.push_back(MultiIndex{subIndex});
+            ++preceedingUnconstrainedIndices;
+          }
+        } else { // dofCodim == 1, i.e. edge, since P2 does not have inner dofs
           if(edgeConstraints[subIndex]) {
-            constraintOffsets.push_back(preceedingUnconstrainedIndices);
+            constraintOffsets.push_back({preceedingUnconstrainedIndices, 1});
             preceedingUnconstrainedIndices = 0;
 #if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
             for(size_type idx : *edgeConstraints[subIndex])
@@ -232,18 +258,18 @@ public:
             for(size_type idx : edgeConstraints[subIndex].value())
 #endif
             {
-              localToGlobal.emplace_back(MultiIndex{idx});
+              localToGlobal.push_back(MultiIndex{idx});
             }
           } else {
             assert(edgeDofs[subIndex] != SIZE_MAX);
-            localToGlobal.emplace_back(MultiIndex{edgeDofs[subIndex]});
+            localToGlobal.push_back(MultiIndex{edgeDofs[subIndex]});
             ++preceedingUnconstrainedIndices;
           }
         }
       }
       localToGlobal.shrink_to_fit();
       constraintOffsets.shrink_to_fit();
-      size_t elementIndex = gridIndexSet.subIndex(e, 0, 0);
+      const size_t elementIndex = gridIndexSet.index(e);
       std::swap(indicesLocalGlobal[elementIndex], localToGlobal);
       std::swap(constraintIndicator[elementIndex], constraintOffsets);
     }
@@ -321,8 +347,10 @@ protected:
   GridView gridView_;
 
   std::vector<std::vector<MultiIndex>> indicesLocalGlobal;
-  std::vector<std::vector<size_type>> constraintIndicator;
-  const std::array<double, 3> constraint;
+  // First size_type is the offset of the constrained indices,
+  // second size_type is index of constraintsWeights.
+  std::vector<std::vector<std::pair<size_type, size_type>>> constraintIndicator;
+  const std::array<std::array<double, 3>, 3> constraintWeights;
 
   size_type numberOfDofs;
 };
@@ -330,13 +358,13 @@ protected:
 
 
 template<typename GV, typename TP>
-class HangingNodeP2Node :
+class HangingNodeBernsteinP2Node :
   public LeafBasisNode<std::size_t, TP>
 {
   static constexpr int dim = GV::dimension;
 
   using Base = LeafBasisNode<std::size_t,TP>;
-  using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;
+  using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;
 
 public:
 
@@ -346,7 +374,7 @@ public:
   using ElementSeed = typename Element::EntitySeed;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
 
-  HangingNodeP2Node(const TreePath& treePath) :
+  HangingNodeBernsteinP2Node(const TreePath& treePath) :
     Base(treePath),
     finiteElement_(nullptr),
     element_(nullptr)
@@ -384,7 +412,7 @@ protected:
 
 
 template<typename GV, class MI, class TP>
-class HangingNodeP2NodeIndexSet
+class HangingNodeBernsteinP2NodeIndexSet
 {
   enum {dim = GV::dimension};
 
@@ -395,7 +423,7 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using PreBasis = HangingNodeP2PreBasis<GV, MI>;
+  using PreBasis = HangingNodeBernsteinP2PreBasis<GV, MI>;
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
   using NodeFactory = PreBasis;
 #endif
@@ -404,7 +432,7 @@ public:
 
   using ConstraintWeights = std::array<double, 3>;
 
-  HangingNodeP2NodeIndexSet(const PreBasis& preBasis) :
+  HangingNodeBernsteinP2NodeIndexSet(const PreBasis& preBasis) :
     preBasis_(&preBasis),
     node_(nullptr),
     indicesLocalGlobal_(nullptr)
@@ -419,7 +447,7 @@ public:
   {
     node_ = &node;
     const auto& gridIndexSet = preBasis_->gridView().indexSet();
-    size_t elementIndex = gridIndexSet.subIndex(node_->element(), 0, 0);
+    const size_t elementIndex = gridIndexSet.index(node_->element());
     indicesLocalGlobal_ = &preBasis_->indicesLocalGlobal[elementIndex];
     constraintIndicator_ = &preBasis_->constraintIndicator[elementIndex];
   }
@@ -457,13 +485,13 @@ public:
   size_type constraintOffset(size_type i) const
   {
     assert(node_ != nullptr);
-    return (*constraintIndicator_)[i];
+    return (*constraintIndicator_)[i].first;
   }
 
-  const ConstraintWeights& constraintWeights(size_type /* i */) const
+  const ConstraintWeights& constraintWeights(size_type i) const
   {
     assert(node_ != nullptr);
-    return preBasis_->constraint;
+    return preBasis_->constraintWeights[(*constraintIndicator_)[i].second];
   }
 
 protected:
@@ -472,7 +500,7 @@ protected:
   const Node* node_;
 
   const std::vector<MultiIndex>* indicesLocalGlobal_;
-  const std::vector<size_t>* constraintIndicator_;
+  const std::vector<std::pair<size_t,size_t>>* constraintIndicator_;
 };
 
 
@@ -481,7 +509,7 @@ namespace BasisBuilder {
 
 namespace Imp {
 
-struct HangingNodeP2PreBasisFactory
+struct HangingNodeBernsteinP2PreBasisFactory
 {
   static const std::size_t requiredMultiIndexSize = 1;
 
@@ -492,7 +520,7 @@ struct HangingNodeP2PreBasisFactory
   auto build(const GridView& gridView) const
 #endif
   {
-    return HangingNodeP2PreBasis<GridView, MultiIndex>(gridView);
+    return HangingNodeBernsteinP2PreBasis<GridView, MultiIndex>(gridView);
   }
 };
 
@@ -507,7 +535,7 @@ struct HangingNodeP2PreBasisFactory
  */
 auto hangingNodeP2()
 {
-  return Imp::HangingNodeP2PreBasisFactory();
+  return Imp::HangingNodeBernsteinP2PreBasisFactory();
 }
 
 } // end namespace BasisBuilder
@@ -518,7 +546,7 @@ auto hangingNodeP2()
 // This is the actual global basis implementation based on the reusable parts.
 // *****************************************************************************
 
-/** \brief Nodal basis of a scalar 2nd-order Lagrangean finite element space
+/** \brief Nodal basis of a scalar 2nd-order Bernstein finite element space
  *         with hanging nodes
  *
  * \ingroup FunctionSpaceBasesImplementations
@@ -526,12 +554,12 @@ auto hangingNodeP2()
  * \note This only works for 2d grids.
  *
  * All arguments passed to the constructor will be forwarded to the constructor
- * of HangingNodeP2PreBasis.
+ * of HangingNodeBernsteinP2PreBasis.
  *
  * \tparam GV The GridView that the space is defined on
  */
 template<typename GV>
-using HangingNodeP2NodalBasis = ConstrainedGlobalBasis<HangingNodeP2PreBasis<GV, FlatMultiIndex<std::size_t>> >;
+using HangingNodeBernsteinP2Basis = ConstrainedGlobalBasis<HangingNodeBernsteinP2PreBasis<GV, FlatMultiIndex<std::size_t>> >;
 
 
 
@@ -539,4 +567,4 @@ using HangingNodeP2NodalBasis = ConstrainedGlobalBasis<HangingNodeP2PreBasis<GV,
 } // end namespace Dune
 
 
-#endif // DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODEP2NODALBASIS_HH
+#endif // DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODEBERNSTEINP2BASIS_HH
