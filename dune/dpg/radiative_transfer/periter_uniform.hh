@@ -18,9 +18,9 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
+#include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/bernsteinbasis.hh>
+#include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
@@ -364,9 +364,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   //   Choose finite element spaces for the solution
   /////////////////////////////////////////////////////////
 
-  using FEBasisInterior = Functions::LagrangeDGBasis<LeafGridView, 1>;
-  using FEBasisTrace = Functions::PQkNodalBasis<LeafGridView, 2>;
-  using FEBasisTest = Functions::PQkDGRefinedDGBasis<LeafGridView, 1, 3>;
+  using FEBasisInterior = Functions::BernsteinDGBasis<LeafGridView, 1>;
+  using FEBasisTrace = Functions::BernsteinBasis<LeafGridView, 2>;
+  using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<LeafGridView, 1, 3>;
   using FEBasisTestEnriched = FEBasisTest;
 
   auto solutionSpaces

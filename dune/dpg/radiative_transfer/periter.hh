@@ -26,10 +26,9 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/functionspacebases/hangingnodelagrangep2basis.hh>
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
+#include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
+#include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
@@ -525,10 +524,10 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   //   Choose finite element spaces for the solution and test functions
   //////////////////////////////////////////////////////////////////////
 
-  using FEBasisInterior = Functions::LagrangeDGBasis<LeafGridView, 1>;
-  using FEBasisTrace = Functions::HangingNodeLagrangeP2Basis<LeafGridView>;
+  using FEBasisInterior = Functions::BernsteinDGBasis<LeafGridView, 1>;
+  using FEBasisTrace = Functions::HangingNodeBernsteinP2Basis<LeafGridView>;
 
-  using FEBasisTest = Functions::PQkDGRefinedDGBasis<LeafGridView, 1, 3>;
+  using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<LeafGridView, 1, 3>;
   using FEBasisTestEnriched = FEBasisTest;
 
   //////////////////////////////////
@@ -613,7 +612,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
 #ifdef PERITER_SKELETAL_SCATTERING
     using FEBasisHostTraceDiscontinuous
-        = Functions::LagrangeDGBasis<HostGridView, 2>;
+        = Functions::BernsteinDGBasis<HostGridView, 2>;
 #else
     using FEBasisHostInterior
         = changeGridView_t<FEBasisInterior, HostGridView>;
