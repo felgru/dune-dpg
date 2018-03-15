@@ -26,7 +26,7 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
+#include <dune/functions/functionspacebases/hangingnodelagrangep2basis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
@@ -526,7 +526,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   //////////////////////////////////////////////////////////////////////
 
   using FEBasisInterior = Functions::LagrangeDGBasis<LeafGridView, 1>;
-  using FEBasisTrace = Functions::HangingNodeP2NodalBasis<LeafGridView>;
+  using FEBasisTrace = Functions::HangingNodeLagrangeP2Basis<LeafGridView>;
 
   using FEBasisTest = Functions::PQkDGRefinedDGBasis<LeafGridView, 1, 3>;
   using FEBasisTestEnriched = FEBasisTest;
