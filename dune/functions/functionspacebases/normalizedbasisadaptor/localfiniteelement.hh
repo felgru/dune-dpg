@@ -134,15 +134,13 @@ namespace Dune
         ScaledLocalInterpolation<
           typename LocalFiniteElement::Traits::LocalInterpolationType>>;
 
-    ScaledLocalFiniteElement () = delete;
-
-    // TODO: replace double with more appropriate type
-    ScaledLocalFiniteElement (const std::vector<double>& scalingWeights) :
+    ScaledLocalFiniteElement () :
       wrappedFiniteElement_(nullptr),
       localBasis_(),
       localInterpolation_()
     {}
 
+    // TODO: replace double with more appropriate type
     void setWrappedFiniteElementAndWeights(
         const LocalFiniteElement& newFiniteElement,
         const typename std::vector<double>::const_iterator weightsBegin)

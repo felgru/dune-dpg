@@ -173,8 +173,7 @@ int main(int argc, char** argv)
                                 DomainOfIntegration::interior>(f(beta))));
 
   {
-    std::chrono::steady_clock::time_point startsystemassembler
-      = std::chrono::steady_clock::now();
+    const auto startsystemassembler = std::chrono::steady_clock::now();
 
     VectorType rhsVector;
     MatrixType stiffnessMatrix;
@@ -182,8 +181,7 @@ int main(int argc, char** argv)
     bufferedSystemAssembler
       .assembleSystem(stiffnessMatrix, rhsVector, rhsFunctions);
 
-    std::chrono::steady_clock::time_point endsystemassembler
-      = std::chrono::steady_clock::now();
+    const auto endsystemassembler = std::chrono::steady_clock::now();
     std::cout << "The   buffered system assembler took "
               << std::chrono::duration_cast<std::chrono::microseconds>
                     (endsystemassembler - startsystemassembler).count()
@@ -191,8 +189,7 @@ int main(int argc, char** argv)
   }
 
   {
-    std::chrono::steady_clock::time_point startsystemassembler
-      = std::chrono::steady_clock::now();
+    const auto startsystemassembler = std::chrono::steady_clock::now();
 
     VectorType rhsVector;
     MatrixType stiffnessMatrix;
@@ -200,8 +197,7 @@ int main(int argc, char** argv)
     unbufferedSystemAssembler
       .assembleSystem(stiffnessMatrix, rhsVector, rhsFunctions);
 
-    std::chrono::steady_clock::time_point endsystemassembler
-      = std::chrono::steady_clock::now();
+    const auto endsystemassembler = std::chrono::steady_clock::now();
     std::cout << "The unbuffered system assembler took "
               << std::chrono::duration_cast<std::chrono::microseconds>
                     (endsystemassembler - startsystemassembler).count()
@@ -237,15 +233,13 @@ int main(int argc, char** argv)
                  + std::get<Phi>(*solutionSpaces).size());
     x = 0;
 
-    std::chrono::steady_clock::time_point startsolver
-      = std::chrono::steady_clock::now();
+    const auto startsolver = std::chrono::steady_clock::now();
 
     UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
     InverseOperatorResult statistics;
     umfPack.apply(x, rhsVector, statistics);
 
-    std::chrono::steady_clock::time_point endsolver
-      = std::chrono::steady_clock::now();
+    const auto endsolver = std::chrono::steady_clock::now();
     std::cout << "Solving the system with UMFPACK took "
               << std::chrono::duration_cast<std::chrono::microseconds>
                     (endsolver - startsolver).count()

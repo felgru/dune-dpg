@@ -18,23 +18,28 @@
 #include "assemble_helper.hh"
 #include "assemble_types.hh"
 #include "integralterm.hh"
+#include "spacetuple.hh"
 
 namespace Dune {
 
   /**
    * \brief This class describes an inner product.
    *
-   * \tparam TSpaces            tuple of test spaces
+   * \tparam TSpaces            shared_ptr of tuple of test spaces
    * \tparam InnerProductTerms  tuple of IntegralTerm
    */
   template<class TSpaces, class InnerProductTerms>
   class InnerProduct
   {
+    static_assert(is_SpaceTuplePtr<TSpaces>::value,
+        "TSpaces needs to be a SpaceTuplePtr!");
   public:
+    //! shared pointer to tuple type of test spaces
+    using TestSpacesPtr = TSpaces;
     //! tuple type of test spaces
-    typedef TSpaces TestSpaces;
+    using TestSpaces = typename TestSpacesPtr::element_type;
     //! tuple type of inner product terms
-    typedef InnerProductTerms Terms;
+    using Terms = InnerProductTerms;
     //! tuple type for the local views of the test spaces
     using TestLocalViews = detail::getLocalViews_t<TestSpaces>;
 
@@ -44,8 +49,8 @@ namespace Dune {
      *
      * \note For your convenience, use make_InnerProduct() instead.
      */
-    constexpr InnerProduct (const std::shared_ptr<TestSpaces>& testSpaces,
-                            const InnerProductTerms&           terms)
+    constexpr InnerProduct (const TestSpacesPtr&     testSpaces,
+                            const InnerProductTerms& terms)
                : testSpaces(testSpaces),
                  terms(terms),
                  testLocalViews(nullptr)
@@ -104,7 +109,7 @@ namespace Dune {
     /**
      * \brief Does exactly what it says on the tin.
      */
-    std::shared_ptr<TestSpaces> getTestSpaces() const
+    TestSpacesPtr getTestSpaces() const
     { return testSpaces; }
 
     /**
@@ -116,8 +121,8 @@ namespace Dune {
     }
 
   private:
-    std::shared_ptr<TestSpaces> testSpaces;
-    InnerProductTerms           terms;
+    TestSpacesPtr         testSpaces;
+    InnerProductTerms     terms;
     size_t localTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
     size_t localTotalTestSize;
     const TestLocalViews* testLocalViews;
@@ -130,24 +135,24 @@ namespace Dune {
  * \param testSpaces  a shared_ptr to a tuple of test spaces
  * \param terms       a tuple of IntegralTerm
  */
-template<class TestSpaces, class InnerProductTerms>
-auto make_InnerProduct(const std::shared_ptr<TestSpaces>& testSpaces,
-                       InnerProductTerms                  terms)
-    -> InnerProduct<TestSpaces, InnerProductTerms>
+template<class TestSpacesPtr, class InnerProductTerms>
+auto make_InnerProduct(const TestSpacesPtr& testSpaces,
+                       InnerProductTerms    terms)
+    -> InnerProduct<TestSpacesPtr, InnerProductTerms>
 {
-  return InnerProduct<TestSpaces, InnerProductTerms> (testSpaces, terms);
+  return InnerProduct<TestSpacesPtr, InnerProductTerms> (testSpaces, terms);
 }
 
-template<class TestSpaces, class InnerProductTerms, class NewTestSpaces>
+template<class TestSpacesPtr, class InnerProductTerms, class NewTestSpacesPtr>
 auto replaceTestSpaces(
-    const InnerProduct<TestSpaces, InnerProductTerms>& innerProduct,
-    const std::shared_ptr<NewTestSpaces>& newTestSpaces) {
+    const InnerProduct<TestSpacesPtr, InnerProductTerms>& innerProduct,
+    const NewTestSpacesPtr& newTestSpaces) {
   return make_InnerProduct(newTestSpaces,
                            innerProduct.getTerms());
 }
 
-template<class TestSpaces, class InnerProductTerms>
-void InnerProduct<TestSpaces, InnerProductTerms>::
+template<class TestSpacesPtr, class InnerProductTerms>
+void InnerProduct<TestSpacesPtr, InnerProductTerms>::
 getOccupationPattern(MatrixIndexSet& nb) const
 {
   using namespace Dune::detail;

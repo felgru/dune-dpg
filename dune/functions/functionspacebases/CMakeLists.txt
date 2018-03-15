@@ -7,8 +7,10 @@ install(FILES
         bernsteindgrefineddgnodalbasis.hh
         constrainedglobalbasis.hh
         constrainedlocalindexset.hh
-        hangingnodep2nodalbasis.hh
+        hangingnodebernsteinp2basis.hh
+        hangingnodelagrangep2basis.hh
         normalizedbasisadaptor.hh
+        normalizedrefinedbasisadaptor.hh
         optimaltestbasis.hh
         pqkdgrefineddgnodalbasis.hh
         pqksubsampleddgbasis.hh

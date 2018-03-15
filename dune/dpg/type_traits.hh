@@ -70,6 +70,9 @@ namespace Functions {
   class HangingNodeP2PreBasis;
 
   template<typename InnerProduct>
+  class NormalizedPreBasis;
+
+  template<typename InnerProduct>
   class NormalizedRefinedPreBasis;
 
   template<typename BilinForm, typename InnerProd>
@@ -375,6 +378,14 @@ template<typename GV, class MI, class GridView>
 struct changeGridView<Functions::HangingNodeP2PreBasis<GV, MI>, GridView>
 {
   typedef Functions::HangingNodeP2PreBasis<GridView, MI> type;
+};
+
+template<typename InnerProduct, class GridView>
+struct changeGridView<Functions::NormalizedPreBasis<InnerProduct>,
+                      GridView>
+{
+  typedef Functions::NormalizedPreBasis<
+            changeGridView_t<InnerProduct, GridView>> type;
 };
 
 template<typename InnerProduct, class GridView>

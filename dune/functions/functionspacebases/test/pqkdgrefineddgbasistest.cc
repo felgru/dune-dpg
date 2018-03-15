@@ -15,7 +15,7 @@
 using namespace Dune;
 using namespace Dune::Functions;
 
-int main (int argc, char* argv[]) try
+int main () try
 {
   // Generate grid for testing
   constexpr int dim = 2;

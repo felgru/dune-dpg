@@ -14,10 +14,10 @@
 
 #include <dune/grid/yaspgrid.hh>
 
-#include <dune/functions/functionspacebases/normalizedbasisadaptor.hh>
-#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
+#include <dune/functions/functionspacebases/normalizedrefinedbasisadaptor.hh>
+#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
-#include "unrefinedbasistest.hh"
+#include "refinedbasistest.hh"
 
 using namespace Dune;
 using namespace Dune::Functions;
@@ -37,8 +37,8 @@ void testNormedAdaptorOn(const typename Basis::GridView gridView)
                                     DomainOfIntegration::interior>(1.)));
   using InnerProduct = decltype(innerProduct);
 
-  NormalizedBasis<InnerProduct> normedBasis(innerProduct);
-  testScalarBasis(normedBasis);
+  NormalizedRefinedBasis<InnerProduct> normedBasis(innerProduct);
+  testRefinedScalarBasis(normedBasis);
 }
 
 int main () try
@@ -53,7 +53,7 @@ int main () try
   typedef GridType::LeafGridView GridView;
   const GridView gridView = grid.leafGridView();
 
-  testNormedAdaptorOn<LagrangeDGBasis<GridView, 2>>(gridView);
+  testNormedAdaptorOn<PQkDGRefinedDGBasis<GridView, 1, 2>>(gridView);
 
   return 0;
 

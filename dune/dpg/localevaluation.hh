@@ -37,7 +37,7 @@ struct LocalFunctionEvaluation<dim, EvaluationType::value> {
   std::vector<FieldVector<double,1> > operator()
                       (const LocalFiniteElement& localFiniteElement,
                        const FieldVector<double, dim>& quadPos,
-                       const Geometry& geometry,
+                       const Geometry&,
                        const FieldVector<double, dim>&) const
   {
     // values of the shape functions
@@ -101,8 +101,8 @@ struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value, false> {
                       (const LocalFiniteElement& localFiniteElement,
                        unsigned int,
                        const FieldVector<double, dim>& quadPos,
-                       const Geometry& geometry,
-                       const SubGeometry& subGeometryInReferenceElement,
+                       const Geometry&,
+                       const SubGeometry&,
                        const FieldVector<double, dim>&) const
   {
     // values of the shape functions

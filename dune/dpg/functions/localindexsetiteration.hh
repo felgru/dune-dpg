@@ -23,8 +23,8 @@ namespace detail {
   void iterateOverLocalIndexSet_impl(
       LocalIndexSet&& localIndexSet,
       UnconstrainedEvaluation&& unconstrainedEvaluation,
-      ConstrainedSetUp&& constrainedSetUp,
-      ConstrainedEvaluation&& constrainedEvaluation) {
+      ConstrainedSetUp&&,
+      ConstrainedEvaluation&&) {
     using size_type = typename std::decay_t<LocalIndexSet>::size_type;
     for(size_type i=0, i_max=localIndexSet.size(); i<i_max; i++) {
       unconstrainedEvaluation(i, localIndexSet.index(i));
@@ -103,14 +103,14 @@ void addToGlobalMatrix(
         {
           getGlobalMatrixEntry(gi, gj) += getLocalMatrixEntry(i, j);
         },
-        [](size_t j){},
+        [](size_t /* j */){},
         [&](size_t j, TestMultiIndex gj, double wj)
         {
           getGlobalMatrixEntry(gi, gj) += wj * getLocalMatrixEntry(i, j);
         }
       );
     },
-    [](size_t i){},
+    [](size_t /* i */){},
     [&](size_t i, TestMultiIndex gi, double wi)
     {
       iterateOverLocalIndexSet(
@@ -119,7 +119,7 @@ void addToGlobalMatrix(
         {
           getGlobalMatrixEntry(gi, gj) += wi * getLocalMatrixEntry(i, j);
         },
-        [](size_t j){},
+        [](size_t /* j */){},
         [&](size_t j, TestMultiIndex gj, double wj)
         {
           getGlobalMatrixEntry(gi, gj) += wi * wj * getLocalMatrixEntry(i, j);

@@ -65,6 +65,8 @@ public:
   using TestspaceCoefficientMatrix
     = typename BufferPolicy::template
         TestspaceCoefficientMatrix<BilinearForm, InnerProduct>;
+  using TestSearchSpacesPtr = typename BilinearForm::TestSpacesPtr;
+  using SolutionSpacesPtr = typename BilinearForm::SolutionSpacesPtr;
   using TestSearchSpaces = typename BilinearForm::TestSpaces;
   using SolutionSpaces = typename BilinearForm::SolutionSpaces;
 
@@ -157,16 +159,13 @@ public:
    *
    * \param[in,out] matrix      the matrix of the DPG system
    * \param[in] dirichletNodes  true marks the dofs in the Dirichlet boundary
-   * \param[in] value           the Dirichlet boundary value
    * \tparam spaceIndex  the index of the solution space on which we apply
    *                     the boundary data
-   * \tparam ValueType   we take either constants or functions for \p value
    */
-  template <size_t spaceIndex, class ValueType>
+  template <size_t spaceIndex>
   void applyDirichletBoundaryToMatrix(
                               BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
-                              const std::vector<bool>& dirichletNodes,
-                              const ValueType& value);
+                              const std::vector<bool>& dirichletNodes);
 
   /**
    * \brief The same as applyDirichletBoundary but it only
@@ -243,22 +242,22 @@ public:
   /**
    * \brief Does exactly what it says on the tin.
    */
-  std::shared_ptr<TestSearchSpaces> getTestSearchSpaces() const
+  TestSearchSpacesPtr getTestSearchSpaces() const
   { return testSearchSpaces_; }
 
   /**
    * \brief Does exactly what it says on the tin.
    */
-  std::shared_ptr<SolutionSpaces> getSolutionSpaces() const
+  SolutionSpacesPtr getSolutionSpaces() const
   { return solutionSpaces_; }
 
 private:
   template<size_t spaceIndex, int dim,
     typename std::enable_if<models<Functions::Concept::GlobalBasis<typename
-                        std::tuple_element_t<spaceIndex, typename
-                            BilinearForm::SolutionSpaces>::GridView>,
-                  std::tuple_element_t<spaceIndex, typename
-                        BilinearForm::SolutionSpaces>>()>::type* = nullptr>
+                        std::tuple_element_t<spaceIndex,
+                                             SolutionSpaces>::GridView>,
+                  std::tuple_element_t<spaceIndex,
+                                       SolutionSpaces>>()>::type* = nullptr>
   void defineCharacteristicFaces_impl(
       BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       BlockVector<FieldVector<double,1> >& rhs,
@@ -267,20 +266,20 @@ private:
 
   template<size_t spaceIndex, int dim,
     typename std::enable_if<models<Functions::Concept::ConstrainedGlobalBasis<
-                      typename std::tuple_element_t<spaceIndex, typename
-                          BilinearForm::SolutionSpaces>::GridView>,
-                  std::tuple_element_t<spaceIndex, typename
-                        BilinearForm::SolutionSpaces>>()>::type* = nullptr>
+                      typename std::tuple_element_t<spaceIndex,
+                                                    SolutionSpaces>::GridView>,
+                  std::tuple_element_t<spaceIndex,
+                                       SolutionSpaces>>()>::type* = nullptr>
   void defineCharacteristicFaces_impl(
       BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
       BlockVector<FieldVector<double,1> >& rhs,
       const FieldVector<double,dim>& beta,
       double delta);
 
-  std::shared_ptr<TestSearchSpaces> testSearchSpaces_;
-  std::shared_ptr<SolutionSpaces>   solutionSpaces_;
-  BilinearForm&                     bilinearForm_;
-  TestspaceCoefficientMatrix        testspaceCoefficientMatrix_;
+  TestSearchSpacesPtr         testSearchSpaces_;
+  SolutionSpacesPtr           solutionSpaces_;
+  BilinearForm&               bilinearForm_;
+  TestspaceCoefficientMatrix  testspaceCoefficientMatrix_;
 };
 
 
@@ -631,19 +630,18 @@ applyDirichletBoundary
                        const ValueType& boundaryValue)
 {
   applyDirichletBoundaryToMatrix<spaceIndex>
-          (matrix, dirichletNodes, boundaryValue);
+          (matrix, dirichletNodes);
   applyDirichletBoundaryToRhs<spaceIndex>
           (rhs,    dirichletNodes, boundaryValue);
 }
 
 
 template<class BilinearForm, class InnerProduct, class BufferPolicy>
-template <size_t spaceIndex, class ValueType>
+template <size_t spaceIndex>
 void DPGSystemAssembler<BilinearForm, InnerProduct, BufferPolicy>::
 applyDirichletBoundaryToMatrix
                       (BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
-                       const std::vector<bool>& dirichletNodes,
-                       const ValueType& boundaryValue)
+                       const std::vector<bool>& dirichletNodes)
 {
   const size_t spaceSize =
         std::get<spaceIndex>(*solutionSpaces_).size();

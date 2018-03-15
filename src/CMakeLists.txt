@@ -35,10 +35,12 @@
 #add_dune_ug_flags(manufactured_transport_uniform)
 #target_link_dune_default_libraries("manufactured_transport_uniform")
 
-#add_executable("manufactured_transport" manufactured_transport.cc)
-#add_dune_suitesparse_flags(manufactured_transport)
-#add_dune_ug_flags(manufactured_transport)
-#target_link_dune_default_libraries("manufactured_transport")
+#if(dune-subgrid_FOUND)
+#  add_executable("manufactured_transport" manufactured_transport.cc)
+#  add_dune_suitesparse_flags(manufactured_transport)
+#  add_dune_ug_flags(manufactured_transport)
+#  target_link_dune_default_libraries("manufactured_transport")
+#endif()
 
 add_executable("plot_extension" plot_extension.cc)
 add_dune_ug_flags(plot_extension)

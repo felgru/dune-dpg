@@ -18,30 +18,39 @@
 #include "assemble_helper.hh"
 #include "assemble_types.hh"
 #include "integralterm.hh"
+#include "spacetuple.hh"
 
 namespace Dune {
 
   /**
    * \brief This class describes a bilinear form.
    *
-   * \tparam TSpaces         tuple of test spaces
-   * \tparam SolSpaces       tuple of solution spaces
+   * \tparam TSpaces         shared_ptr of tuple of test spaces
+   * \tparam SolSpaces       shared_ptr of tuple of solution spaces
    * \tparam BilinearTerms   tuple of IntegralTerm
    */
   template<class TSpaces, class SolSpaces, class BilinearTerms>
   class BilinearForm
   {
+    static_assert(is_SpaceTuplePtr<TSpaces>::value,
+        "TSpaces needs to be a SpaceTuplePtr!");
+    static_assert(is_SpaceTuplePtr<SolSpaces>::value,
+        "SolSpaces needs to be a SpaceTuplePtr!");
   public:
+    //! shared pointer to tuple type of test spaces
+    using TestSpacesPtr = TSpaces;
+    //! shared pointer to tuple type of solution spaces
+    using SolutionSpacesPtr = SolSpaces;
     //! tuple type of test spaces
-    typedef TSpaces TestSpaces;
+    using TestSpaces = typename TestSpacesPtr::element_type;
     //! tuple type of solution spaces
-    typedef SolSpaces SolutionSpaces;
+    using SolutionSpaces = typename SolutionSpacesPtr::element_type;
     //! tuple type of bilinear form terms
-    typedef BilinearTerms Terms;
+    using Terms = BilinearTerms;
     //! tuple type for the local views of the test spaces
-    typedef detail::getLocalViews_t<TestSpaces>  TestLocalViews;
+    using TestLocalViews = detail::getLocalViews_t<TestSpaces>;
     //! tuple type for the local views of the solution spaces
-    typedef detail::getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
+    using SolutionLocalViews = detail::getLocalViews_t<SolutionSpaces>;
 
     BilinearForm () = delete;
     /**
@@ -49,9 +58,9 @@ namespace Dune {
      *
      * \note For your convenience, use make_BilinearForm() instead.
      */
-    constexpr BilinearForm (const std::shared_ptr<TestSpaces>&     testSpaces,
-                            const std::shared_ptr<SolutionSpaces>& solutionSpaces,
-                            const BilinearTerms&              terms)
+    constexpr BilinearForm (const TestSpacesPtr&     testSpaces,
+                            const SolutionSpacesPtr& solutionSpaces,
+                            const BilinearTerms&  terms)
                : testSpaces(testSpaces),
                  solutionSpaces(solutionSpaces),
                  terms(terms),
@@ -126,13 +135,13 @@ namespace Dune {
     /**
      * \brief Does exactly what it says on the tin.
      */
-    std::shared_ptr<TestSpaces> getTestSpaces() const
+    TestSpacesPtr getTestSpaces() const
     { return testSpaces; }
 
     /**
      * \brief Does exactly what it says on the tin.
      */
-    std::shared_ptr<SolutionSpaces> getSolutionSpaces() const
+    SolutionSpacesPtr getSolutionSpaces() const
     { return solutionSpaces; }
 
     /**
@@ -160,9 +169,9 @@ namespace Dune {
     { return localSolutionSpaceOffsets; }
 
   private:
-    std::shared_ptr<TestSpaces>     testSpaces;
-    std::shared_ptr<SolutionSpaces> solutionSpaces;
-    BilinearTerms                   terms;
+    TestSpacesPtr     testSpaces;
+    SolutionSpacesPtr solutionSpaces;
+    BilinearTerms     terms;
 
     size_t localTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
@@ -177,27 +186,28 @@ namespace Dune {
  * \brief Creates a BilinearForm,
  *        deducing the target type from the types of arguments.
  *
- * \param testSpaces     a tuple of test spaces
- * \param solutionSpaces a tuple of solution spaces
+ * \param testSpaces     a shared_ptr to a tuple of test spaces
+ * \param solutionSpaces a shared_ptr to a tuple of solution spaces
  * \param terms          a tuple of IntegralTerm
  */
-template<class TestSpaces, class SolutionSpaces, class BilinearTerms>
-auto make_BilinearForm(const std::shared_ptr<TestSpaces>&     testSpaces,
-                       const std::shared_ptr<SolutionSpaces>& solutionSpaces,
-                       BilinearTerms                     terms)
-    -> BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>
+template<class TestSpacesPtr, class SolutionSpacesPtr, class BilinearTerms>
+auto make_BilinearForm(const TestSpacesPtr&     testSpaces,
+                       const SolutionSpacesPtr& solutionSpaces,
+                       BilinearTerms            terms)
+    -> BilinearForm<TestSpacesPtr, SolutionSpacesPtr, BilinearTerms>
 {
-  return BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>
+  return BilinearForm<TestSpacesPtr, SolutionSpacesPtr, BilinearTerms>
                       (testSpaces,
                        solutionSpaces,
                        terms);
 }
 
-template<class TestSpaces, class SolutionSpaces, class BilinearTerms,
-         class NewTestSpaces>
+template<class TestSpacesPtr, class SolutionSpacesPtr, class BilinearTerms,
+         class NewTestSpacesPtr>
 auto replaceTestSpaces(
-    const BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>& bilinearForm,
-    const std::shared_ptr<NewTestSpaces>& newTestSpaces) {
+    const BilinearForm<TestSpacesPtr, SolutionSpacesPtr, BilinearTerms>&
+                                                              bilinearForm,
+    const NewTestSpacesPtr& newTestSpaces) {
   return make_BilinearForm
                      (newTestSpaces,
                       bilinearForm.getSolutionSpaces(),
@@ -205,9 +215,9 @@ auto replaceTestSpaces(
 }
 
 
-template<class TestSpaces, class SolutionSpaces, class BilinearTerms>
+template<class TestSpacesPtr, class SolutionSpacesPtr, class BilinearTerms>
 template<bool mirror>
-void BilinearForm<TestSpaces, SolutionSpaces, BilinearTerms>::
+void BilinearForm<TestSpacesPtr, SolutionSpacesPtr, BilinearTerms>::
 getOccupationPattern(MatrixIndexSet& nb, size_t testShift, size_t solutionShift) const
 {
   using namespace Dune::detail;

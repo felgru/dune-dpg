@@ -26,7 +26,7 @@ class GeometryComparable
   typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
 
   public:
-  void set(Geometry geometry)
+  void set(const Geometry& geometry)
   {
     corners=geometry.corners();
     cornerVector.resize(corners);
