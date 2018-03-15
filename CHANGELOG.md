@@ -26,7 +26,7 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   interfaces.
 * Add a Bernstein polynomial basis under the name
   `BernsteinPkLocalFiniteElement` with corresponding global bases
-  `BernsteinBasis`, `BernsteinDGBasis` and `BernsteinDGRefinedDGNodalBasis`.
+  `BernsteinBasis`, `BernsteinDGBasis` and `BernsteinDGRefinedDGBasis`.
   They can be used as a more stable replacement for the standard
   Lagrange basis.
   What is still missing is a continuous Bernstein basis with hanging
