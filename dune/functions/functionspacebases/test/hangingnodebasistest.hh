@@ -136,8 +136,11 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
                     if(std::fabs(valuesDominating[j] - valueDominated) > eps)
                     {
                       std::cout << "Dominating FE at local index " << j
+                        << " and position " << quadPosDominating
+                        << " (" << quadPos << " locally)"
                         << " evaluates to " << valuesDominating[j]
-                        << " but weighted sum of dominated FEs eavalutes to "
+                        << " but dominated basis evaluations at "
+                        << quadPosDominated << " have weighted sum "
                         << valueDominated << "!\n";
                       std::cout << "It is a DoF of codim "
                         << localCoefficientsDominating.localKey(j).codim()
