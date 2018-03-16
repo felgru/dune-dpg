@@ -966,7 +966,7 @@ defineCharacteristicFaces_impl(
         std::tie(left, right) = endpoints[face];
         for(auto&& dof: dofs)
         {
-          auto row = localIndexSet.index(dof.first)[0];
+          const auto row = localIndexSet.index(dof.first)[0];
           auto col = row;
           const size_t k = dofs.size()+1;
 
@@ -976,10 +976,10 @@ defineCharacteristicFaces_impl(
           matrix[row+globalOffset][col+globalOffset] = -1;
           col = localIndexSet.index(left)[0];
           matrix[row+globalOffset][col+globalOffset]
-              = (double)(k-dof.second-1)/k;
+              = static_cast<double>(k-dof.second-1)/k;
           col = localIndexSet.index(right)[0];
           matrix[row+globalOffset][col+globalOffset]
-              = (double)(dof.second+1)/k;
+              = static_cast<double>(dof.second+1)/k;
 
           rhs[row+globalOffset] = 0;
         }
@@ -1113,8 +1113,8 @@ defineCharacteristicFaces_impl(
         std::tie(left, right) = endpoints[face];
         for(auto&& dof: dofs)
         {
-          auto row = detail::getUnconstrainedIndex(localIndexSet,
-                                                   dof.first)[0];
+          const auto row = detail::getUnconstrainedIndex(localIndexSet,
+                                                         dof.first)[0];
           auto col = row;
           const size_t k = dofs.size()+1;
 
@@ -1124,10 +1124,10 @@ defineCharacteristicFaces_impl(
           matrix[row+globalOffset][col+globalOffset] = -1;
           col = detail::getUnconstrainedIndex(localIndexSet, left)[0];
           matrix[row+globalOffset][col+globalOffset]
-              = (double)(k-dof.second-1)/k;
+              = static_cast<double>(k-dof.second-1)/k;
           col = detail::getUnconstrainedIndex(localIndexSet, right)[0];
           matrix[row+globalOffset][col+globalOffset]
-              = (double)(dof.second+1)/k;
+              = static_cast<double>(dof.second+1)/k;
 
           rhs[row+globalOffset] = 0;
         }

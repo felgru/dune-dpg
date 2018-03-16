@@ -46,8 +46,8 @@ namespace Dune {
       : QuadratureRule<ctype,dim>(quad.type(), quad.order())
     {
       if(quad.type().isCube()) {
-        unsigned int numSections = StaticPower<s,dim>::power;
-        ctype volumeFraction = 1./(ctype)numSections;
+        constexpr unsigned int numSections = StaticPower<s,dim>::power;
+        constexpr ctype volumeFraction = 1./static_cast<ctype>(numSections);
 
         this->reserve(numSections*quad.size());
 
@@ -59,7 +59,7 @@ namespace Dune {
             Dune::FieldVector<ctype,dim> position = quad[q].position();
             for(unsigned int d=0; d<dim; d++) {
               position[d] += alpha[d];
-              position[d] /= (ctype)s;
+              position[d] /= static_cast<ctype>(s);
             }
             this->emplace_back(position,
                                volumeFraction*quad[q].weight());
@@ -69,8 +69,8 @@ namespace Dune {
         }
 
       } else if(quad.type().isTriangle()) {
-        unsigned int numSections = StaticPower<s,dim>::power;
-        ctype volumeFraction = 1./(ctype)numSections;
+        constexpr unsigned int numSections = StaticPower<s,dim>::power;
+        constexpr ctype volumeFraction = 1./static_cast<ctype>(numSections);
 
         this->reserve(numSections*quad.size());
 
@@ -83,9 +83,9 @@ namespace Dune {
                 Dune::FieldVector<ctype,dim> position = quad[q].position();
                 ctype tmp = position[0];
                 position[0] = 1 - position[1] + i/2;
-                position[0] /= (ctype)s;
+                position[0] /= static_cast<ctype>(s);
                 position[1] = 1 - tmp + line;
-                position[1] /= (ctype)s;
+                position[1] /= static_cast<ctype>(s);
 
                 this->emplace_back(position,
                                    volumeFraction*quad[q].weight());
@@ -96,9 +96,9 @@ namespace Dune {
 
                 Dune::FieldVector<ctype,dim> position = quad[q].position();
                 position[0] += i/2;
-                position[0] /= (ctype)s;
+                position[0] /= static_cast<ctype>(s);
                 position[1] += line;
-                position[1] /= (ctype)s;
+                position[1] /= static_cast<ctype>(s);
 
                 this->emplace_back(position,
                                    volumeFraction*quad[q].weight());

@@ -196,7 +196,7 @@ struct levelOfFE<Functions::DefaultGlobalBasis<
 template<class InnerProduct>
 struct levelOfFE<Functions::DefaultGlobalBasis<
              Functions::NormalizedRefinedPreBasis<InnerProduct>>>
-       : levelOfFE<typename std::tuple_element<(size_t)0,
+       : levelOfFE<typename std::tuple_element<static_cast<size_t>(0),
                               typename InnerProduct::TestSpaces>::type> {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
