@@ -80,16 +80,11 @@ inline static void interiorImpl(
         * quad[pt].weight();
 
       // Evaluate all shape function values at this quadrature point
-      std::vector<FieldVector<double,1>> testShapeFunctionValues =
-          detail::LocalRefinedFunctionEvaluation
-                  <dim, EvaluationType::value,
-                   is_ContinuouslyRefinedFiniteElement<TestSpace>::value>()
-                        (testLocalFiniteElement,
-                         subElementIndex,
-                         quadPos,
-                         geometry,
-                         subGeometryInReferenceElement,
-                         {});
+      const std::vector<FieldVector<double,1>> testShapeFunctionValues =
+        detail::LocalRefinedFunctionEvaluationHelper
+          <is_ContinuouslyRefinedFiniteElement<TestSpace>::value>::
+            evaluateValue(testLocalFiniteElement, subElementIndex,
+                          quadPos);
       std::vector<FieldVector<double,1>> shapeFunctionValues;
       solutionLocalFiniteElement.localBasis().
           evaluateFunction(quadPosInReferenceElement, shapeFunctionValues);
@@ -274,15 +269,10 @@ faceImpl(const TestLocalView& testLocalView,
         // Left Hand Side Shape Functions //
         ////////////////////////////////////
         const std::vector<FieldVector<double,1> > testValues =
-          detail::LocalRefinedFunctionEvaluation
-                  <dim, EvaluationType::value,
-                   is_ContinuouslyRefinedFiniteElement<TestSpace>::value>()
-                        (testLocalFiniteElement,
-                         subElementIndex,
-                         elementQuadPosSubCell,
-                         geometry,
-                         subGeometryInReferenceElement,
-                         beta);
+          detail::LocalRefinedFunctionEvaluationHelper
+            <is_ContinuouslyRefinedFiniteElement<TestSpace>::value>::
+              evaluateValue(testLocalFiniteElement, subElementIndex,
+                            elementQuadPosSubCell);
 
         /////////////////////////////////////
         // Right Hand Side Shape Functions //

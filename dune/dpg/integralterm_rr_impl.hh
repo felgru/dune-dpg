@@ -13,8 +13,7 @@ using RhsLocalView = typename RhsSpace::LocalView;
 
 template <class MatrixType,
           class Element,
-          class LocalFactor,
-          class DirectionType>
+          class LocalCoefficients>
 inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                                 const RhsLocalView& rhsLocalView,
                                 MatrixType& elementMatrix,
@@ -22,9 +21,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                                 size_t rhsSpaceOffset,
                                 unsigned int quadratureOrder,
                                 const Element& element,
-                                const LocalFactor& localFactor,
-                                const DirectionType& lhsBeta,
-                                const DirectionType& rhsBeta)
+                                const LocalCoefficients& localCoefficients)
 {
   constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
@@ -67,43 +64,34 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
       const double integrationWeight
         = geometry.integrationElement(elementQuadPos)
         * subGeometryInReferenceElement.integrationElement(quadPos)
-        * quad[pt].weight() * localFactor(elementQuadPos);
+        * quad[pt].weight() * localCoefficients.localFactor()(elementQuadPos);
 
-      //////////////////////////////
-      // Left hand side Functions //
-      //////////////////////////////
-      constexpr auto lhsType = (type == IntegrationType::valueValue ||
-                                type == IntegrationType::valueGrad)
-                               ? EvaluationType::value : EvaluationType::grad;
+      ///////////////////////////////////////
+      // evaluate finite element functions //
+      ///////////////////////////////////////
+
+      using FunctionEvaluator
+        = detail::LocalRefinedFunctionEvaluation<dim, type>;
 
       const std::vector<FieldVector<double,1> > lhsValues =
-          detail::LocalRefinedFunctionEvaluation
-                  <dim, lhsType,
-                   is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>()
+          FunctionEvaluator::template evaluateLhs
+                  <is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>
                         (lhsLocalFiniteElement,
                          subElementIndex,
                          quadPos,
                          geometry,
                          subGeometryInReferenceElement,
-                         lhsBeta);
-
-      ///////////////////////////////
-      // Right hand side Functions //
-      ///////////////////////////////
-      constexpr auto rhsType = (type == IntegrationType::valueValue ||
-                                type == IntegrationType::gradValue)
-                               ? EvaluationType::value : EvaluationType::grad;
+                         localCoefficients);
 
       const std::vector<FieldVector<double,1> > rhsValues =
-          detail::LocalRefinedFunctionEvaluation
-                  <dim, rhsType,
-                   is_ContinuouslyRefinedFiniteElement<RhsSpace>::value>()
+          FunctionEvaluator::template evaluateRhs
+                  <is_ContinuouslyRefinedFiniteElement<RhsSpace>::value>
                         (rhsLocalFiniteElement,
                          subElementIndex,
                          quadPos,
                          geometry,
                          subGeometryInReferenceElement,
-                         rhsBeta);
+                         localCoefficients);
 
       // Compute the actual matrix entries
       for (unsigned int i=0; i<nLhs; i++)
@@ -127,8 +115,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
 
 template <class MatrixType,
           class Element,
-          class LocalFactor,
-          class DirectionType>
+          class LocalCoefficients>
 inline static void
 faceImpl(const LhsLocalView& lhsLocalView,
          const RhsLocalView& rhsLocalView,
@@ -137,9 +124,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
          size_t rhsSpaceOffset,
          unsigned int quadratureOrder,
          const Element& element,
-         const LocalFactor& localFactor,
-         const DirectionType& lhsBeta,
-         const DirectionType& rhsBeta)
+         const LocalCoefficients& localCoefficients)
 {
   constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
@@ -179,14 +164,14 @@ faceImpl(const LhsLocalView& lhsLocalView,
           = RefinedFaceComputations<SubElement>(face, subElement, element)
               .unitOuterNormal();
 
-      const double prod = lhsBeta * unitOuterNormal;
+      const double prod = localCoefficients.direction() * unitOuterNormal;
       if(prod > 0)
         ++nOutflowFaces;
     }
 
     FieldVector<double,dim> referenceBeta
         = detail::referenceBeta(geometry,
-            subGeometryInReferenceElement, lhsBeta);
+            subGeometryInReferenceElement, localCoefficients.direction());
 
     for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
     {
@@ -202,7 +187,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
           = faceComputations.unitOuterNormal();
 
       if(type == IntegrationType::travelDistanceWeighted &&
-         lhsBeta * unitOuterNormal >= 0) {
+         localCoefficients.direction() * unitOuterNormal >= 0) {
         /* Only integrate over inflow boundaries. */
         continue;
       }
@@ -235,14 +220,14 @@ faceImpl(const LhsLocalView& lhsLocalView,
         double integrationWeight;
         if(type == IntegrationType::normalVector ||
            type == IntegrationType::travelDistanceWeighted) {
-          integrationWeight = localFactor(elementQuadPos)
+          integrationWeight = localCoefficients.localFactor()(elementQuadPos)
                             * quadFace[pt].weight()
                             * integrationElement;
-          // TODO: scale lhsBeta to length 1
+          // TODO: scale localCoefficients.direction() to length 1
           if(type == IntegrationType::travelDistanceWeighted)
-            integrationWeight *= fabs(lhsBeta*unitOuterNormal);
+            integrationWeight *= fabs(localCoefficients.direction()*unitOuterNormal);
           else
-            integrationWeight *= (lhsBeta*unitOuterNormal);
+            integrationWeight *= (localCoefficients.direction()*unitOuterNormal);
         } else if(type == IntegrationType::normalSign) {
           int sign = 1;
           bool signfound = false;
@@ -263,7 +248,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
           }
 
           integrationWeight = sign
-                            * localFactor(elementQuadPos)
+                            * localCoefficients.localFactor()(elementQuadPos)
                             * quadFace[pt].weight() * integrationElement;
         }
 
@@ -277,29 +262,19 @@ faceImpl(const LhsLocalView& lhsLocalView,
         // Left Hand Side Functions //
         //////////////////////////////
         const std::vector<FieldVector<double,1> > lhsValues =
-          detail::LocalRefinedFunctionEvaluation
-                  <dim, EvaluationType::value,
-                   is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>()
-                        (lhsLocalFiniteElement,
-                         subElementIndex,
-                         elementQuadPosSubCell,
-                         geometry,
-                         subGeometryInReferenceElement,
-                         lhsBeta);
+          detail::LocalRefinedFunctionEvaluationHelper
+            <is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>::
+              evaluateValue(lhsLocalFiniteElement, subElementIndex,
+                            elementQuadPosSubCell);
 
         ///////////////////////////////
         // Right Hand Side Functions //
         ///////////////////////////////
         const std::vector<FieldVector<double,1> > rhsValues =
-          detail::LocalRefinedFunctionEvaluation
-                  <dim, EvaluationType::value,
-                   is_ContinuouslyRefinedFiniteElement<RhsSpace>::value>()
-                        (rhsLocalFiniteElement,
-                         subElementIndex,
-                         elementQuadPosSubCell,
-                         geometry,
-                         subGeometryInReferenceElement,
-                         rhsBeta);
+          detail::LocalRefinedFunctionEvaluationHelper
+            <is_ContinuouslyRefinedFiniteElement<RhsSpace>::value>::
+              evaluateValue(rhsLocalFiniteElement, subElementIndex,
+                            elementQuadPosSubCell);
 
         // Compute the actual matrix entries
         for (size_t i=0; i<nLhs; i++)

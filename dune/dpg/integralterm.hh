@@ -9,6 +9,7 @@
 #include <dune/istl/matrix.hh>
 
 #include "assemble_types.hh"
+#include "localcoefficients.hh"
 #include "localevaluation.hh"
 #include "quadrature.hh"
 #include "traveldistancenorm.hh"
@@ -24,16 +25,15 @@ namespace Dune {
    *
    * \tparam integrationType  the form of the integrand, see #IntegrationType
    * \tparam domainOfIntegration  see #DomainOfIntegration
-   * \tparam Factor     the type of the factor with which
-   *                    we multiply the integrand
-   * \tparam Direction  the type of the transport directions
+   * \tparam LocalCoefficients  a class that contains the factor with which
+   *                    we multiply the integrand and the transport directions
    */
   template <IntegrationType type,
             DomainOfIntegration domain_of_integration,
-            class Factor,
-            class Direction = FieldVector<double, 2> >
+            class LocalCoefficients>
   class IntegralTerm
   {
+    using Factor = typename LocalCoefficients::Factor;
     using LocalFactor = typename Factor::LocalFunction;
     using Element = typename Factor::Element;
   public:
@@ -45,13 +45,8 @@ namespace Dune {
      *
      * \note For your convenience, use make_IntegralTerm() instead.
      */
-    IntegralTerm (Factor factor,
-                  Direction lhsBeta = {1,1},
-                  Direction rhsBeta = {1,1})
-        : factor_(factor),
-          localFactor_(localFunction(factor_)),
-          lhsBeta_(lhsBeta),
-          rhsBeta_(rhsBeta)
+    IntegralTerm (LocalCoefficients&& localCoefficients)
+        : localCoefficients_(localCoefficients)
     {};
 
     /**
@@ -80,15 +75,11 @@ namespace Dune {
 
     void bind(const Element& element)
     {
-      localFactor_.bind(element);
+      localCoefficients_.bind(element);
     }
 
   private:
-    Factor factor_;
-    LocalFactor localFactor_;
-    Direction lhsBeta_;
-    Direction rhsBeta_;
-
+    LocalCoefficients localCoefficients_;
   };
 
 
@@ -162,14 +153,14 @@ auto make_IntegralTerm(Factor c)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                   std::integral_constant<size_t, rhsSpaceIndex>,
                   IntegralTerm<integrationType, domainOfIntegration,
-                               Factor> >
+                               detail::LocalCoefficients::OnlyFactor<Factor>> >
 {
   return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                 std::integral_constant<size_t, rhsSpaceIndex>,
                 IntegralTerm<integrationType, domainOfIntegration,
-                             Factor> >
+                             detail::LocalCoefficients::OnlyFactor<Factor>> >
          ({},{},
-          IntegralTerm<integrationType, domainOfIntegration, Factor>(c));
+          {detail::LocalCoefficients::OnlyFactor<Factor>(c)});
 }
 
 /**
@@ -203,15 +194,17 @@ auto make_IntegralTerm(Factor c, Direction beta)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                   std::integral_constant<size_t, rhsSpaceIndex>,
                   IntegralTerm<integrationType, domainOfIntegration,
-                               Factor, Direction> >
+                               detail::LocalCoefficients::FactorAndDirection
+                                   <Factor, Direction>> >
 {
   return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                 std::integral_constant<size_t, rhsSpaceIndex>,
                 IntegralTerm<integrationType, domainOfIntegration,
-                             Factor, Direction> >
+                             detail::LocalCoefficients::FactorAndDirection
+                                 <Factor, Direction>> >
          ({},{},
-          IntegralTerm<integrationType, domainOfIntegration,
-                       Factor, Direction>(c, beta, beta));
+          {detail::LocalCoefficients::FactorAndDirection
+                                 <Factor, Direction>(c, beta)});
 }
 
 /**
@@ -243,24 +236,26 @@ auto make_IntegralTerm(Factor c,
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                   std::integral_constant<size_t, rhsSpaceIndex>,
                   IntegralTerm<integrationType, domainOfIntegration,
-                               Factor, Direction> >
+                               detail::LocalCoefficients::FactorAndTwoDirections
+                                 <Factor, Direction, Direction>> >
 {
   return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                 std::integral_constant<size_t, rhsSpaceIndex>,
                 IntegralTerm<integrationType, domainOfIntegration,
-                             Factor, Direction> >
+                             detail::LocalCoefficients::FactorAndTwoDirections
+                                 <Factor, Direction, Direction>> >
          ({},{},
-          IntegralTerm<integrationType, domainOfIntegration,
-                       Factor, Direction>(c, lhsBeta, rhsBeta));
+          {detail::LocalCoefficients::FactorAndTwoDirections
+                   <Factor, Direction, Direction>(c, lhsBeta, rhsBeta)});
 }
 
 
 template<IntegrationType type, DomainOfIntegration domain_of_integration,
-         class Factor, class Direction>
+         class LocalCoefficients>
 template <class LhsLocalView,
           class RhsLocalView,
           class MatrixType>
-void IntegralTerm<type, domain_of_integration, Factor, Direction>
+void IntegralTerm<type, domain_of_integration, LocalCoefficients>
      ::getLocalMatrix(
         const LhsLocalView& lhsLocalView,
         const RhsLocalView& rhsLocalView,
@@ -268,11 +263,6 @@ void IntegralTerm<type, domain_of_integration, Factor, Direction>
         const size_t lhsSpaceOffset,
         const size_t rhsSpaceOffset) const
 {
-  static_assert(std::is_same<typename std::decay<Direction>::type,
-                             FieldVector<double, 2>
-                            >::value,
-             "getLocalMatrix only implemented for constant flow!");
-
   static_assert(type == IntegrationType::valueValue
              || type == IntegrationType::gradValue
              || type == IntegrationType::valueGrad
@@ -305,10 +295,15 @@ void IntegralTerm<type, domain_of_integration, Factor, Direction>
 
   /* TODO: We might need a higher order when factor is a function. */
   /* TODO: Assuming β const. */
-  const unsigned int quadratureOrder = lhsOrder + rhsOrder;
+  const auto quadratureOrder = lhsOrder + rhsOrder;
 
 
-  if(domain_of_integration == DomainOfIntegration::interior) {
+  using namespace Dune::Hybrid;
+  ifElse(equals(std::integral_constant<DomainOfIntegration,
+                                       domain_of_integration>(),
+                std::integral_constant<DomainOfIntegration,
+                                       DomainOfIntegration::interior>()),
+  [&](auto id) {
     detail::GetLocalMatrix<type, LhsSpace, RhsSpace>
                          ::interiorImpl(lhsLocalView,
                                         rhsLocalView,
@@ -317,10 +312,8 @@ void IntegralTerm<type, domain_of_integration, Factor, Direction>
                                         rhsSpaceOffset,
                                         quadratureOrder,
                                         element,
-                                        localFactor_,
-                                        lhsBeta_,
-                                        rhsBeta_);
-  } else {
+                                        localCoefficients_);
+  }, [&](auto id) {
     detail::GetLocalMatrix<type, LhsSpace, RhsSpace>
                          ::faceImpl(lhsLocalView,
                                     rhsLocalView,
@@ -329,11 +322,9 @@ void IntegralTerm<type, domain_of_integration, Factor, Direction>
                                     rhsSpaceOffset,
                                     quadratureOrder,
                                     element,
-                                    localFactor_,
-                                    lhsBeta_,
-                                    rhsBeta_);
+                                    localCoefficients_);
 
-  }
+  });
 }
 
 } // end namespace Dune
