@@ -578,10 +578,10 @@ public:
             = Dune::ReferenceElements<double,dim>::general(element.type());
 
         if (k>3)
-          DUNE_THROW(Dune::NotImplemented, "PQkNodalBasis for 3D grids is only implemented if k<=3");
+          DUNE_THROW(Dune::NotImplemented, "BernsteinBasis for 3D grids is only implemented if k<=3");
 
         if (k==3 and !refElement.type(localKey.subEntity(), localKey.codim()).isTriangle())
-          DUNE_THROW(Dune::NotImplemented, "PQkNodalBasis for 3D grids with k==3 is only implemented if the grid is a simplex grid");
+          DUNE_THROW(Dune::NotImplemented, "BernsteinBasis for 3D grids with k==3 is only implemented if the grid is a simplex grid");
 
         return {{ preBasis_->triangleOffset_ + static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())) }};
       }
@@ -604,7 +604,7 @@ public:
       } else
         DUNE_THROW(Dune::NotImplemented, "Grids of dimension larger than 3 are no supported");
     }
-    DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the PQkNodalBasis");
+    DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the BernsteinBasis");
   }
 #endif
 
