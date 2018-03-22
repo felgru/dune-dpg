@@ -125,7 +125,7 @@ struct LocalFunctionEvaluation {
                     (localFiniteElement,
                      quadPos,
                      geometry,
-                     localCoefficients.direction());
+                     localCoefficients.localDirection()(quadPos));
   }
 
   template<EvaluationType type,
@@ -151,7 +151,7 @@ struct LocalFunctionEvaluation {
                     (localFiniteElement,
                      quadPos,
                      geometry,
-                     localCoefficients.secondDirection());
+                     localCoefficients.localSecondDirection()(quadPos));
   }
 };
 
@@ -184,7 +184,7 @@ struct LocalLinearTermFunctionEvaluation {
                     (localFiniteElement,
                      quadPos,
                      geometry,
-                     localCoefficients.direction());
+                     localCoefficients.localDirection()(quadPos));
   }
 };
 
@@ -399,7 +399,7 @@ struct LocalRefinedFunctionEvaluation {
                            quadPos,
                            geometry,
                            subGeometryInReferenceElement,
-                           localCoefficients.direction());
+                           localCoefficients.localDirection()(quadPos));
   }
 
   template<EvaluationType type, bool isDGRefined,
@@ -434,7 +434,7 @@ struct LocalRefinedFunctionEvaluation {
                            quadPos,
                            geometry,
                            subGeometryInReferenceElement,
-                           localCoefficients.secondDirection());
+                           localCoefficients.localSecondDirection()(quadPos));
   }
 };
 
@@ -498,7 +498,7 @@ struct LocalRefinedLinearTermFunctionEvaluation {
                            quadPos,
                            geometry,
                            subGeometryInReferenceElement,
-                           localCoefficients.direction());
+                           localCoefficients.localDirection()(quadPos));
   }
 };
 

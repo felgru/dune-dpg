@@ -136,6 +136,8 @@ faceImpl(const LhsLocalView& lhsLocalView,
       (is_DGRefinedFiniteElement<LhsSpace>::value) ?
         lhsLocalFiniteElement.size() : 0;
 
+  const auto direction = localCoefficients.localDirection()({0.5,0.5});
+
   unsigned int subElementOffset = 0;
   unsigned int subElementIndex = 0;
   for(const auto& subElement : elements(referenceGridView))
@@ -151,14 +153,14 @@ faceImpl(const LhsLocalView& lhsLocalView,
           = RefinedFaceComputations<SubElement>(face, subElement, element)
               .unitOuterNormal();
 
-      const double prod = localCoefficients.direction() * unitOuterNormal;
+      const double prod = direction * unitOuterNormal;
       if(prod > 0)
         ++nOutflowFaces;
     }
 
     FieldVector<double,dim> referenceBeta
         = detail::referenceBeta(geometry,
-            subGeometryInReferenceElement, localCoefficients.direction());
+            subGeometryInReferenceElement, direction);
 
     for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
     {
@@ -174,7 +176,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
           = faceComputations.unitOuterNormal();
 
       if(type == IntegrationType::travelDistanceWeighted &&
-         localCoefficients.direction() * unitOuterNormal >= 0) {
+         direction * unitOuterNormal >= 0) {
         /* Only integrate over inflow boundaries. */
         continue;
       }
@@ -212,11 +214,11 @@ faceImpl(const LhsLocalView& lhsLocalView,
           integrationWeight = localCoefficients.localFactor()(elementQuadPos)
                             * quadFace[pt].weight()
                             * integrationElement;
-          // TODO: scale localCoefficients.direction() to length 1
+          // TODO: scale direction to length 1
           if(type == IntegrationType::travelDistanceWeighted)
-            integrationWeight *= fabs(localCoefficients.direction()*unitOuterNormal);
+            integrationWeight *= fabs(direction*unitOuterNormal);
           else
-            integrationWeight *= (localCoefficients.direction()*unitOuterNormal);
+            integrationWeight *= (direction*unitOuterNormal);
         } else if(type == IntegrationType::normalSign) {
           int sign = 1;
           bool signfound = false;

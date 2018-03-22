@@ -103,11 +103,13 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const unsigned int nLhs(lhsLocalFiniteElement.size());
   const unsigned int nRhs(rhsLocalFiniteElement.size());
 
+  const auto direction = localCoefficients.localDirection()({0.5,0.5});
+
   unsigned int nOutflowFaces = 0;
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
   {
     auto face = element.template subEntity<1>(f);
-    const double prod = localCoefficients.direction()
+    const double prod = direction
       * FaceComputations<Element>(face, element).unitOuterNormal();
     if(prod > 0)
       ++nOutflowFaces;
@@ -118,7 +120,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
   FieldVector<double,dim> referenceBeta;
   {
     const auto& jacobianInverse = geometry.jacobianInverseTransposed({0., 0.});
-    jacobianInverse.mtv(localCoefficients.direction(), referenceBeta);
+    jacobianInverse.mtv(direction, referenceBeta);
   }
 
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
@@ -126,7 +128,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
     auto face = element.template subEntity<1>(f);
     auto faceComputations = FaceComputations<Element>(face, element);
     if(type == IntegrationType::travelDistanceWeighted &&
-       localCoefficients.direction() * faceComputations.unitOuterNormal() >= 0) {
+       direction * faceComputations.unitOuterNormal() >= 0) {
       /* Only integrate over inflow boundaries. */
       continue;
     }
@@ -167,10 +169,10 @@ faceImpl(const LhsLocalView& lhsLocalView,
         if(type == IntegrationType::travelDistanceWeighted)
         {
           // |beta * n|*integrationweight
-          integrationWeight *= fabs(localCoefficients.direction()*integrationOuterNormal);
+          integrationWeight *= fabs(direction*integrationOuterNormal);
         }
         else
-          integrationWeight *= (localCoefficients.direction()*integrationOuterNormal);
+          integrationWeight *= (direction*integrationOuterNormal);
       } else if(type == IntegrationType::normalSign) {
         const double integrationElement =
             face.geometry().integrationElement(quadFacePos);
