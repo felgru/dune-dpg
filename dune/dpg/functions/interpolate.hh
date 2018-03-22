@@ -7,7 +7,6 @@
 #include <dune/common/version.hh>
 #include <dune/functions/common/functionfromcallable.hh>
 #include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/geometry/affinegeometry.hh>
 #include <dune/geometry/referenceelements.hh>
 
