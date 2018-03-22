@@ -413,7 +413,11 @@ public:
         // The dimension of the entity that the current dof is related to
         auto dofDim = dim - localKey.codim();
 
-        if (dofDim==0) {  // vertex dof
+        // The test for k==1 is redundant, but having it here allows the
+        // compiler to conclude at compile-time that the dofDim==0 case
+        // is the only one that will ever happen.
+        // See https://gitlab.dune-project.org/staging/dune-functions/issues/30
+        if (k==1 || dofDim==0) {  // vertex dof
           *it = {{ static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),dim)) }};
           continue;
         }
