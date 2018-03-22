@@ -237,6 +237,9 @@ int main(int argc, char** argv)
     const double c = sigma;
 
     auto cFunc = Functions::make_GridViewFunction(c, gridView);
+    auto betaFunc
+      = Functions::ConstantGridViewFunction<FieldVector<double, dim>, GridView>
+            (beta);
 
     auto oneFunc = Functions::make_GridViewFunction(1., gridView);
     auto minusOneFunc = Functions::make_GridViewFunction(-1., gridView);
@@ -244,9 +247,11 @@ int main(int argc, char** argv)
     auto unnormalizedInnerProduct = make_InnerProduct(unnormalizedTestSpaces,
         make_tuple(
              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                   DomainOfIntegration::interior>(oneFunc, beta),
+                                   DomainOfIntegration::interior>(oneFunc,
+                                                                  betaFunc),
              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                   DomainOfIntegration::face>(oneFunc, beta)));
+                                   DomainOfIntegration::face>(oneFunc,
+                                                              betaFunc)));
     auto testSpaces = make_normalized_space_tuple(unnormalizedInnerProduct);
     auto unnormalizedInnerProduct_aposteriori
         = replaceTestSpaces(unnormalizedInnerProduct,
@@ -263,9 +268,9 @@ int main(int argc, char** argv)
                 make_IntegralTerm<0,0,IntegrationType::valueValue,
                                       DomainOfIntegration::interior>(cFunc),
                 make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                      DomainOfIntegration::interior>(minusOneFunc, beta),
+                                      DomainOfIntegration::interior>(minusOneFunc, betaFunc),
                 make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                      DomainOfIntegration::face>(oneFunc, beta)));
+                                      DomainOfIntegration::face>(oneFunc, betaFunc)));
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
 
