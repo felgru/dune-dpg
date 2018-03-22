@@ -28,8 +28,8 @@
 #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
-#include <dune/functions/functionspacebases/hangingnodelagrangep2basis.hh>
-#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
+#include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
+#include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
@@ -37,6 +37,7 @@
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/functionplotter.hh>
+#include <dune/dpg/functions/normedspaces.hh>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -131,6 +132,24 @@ double f(const Domain& x,
   return sGradUAnalytic(x,s) + sigma*uAnalytic(x,s);
 }
 
+template<typename FEBasisInterior, typename FEBasisTrace>
+auto make_solution_spaces(const typename FEBasisInterior::GridView& gridView)
+{
+  auto interiorSpace = make_space_tuple<FEBasisInterior>(gridView);
+  auto l2InnerProduct = make_InnerProduct(interiorSpace,
+       make_tuple(
+           make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                 DomainOfIntegration::interior>(1.)));
+  using InnerProduct = decltype(l2InnerProduct);
+  using WrappedSpaces = typename InnerProduct::TestSpaces;
+  using NormedSpace = std::conditional_t<
+    is_RefinedFiniteElement<std::tuple_element_t<0, WrappedSpaces>>::value,
+    Functions::NormalizedRefinedBasis<InnerProduct>,
+    Functions::NormalizedBasis<InnerProduct>>;
+
+  return std::make_shared<std::tuple<NormedSpace, FEBasisTrace>>(
+      std::make_tuple(NormedSpace(l2InnerProduct), FEBasisTrace(gridView)));
+}
 
 int main(int argc, char** argv)
 {
@@ -190,28 +209,44 @@ int main(int argc, char** argv)
     /////////////////////////////////////////////////////////
 
     // u
-    using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
+    using FEBasisInterior = Functions::BernsteinDGBasis<GridView, 1>;
 
     // bulk term corresponding to theta
-    using FEBasisTrace = Functions::HangingNodeLagrangeP2Basis<GridView>;
+    using FEBasisTrace = Functions::HangingNodeBernsteinP2Basis<GridView>;
 
     auto solutionSpaces
-      = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
+      = make_solution_spaces<FEBasisInterior, FEBasisTrace>(gridView);
 
     // v search space
     using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
-    auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
+    auto unnormalizedTestSpaces = make_space_tuple<FEBasisTest>(gridView);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
         = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 4>;
-    auto testSpaces_aposteriori
+    auto unnormalizedTestSpaces_aposteriori
         = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
     FieldVector<double, dim> beta
                = {std::cos(boost::math::constants::pi<double>()/8),
                   std::sin(boost::math::constants::pi<double>()/8)};
     const double c = sigma;
+    auto unnormalizedInnerProduct = make_InnerProduct(unnormalizedTestSpaces,
+        make_tuple(
+             make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                   DomainOfIntegration::interior>(1., beta),
+             make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                   DomainOfIntegration::face>(1., beta)));
+    auto testSpaces = make_normalized_space_tuple(unnormalizedInnerProduct);
+    auto unnormalizedInnerProduct_aposteriori
+        = replaceTestSpaces(unnormalizedInnerProduct,
+                            unnormalizedTestSpaces_aposteriori);
+    auto testSpaces_aposteriori
+        = make_normalized_space_tuple(unnormalizedInnerProduct_aposteriori);
+    auto innerProduct
+        = replaceTestSpaces(unnormalizedInnerProduct, testSpaces);
+    auto innerProduct_aposteriori
+       = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
     auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
             make_tuple(
@@ -223,14 +258,6 @@ int main(int argc, char** argv)
                                       DomainOfIntegration::face>(1., beta)));
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
-     auto innerProduct = make_InnerProduct(testSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta),
-              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                    DomainOfIntegration::face>(1., beta)));
-     auto innerProduct_aposteriori
-        = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
     //  System assembler without geometry buffer
     //auto systemAssembler
@@ -286,8 +313,8 @@ int main(int argc, char** argv)
     /////////////////////////////////////////////////
     //   Choose an initial iterate
     /////////////////////////////////////////////////
-    VectorType x(std::get<FEBasisTrace>(*solutionSpaces).size()
-                 + std::get<FEBasisInterior>(*solutionSpaces).size());
+    VectorType x(std::get<1>(*solutionSpaces).size()
+                 + std::get<0>(*solutionSpaces).size());
     x = 0;
     ////////////////////////////
     //   Compute solution
@@ -320,9 +347,9 @@ int main(int argc, char** argv)
     FunctionPlotter thetaPlotter("transport_solution_trace_"
                                 + std::to_string(nelements)
                                 + "_" + std::to_string(i));
-    uPlotter.plot("u", x, std::get<FEBasisInterior>(*solutionSpaces), 0, 0);
-    thetaPlotter.plot("theta", x, std::get<FEBasisTrace>(*solutionSpaces),
-                      2, std::get<FEBasisInterior>(*solutionSpaces).size());
+    uPlotter.plot("u", x, std::get<0>(*solutionSpaces), 0, 0);
+    thetaPlotter.plot("theta", x, std::get<1>(*solutionSpaces),
+                      2, std::get<0>(*solutionSpaces).size());
 
     const auto endresults = std::chrono::steady_clock::now();
     std::cout << "Saving the results took "

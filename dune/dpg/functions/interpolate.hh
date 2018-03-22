@@ -85,7 +85,7 @@ VectorType interpolateToUniformlyRefinedGrid(
 #endif
            globalSubGeometry.jacobianTransposed({})
              .leftmultiply(globalGeometry.jacobianTransposed({})));
-      auto localF = [&subGeometry, &coarseLocalBasis, local_v_coarse]
+      auto localF = [&subGeometry, &coarseLocalBasis, &local_v_coarse]
                     (const LocalDomain& x) {
         auto xCoarse = subGeometry.global(x);
 
@@ -105,7 +105,7 @@ VectorType interpolateToUniformlyRefinedGrid(
 
       for (size_t i=0, nFine=fineLocalView.size(); i<nFine; i++)
       {
-        auto row = fineLocalIndexSet.index(i)[0];
+        const auto row = fineLocalIndexSet.index(i)[0];
         v_fine[row] = interpolationValues[i];
       }
     }

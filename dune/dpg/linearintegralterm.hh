@@ -144,7 +144,7 @@ void LinearIntegralTerm<integrationType,
      ::getLocalVector(
         const LocalView& localView,
         VectorType& elementVector,
-        size_t spaceOffset) const
+        const size_t spaceOffset) const
 {
   static_assert(std::is_same<typename std::decay<DirectionType>::type,
                              FieldVector<double, 2>

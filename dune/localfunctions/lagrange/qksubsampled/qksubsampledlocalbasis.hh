@@ -102,7 +102,7 @@ namespace Dune
       typename Traits::DomainType inInSection;
       for(int i=d-1; i>=0; i--)
       {
-        section[i]     = (int)(in[i]*s);
+        section[i]     = static_cast<int>(in[i]*s);
         if(section[i] >= s)
             section[i] = s-1;
         sectionIndex  *= s;
@@ -114,7 +114,7 @@ namespace Dune
 
       for (size_t j=0; j<k+1; j++)
       {
-        size_t dofOffset = sectionOffset + j*(s*k+1);
+        const size_t dofOffset = sectionOffset + j*(s*k+1);
         for (size_t i=0; i<k+1; i++)
         {
           const size_t dofIndex = dofOffset + i;
@@ -144,7 +144,7 @@ namespace Dune
       typename Traits::DomainType inInSection;
       for(int i=d-1; i>=0; i--)
       {
-        section[i]     = (int)(in[i]*s);
+        section[i]     = static_cast<int>(in[i]*s);
         if(section[i] >= s)
             section[i] = s-1;
         sectionIndex  *= s;
@@ -156,14 +156,13 @@ namespace Dune
 
       for (size_t j=0; j<k+1; j++)
       {
-        size_t dofOffset = sectionOffset + j*(s*k+1);
+        const size_t dofOffset = sectionOffset + j*(s*k+1);
         for (size_t i=0; i<k+1; i++)
         {
           const size_t dofIndex = dofOffset + i;
 
-          Dune::FieldVector<int,d> multiindexInSection;
-          multiindexInSection[0] = i;
-          multiindexInSection[1] = j;
+          const Dune::FieldVector<int,d>
+              multiindexInSection{static_cast<int>(i), static_cast<int>(j)};
 
           // Compute Jacobian
           for (int j=0; j<d; j++)

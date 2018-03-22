@@ -27,13 +27,14 @@
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
-#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
+#include <dune/functions/functionspacebases/bernsteinbasis.hh>
+#include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/functionplotter.hh>
+#include <dune/dpg/functions/normedspaces.hh>
 #include <dune/dpg/rhs_assembler.hh>
 
 
@@ -125,6 +126,24 @@ double f(const Domain& x,
   return sGradUAnalytic(x,s) + sigma*uAnalytic(x,s);
 }
 
+template<typename FEBasisInterior, typename FEBasisTrace>
+auto make_solution_spaces(const typename FEBasisInterior::GridView& gridView)
+{
+  auto interiorSpace = make_space_tuple<FEBasisInterior>(gridView);
+  auto l2InnerProduct = make_InnerProduct(interiorSpace,
+       make_tuple(
+           make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                 DomainOfIntegration::interior>(1.)));
+  using InnerProduct = decltype(l2InnerProduct);
+  using WrappedSpaces = typename InnerProduct::TestSpaces;
+  using NormedSpace = std::conditional_t<
+    is_RefinedFiniteElement<std::tuple_element_t<0, WrappedSpaces>>::value,
+    Functions::NormalizedRefinedBasis<InnerProduct>,
+    Functions::NormalizedBasis<InnerProduct>>;
+
+  return std::make_shared<std::tuple<NormedSpace, FEBasisTrace>>(
+      std::make_tuple(NormedSpace(l2InnerProduct), FEBasisTrace(gridView)));
+}
 
 int main(int argc, char** argv)
 {
@@ -200,24 +219,40 @@ int main(int argc, char** argv)
     //   Choose finite element spaces and weak formulation of problem
     ////////////////////////////////////////////////////////////////////
 
-    using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
-    FEBasisInterior spacePhi(gridView);
-
-    using FEBasisTraceLifting = Functions::PQkNodalBasis<GridView, 2>;
-    FEBasisTraceLifting spaceW(gridView);
+    using FEBasisInterior = Functions::BernsteinDGBasis<GridView, 1>;
+    using FEBasisTraceLifting = Functions::BernsteinBasis<GridView, 2>;
 
     auto solutionSpaces
-        = make_space_tuple<FEBasisInterior, FEBasisTraceLifting>(gridView);
+      = make_solution_spaces<FEBasisInterior, FEBasisTraceLifting>(gridView);
 
     using FEBasisTest
         = Functions::BernsteinDGRefinedDGBasis<GridView, 2, 3>;
-    auto testSearchSpaces = make_space_tuple<FEBasisTest>(gridView);
+    auto unnormalizedTestSearchSpaces = make_space_tuple<FEBasisTest>(gridView);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
         = Functions::BernsteinDGRefinedDGBasis<GridView, 2, 4>;
-    auto testSpaces_aposteriori
+    auto unnormalizedTestSpaces_aposteriori
         = make_space_tuple<FEBasisTest_aposteriori>(gridView);
+
+    auto unnormalizedInnerProduct = make_InnerProduct(
+          unnormalizedTestSearchSpaces,
+          make_tuple(
+              make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                    DomainOfIntegration::interior>(1.),
+              make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                    DomainOfIntegration::interior>(1., beta)));
+    auto unnormalizedInnerProduct_aposteriori
+        = replaceTestSpaces(unnormalizedInnerProduct,
+                            unnormalizedTestSpaces_aposteriori);
+
+    auto testSearchSpaces
+        = make_normalized_space_tuple(unnormalizedInnerProduct);
+    auto testSpaces_aposteriori
+        = make_normalized_space_tuple(unnormalizedInnerProduct_aposteriori);
+
+    auto innerProduct
+        = replaceTestSpaces(unnormalizedInnerProduct, testSearchSpaces);
 
     auto bilinearForm = make_BilinearForm(testSearchSpaces, solutionSpaces,
             make_tuple(
@@ -227,12 +262,6 @@ int main(int argc, char** argv)
                                       DomainOfIntegration::interior>(-1., beta),
                 make_IntegralTerm<0,1,IntegrationType::normalVector,
                                       DomainOfIntegration::face>(1., beta)));
-    auto innerProduct = make_InnerProduct(testSearchSpaces,
-            make_tuple(
-                make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                      DomainOfIntegration::interior>(1.),
-                make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                      DomainOfIntegration::interior>(1., beta)));
 
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
@@ -281,8 +310,8 @@ int main(int argc, char** argv)
     //   Compute solution
     ////////////////////////////
 
-    VectorType x(spaceW.size()
-                 +spacePhi.size());
+    VectorType x(std::get<0>(*solutionSpaces).size()
+                 + std::get<1>(*solutionSpaces).size());
     x = 0;
 
     std::cout << "rhs size = " << rhsVector.size()
@@ -323,6 +352,8 @@ int main(int argc, char** argv)
     //////////////////////////////////////////////////////////////////
     //  Write result to VTK files
     //////////////////////////////////////////////////////////////////
+    // auto& spacePhi = std::get<0>(*solutionSpaces);
+    // auto& spaceW = std::get<1>(*solutionSpaces);
     // FunctionPlotter phiPlotter("transport_solution");
     // FunctionPlotter wPlotter("transport_solution_trace");
     // phiPlotter.plot("phi", x, spacePhi, 0, 0);

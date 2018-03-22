@@ -34,7 +34,8 @@ namespace Dune
         {
           if (i==0 or i+j==k or j==0)
           {
-            x[0] = ((D)i)/((D)kdiv); x[1] = ((D)j)/((D)kdiv);
+            x[0] = static_cast<D>(i)/static_cast<D>(kdiv);
+            x[1] = static_cast<D>(j)/static_cast<D>(kdiv);
             f.evaluate(x,y);
             out[n] = y;
             n++;
