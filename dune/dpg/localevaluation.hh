@@ -161,25 +161,40 @@ struct LocalLinearTermFunctionEvaluation {
                       LinearIntegrationType::valueFunction)
                       ? EvaluationType::value : EvaluationType::grad;
 
-  template<class LocalFiniteElement, class Geometry, class LocalCoefficients,
-           std::enable_if_t<evaluationType
-                            == EvaluationType::value>* = nullptr>
-  static std::vector<FieldVector<double,1> >
-  evaluate(const LocalFiniteElement& localFiniteElement,
-           const FieldVector<double, dim>& quadPos,
-           const Geometry& ,
-           const LocalCoefficients& ) {
-    return evaluateLocalFunctionValue(localFiniteElement, quadPos);
-  }
-
-  template<class LocalFiniteElement, class Geometry, class LocalCoefficients,
-           std::enable_if_t<evaluationType
-                            == EvaluationType::grad>* = nullptr>
+  template<class LocalFiniteElement, class Geometry, class LocalCoefficients>
   static std::vector<FieldVector<double,1> >
   evaluate(const LocalFiniteElement& localFiniteElement,
            const FieldVector<double, dim>& quadPos,
            const Geometry& geometry,
            const LocalCoefficients& localCoefficients) {
+    return evaluate_<evaluationType>
+                    (localFiniteElement,
+                     quadPos,
+                     geometry,
+                     localCoefficients);
+  }
+
+  private:
+
+  template<EvaluationType type,
+           class LocalFiniteElement, class Geometry, class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::value>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluate_(const LocalFiniteElement& localFiniteElement,
+            const FieldVector<double, dim>& quadPos,
+            const Geometry& ,
+            const LocalCoefficients& ) {
+    return evaluateLocalFunctionValue(localFiniteElement, quadPos);
+  }
+
+  template<EvaluationType type,
+           class LocalFiniteElement, class Geometry, class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::grad>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluate_(const LocalFiniteElement& localFiniteElement,
+            const FieldVector<double, dim>& quadPos,
+            const Geometry& geometry,
+            const LocalCoefficients& localCoefficients) {
     return evaluateLocalFunctionGrad
                     (localFiniteElement,
                      quadPos,
