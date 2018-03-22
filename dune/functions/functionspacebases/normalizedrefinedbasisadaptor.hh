@@ -4,6 +4,7 @@
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_NORMALIZEDREFINEDBASISADAPTOR_HH
 
 #include <array>
+#include <cmath>
 #include <dune/common/version.hh>
 
 #include <dune/dpg/assemble_helper.hh>
@@ -216,7 +217,7 @@ public:
     innerProduct_.getLocalMatrix(localGramian);
     scalingWeights_.resize(localGramian.N());
     for(size_t i = 0, size = scalingWeights_.size(); i < size; i++)
-      scalingWeights_[i] = 1./localGramian[i][i];
+      scalingWeights_[i] = 1./std::sqrt(localGramian[i][i]);
 
     finiteElement_.setWrappedFiniteElementAndWeights(
         wrappedNode_.finiteElement(), scalingWeights_.begin());
