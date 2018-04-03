@@ -6,8 +6,6 @@
 #include <algorithm>
 #include <vector>
 
-#include <dune/common/version.hh>
-
 #include <dune/geometry/type.hh>
 
 #include <dune/localfunctions/common/localfiniteelementtraits.hh>
