@@ -7,7 +7,6 @@
 
 #include <iostream>
 
-#include <dune/common/exceptions.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/functions/functionspacebases/hangingnodelagrangep2basis.hh>
 #include <dune/geometry/quadraturerules.hh>
@@ -18,7 +17,7 @@
 
 using namespace Dune;
 
-int main() try
+int main()
 {
   constexpr int dim = 2;
   using HostGrid = UGGrid<dim>;
@@ -51,9 +50,4 @@ int main() try
   success &= constraintsFulfillContinuityEquation(hangingNodeBasis);
 
   return success ? 0 : 1;
-}
-catch (Dune::Exception e)
-{
-  std::cout << e << std::endl;
-  return 1;
 }

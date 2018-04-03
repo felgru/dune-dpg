@@ -7,6 +7,7 @@
 
 #include <config.h>
 
+#include <dune/common/exceptions.hh>
 #include <dune/common/version.hh>
 
 #include <dune/geometry/referenceelements.hh>
@@ -263,32 +264,21 @@ int main (int argc, char** argv)
     maxOrder = std::atoi(argv[1]);
     std::cout << "maxOrder = " << maxOrder << std::endl;
   }
-  try {
-    static const unsigned int refinement = 2;
-    static const unsigned int dim = 2;
+  static const unsigned int refinement = 2;
+  static const unsigned int dim = 2;
 
-    checkSubsampledRule<double,refinement,dim>
+  checkSubsampledRule<double,refinement,dim>
 #if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
-        (Dune::GeometryTypes::simplex(dim), maxOrder);
+      (Dune::GeometryTypes::simplex(dim), maxOrder);
 #else
-        (Dune::GeometryType::simplex, maxOrder);
+      (Dune::GeometryType::simplex, maxOrder);
 #endif
-    checkSubsampledRule<double,refinement,dim>
+  checkSubsampledRule<double,refinement,dim>
 #if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
-        (Dune::GeometryTypes::cube(dim), maxOrder);
+      (Dune::GeometryTypes::cube(dim), maxOrder);
 #else
-        (Dune::GeometryType::cube, maxOrder);
+      (Dune::GeometryType::cube, maxOrder);
 #endif
-  }
-  catch( const Dune::Exception &e )
-  {
-    std::cerr << e << std::endl;
-    throw;
-  }
-  catch (...) {
-    std::cerr << "Generic exception!" << std::endl;
-    throw;
-  }
 
   return success ? 0 : 1;
 }

@@ -13,8 +13,6 @@
 
 #include <boost/math/constants/constants.hpp>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
@@ -153,7 +151,6 @@ auto make_solution_spaces(const typename FEBasisInterior::GridView& gridView)
 
 int main(int argc, char** argv)
 {
-  try{
   if(argc != 2) {
     std::cerr << "Usage: " << argv[0] << " n" << std::endl << std::endl
               << "Solves the transport problem on an nxn grid." << std::endl;
@@ -412,11 +409,4 @@ int main(int argc, char** argv)
 
 
   return 0;
-  }
-  catch (Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
 }

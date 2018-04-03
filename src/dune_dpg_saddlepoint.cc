@@ -7,8 +7,6 @@
 #include <tuple>
 #include <vector>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 

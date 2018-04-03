@@ -12,8 +12,6 @@
 
 #include <boost/math/constants/constants.hpp>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
