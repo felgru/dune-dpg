@@ -5,13 +5,19 @@
 #include "config.h"
 #endif
 
+#include <cmath>
 #include <iostream>
+
+#include <boost/math/constants/constants.hpp>
+
+#include <Eigen/Core>
+
 #include "../waveletkernelapproximation.hh"
 
 bool sameVector(const Eigen::VectorXd& x, const Eigen::VectorXd& y) {
   const double eps = 1e-10;
   for(size_t i=0, imax=x.size(); i < imax; i++) {
-    if(fabs(x[i]-y[i]) > eps) {
+    if(std::fabs(x[i]-y[i]) > eps) {
       std::cout << "Comparison failed at index " << i
                 << ", value should be " << x[i]
                 << " but was " << y[i] << '\n';
@@ -69,7 +75,7 @@ int main()
   // HaarWavelet::DWT(y);
   // Eigen::VectorXd wlt(x.size());
   // for(size_t i=0, imax=wlt.size(); i < imax; i++) wlt[i] = 0;
-  // wlt(0) = sqrt(2*boost::math::constants::pi<double>());
+  // wlt(0) = std::sqrt(2*boost::math::constants::pi<double>());
   // std::cout << "Wavelet transform of constant 1 function\n";
   // success &= sameVector(wlt, y);
 
@@ -99,7 +105,7 @@ int main()
   // y = x;
   // HaarWavelet::DWT(y);
   // for(size_t i=0, imax=wlt.size(); i < imax; i++) wlt[i] = 0;
-  // wlt(1) = sqrt(boost::math::constants::pi<double>());
+  // wlt(1) = std::sqrt(boost::math::constants::pi<double>());
   // success &= sameVector(wlt, y);
   // std::cout << "IDWT(DWT(f)) == f\n";
   // HaarWavelet::IDWT(y);
