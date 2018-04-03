@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
+## 0.4 (Unreleased)
+### Added
+### Changed
+### Fixed
+### Deprecated
+### Removed
+
 ## 0.3 (Unreleased)
 ### Added
 * New `ErrorTools::l2norm` function to compute the L_2 norm of a
