@@ -10,8 +10,6 @@
 #include <tuple>
 #include <vector>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
@@ -69,8 +67,6 @@ double fieldExact(const Dune::FieldVector<double, 2>& x) {
 
 int main()
 {
-  try{
-
   ///////////////////////////////////
   //   Generate the grid
   ///////////////////////////////////
@@ -327,11 +323,4 @@ int main()
   }
 
   return 0;
-  }
-  catch (Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
 }

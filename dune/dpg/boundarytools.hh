@@ -13,7 +13,6 @@
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/dpg/subgrid_workarounds.hh>
 
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/geometry/referenceelements.hh>
