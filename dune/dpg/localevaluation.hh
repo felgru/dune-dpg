@@ -80,7 +80,7 @@ struct LocalFunctionEvaluation<dim, EvaluationType::grad> {
 /* We need to make this a class, as partial specializations of
  * function templates are not allowed. */
 template<int dim, EvaluationType type,
-         bool isDGRefined>
+         bool isContinuouslyRefined>
 struct LocalRefinedFunctionEvaluation {
 
   template <class LocalFiniteElement, class Geometry, class SubGeometry>
