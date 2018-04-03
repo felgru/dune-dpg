@@ -255,8 +255,8 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
         const LhsLocalView& lhsLocalView,
         const RhsLocalView& rhsLocalView,
         MatrixType& elementMatrix,
-        size_t lhsSpaceOffset,
-        size_t rhsSpaceOffset) const
+        const size_t lhsSpaceOffset,
+        const size_t rhsSpaceOffset) const
 {
   static_assert(std::is_same<typename std::decay<DirectionType>::type,
                              FieldVector<double, 2>

@@ -37,7 +37,7 @@ struct LocalFunctionEvaluation<dim, EvaluationType::value> {
   std::vector<FieldVector<double,1> > operator()
                       (const LocalFiniteElement& localFiniteElement,
                        const FieldVector<double, dim>& quadPos,
-                       const Geometry& geometry,
+                       const Geometry&,
                        const FieldVector<double, dim>&) const
   {
     // values of the shape functions
@@ -80,7 +80,7 @@ struct LocalFunctionEvaluation<dim, EvaluationType::grad> {
 /* We need to make this a class, as partial specializations of
  * function templates are not allowed. */
 template<int dim, EvaluationType type,
-         bool isDGRefined>
+         bool isContinuouslyRefined>
 struct LocalRefinedFunctionEvaluation {
 
   template <class LocalFiniteElement, class Geometry, class SubGeometry>
@@ -101,8 +101,8 @@ struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value, false> {
                       (const LocalFiniteElement& localFiniteElement,
                        unsigned int,
                        const FieldVector<double, dim>& quadPos,
-                       const Geometry& geometry,
-                       const SubGeometry& subGeometryInReferenceElement,
+                       const Geometry&,
+                       const SubGeometry&,
                        const FieldVector<double, dim>&) const
   {
     // values of the shape functions

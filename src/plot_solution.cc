@@ -14,8 +14,6 @@
 
 #include <boost/math/constants/constants.hpp>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
@@ -28,7 +26,7 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
+#include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
@@ -56,7 +54,6 @@ auto f(const Direction& s)
 
 int main(int argc, char** argv)
 {
-  try{
   if(argc != 2) {
     std::cerr << "Usage: " << argv[0] << " n" << std::endl << std::endl
               << "Solves the transport problem on an nxn grid." << std::endl;
@@ -85,7 +82,7 @@ int main(int argc, char** argv)
 
   // We use a SubGrid as it will automatically make sure that we do
   // not have more than difference 1 in the levels of neighboring
-  // elements. This is necessary since HangingNodeP2NodalBasis does
+  // elements. This is necessary since HangingNodeBernsteinP2Basis does
   // not implement higher order hanging nodes constraints.
   std::unique_ptr<Grid> grid = std::make_unique<Grid>(*hostGrid);
   {
@@ -104,8 +101,7 @@ int main(int argc, char** argv)
   constexpr double tol = 1e-10;
   for(unsigned int i = 0; err > tol && i < 200; ++i)
   {
-    std::chrono::steady_clock::time_point startiteration
-        = std::chrono::steady_clock::now();
+    const auto startiteration = std::chrono::steady_clock::now();
     GridView gridView = grid->leafGridView();
 
     /////////////////////////////////////////////////////////
@@ -116,7 +112,7 @@ int main(int argc, char** argv)
     using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
 
     // bulk term corresponding to theta
-    using FEBasisTrace = Functions::HangingNodeP2NodalBasis<GridView>;
+    using FEBasisTrace = Functions::HangingNodeBernsteinP2Basis<GridView>;
 
     auto solutionSpaces
       = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
@@ -146,22 +142,22 @@ int main(int argc, char** argv)
                                       DomainOfIntegration::face>(1., beta)));
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
-     auto innerProduct = make_InnerProduct(testSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta),
-              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                    DomainOfIntegration::face>(1., beta)));
-     auto innerProduct_aposteriori
+    auto innerProduct = make_InnerProduct(testSpaces,
+         make_tuple(
+             make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                   DomainOfIntegration::interior>(1., beta),
+             make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                   DomainOfIntegration::face>(1., beta)));
+    auto innerProduct_aposteriori
         = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
     //  System assembler without geometry buffer
-    //auto systemAssembler
-    //   = make_DPGSystemAssembler(bilinearForm, innerProduct);
+    // auto systemAssembler
+    //     = make_DPGSystemAssembler(bilinearForm, innerProduct);
 
     //  System assembler with geometry buffer
     auto systemAssembler
-     = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
+        = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
     /////////////////////////////////////////////////////////
     //   Stiffness matrix and right hand side vector
     /////////////////////////////////////////////////////////
@@ -183,7 +179,7 @@ int main(int argc, char** argv)
                                             DomainOfIntegration::interior>(
                                    f(beta))));
 
-    std::chrono::steady_clock::time_point startsystemassembler = std::chrono::steady_clock::now();
+    const auto startsystemassembler = std::chrono::steady_clock::now();
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
     // Determine Dirichlet dofs for theta (inflow boundary)
@@ -198,9 +194,10 @@ int main(int argc, char** argv)
            dirichletNodesInflow,
            0.);
     }
-    std::chrono::steady_clock::time_point endsystemassembler = std::chrono::steady_clock::now();
+    const auto endsystemassembler = std::chrono::steady_clock::now();
     std::cout << "The system assembler took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(endsystemassembler - startsystemassembler).count()
+              << std::chrono::duration_cast<std::chrono::microseconds>
+                 (endsystemassembler - startsystemassembler).count()
               << "us.\n";
 
 
@@ -218,19 +215,20 @@ int main(int argc, char** argv)
               <<" matrix size = " << stiffnessMatrix.N() <<" x " << stiffnessMatrix.M()
               <<" solution size = "<< x.size() <<std::endl;
 
-    std::chrono::steady_clock::time_point startsolve = std::chrono::steady_clock::now();
+    const auto startsolve = std::chrono::steady_clock::now();
 
     UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
     InverseOperatorResult statistics;
     umfPack.apply(x, rhs, statistics);
 
-    std::chrono::steady_clock::time_point endsolve = std::chrono::steady_clock::now();
+    const auto endsolve = std::chrono::steady_clock::now();
     std::cout << "The solution took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(endsolve - startsolve).count()
+              << std::chrono::duration_cast<std::chrono::microseconds>
+                 (endsolve - startsolve).count()
               << "us.\n";
 
 #if 1
-    std::chrono::steady_clock::time_point startresults = std::chrono::steady_clock::now();
+    const auto startresults = std::chrono::steady_clock::now();
     //////////////////////////////////////////////////////////////////
     //  Write result to VTK file
     //////////////////////////////////////////////////////////////////
@@ -244,9 +242,10 @@ int main(int argc, char** argv)
     thetaPlotter.plot("theta", x, std::get<FEBasisTrace>(*solutionSpaces),
                       2, std::get<FEBasisInterior>(*solutionSpaces).size());
 
-    std::chrono::steady_clock::time_point endresults = std::chrono::steady_clock::now();
+    const auto endresults = std::chrono::steady_clock::now();
     std::cout << "Saving the results took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(endresults - startresults).count()
+              << std::chrono::duration_cast<std::chrono::microseconds>
+                 (endresults - startresults).count()
               << "us.\n";
 #endif
 
@@ -259,7 +258,7 @@ int main(int argc, char** argv)
       = replaceTestSpaces(rightHandSide, testSpaces_aposteriori);
     rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
 
-    std::chrono::steady_clock::time_point starterror = std::chrono::steady_clock::now();
+    const auto starterror = std::chrono::steady_clock::now();
     const double ratio = .2;
     auto errorEstimates = ErrorTools::squaredCellwiseResidual(
                                      bilinearForm_aposteriori,
@@ -275,28 +274,23 @@ int main(int argc, char** argv)
     std::cout << "A posteriori error in iteration " << i << ": "
               << err << std::endl;
 
-    std::chrono::steady_clock::time_point enderror = std::chrono::steady_clock::now();
+    const auto enderror = std::chrono::steady_clock::now();
     std::cout << "The error computation took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(enderror - starterror).count()
+              << std::chrono::duration_cast<std::chrono::microseconds>
+                 (enderror - starterror).count()
               << "us.\n";
 
     grid->preAdapt();
     grid->adapt();
     grid->postAdapt();
 
-    std::chrono::steady_clock::time_point endwholeiteration = std::chrono::steady_clock::now();
+    const auto endwholeiteration = std::chrono::steady_clock::now();
     std::cout << "The whole iteration took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(endwholeiteration - startiteration).count()
+              << std::chrono::duration_cast<std::chrono::microseconds>
+                 (endwholeiteration - startiteration).count()
               << "us.\n";
   }
 
 
   return 0;
-  }
-  catch (Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
 }

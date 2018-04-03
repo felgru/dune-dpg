@@ -9,7 +9,7 @@
 #include "../lagrange/qktrace.hh"
 #include <dune/localfunctions/test/test-localfe.hh>
 
-int main(int argc, char** argv) try
+int main() try
 {
   bool success = true;
 

@@ -1,7 +1,7 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODEP2NODALBASIS_HH
-#define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODEP2NODALBASIS_HH
+#ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODELAGRANGEP2BASIS_HH
+#define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODELAGRANGEP2BASIS_HH
 
 #include <array>
 #include <dune/common/exceptions.hh>
@@ -30,9 +30,9 @@ namespace Functions {
 // *****************************************************************************
 // This is the reusable part of the basis. It contains
 //
-//   HangingNodeP2PreBasis
-//   HangingNodeP2NodeIndexSet
-//   HangingNodeP2Node
+//   HangingNodeLagrangeP2PreBasis
+//   HangingNodeLagrangeP2NodeIndexSet
+//   HangingNodeLagrangeP2Node
 //
 // The pre-basis allows to create the others and is the owner of possible shared
 // state. These three components do _not_ depend on the global basis or index
@@ -40,13 +40,13 @@ namespace Functions {
 // *****************************************************************************
 
 template<typename GV, typename TP>
-class HangingNodeP2Node;
+class HangingNodeLagrangeP2Node;
 
 template<typename GV, class MI, class TP>
-class HangingNodeP2NodeIndexSet;
+class HangingNodeLagrangeP2NodeIndexSet;
 
 template<typename GV, class MI>
-class HangingNodeP2PreBasis;
+class HangingNodeLagrangeP2PreBasis;
 
 
 
@@ -61,7 +61,7 @@ class HangingNodeP2PreBasis;
  * \note This only works on 2d grids
  */
 template<typename GV, class MI>
-class HangingNodeP2PreBasis
+class HangingNodeLagrangeP2PreBasis
 {
   static constexpr int dim = GV::dimension;
 
@@ -76,7 +76,7 @@ public:
 private:
 
   template<typename, class, class>
-  friend class HangingNodeP2NodeIndexSet;
+  friend class HangingNodeLagrangeP2NodeIndexSet;
 
   using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;
 
@@ -84,11 +84,11 @@ public:
 
   //! Template mapping root tree path to type of created tree node
   template<class TP>
-  using Node = HangingNodeP2Node<GV, TP>;
+  using Node = HangingNodeLagrangeP2Node<GV, TP>;
 
   //! Template mapping root tree path to type of created tree node index set
   template<class TP>
-  using IndexSet = HangingNodeP2NodeIndexSet<GV, MI, TP>;
+  using IndexSet = HangingNodeLagrangeP2NodeIndexSet<GV, MI, TP>;
 
   //! Type used for global numbering of the basis vectors
   using MultiIndex = MI;
@@ -97,11 +97,11 @@ public:
   using SizePrefix = Dune::ReservedVector<size_type, 1>;
 
   //! Constructor for a given grid view object
-  HangingNodeP2PreBasis(const GridView& gv) :
+  HangingNodeLagrangeP2PreBasis(const GridView& gv) :
     gridView_(gv),
     constraint{3./8, 3./4, -1./8}
   {
-    static_assert(dim==2, "HangingNodeP2GlobalBasis only defined in 2D!");
+    static_assert(dim==2, "HangingNodeLagrangeP2GlobalBasis only defined in 2D!");
   }
 
   //! Initialize the global indices
@@ -205,7 +205,7 @@ public:
       auto& finiteElement = feCache.get(e.type());
       if(!e.type().isTriangle ()) {
         DUNE_THROW(Dune::NotImplemented,
-                   "HangingNodeP2PreBasis only implemented on triangles.");
+                   "HangingNodeLagrangeP2PreBasis only implemented on triangles.");
       }
       const unsigned short numDofs = finiteElement.size();
       std::vector<MultiIndex> localToGlobal;
@@ -241,7 +241,7 @@ public:
       }
       localToGlobal.shrink_to_fit();
       constraintOffsets.shrink_to_fit();
-      size_t elementIndex = gridIndexSet.subIndex(e, 0, 0);
+      size_t elementIndex = gridIndexSet.index(e);
       std::swap(indicesLocalGlobal[elementIndex], localToGlobal);
       std::swap(constraintIndicator[elementIndex], constraintOffsets);
     }
@@ -328,7 +328,7 @@ protected:
 
 
 template<typename GV, typename TP>
-class HangingNodeP2Node :
+class HangingNodeLagrangeP2Node :
   public LeafBasisNode<std::size_t, TP>
 {
   static constexpr int dim = GV::dimension;
@@ -344,7 +344,7 @@ public:
   using ElementSeed = typename Element::EntitySeed;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
 
-  HangingNodeP2Node(const TreePath& treePath) :
+  HangingNodeLagrangeP2Node(const TreePath& treePath) :
     Base(treePath),
     finiteElement_(nullptr),
     element_(nullptr)
@@ -382,7 +382,7 @@ protected:
 
 
 template<typename GV, class MI, class TP>
-class HangingNodeP2NodeIndexSet
+class HangingNodeLagrangeP2NodeIndexSet
 {
   enum {dim = GV::dimension};
 
@@ -393,7 +393,7 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using PreBasis = HangingNodeP2PreBasis<GV, MI>;
+  using PreBasis = HangingNodeLagrangeP2PreBasis<GV, MI>;
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
   using NodeFactory = PreBasis;
 #endif
@@ -402,7 +402,7 @@ public:
 
   using ConstraintWeights = std::array<double, 3>;
 
-  HangingNodeP2NodeIndexSet(const PreBasis& preBasis) :
+  HangingNodeLagrangeP2NodeIndexSet(const PreBasis& preBasis) :
     preBasis_(&preBasis),
     node_(nullptr),
     indicesLocalGlobal_(nullptr)
@@ -417,7 +417,7 @@ public:
   {
     node_ = &node;
     const auto& gridIndexSet = preBasis_->gridView().indexSet();
-    size_t elementIndex = gridIndexSet.subIndex(node_->element(), 0, 0);
+    size_t elementIndex = gridIndexSet.index(node_->element());
     indicesLocalGlobal_ = &preBasis_->indicesLocalGlobal[elementIndex];
     constraintIndicator_ = &preBasis_->constraintIndicator[elementIndex];
   }
@@ -458,7 +458,7 @@ public:
     return (*constraintIndicator_)[i];
   }
 
-  const ConstraintWeights& constraintWeights(size_type i) const
+  const ConstraintWeights& constraintWeights(size_type /* i */) const
   {
     assert(node_ != nullptr);
     return preBasis_->constraint;
@@ -479,7 +479,7 @@ namespace BasisBuilder {
 
 namespace Imp {
 
-struct HangingNodeP2PreBasisFactory
+struct HangingNodeLagrangeP2PreBasisFactory
 {
   static const std::size_t requiredMultiIndexSize = 1;
 
@@ -490,7 +490,7 @@ struct HangingNodeP2PreBasisFactory
   auto build(const GridView& gridView) const
 #endif
   {
-    return HangingNodeP2PreBasis<GridView, MultiIndex>(gridView);
+    return HangingNodeLagrangeP2PreBasis<GridView, MultiIndex>(gridView);
   }
 };
 
@@ -505,7 +505,7 @@ struct HangingNodeP2PreBasisFactory
  */
 auto hangingNodeP2()
 {
-  return Imp::HangingNodeP2PreBasisFactory();
+  return Imp::HangingNodeLagrangeP2PreBasisFactory();
 }
 
 } // end namespace BasisBuilder
@@ -524,12 +524,12 @@ auto hangingNodeP2()
  * \note This only works for 2d grids.
  *
  * All arguments passed to the constructor will be forwarded to the constructor
- * of HangingNodeP2PreBasis.
+ * of HangingNodeLagrangeP2PreBasis.
  *
  * \tparam GV The GridView that the space is defined on
  */
 template<typename GV>
-using HangingNodeP2NodalBasis = ConstrainedGlobalBasis<HangingNodeP2PreBasis<GV, FlatMultiIndex<std::size_t>> >;
+using HangingNodeLagrangeP2Basis = ConstrainedGlobalBasis<HangingNodeLagrangeP2PreBasis<GV, FlatMultiIndex<std::size_t>> >;
 
 
 
@@ -537,4 +537,4 @@ using HangingNodeP2NodalBasis = ConstrainedGlobalBasis<HangingNodeP2PreBasis<GV,
 } // end namespace Dune
 
 
-#endif // DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODEP2NODALBASIS_HH
+#endif // DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODELAGRANGEP2BASIS_HH

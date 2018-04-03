@@ -13,8 +13,6 @@
 
 #include <boost/math/constants/constants.hpp>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
@@ -28,8 +26,8 @@
 #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
-#include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
-#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
+#include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
+#include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
@@ -37,6 +35,7 @@
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/functionplotter.hh>
+#include <dune/dpg/functions/normedspaces.hh>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -131,10 +130,27 @@ double f(const Domain& x,
   return sGradUAnalytic(x,s) + sigma*uAnalytic(x,s);
 }
 
+template<typename FEBasisInterior, typename FEBasisTrace>
+auto make_solution_spaces(const typename FEBasisInterior::GridView& gridView)
+{
+  auto interiorSpace = make_space_tuple<FEBasisInterior>(gridView);
+  auto l2InnerProduct = make_InnerProduct(interiorSpace,
+       make_tuple(
+           make_IntegralTerm<0,0,IntegrationType::valueValue,
+                                 DomainOfIntegration::interior>(1.)));
+  using InnerProduct = decltype(l2InnerProduct);
+  using WrappedSpaces = typename InnerProduct::TestSpaces;
+  using NormedSpace = std::conditional_t<
+    is_RefinedFiniteElement<std::tuple_element_t<0, WrappedSpaces>>::value,
+    Functions::NormalizedRefinedBasis<InnerProduct>,
+    Functions::NormalizedBasis<InnerProduct>>;
+
+  return std::make_shared<std::tuple<NormedSpace, FEBasisTrace>>(
+      std::make_tuple(NormedSpace(l2InnerProduct), FEBasisTrace(gridView)));
+}
 
 int main(int argc, char** argv)
 {
-  try{
   if(argc != 2) {
     std::cerr << "Usage: " << argv[0] << " n" << std::endl << std::endl
               << "Solves the transport problem on an nxn grid." << std::endl;
@@ -163,7 +179,7 @@ int main(int argc, char** argv)
 
   // We use a SubGrid as it will automatically make sure that we do
   // not have more than difference 1 in the levels of neighboring
-  // elements. This is necessary since HangingNodeP2NodalBasis does
+  // elements. This is necessary since HangingNodeLagrangeP2Basis does
   // not implement higher order hanging nodes constraints.
   std::unique_ptr<Grid> grid = std::make_unique<Grid>(*hostGrid);
   {
@@ -182,8 +198,7 @@ int main(int argc, char** argv)
   const double tol = 1e-10;
   for(unsigned int i = 0; err > tol && i < 200; ++i)
   {
-    std::chrono::steady_clock::time_point startiteration
-        = std::chrono::steady_clock::now();
+    const auto startiteration = std::chrono::steady_clock::now();
     GridView gridView = grid->leafGridView();
 
     /////////////////////////////////////////////////////////
@@ -191,28 +206,44 @@ int main(int argc, char** argv)
     /////////////////////////////////////////////////////////
 
     // u
-    using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
+    using FEBasisInterior = Functions::BernsteinDGBasis<GridView, 1>;
 
     // bulk term corresponding to theta
-    using FEBasisTrace = Functions::HangingNodeP2NodalBasis<GridView>;
+    using FEBasisTrace = Functions::HangingNodeBernsteinP2Basis<GridView>;
 
     auto solutionSpaces
-      = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
+      = make_solution_spaces<FEBasisInterior, FEBasisTrace>(gridView);
 
     // v search space
     using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
-    auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
+    auto unnormalizedTestSpaces = make_space_tuple<FEBasisTest>(gridView);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
         = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 4>;
-    auto testSpaces_aposteriori
+    auto unnormalizedTestSpaces_aposteriori
         = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
     FieldVector<double, dim> beta
                = {std::cos(boost::math::constants::pi<double>()/8),
                   std::sin(boost::math::constants::pi<double>()/8)};
     const double c = sigma;
+    auto unnormalizedInnerProduct = make_InnerProduct(unnormalizedTestSpaces,
+        make_tuple(
+             make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                   DomainOfIntegration::interior>(1., beta),
+             make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                   DomainOfIntegration::face>(1., beta)));
+    auto testSpaces = make_normalized_space_tuple(unnormalizedInnerProduct);
+    auto unnormalizedInnerProduct_aposteriori
+        = replaceTestSpaces(unnormalizedInnerProduct,
+                            unnormalizedTestSpaces_aposteriori);
+    auto testSpaces_aposteriori
+        = make_normalized_space_tuple(unnormalizedInnerProduct_aposteriori);
+    auto innerProduct
+        = replaceTestSpaces(unnormalizedInnerProduct, testSpaces);
+    auto innerProduct_aposteriori
+       = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
     auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
             make_tuple(
@@ -224,14 +255,6 @@ int main(int argc, char** argv)
                                       DomainOfIntegration::face>(1., beta)));
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
-     auto innerProduct = make_InnerProduct(testSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta),
-              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                    DomainOfIntegration::face>(1., beta)));
-     auto innerProduct_aposteriori
-        = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
     //  System assembler without geometry buffer
     //auto systemAssembler
@@ -262,7 +285,7 @@ int main(int argc, char** argv)
                                    [beta](const FieldVector<double, 2>& x)
                                    { return f(x, beta); })));
 
-    std::chrono::steady_clock::time_point startsystemassembler = std::chrono::steady_clock::now();
+    const auto startsystemassembler = std::chrono::steady_clock::now();
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
     // Determine Dirichlet dofs for theta (inflow boundary)
@@ -277,17 +300,18 @@ int main(int argc, char** argv)
            dirichletNodesInflow,
            0.);
     }
-    std::chrono::steady_clock::time_point endsystemassembler = std::chrono::steady_clock::now();
+    const auto endsystemassembler = std::chrono::steady_clock::now();
     std::cout << "The system assembler took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(endsystemassembler - startsystemassembler).count()
+              << std::chrono::duration_cast<std::chrono::microseconds>
+                 (endsystemassembler - startsystemassembler).count()
               << "us.\n";
 
 
     /////////////////////////////////////////////////
     //   Choose an initial iterate
     /////////////////////////////////////////////////
-    VectorType x(std::get<FEBasisTrace>(*solutionSpaces).size()
-                 + std::get<FEBasisInterior>(*solutionSpaces).size());
+    VectorType x(std::get<1>(*solutionSpaces).size()
+                 + std::get<0>(*solutionSpaces).size());
     x = 0;
     ////////////////////////////
     //   Compute solution
@@ -297,19 +321,20 @@ int main(int argc, char** argv)
               <<" matrix size = " << stiffnessMatrix.N() <<" x " << stiffnessMatrix.M()
               <<" solution size = "<< x.size() <<std::endl;
 
-    std::chrono::steady_clock::time_point startsolve = std::chrono::steady_clock::now();
+    const auto startsolve = std::chrono::steady_clock::now();
 
     UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
     InverseOperatorResult statistics;
     umfPack.apply(x, rhs, statistics);
 
-    std::chrono::steady_clock::time_point endsolve = std::chrono::steady_clock::now();
+    const auto endsolve = std::chrono::steady_clock::now();
     std::cout << "The solution took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(endsolve - startsolve).count()
+              << std::chrono::duration_cast<std::chrono::microseconds>
+                 (endsolve - startsolve).count()
               << "us.\n";
 
 #if 1
-    std::chrono::steady_clock::time_point startresults = std::chrono::steady_clock::now();
+    const auto startresults = std::chrono::steady_clock::now();
     //////////////////////////////////////////////////////////////////
     //  Write result to VTK file
     //////////////////////////////////////////////////////////////////
@@ -319,13 +344,14 @@ int main(int argc, char** argv)
     FunctionPlotter thetaPlotter("transport_solution_trace_"
                                 + std::to_string(nelements)
                                 + "_" + std::to_string(i));
-    uPlotter.plot("u", x, std::get<FEBasisInterior>(*solutionSpaces), 0, 0);
-    thetaPlotter.plot("theta", x, std::get<FEBasisTrace>(*solutionSpaces),
-                      2, std::get<FEBasisInterior>(*solutionSpaces).size());
+    uPlotter.plot("u", x, std::get<0>(*solutionSpaces), 0, 0);
+    thetaPlotter.plot("theta", x, std::get<1>(*solutionSpaces),
+                      2, std::get<0>(*solutionSpaces).size());
 
-    std::chrono::steady_clock::time_point endresults = std::chrono::steady_clock::now();
+    const auto endresults = std::chrono::steady_clock::now();
     std::cout << "Saving the results took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(endresults - startresults).count()
+              << std::chrono::duration_cast<std::chrono::microseconds>
+                 (endresults - startresults).count()
               << "us.\n";
 #endif
 
@@ -338,7 +364,7 @@ int main(int argc, char** argv)
       = replaceTestSpaces(rightHandSide, testSpaces_aposteriori);
     rhsAssembler_aposteriori.assembleRhs(rhs, rightHandSide_aposteriori);
 
-    std::chrono::steady_clock::time_point starterror = std::chrono::steady_clock::now();
+    const auto starterror = std::chrono::steady_clock::now();
     const double ratio = .2;
     auto errorEstimates = ErrorTools::squaredCellwiseResidual(
                                      bilinearForm_aposteriori,
@@ -360,9 +386,10 @@ int main(int argc, char** argv)
     std::cout << "A posteriori error in iteration " << i << ": "
               << err << std::endl;
 
-    std::chrono::steady_clock::time_point enderror = std::chrono::steady_clock::now();
+    const auto enderror = std::chrono::steady_clock::now();
     std::cout << "The error computation took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(enderror - starterror).count()
+              << std::chrono::duration_cast<std::chrono::microseconds>
+                 (enderror - starterror).count()
               << "us.\n";
 
     std::cout <<   "exact L2 error:     " << l2err
@@ -373,19 +400,13 @@ int main(int argc, char** argv)
     grid->adapt();
     grid->postAdapt();
 
-    std::chrono::steady_clock::time_point endwholeiteration = std::chrono::steady_clock::now();
+    const auto endwholeiteration = std::chrono::steady_clock::now();
     std::cout << "The whole iteration took "
-              << std::chrono::duration_cast<std::chrono::microseconds>(endwholeiteration - startiteration).count()
+              << std::chrono::duration_cast<std::chrono::microseconds>
+                 (endwholeiteration - startiteration).count()
               << "us.\n";
   }
 
 
   return 0;
-  }
-  catch (Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
 }

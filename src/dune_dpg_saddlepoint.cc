@@ -7,8 +7,6 @@
 #include <tuple>
 #include <vector>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 
@@ -20,7 +18,6 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
@@ -35,20 +32,19 @@ using namespace Dune;
 
 
 
-int main(int argc, char** argv)
+int main()
 {
-  try{
   ///////////////////////////////////
   //   Generate the grid
   ///////////////////////////////////
 
   constexpr int dim = 2;
-  typedef YaspGrid<dim> GridType;
+  using GridType = YaspGrid<dim>;
   const FieldVector<double,dim> l(1);
   const std::array<int,dim> elements = {5, 5};
   const GridType grid(l, elements);
 
-  typedef GridType::LeafGridView GridView;
+  using GridView = GridType::LeafGridView;
   const GridView gridView = grid.leafGridView();
   const FieldVector<double,dim> beta = {1., 0.5};
 
@@ -58,11 +54,14 @@ int main(int argc, char** argv)
 
   typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
-  auto solutionSpaces
-    = make_space_tuple<FEBasisTrace, FEBasisInterior>(gridView);
 
   typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v
-  auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
+
+  auto spaces = make_space_tuple<FEBasisTest,
+                                 FEBasisTrace, FEBasisInterior>(gridView);
+
+  auto testSpaces = make_space_tuple_view<0, 1>(spaces);
+  auto solutionSpaces = make_space_tuple_view<1, 2>(spaces);
 
   /////////////////////////////////////////////////////////
   //   Choose a bilinear form
@@ -103,9 +102,8 @@ int main(int argc, char** argv)
   using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
   auto rightHandSide
-    = make_Saddlepoint_LinearForm(
-        systemAssembler.getTestSpaces(),
-        systemAssembler.getSolutionSpaces(),
+    = make_LinearForm(
+        spaces,
         std::make_tuple(
             make_LinearIntegralTerm<0,
                                     LinearIntegrationType::valueFunction,
@@ -176,11 +174,4 @@ int main(int argc, char** argv)
   uPlotter.plot("u", x, std::get<1>(*solutionSpaces), 2, nTest+nFace);
 
   return 0;
-  }
-  catch (Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
 }

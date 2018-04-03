@@ -1,26 +1,21 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_TEST_HANGINGNODEBASISTEST_HH
+#define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_TEST_HANGINGNODEBASISTEST_HH
 
 #include <iostream>
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/version.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
-#include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
 #include <dune/geometry/quadraturerules.hh>
-#include <dune/grid/uggrid.hh>
-#include <dune/grid/utility/structuredgridfactory.hh>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #include <dune/subgrid/subgrid.hh>
 #pragma GCC diagnostic pop
 
-using namespace Dune;
+namespace Dune {
 
 template<class GlobalBasis>
 bool globalIndicesFormConsecutiveRange(const GlobalBasis& feBasis)
@@ -111,35 +106,54 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
             std::vector<FieldVector<double,1> > valuesDominated;
             dominatedElementLocalView.tree().finiteElement().localBasis()
               .evaluateFunction(quadPosDominated, valuesDominated);
+            const auto& localCoefficientsDominating
+              = localView.tree().finiteElement().localCoefficients();
             iterateOverLocalIndexSet(
                 localIndexSet,
                 [&](size_t j, auto gj)
                 {
                   if(std::fabs(valuesDominating[j]) > eps) {
                     double valueDominated = 0.;
+                    std::vector<std::pair<double, double>> constraints;
                     iterateOverLocalIndexSet(
                         dominatedElementLocalIndexSet,
                         [&](size_t i, auto gi)
                         {
-                          if(gi == gj) valueDominated += valuesDominated[i];
+                          if(gi == gj) {
+                            valueDominated += valuesDominated[i];
+                            constraints.emplace_back(1., valuesDominated[i]);
+                          }
                         },
-                        [](size_t i) {},
+                        [](size_t /* i */) {},
                         [&](size_t i, auto gi, double wi)
                         {
-                          if(gi == gj) valueDominated += wi*valuesDominated[i];
+                          if(gi == gj) {
+                            valueDominated += wi*valuesDominated[i];
+                            constraints.emplace_back(wi, valuesDominated[i]);
+                          }
                         });
                     if(std::fabs(valuesDominating[j] - valueDominated) > eps)
                     {
                       std::cout << "Dominating FE at local index " << j
+                        << " and position " << quadPosDominating
+                        << " (" << quadPos << " locally)"
                         << " evaluates to " << valuesDominating[j]
-                        << " but weighted sum of dominated FEs eavalutes to "
-                        << " valueDominated!\n";
+                        << " but dominated basis evaluations at "
+                        << quadPosDominated << " have weighted sum "
+                        << valueDominated << "!\n";
+                      std::cout << "It is a DoF of codim "
+                        << localCoefficientsDominating.localKey(j).codim()
+                        << '\n';
+                      std::cout << "weights * dominated basis evaluations:\n";
+                      for(const auto& c: constraints) {
+                        std::cout << c.first << " * " << c.second << '\n';
+                      }
                       success = false;
                     }
                   }
                 },
-                [](size_t j) {},
-                [&](size_t j, auto gj, double wj)
+                [](size_t /* j */) {},
+                [&](size_t j, auto /* gj */, double /* wj */)
                 {
                   if(std::fabs(valuesDominating[j]) > eps) {
                     DUNE_THROW(Dune::InvalidStateException,
@@ -179,42 +193,6 @@ createHangingNodeRefinedSubGrid(HostGrid& hostGrid)
   return grid;
 }
 
-int main() try
-{
-  constexpr int dim = 2;
-  using HostGrid = UGGrid<dim>;
-  const FieldVector<double,dim> lower = {0, 0};
-  const FieldVector<double,dim> upper = {1, 1};
-  const std::array<unsigned int,dim> numElements = {1, 1};
-
-  std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
-                                ::createSimplexGrid(lower, upper, numElements);
-  hostGrid->setClosureType(HostGrid::NONE);
-
-  // We use a SubGrid as it will automatically make sure that we do
-  // not have more than difference 1 in the levels of neighboring
-  // elements. This is necessary since HangingNodeP2NodalBasis does
-  // not implement higher order hanging nodes constraints.
-
-  const auto grid = createHangingNodeRefinedSubGrid(*hostGrid);
-  using Grid = decltype(grid)::element_type;
-  using GridView = Grid::LeafGridView;
-  const GridView gridView = grid->leafGridView();
-
-  bool success = true;
-
-  std::cout << "Testing HangingNodeP2DNodalBasis on 2d"
-            << " triangular grid." << std::endl;
-
-  Functions::HangingNodeP2NodalBasis<GridView> hangingNodeBasis(gridView);
-
-  success &= globalIndicesFormConsecutiveRange(hangingNodeBasis);
-  success &= constraintsFulfillContinuityEquation(hangingNodeBasis);
-
-  return success ? 0 : 1;
 }
-catch (Dune::Exception e)
-{
-  std::cout << e << std::endl;
-  return 1;
-}
+
+#endif // defined(DUNE_FUNCTIONS_FUNCTIONSPACEBASES_TEST_HANGINGNODEBASISTEST_HH)

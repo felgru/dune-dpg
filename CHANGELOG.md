@@ -4,29 +4,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
+## 0.4 (Unreleased)
+### Added
+### Changed
+### Fixed
+### Deprecated
+### Removed
+* The workarounds for missing dune-subgrid functionality have been removed
+  as everything is now implemented in SubGrid itself.
+  Be sure to use at least commit TODO of due-sugrid which implements all
+  required methods in the SubGrid class.
+
 ## 0.3 (Unreleased)
 ### Added
 * New `ErrorTools::l2norm` function to compute the L_2 norm of a
   finite element function.
 * New `ErrorPlotter` class to plot error estimators.
-* New GlobalBasis `HangingNodeP2NodalBasis` that implements P2 elements
-  with hanging nodes. Since we only handle hanging nodes of order one,
-  you have to make sure that neighboring cells in the grid do not vary
-  in level by more than one. This can be assured by using
+* New global bases `HangingNodeLagrangeP2Basis` and
+  `HangingNodeBernsteinP2Basis` implementing P2 elements with hanging
+  nodes. Since we only handle hanging nodes of order one, you have to
+  make sure that neighboring cells in the grid do not vary in level by
+  more than one. This can be assured by using
   [dune-subgrid](http://numerik.mi.fu-berlin.de/dune-subgrid/index.php)
   which by default limits the difference in level to maximally one.
-  Be sure to use at least commit 5923a229ca65fe123b03f90583172e2511fe158a
-  of the 2.6 developement version from dune-subgrid, since older versions
-  do not implement enough of Dune’s Grid interface.
-* Since `HangingNodeP2NodalBasis` does not fit the GlobalBasis interface
-  as its index set does not implement DefaultIndexSet, we introduce a
+  since dune-subgrid does not implement the whole grid interface, we
+  defined missing functionality in `dune/dpg/subgrid_workarounds.hh`.
+* Since the new hanging node bases do not fit the GlobalBasis interface
+  as their index set does not implement DefaultIndexSet, we introduce a
   new `ConstrainedGlobalBasis` interface.
   Use the auxiliary functions `iterateOverLocalIndexSet` and
   `addToGlobalMatrix` to conveniently handle index sets from both
   interfaces.
 * Add a Bernstein polynomial basis under the name
   `BernsteinPkLocalFiniteElement` with corresponding global bases
-  `BernsteinBasis`, `BernsteinDGBasis` and `BernsteinDGRefinedDGNodalBasis`.
+  `BernsteinBasis`, `BernsteinDGBasis` and `BernsteinDGRefinedDGBasis`.
   They can be used as a more stable replacement for the standard
   Lagrange basis.
   What is still missing is a continuous Bernstein basis with hanging
@@ -42,6 +53,10 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * New `SkeletalLinearFunctionalTerm` that can be used to implement
   the second alternative for handling boundary values as given in
   Broersen, Dahmen, Stevenson Remark 3.6.
+* New `SpaceTupleView` class to use part of a tuple of spaces as a
+  space tuple pointer. This is used e.g. in our saddle point problem
+  example to define test and trial spaces as part of the same tuple
+  of spaces.
 * New option to use a least squares solver instead of Cholesky by defining
   the preprocessor variable DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY.
   This might help on strongly refined grids, where the Gramian in the trial
@@ -64,7 +79,7 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   to tuples of spaces. To create such `shared_ptr`s to tuples, you can use
   the new function `make_space_tuple`.
 * the example programs plot_solution and dune_dpg_error now require
-  dune-subgrid to compile as they use `HangingNodeP2NodalBasis` for the
+  dune-subgrid to compile as they use the new hanging node bases for the
   trace variables now.
 * `BoundaryTools::getInflowBoundaryValue` has been renamed to
   `BoundaryTools::getBoundaryValue` as it also works for other boundary
@@ -98,6 +113,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   was recently added to dune-functions. This should give faster access
   to global indices, especially if you are using the `OptimalTestBasis`
   class.
+* The boundaryValue argument of the `applyDirichletBoundaryToMatrix`
+  method of DPGAssembler and SaddlepointAssembler has been removed as
+  it was never used in this method.
 * README, INSTALL: Mention dune-uggrid instead of ug.
 * Remove some noise from the API documentation and add some more
   documentation for previously undocumented things.
@@ -128,7 +146,8 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   ErrorTools::squaredCellwiseResidual(...))`.
 
 ### Removed
-* Remove the `make_DPGLinearForm` and `make_DPG_LinearForm` functions,
+* Remove the `make_DPGLinearForm`, `make_DPG_LinearForm` and
+  `make_Saddlepoint_LinearForm` functions,
   use `make_LinearForm` instead.
 * Remove the `refinedReferenceElement` method of refined global basis
   nodes. As a replacement, a new method `refinedReferenceElementGridView`

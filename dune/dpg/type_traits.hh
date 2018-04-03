@@ -67,7 +67,16 @@ namespace Functions {
   class OptimalTestBasisPreBasis;
 
   template<typename GV, class MI>
-  class HangingNodeP2PreBasis;
+  class HangingNodeBernsteinP2PreBasis;
+
+  template<typename GV, class MI>
+  class HangingNodeLagrangeP2PreBasis;
+
+  template<typename InnerProduct>
+  class NormalizedPreBasis;
+
+  template<typename InnerProduct>
+  class NormalizedRefinedPreBasis;
 
   template<typename BilinForm, typename InnerProd>
   class TestspaceCoefficientMatrix;
@@ -141,6 +150,11 @@ struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
                Functions::BernsteinDGRefinedDGPreBasis
                    <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
+
+template<typename InnerProduct>
+struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
+                    Functions::NormalizedRefinedPreBasis<InnerProduct>>>
+       : std::true_type {};
 #endif
 
 template <typename GlobalBasis>
@@ -178,6 +192,12 @@ struct levelOfFE<Functions::DefaultGlobalBasis<
              Functions::BernsteinDGRefinedDGPreBasis
                  <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::integral_constant<int, level> {};
+
+template<class InnerProduct>
+struct levelOfFE<Functions::DefaultGlobalBasis<
+             Functions::NormalizedRefinedPreBasis<InnerProduct>>>
+       : levelOfFE<typename std::tuple_element<static_cast<size_t>(0),
+                              typename InnerProduct::TestSpaces>::type> {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct levelOfFE<Functions::DefaultGlobalBasis<
@@ -358,9 +378,33 @@ struct changeGridView<Functions::OptimalTestBasisPreBasis
 };
 
 template<typename GV, class MI, class GridView>
-struct changeGridView<Functions::HangingNodeP2PreBasis<GV, MI>, GridView>
+struct changeGridView<Functions::HangingNodeBernsteinP2PreBasis<GV, MI>,
+                      GridView>
 {
-  typedef Functions::HangingNodeP2PreBasis<GridView, MI> type;
+  typedef Functions::HangingNodeBernsteinP2PreBasis<GridView, MI> type;
+};
+
+template<typename GV, class MI, class GridView>
+struct changeGridView<Functions::HangingNodeLagrangeP2PreBasis<GV, MI>,
+                      GridView>
+{
+  typedef Functions::HangingNodeLagrangeP2PreBasis<GridView, MI> type;
+};
+
+template<typename InnerProduct, class GridView>
+struct changeGridView<Functions::NormalizedPreBasis<InnerProduct>,
+                      GridView>
+{
+  typedef Functions::NormalizedPreBasis<
+            changeGridView_t<InnerProduct, GridView>> type;
+};
+
+template<typename InnerProduct, class GridView>
+struct changeGridView<Functions::NormalizedRefinedPreBasis<InnerProduct>,
+                      GridView>
+{
+  typedef Functions::NormalizedRefinedPreBasis<
+            changeGridView_t<InnerProduct, GridView>> type;
 };
 
 template<typename BilinForm, typename InnerProd, class GridView>

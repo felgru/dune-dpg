@@ -12,7 +12,6 @@
 
 #include <dune/dpg/functions/localindexsetiteration.hh>
 
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
 #include <dune/geometry/referenceelements.hh>
@@ -208,7 +207,8 @@ namespace Dune {
           dirichletNodesInt[ gi[0] ] += dofOnInflowBoundary;
 
         },
-        [&](size_type i) {
+        [](size_type) {},
+        [&](size_type i, MultiIndex gi, double wi) {
           unsigned int dofOnInflowBoundary = 0;
 
           // localkey of dof i
@@ -227,13 +227,8 @@ namespace Dune {
             dofOnInflowBoundary = vertexOnInflowBoundary[dofIndex];
           }
 
-          if(dofOnInflowBoundary) {
-            DUNE_THROW(InvalidStateException,
-                "The boundary should not contain constrained DoFs!");
-          }
-        },
-        [](size_type, MultiIndex, double) {});
-
+          dirichletNodesInt[ gi[0] ] += wi * dofOnInflowBoundary;
+        });
 
     } // end element e
 
@@ -337,7 +332,7 @@ namespace Dune {
 
           if(dofCodim == 1) //the dof belongs to a face
           {
-             dofOnBoundary = faceOnBoundary[dofIndex];
+            dofOnBoundary = faceOnBoundary[dofIndex];
           }
           if(dofCodim == 2) //the dof belongs to a vertex
           {
@@ -346,7 +341,8 @@ namespace Dune {
 
           dirichletNodesInt[ gi[0] ] += dofOnBoundary;
         },
-        [&](size_type i) {
+        [](size_type) {},
+        [&](size_type i, MultiIndex gi, double wi) {
           unsigned int dofOnBoundary = 0;
 
           // localkey of dof i
@@ -358,19 +354,15 @@ namespace Dune {
 
           if(dofCodim == 1) //the dof belongs to a face
           {
-             dofOnBoundary = faceOnBoundary[dofIndex];
+            dofOnBoundary = faceOnBoundary[dofIndex];
           }
           if(dofCodim == 2) //the dof belongs to a vertex
           {
             dofOnBoundary = vertexOnBoundary[dofIndex];
           }
 
-          if(dofOnBoundary) {
-            DUNE_THROW(InvalidStateException,
-                "The boundary should not contain constrained DoFs!");
-          }
-        },
-        [](size_type, MultiIndex, double) {});
+          dirichletNodesInt[ gi[0] ] += dofOnBoundary;
+        });
 
     } // end element e
 
@@ -426,11 +418,10 @@ namespace Dune {
         [&](size_type i, MultiIndex gi) {
           rhsContrib[ gi[0] ] = out[i];
         },
-        [](size_type) {
-          //DUNE_THROW(InvalidStateException,
-          //    "The boundary should not contain constrained DoFs!");
-        },
-        [](size_type, MultiIndex, double) {});
+        [](size_type) {},
+        [&](size_type i, MultiIndex gi, double wi) {
+          rhsContrib[ gi[0] ] = wi * out[i];
+        });
     }
   }
 

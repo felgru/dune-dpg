@@ -10,8 +10,6 @@
 #include <tuple>
 #include <vector>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
@@ -24,7 +22,7 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/functionspacebases/hangingnodep2nodalbasis.hh>
+#include <dune/functions/functionspacebases/hangingnodelagrangep2basis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
@@ -69,8 +67,6 @@ double fieldExact(const Dune::FieldVector<double, 2>& x) {
 
 int main()
 {
-  try{
-
   ///////////////////////////////////
   //   Generate the grid
   ///////////////////////////////////
@@ -94,7 +90,7 @@ int main()
 
   // We use a SubGrid as it will automatically make sure that we do
   // not have more than difference 1 in the levels of neighboring
-  // elements. This is necessary since HangingNodeP2NodalBasis does
+  // elements. This is necessary since HangingNodeLagrangeP2Basis does
   // not implement higher order hanging nodes constraints.
   std::unique_ptr<Grid> grid = std::make_unique<Grid>(*hostGrid);
   {
@@ -117,7 +113,7 @@ int main()
     /////////////////////////////////////////////////////////
 
     using FEBasisInterior = Functions::LagrangeDGBasis<GridView, 1>;
-    using FEBasisTrace = Functions::HangingNodeP2NodalBasis<GridView>;
+    using FEBasisTrace = Functions::HangingNodeLagrangeP2Basis<GridView>;
     auto solutionSpaces
       = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
@@ -327,11 +323,4 @@ int main()
   }
 
   return 0;
-  }
-  catch (Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
 }

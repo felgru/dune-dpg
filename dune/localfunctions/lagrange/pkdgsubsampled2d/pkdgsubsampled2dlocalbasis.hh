@@ -62,14 +62,14 @@ namespace Dune
         out[i] = 0;
       // In which section of the subgrid are we?
       typename Traits::DomainType inInSection;
-      size_t line          = (size_t)(in[1]*s);
+      size_t line          = static_cast<size_t>(in[1]*s);
       if(line>=s) line = s-1;
-      size_t sectionOffset = (size_t)(in[0]*s);
+      size_t sectionOffset = static_cast<size_t>(in[0]*s);
       if(sectionOffset>=s-line) sectionOffset = s-line-1;
       inInSection[0] = in[0]*s - sectionOffset;
       inInSection[1] = in[1]*s - line;
-      bool mirrored = (inInSection[0] + inInSection[1] > 1)
-                    && (sectionOffset < s-line-1);
+      const bool mirrored = (inInSection[0] + inInSection[1] > 1)
+                          && (sectionOffset < s-line-1);
       sectionOffset *= 2;
       sectionOffset += (2*s-line)*line; // = s^2 - (s-line)^2
       if(mirrored) {
@@ -103,14 +103,14 @@ namespace Dune
         out[i] = 0;
       // In which section of the subgrid are we?
       typename Traits::DomainType inInSection;
-      size_t line          = (size_t)(in[1]*s);
+      size_t line          = static_cast<size_t>(in[1]*s);
       if(line>=s) line = s-1;
-      size_t sectionOffset = (size_t)(in[0]*s);
+      size_t sectionOffset = static_cast<size_t>(in[0]*s);
       if(sectionOffset>=s-line) sectionOffset = s-line-1;
       inInSection[0] = in[0]*s - sectionOffset;
       inInSection[1] = in[1]*s - line;
-      bool mirrored = (inInSection[0] + inInSection[1] > 1)
-                    && (sectionOffset < s-line-1);
+      const bool mirrored = (inInSection[0] + inInSection[1] > 1)
+                          && (sectionOffset < s-line-1);
       sectionOffset *= 2;
       sectionOffset += (2*s-line)*line; // = s^2 - (s-line)^2
       if(mirrored) {
@@ -127,7 +127,8 @@ namespace Dune
       if(mirrored) {
         for(size_t i=0, i_max=outInSection.size(); i<i_max; ++i)
           for(unsigned int d=0; d<2; ++d)
-            out[sectionOffset+i][0][d] = -(double)s*outInSection[i][0][1-d];
+            out[sectionOffset+i][0][d]
+              = -static_cast<double>(s)*outInSection[i][0][1-d];
       } else {
         for(size_t i=0, i_max=outInSection.size(); i<i_max; ++i)
           for(unsigned int d=0; d<2; ++d)

@@ -45,7 +45,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
     // Position of the current quadrature point in the reference element
     const FieldVector<double,dim>& quadPos = quad[pt].position();
     // Global position of the current quadrature point
-    const FieldVector<double,dim>& globalQuadPos
+    const FieldVector<double,dim> globalQuadPos
           = geometry.global(quadPos);
 
     // The multiplicative factor in the integral transformation formula
@@ -61,7 +61,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                               type == IntegrationType::valueGrad)
                              ? EvaluationType::value : EvaluationType::grad;
 
-    std::vector<FieldVector<double,1> > lhsValues =
+    const std::vector<FieldVector<double,1> > lhsValues =
         detail::LocalFunctionEvaluation<dim, lhsType>()
                       (lhsLocalFiniteElement,
                        quadPos,
@@ -75,7 +75,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                               type == IntegrationType::gradValue)
                              ? EvaluationType::value : EvaluationType::grad;
 
-    std::vector<FieldVector<double,1> > rhsValues =
+    const std::vector<FieldVector<double,1> > rhsValues =
         detail::LocalFunctionEvaluation<dim, rhsType>()
                       (rhsLocalFiniteElement,
                        quadPos,
@@ -109,7 +109,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
          const Element& element,
          const FactorType& factor,
          const DirectionType& lhsBeta,
-         const DirectionType& rhsBeta)
+         const DirectionType& /* rhsBeta */)
 {
   constexpr int dim = Element::mydimension;
 

@@ -14,6 +14,7 @@
 #include "assemble_helper.hh"
 #include "assemble_types.hh"
 #include "linearintegralterm.hh"
+#include "spacetuple.hh"
 #include "type_traits.hh"
 
 namespace Dune {
@@ -21,21 +22,26 @@ namespace Dune {
   /**
    * \brief This class describes a linear form.
    *
-   * \tparam Sps             tuple of (test) spaces
+   * \tparam Sps             shared_ptr of a tuple of (test) spaces
    * \tparam LinearTerms     tuple of LinearIntegralTerm
    */
   template<class Sps, class LinearTerms>
   class LinearForm
   {
+    static_assert(is_SpaceTuplePtr<Sps>::value,
+        "Sps needs to be a SpaceTuplePtr!");
   public:
-    typedef std::decay_t<Sps> Spaces;
+    //! shared pointer to tuple type of test spaces
+    using SpacesPtr = Sps;
+    //! tuple type of test spaces
+    using Spaces = typename SpacesPtr::element_type;
     static_assert(Concept::tupleEntriesModel<
         Functions::Concept::GeneralizedGlobalBasis<
             typename std::tuple_element_t<0, Spaces>::GridView>,
         Spaces>(),
         "Spaces need to model the GeneralizedGlobalBasis concept.");
     //! tuple type for the local views of the test spaces
-    typedef detail::getLocalViews_t<Spaces>  LocalViews;
+    using LocalViews = detail::getLocalViews_t<Spaces>;
 
     LinearForm () = delete;
     /**
@@ -43,8 +49,8 @@ namespace Dune {
      *
      * \note For your convenience, use make_LinearForm() instead.
      */
-    constexpr LinearForm (const std::shared_ptr<Spaces>& spaces,
-                          const LinearTerms&             terms)
+    constexpr LinearForm (const SpacesPtr&    spaces,
+                          const LinearTerms&  terms)
                : spaces(spaces),
                  terms(terms),
                  localViews(nullptr)
@@ -105,7 +111,7 @@ namespace Dune {
     /**
      * \brief Does exactly what it says on the tin.
      */
-    std::shared_ptr<Spaces> getSpaces() const
+    SpacesPtr getSpaces() const
     { return spaces; }
 
     /**
@@ -125,8 +131,8 @@ namespace Dune {
     { return localSpaceOffsets; }
 
   private:
-    std::shared_ptr<Spaces> spaces;
-    LinearTerms             terms;
+    SpacesPtr    spaces;
+    LinearTerms  terms;
 
     size_t localSpaceOffsets[std::tuple_size<Spaces>::value];
     size_t localTotalSpaceSize;
@@ -135,62 +141,27 @@ namespace Dune {
   };
 
 /**
- * \brief Creates a LinearForm for a saddlepoint formulation,
- *        deducing the target type from the types of arguments.
- *
- * \param testSpaces      a shared_ptr to a tuple of test spaces
- * \param solutionSpaces  a shared_ptr to a tuple of solution spaces
- * \param terms           a tuple of LinearIntegralTerm
- */
-template<class TestSpaces, class SolutionSpaces, class LinearTerms>
-auto make_Saddlepoint_LinearForm(TestSpaces      testSpaces,
-                                 SolutionSpaces  solutionSpaces,
-                                 LinearTerms     terms)
-    -> LinearForm<typename std::remove_reference<decltype(
-            std::tuple_cat(std::declval<TestSpaces>(),
-                           std::declval<SolutionSpaces>())
-            )>::type, LinearTerms>
-{
-  // TODO: This does not really make sense because
-  //       of the spaceindex in LinearTerms.
-  static_assert(std::tuple_size<SolutionSpaces>::value > 0,
-      "Use make_LinearForm and concatenate spaces");
-  using Spaces
-    = typename std::remove_reference<decltype(
-            std::tuple_cat(std::declval<TestSpaces>(),
-                           std::declval<SolutionSpaces>()
-            ))>::type;
-  return LinearForm<Spaces, LinearTerms>
-                    // TODO: Wrap concatenated tuple into a shared_ptr.
-                    //       We cannot do it here, as the LinearForm would
-                    //       than hold copies to the spaces we were giving
-                    //       here, thus making it possible to have
-                    //       inconsistent spaces after refinement.
-                    (std::tuple_cat(testSpaces, solutionSpaces), terms);
-}
-
-/**
  * \brief Creates a LinearForm (i.e. for a saddlepoint formulation),
  *        deducing the target type from the types of arguments.
  *
  * \param spaces          a shared_ptr to a tuple of spaces
  * \param terms           a tuple of LinearIntegralTerm
  */
-template<class Spaces, class LinearTerms>
-auto make_LinearForm(const std::shared_ptr<Spaces>& spaces,
-                     LinearTerms                    terms)
-    -> LinearForm<Spaces, LinearTerms>
+template<class SpacesPtr, class LinearTerms>
+auto make_LinearForm(const SpacesPtr& spaces,
+                     LinearTerms      terms)
+    -> LinearForm<SpacesPtr, LinearTerms>
 {
-  return LinearForm<Spaces, LinearTerms>
+  return LinearForm<SpacesPtr, LinearTerms>
                     (spaces, terms);
 }
 
-template<class TestSpaces, class LinearTerms, class NewTestSpaces>
+template<class TestSpacesPtr, class LinearTerms, class NewTestSpacesPtr>
 auto replaceTestSpaces(
-    const LinearForm<TestSpaces, LinearTerms>& linearForm,
-    const std::shared_ptr<NewTestSpaces>& newTestSpaces)
-  -> LinearForm<NewTestSpaces, LinearTerms> {
-  return LinearForm<NewTestSpaces, LinearTerms>
+    const LinearForm<TestSpacesPtr, LinearTerms>& linearForm,
+    const NewTestSpacesPtr& newTestSpaces)
+  -> LinearForm<NewTestSpacesPtr, LinearTerms> {
+  return LinearForm<NewTestSpacesPtr, LinearTerms>
                      (newTestSpaces,
                       linearForm.getTerms());
 }

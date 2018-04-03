@@ -78,7 +78,7 @@ struct GetLocalLinearTermVector<integrationType, Space, false>
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
       // Global position of the current quadrature point
-      const FieldVector<double,dim>& globalQuadPos
+      const FieldVector<double,dim> globalQuadPos
           = geometry.global(quadPos);
 
       // The multiplicative factor in the integral transformation formula
@@ -159,7 +159,7 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
 
         // Position of the current quadrature point in the reference element
         const FieldVector<double,dim>& quadPos = quad[pt].position();
-        const FieldVector<double,dim>& globalQuadPos
+        const FieldVector<double,dim> globalQuadPos
             = geometry.global(subGeometryInReferenceElement.global(quadPos));
 
         // The multiplicative factor in the integral transformation formula

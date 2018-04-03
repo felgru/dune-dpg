@@ -9,28 +9,12 @@
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/std/memory.hh>
 #include <dune/common/tupleutility.hh>
-#include <dune/dpg/functions/concepts.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
+#include <dune/dpg/spacetuple.hh>
 #include <dune/istl/matrixindexset.hh>
 #include <boost/hana.hpp>
 
 namespace Dune {
-
-/**
- * Create a shared_ptr to a tuple of spaces over the same GridView
- */
-template<class... Spaces, class GridView>
-std::shared_ptr<std::tuple<Spaces...>>
-make_space_tuple(const GridView& gridView)
-{
-  static_assert(Concept::tupleEntriesModel<
-      Functions::Concept::GeneralizedGlobalBasis<GridView>,
-      std::tuple<Spaces...>>(),
-      "Spaces need to model the GeneralizedGlobalBasis concept.");
-
-  return std::make_shared<typename std::tuple<Spaces...>>(
-      std::make_tuple(Spaces(gridView)...));
-}
 
 namespace detail {
 
@@ -56,7 +40,7 @@ using getLocalIndexSets_t
 
 template<class Spaces>
 inline getLocalIndexSets_t<Spaces> getLocalIndexSets(const Spaces& spaces) {
-  return genericTransformTuple(spaces, getLocalIndexSetFunctor());
+  return genericTransformSpaceTuple(spaces, getLocalIndexSetFunctor());
 }
 
 struct getLocalViewFunctor
@@ -81,7 +65,7 @@ using getLocalViews_t
 
 template<class Spaces>
 inline getLocalViews_t<Spaces> getLocalViews(const Spaces& spaces) {
-  return genericTransformTuple(spaces, getLocalViewFunctor());
+  return genericTransformSpaceTuple(spaces, getLocalViewFunctor());
 }
 
 template<class LocalViews, class Element>
@@ -251,7 +235,7 @@ struct getOccupationPatternHelper
             class solutionSpaceIndex>
   void operator()
          (const boost::hana::tuple<testSpaceIndex,
-                                   solutionSpaceIndex>& indexTuple)
+                                   solutionSpaceIndex>&)
   {
     const auto& testLIS =
         std::get<testSpaceIndex::value>(testLocalIndexSets);
@@ -282,7 +266,7 @@ struct getOccupationPatternHelper
           iterateOverLocalIndexSet(
               solutionLIS,
               fillOccupationPatternInner,
-              [](size_t j){},
+              [](size_t /* j */){},
               [&](size_t j, SolutionMultiIndex gj, double /* wj */)
               {
                 fillOccupationPatternInner(j, gj);
@@ -292,7 +276,7 @@ struct getOccupationPatternHelper
     iterateOverLocalIndexSet(
         testLIS,
         fillOccupationPattern,
-        [](size_t i){},
+        [](size_t /* i */){},
         [&](size_t i, TestMultiIndex gi, double /* wi */)
         {
           fillOccupationPattern(i, gi);
@@ -358,7 +342,7 @@ struct localToGlobalCopier
             class solutionSpaceIndex>
   void operator()
          (const boost::hana::tuple<testSpaceIndex,
-                                   solutionSpaceIndex>& indexTuple)
+                                   solutionSpaceIndex>&)
   {
     const auto& testLocalIndexSet
         = std::get<testSpaceIndex::value>(testLocalIndexSets);
@@ -496,7 +480,7 @@ struct localToGlobalRHSCopier
         testGlobalOffsets(testGlobalOffsets) {}
 
   template <class TestSpaceIndex>
-  void operator() (const TestSpaceIndex& index) const
+  void operator() (const TestSpaceIndex&) const
   {
     constexpr auto testSpaceIndex = TestSpaceIndex::type::value;
     const auto& testLocalIndexSet
@@ -514,7 +498,7 @@ struct localToGlobalRHSCopier
           rhs[gi[0] + testGlobalOffset]
               += localRhs[i+testLocalOffset];
         },
-        [](size_t i){},
+        [](size_t /* i */){},
         [&](size_t i, MultiIndex gi, double wi)
         {
           rhs[gi[0] + testGlobalOffset]

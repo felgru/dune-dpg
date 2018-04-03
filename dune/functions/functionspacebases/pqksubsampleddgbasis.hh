@@ -351,7 +351,7 @@ public:
 
     for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
     {
-      switch ((unsigned int)dim)
+      switch (dim)
       {
         case 1:
         {
@@ -420,7 +420,7 @@ public:
     const auto& gridIndexSet = preBasis_->gridView().indexSet();
     const auto& element = node_->element();
 
-    switch ((unsigned int)dim)
+    switch (dim)
     {
       case 1:
       {

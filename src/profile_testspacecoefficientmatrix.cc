@@ -14,8 +14,6 @@
 
 #include <boost/math/constants/constants.hpp>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
@@ -27,7 +25,6 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
@@ -48,7 +45,6 @@ auto f(const Direction& s)
 
 int main(int argc, char** argv)
 {
-  try{
   if(argc != 5 && argc != 2) {
     std::cerr << "Usage: " << argv[0] << " n [c βx βy]\n\n"
               << "Solves the transport problem β.∇ϕ + c ϕ = 1"
@@ -173,8 +169,7 @@ int main(int argc, char** argv)
                                 DomainOfIntegration::interior>(f(beta))));
 
   {
-    std::chrono::steady_clock::time_point startsystemassembler
-      = std::chrono::steady_clock::now();
+    const auto startsystemassembler = std::chrono::steady_clock::now();
 
     VectorType rhsVector;
     MatrixType stiffnessMatrix;
@@ -182,8 +177,7 @@ int main(int argc, char** argv)
     bufferedSystemAssembler
       .assembleSystem(stiffnessMatrix, rhsVector, rhsFunctions);
 
-    std::chrono::steady_clock::time_point endsystemassembler
-      = std::chrono::steady_clock::now();
+    const auto endsystemassembler = std::chrono::steady_clock::now();
     std::cout << "The   buffered system assembler took "
               << std::chrono::duration_cast<std::chrono::microseconds>
                     (endsystemassembler - startsystemassembler).count()
@@ -191,8 +185,7 @@ int main(int argc, char** argv)
   }
 
   {
-    std::chrono::steady_clock::time_point startsystemassembler
-      = std::chrono::steady_clock::now();
+    const auto startsystemassembler = std::chrono::steady_clock::now();
 
     VectorType rhsVector;
     MatrixType stiffnessMatrix;
@@ -200,8 +193,7 @@ int main(int argc, char** argv)
     unbufferedSystemAssembler
       .assembleSystem(stiffnessMatrix, rhsVector, rhsFunctions);
 
-    std::chrono::steady_clock::time_point endsystemassembler
-      = std::chrono::steady_clock::now();
+    const auto endsystemassembler = std::chrono::steady_clock::now();
     std::cout << "The unbuffered system assembler took "
               << std::chrono::duration_cast<std::chrono::microseconds>
                     (endsystemassembler - startsystemassembler).count()
@@ -237,15 +229,13 @@ int main(int argc, char** argv)
                  + std::get<Phi>(*solutionSpaces).size());
     x = 0;
 
-    std::chrono::steady_clock::time_point startsolver
-      = std::chrono::steady_clock::now();
+    const auto startsolver = std::chrono::steady_clock::now();
 
     UMFPack<MatrixType> umfPack(stiffnessMatrix, 0);
     InverseOperatorResult statistics;
     umfPack.apply(x, rhsVector, statistics);
 
-    std::chrono::steady_clock::time_point endsolver
-      = std::chrono::steady_clock::now();
+    const auto endsolver = std::chrono::steady_clock::now();
     std::cout << "Solving the system with UMFPACK took "
               << std::chrono::duration_cast<std::chrono::microseconds>
                     (endsolver - startsolver).count()
@@ -254,11 +244,4 @@ int main(int argc, char** argv)
 
 
   return 0;
-  }
-  catch (Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
 }
