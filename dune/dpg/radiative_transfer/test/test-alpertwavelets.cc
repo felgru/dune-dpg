@@ -21,7 +21,7 @@ bool sameVector(const Eigen::VectorXd& x, const Eigen::VectorXd& y) {
   return true;
 }
 
-int main() try
+int main()
 {
   using namespace Dune::ScatteringKernelApproximation;
   bool success = true;
@@ -105,10 +105,5 @@ int main() try
   // HaarWavelet::IDWT(y);
   // success &= sameVector(x, y);
 
-  // return success ? 0 : 1;
-}
-catch (Dune::Exception e)
-{
-  std::cout << e << std::endl;
-  return 1;
+  return success ? 0 : 1;
 }

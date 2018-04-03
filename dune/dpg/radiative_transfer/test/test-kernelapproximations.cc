@@ -23,7 +23,7 @@ bool sameVector(const Eigen::VectorXd& x, const Eigen::VectorXd& y) {
   return true;
 }
 
-int main() try
+int main()
 {
   bool success = true;
 
@@ -61,9 +61,4 @@ int main() try
   success &= sameVector(x, z);
 
   return success ? 0 : 1;
-}
-catch (Dune::Exception e)
-{
-  std::cout << e << std::endl;
-  return 1;
 }

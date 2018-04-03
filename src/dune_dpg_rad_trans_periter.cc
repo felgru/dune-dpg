@@ -18,7 +18,6 @@
 #include <array>
 #include <vector>
 
-#include <dune/common/exceptions.hh> // We use exceptions
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <dune/grid/io/file/gmshreader.hh>
@@ -65,8 +64,6 @@ void checkSizeGrid(unsigned int sizeGrid, unsigned int multipleOf) {
 
 int main(int argc, char** argv)
 {
-  try{
-
   // Set up MPI, if available
   FakeMPIHelper::instance(argc, argv);
 
@@ -234,11 +231,4 @@ int main(int argc, char** argv)
              foldername, plotSolutions);
 
   return 0;
-  }
-  catch (Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
 }
