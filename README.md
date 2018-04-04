@@ -97,6 +97,24 @@ pvpython interpreter shipped with ParaView, you can also run
 seems to be highly unstable we cannot guarantee that the script will run
 unmodified on another version of ParaView.)
 
+Description of src/manufactured_transport.cc and src/manufactured_transport_uniform.cc
+--------------------------------------------------------------------------------------
+
+manufactured_transport.cc and manufactured_transport_uniform.cc compute
+the Discontinuous Petrov-Galerkin solution of a transport problem whose
+solution is known. Thus, we can compare the DPG error estimates with
+the exact errors.
+
+manufactured_transport.cc uses adaptive refinement while
+manufactured_transport_uniform.cc uses uniform refinement.
+
+You can run each of those programs from the build directory as
+
+    src/manufactured_transport <n>
+    src/manufactured_transport_uniform <n>
+
+where `<n>` is the desired grid resolution.
+
 Description of src/convergence_test.cc
 --------------------------------------
 
