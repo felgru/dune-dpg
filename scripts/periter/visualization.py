@@ -36,7 +36,7 @@ def drawArrowPlot(n, dirNum, lx, ly):
     y0 = 0.
     plt.quiver(x0, y0, lx, ly, angles='xy', scale_units='xy', scale = 1)
     plt.axis([-1, 1, -1, 1])
-    plt.savefig('dir-n'+str(n)+'-dir'+str(dirNum)+'.pdf')
+    plt.savefig('dir-n{}-dir{}.pdf'.format(n, dirNum))
     plt.clf()
 
 def reorder(S):
@@ -62,38 +62,22 @@ def mergePlots(N, reorderedS
             oldindex = s['index']
             newindex = reorderedS[n].index(s)
             # Definition of file names
-            zerosold = ''
-            zerosnew = ''
-            if oldindex<10:
-                zerosold = '000'
-            else:
-                if oldindex<100:
-                    zerosold = '00'
-                else:
-                    zerosold = '0'
-            if newindex<10:
-                zerosnew = '000'
-            else:
-                if newindex<100:
-                    zerosnew = '00'
-                else:
-                    zerosnew = '0'
             # File names for u and direction (they have the old indexes)
-            filenameU   = prefixU+'-n'+str(n)+'-dir'+zerosold+str(oldindex)
-            filenameDir = prefixDir+'-n'+str(n)+'-dir'+str(oldindex)
+            filenameU   = '{}-n{}-dir{:0>4}'.format(prefixU, n, oldindex)
+            filenameDir = '{}-n{}-dir{}'.format(prefixDir, n, oldindex)
             # File name for merged file (it has the new index)
-            fileMerge   = prefixMerge+'-n'+str(n)+'-dir'+zerosnew+str(newindex)
+            fileMerge   = '{}-n{}-dir{:0>4}'.format(prefixMerge, n, newindex)
 
             # We convert png file of u into a pdf
             # (because Visit cannot save in pdf)
             if convert_u_png_to_pdf:
-                cmd = 'convert '+filenameU+'.png '+filenameU+'.pdf'
+                cmd = 'convert {0}.png {0}.pdf'.format(filenameU)
                 os.system(cmd)
             # We merge the two files
             cmd = 'pdfjam '+filenameU+'.pdf'+' '+filenameDir+'.pdf -o '+fileMerge+'.pdf --nup 2x1 --twoside --landscape --scale 1.1 --delta "-2.0cm 0.cm" --offset \'2cm 0cm\''
             os.system(cmd)
         # We put together the merged files of each iteration
-        cmd = 'pdfjam '+prefixMerge+'-n'+str(n)+'-dir*.pdf -o '+prefixSummary+'-n'+str(n)+'.pdf --landscape'
+        cmd = 'pdfjam {1}-n{0}-dir*.pdf -o {2}-n{0}.pdf --landscape'.format(n, prefixMerge, prefixSummary)
         os.system(cmd)
 
 def makeVideo(N
@@ -101,7 +85,7 @@ def makeVideo(N
     , prefixVideo = 'video-elevate'):
     for n in range(N):
         # Make a gif movie
-        cmd = 'convert -verbose -delay 100 -loop 1 -density 300 '+prefixSummary+'-n'+str(n)+'.pdf '+prefixVideo+'-n'+str(n)+'.gif'
+        cmd = 'convert -verbose -delay 100 -loop 1 -density 300 {1}-n{0}.pdf {2}-n{0}.gif'.format(n, prefixSummary, prefixVideo)
         os.system(cmd)
 
 def str2bool(v):
