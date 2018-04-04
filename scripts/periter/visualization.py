@@ -36,7 +36,7 @@ def drawArrowPlot(n, dirNum, lx, ly):
     y0 = 0.
     plt.quiver(x0, y0, lx, ly, angles='xy', scale_units='xy', scale = 1)
     plt.axis([-1, 1, -1, 1])
-    plt.savefig('dir-n{}-dir{}.pdf'.format(n, dirNum))
+    plt.savefig('dir-n{}-dir{:0>4}.pdf'.format(n, dirNum))
     plt.clf()
 
 def reorder(S):
@@ -64,7 +64,7 @@ def mergePlots(N, reorderedS
             # Definition of file names
             # File names for u and direction (they have the old indexes)
             filenameU   = '{}-n{}-dir{:0>4}'.format(prefixU, n, oldindex)
-            filenameDir = '{}-n{}-dir{}'.format(prefixDir, n, oldindex)
+            filenameDir = '{}-n{}-dir{:0>4}'.format(prefixDir, n, oldindex)
             # File name for merged file (it has the new index)
             fileMerge   = '{}-n{}-dir{:0>4}'.format(prefixMerge, n, newindex)
 
