@@ -31,7 +31,7 @@ libraries installed on your system:
       (Boost versions as low as 1.61, which introduced Boost::Hana, might
        work but have not been tested.)
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
-    - DUNE core libraries 2.5
+    - DUNE core libraries 2.5 or 2.6
       including the staging modules dune-typetree and dune-functions
       (https://dune-project.org/releases/2.5.0/)
     - A grid manager. Our examples use dune-uggrid
@@ -40,7 +40,7 @@ libraries installed on your system:
       but one could also use other managers, e.g., ALBERTA or YASPgrid.
       (https://dune-project.org/groups/grid/)
     - for the plot_solution test program, you will also need the
-      dune-subgrid module
+      dune-subgrid module in the current developement version 2.6 from Git
       (https://git.imp.fu-berlin.de/agnumpde/dune-subgrid)
 
 Instructions on how to build dune-dpg can be found in [INSTALL.md](INSTALL.md).
