@@ -11,7 +11,7 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 ### Deprecated
 ### Removed
 
-## 0.3 (Unreleased)
+## 0.3 - 2018-04-04
 ### Added
 * New `ErrorTools::l2norm` function to compute the L_2 norm of a
   finite element function.
