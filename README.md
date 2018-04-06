@@ -34,6 +34,9 @@ libraries installed on your system:
     - DUNE core libraries 2.5 or 2.6
       including the staging modules dune-typetree and dune-functions
       (https://dune-project.org/releases/2.5.0/)
+      For dune-istl's UMFPACK interface to work with matrices > 2GB, you
+      have to apply the patch `contrib/umfpack_dl.diff`. Refer to
+      [INSTALL.md](INSTALL.md) for instructions.
     - A grid manager. Our examples use dune-uggrid
       which has been added as a staging module in DUNE 2.5
       (https://dune-project.org/releases/2.5.0/)
