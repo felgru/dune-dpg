@@ -25,7 +25,7 @@ libraries installed on your system:
 
   - Programs:
     - a C++14-compatible compiler (e.g. GCC >= 6)
-    - cmake >= 2.8.12
+    - cmake >= 3.1
   - Libraries:
     - Boost >= 1.63
       (Boost versions as low as 1.61, which introduced Boost::Hana, might
