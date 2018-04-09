@@ -6,15 +6,12 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/common/power.hh>
-#include <dune/common/version.hh>
 
 #include <dune/geometry/type.hh>
 
 #include <dune/localfunctions/common/localbasis.hh>
 #include <dune/localfunctions/common/localfiniteelementtraits.hh>
-#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
 #include <dune/localfunctions/common/localinterpolation.hh>
-#endif
 
 
 namespace Dune
@@ -44,11 +41,7 @@ namespace Dune
     {
       typename LB::Traits::DomainType x;
 
-#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
       auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
-#else
-      typename LB::Traits::RangeType y;
-#endif
 
       out.resize(StaticPower<s*k+1,d>::power);
 
@@ -61,12 +54,7 @@ namespace Dune
         for (int j=0; j<d; j++)
           x[j] = (1.0*alpha[j])/(s*k);
 
-#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
         out[i] = f(x);
-#else
-        ff.evaluate(x,y);
-        out[i] = y;
-#endif
       }
     }
   };
@@ -82,19 +70,10 @@ namespace Dune
     {
       typename LB::Traits::DomainType x(0);
 
-#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
       auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
-#else
-      typename LB::Traits::RangeType y;
-#endif
 
       out.resize(1);
-#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
       out[0] = f(x);
-#else
-      ff.evaluate(x,y);
-      out[0] = y;
-#endif
     }
   };
 
