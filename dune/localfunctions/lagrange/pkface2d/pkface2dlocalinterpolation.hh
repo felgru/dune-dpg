@@ -5,6 +5,12 @@
 
 #include <vector>
 
+#include <dune/common/version.hh>
+
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+#include <dune/localfunctions/common/localinterpolation.hh>
+#endif
+
 namespace Dune
 {
   template<class LB>
@@ -22,26 +28,43 @@ namespace Dune
   public:
 
     template<typename F, typename C>
-    void interpolate (const F& f, std::vector<C>& out) const
+    void interpolate (const F& ff, std::vector<C>& out) const
     {
       typename LB::Traits::DomainType x;
+
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+      auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
+#else
       typename LB::Traits::RangeType y;
-      // typedef typename LB::Traits::DomainFieldType D;
+#endif
+
       out.resize(N);
       for (int l=0; l<=k; l++)
       {
         x[0]=1.0*l/kdiv;
         x[1]=0;
-        f.evaluate(x,y);
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+        out[l] = f(x);
+#else
+        ff.evaluate(x,y);
         out[l] = y;
+#endif
         x[0]=0;
         x[1]=1.0*l/kdiv;
-        f.evaluate(x,y);
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+        out[l+(k+1)] = f(x);
+#else
+        ff.evaluate(x,y);
         out[l+(k+1)] = y;
+#endif
         x[0]=1.0*l/kdiv;
         x[1]=1.0*(k-l)/kdiv;
-        f.evaluate(x,y);
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+        out[l+2*(k+1)] = f(x);
+#else
+        ff.evaluate(x,y);
         out[l+2*(k+1)] = y;
+#endif
       }
     }
 

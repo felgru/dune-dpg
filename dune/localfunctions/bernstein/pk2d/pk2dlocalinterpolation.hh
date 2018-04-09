@@ -8,6 +8,11 @@
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
+
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+#include <dune/localfunctions/common/localinterpolation.hh>
+#endif
 
 #include "bernsteinbasisevaluation.hh"
 
@@ -28,12 +33,17 @@ namespace Dune
   public:
 
     template<typename F, typename C>
-    void interpolate (const F& f, std::vector<C>& out) const
+    void interpolate (const F& ff, std::vector<C>& out) const
     {
-      typename LB::Traits::DomainType x;
-      typename LB::Traits::RangeType y;
       typedef typename LB::Traits::DomainFieldType D;
       typedef typename LB::Traits::RangeFieldType R;
+
+      typename LB::Traits::DomainType x;
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+      auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
+#else
+      typename LB::Traits::RangeType y;
+#endif
       FieldMatrix<C, N, N> vandermonde;
       FieldVector<C, N> fEvaluations;
       int n=0;
@@ -43,8 +53,12 @@ namespace Dune
         {
           x[0] = static_cast<D>(i)/static_cast<D>(kdiv);
           x[1] = static_cast<D>(j)/static_cast<D>(kdiv);
-          f.evaluate(x,y);
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+          fEvaluations[n] = f(x);
+#else
+          ff.evaluate(x,y);
           fEvaluations[n] = y;
+#endif
           detail::Pk2DBernsteinBasis<D, R, k>
               ::fillVectorOfEvaluations(x, vandermondeRow->begin());
           ++n;

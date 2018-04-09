@@ -6,9 +6,17 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
 ## 0.4 (Unreleased)
 ### Added
+
 ### Changed
+* The `interpolate` method of all localfunctions can now be called with
+  a function object f that implements `f(x)` instead of the
+  `f.evaluate(x,y)` interface. This is in accordance with changes in
+  dune-localfunctions 2.7.
+
 ### Fixed
+
 ### Deprecated
+
 ### Removed
 * The workarounds for missing dune-subgrid functionality have been removed
   as everything is now implemented in SubGrid itself.
