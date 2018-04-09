@@ -142,22 +142,22 @@ int main(int argc, char** argv)
                                       DomainOfIntegration::face>(1., beta)));
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
-     auto innerProduct = make_InnerProduct(testSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta),
-              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                    DomainOfIntegration::face>(1., beta)));
-     auto innerProduct_aposteriori
+    auto innerProduct = make_InnerProduct(testSpaces,
+         make_tuple(
+             make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                   DomainOfIntegration::interior>(1., beta),
+             make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                   DomainOfIntegration::face>(1., beta)));
+    auto innerProduct_aposteriori
         = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
     //  System assembler without geometry buffer
-    //auto systemAssembler
-    //   = make_DPGSystemAssembler(bilinearForm, innerProduct);
+    // auto systemAssembler
+    //     = make_DPGSystemAssembler(bilinearForm, innerProduct);
 
     //  System assembler with geometry buffer
     auto systemAssembler
-     = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
+        = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
     /////////////////////////////////////////////////////////
     //   Stiffness matrix and right hand side vector
     /////////////////////////////////////////////////////////

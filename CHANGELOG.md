@@ -4,7 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
-## 0.3 (Unreleased)
+## 0.4 (Unreleased)
+### Added
+### Changed
+### Fixed
+### Deprecated
+### Removed
+* The workarounds for missing dune-subgrid functionality have been removed
+  as everything is now implemented in SubGrid itself.
+  Be sure to use at least commit 5706c70d8c4472f39e5bd61d1de1caf22381b8b9
+  of due-sugrid which implements all required methods in the SubGrid class.
+
+## 0.3 - 2018-04-04
 ### Added
 * New `ErrorTools::l2norm` function to compute the L_2 norm of a
   finite element function.
