@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
     const FieldVector<double, dim> upper = {size, size};
     const std::array<unsigned int, dim> numElements = {1, 1};
 
-    const std::shared_ptr<Grid> grid
+    const std::unique_ptr<Grid> grid
         = StructuredGridFactory<Grid>::createSimplexGrid
                                         (lower, upper, numElements);
     // To prevent bug in UGGrid destructor

@@ -41,7 +41,6 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
-#include <dune/common/version.hh>
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
@@ -276,11 +275,7 @@ BlockVector<FieldVector<double,1>> harmonic_extension_of_boundary_values(
   MatrixAdapter<Matrix,Vector,Vector> op(stiffnessMatrix);
 
   // Sequential incomplete LU decomposition as the preconditioner
-#if DUNE_VERSION_NEWER(DUNE_ISTL,2,6)
   SeqILU<Matrix,Vector,Vector> ilu0(stiffnessMatrix,1.0);
-#else
-  SeqILU0<Matrix,Vector,Vector> ilu0(stiffnessMatrix,1.0);
-#endif
 
   Vector extension(feBasis.size());
   extension = 0.;
