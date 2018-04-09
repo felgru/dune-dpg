@@ -100,7 +100,8 @@ Installation of Dune on other Linux distributions and MacOS
     dune-common, dune-geometry, dune-grid, dune-istl,
     dune-localfunctions, dune-uggrid, dune-typetree, dune-functions
     Link: https://dune-project.org/releases/2.5.0/
-  - The current developement version 2.6 of dune-subgrid from git:
+  - The current developement version 2.7 from the Git master branch
+    of dune-subgrid:
     https://git.imp.fu-berlin.de/agnumpde/dune-subgrid
 
 Careful: If you want to use the UMFPack wrapper from dune-istl
