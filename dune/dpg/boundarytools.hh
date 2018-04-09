@@ -40,6 +40,12 @@ namespace Dune {
       using DomainType = FieldVector<double, 2>;
       using RangeType  = FieldVector<double, 1>;
 
+      struct Traits
+      {
+        using DomainType = FieldVector<double, 2>;
+        using RangeType  = FieldVector<double, 1>;
+      };
+
       BoundaryCondition(const Function& g) : g_(g) {};
 
       // Remark: this signature assumes that we have a 2D scalar problem
