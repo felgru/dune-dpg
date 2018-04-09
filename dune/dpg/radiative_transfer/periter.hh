@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <iomanip>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -53,7 +54,6 @@
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #include <dune/subgrid/subgrid.hh>
 #pragma GCC diagnostic pop
-#include <dune/dpg/subgrid_workarounds.hh>
 
 #include <boost/math/constants/constants.hpp>
 
@@ -95,6 +95,20 @@ restoreSubGridFromIdSet(
   std::set<typename SubGrid::HostGridType::GlobalIdSet::IdType>
     idSetCopy(idSet);
   return restoreSubGridFromIdSet<SubGrid>(std::move(idSetCopy), hostGrid);
+}
+
+template<class SubGrid>
+std::unique_ptr<SubGrid> copySubGrid(const SubGrid& subGrid) {
+  std::unique_ptr<SubGrid> gr
+      = std::make_unique<SubGrid>(subGrid.getHostGrid());
+  gr->createBegin();
+  const auto gridView = subGrid.leafGridView();
+  for(const auto& e : elements(gridView)) {
+    gr->insert(subGrid.template getHostEntity<0>(e));
+  }
+  gr->createEnd();
+  gr->setMaxLevelDifference(1);
+  return gr;
 }
 
 /**
