@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
   const double theta = 1.;
   const FieldVector<double, dim> s = {std::cos(theta), std::sin(theta)};
 
-  std::vector<std::shared_ptr<Grid>> grids;
+  std::vector<std::unique_ptr<Grid>> grids;
   grids.reserve(numLevels);
   for(int level = 0; level < numLevels; level++) {
     const double size = std::exp2(-level);
@@ -101,14 +101,12 @@ int main(int argc, char *argv[]) {
     const FieldVector<double, dim> upper = {size, size};
     const std::array<unsigned int, dim> numElements = {1, 1};
 
-    const std::unique_ptr<Grid> grid
-        = StructuredGridFactory<Grid>::createSimplexGrid
-                                        (lower, upper, numElements);
     // To prevent bug in UGGrid destructor
-    grids.push_back(grid);
+    grids.push_back(StructuredGridFactory<Grid>::createSimplexGrid
+                                        (lower, upper, numElements));
 
     using LeafGridView = typename Grid::LeafGridView;
-    const LeafGridView gridView = grid->leafGridView();
+    const LeafGridView gridView = grids.back()->leafGridView();
 
     using FEBasisTest
         = Functions::BernsteinDGRefinedDGBasis<LeafGridView, 1, 3>;
