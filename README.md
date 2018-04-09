@@ -33,9 +33,9 @@ libraries installed on your system:
     - Eigen >= 3.2
       (http://eigen.tuxfamily.org)
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
-    - DUNE core libraries 2.6
+    - DUNE core libraries 2.7
       including the staging modules dune-typetree and dune-functions
-      (https://dune-project.org/releases/2.6.0/)
+      (https://dune-project.org/releases/2.7.0/)
       For dune-istl's UMFPACK interface to work with matrices > 2GB, you
       have to apply the patch `contrib/umfpack_dl.diff` if you are using
       dune-istl < 2.7. Refer to [INSTALL.md](INSTALL.md) for instructions.
@@ -44,7 +44,7 @@ libraries installed on your system:
       but one could also use other managers, e.g., ALBERTA or YASPgrid.
       (https://dune-project.org/groups/grid/)
     - for the plot_solution and the ASTI programs, you will also need
-      dune-subgrid (>= 2.6)
+      dune-subgrid (>= 2.7)
       (https://git.imp.fu-berlin.de/agnumpde/dune-subgrid)
 
 Instructions on how to build dune-dpg can be found in [INSTALL.md](INSTALL.md).
