@@ -5,7 +5,11 @@
 
 #include <vector>
 
+#include <dune/common/version.hh>
+
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
 #include <dune/localfunctions/common/localinterpolation.hh>
+#endif
 
 namespace Dune
 {
@@ -28,7 +32,11 @@ namespace Dune
     {
       typename LB::Traits::DomainType x;
 
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
       auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
+#else
+      typename LB::Traits::RangeType y;
+#endif
 
       typedef typename LB::Traits::DomainFieldType D;
       out.resize(N);
@@ -40,7 +48,12 @@ namespace Dune
           {
             x[0] = static_cast<D>(i)/static_cast<D>(kdiv);
             x[1] = static_cast<D>(j)/static_cast<D>(kdiv);
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
             out[n] = f(x);
+#else
+            ff.evaluate(x,y);
+            out[n] = y;
+#endif
             n++;
           }
         }
