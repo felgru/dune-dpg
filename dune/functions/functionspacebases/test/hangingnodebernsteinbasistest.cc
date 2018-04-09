@@ -7,9 +7,7 @@
 
 #include <iostream>
 
-#include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
-#include <dune/geometry/quadraturerules.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
@@ -25,7 +23,7 @@ int main()
   const FieldVector<double,dim> upper = {1, 1};
   const std::array<unsigned int,dim> numElements = {1, 1};
 
-  std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
+  std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
                                 ::createSimplexGrid(lower, upper, numElements);
   hostGrid->setClosureType(HostGrid::NONE);
 

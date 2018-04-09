@@ -6,7 +6,6 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
-#include <dune/common/version.hh>
 
 #include <dune/localfunctions/bernstein/pqkfactory.hh>
 
@@ -97,14 +96,8 @@ public:
       }
       case 2:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         quadrilateralOffset_ = dofsPerTriangle
                                * gridView_.size(GeometryTypes::triangle);
-#else
-        GeometryType triangle;
-        triangle.makeTriangle();
-        quadrilateralOffset_ = dofsPerTriangle * gridView_.size(triangle);
-#endif
         break;
       }
       case 3:
@@ -147,16 +140,8 @@ public:
         return dofsPerEdge * gridView_.size(0);
       case 2:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         return dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
              + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
-#else
-        GeometryType triangle, quad;
-        triangle.makeTriangle();
-        quad.makeQuadrilateral();
-        return dofsPerTriangle * gridView_.size(triangle)
-             + dofsPerQuad * gridView_.size(quad);
-#endif
       }
     }
     DUNE_THROW(Dune::NotImplemented, "No size method for " << dim
@@ -266,9 +251,6 @@ public:
   using MultiIndex = MI;
 
   using PreBasis = BernsteinDGRefinedDGPreBasis<GV, level, k, MI>;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   using Node = typename PreBasis::template Node<TP>;
 
@@ -302,7 +284,6 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It>
   It indices(It it) const
   {
@@ -344,35 +325,6 @@ public:
     }
     return it;
   }
-#else
-  MultiIndex index(size_type i) const
-  {
-    const auto& gridIndexSet = preBasis_->gridView().indexSet();
-    const auto& element = node_->element();
-
-    switch (dim)
-    {
-      case 1:
-      {
-        return {preBasis_->dofsPerEdge*gridIndexSet.subIndex(element,0,0) + i};
-      }
-      case 2:
-      {
-        if (element.type().isTriangle())
-        {
-          return {preBasis_->dofsPerTriangle*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else if (element.type().isQuadrilateral())
-        {
-          return { preBasis_->quadrilateralOffset_ + preBasis_->dofsPerQuad*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else
-          DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");
-      }
-    }
-    DUNE_THROW(Dune::NotImplemented, "No index method for " << dim << "d grids available yet!");
-  }
-#endif
 
 protected:
   const PreBasis* preBasis_;

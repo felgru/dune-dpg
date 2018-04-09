@@ -8,7 +8,6 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
 
 #include <dune/dpg/functions/localindexsetiteration.hh>
 
@@ -123,17 +122,10 @@ namespace Dune {
 
       localIndexSet.bind(localView);
 
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       const unsigned int nFace
           = referenceElement<double, dim>(e.type()).size(dim-1);
       const unsigned int nVertex
           = referenceElement<double, dim>(e.type()).size(dim);
-#else
-      const unsigned int nFace
-          = ReferenceElements<double, dim>::general(e.type()).size(dim-1);
-      const unsigned int nVertex
-          = ReferenceElements<double, dim>::general(e.type()).size(dim);
-#endif
 
       // For every vertex, we have to see whether it is on the inflow boundary.
       // If vertex i is on the inflow boundary, we will have vertexOnInflowBoundary[i] >0.
@@ -272,17 +264,10 @@ namespace Dune {
 
       localIndexSet.bind(localView);
 
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       const unsigned int nFace
           = referenceElement<double, dim>(e.type()).size(dim-1);
       const unsigned int nVertex
           = referenceElement<double, dim>(e.type()).size(dim);
-#else
-      const unsigned int nFace
-          = ReferenceElements<double, dim>::general(e.type()).size(dim-1);
-      const unsigned int nVertex
-          = ReferenceElements<double, dim>::general(e.type()).size(dim);
-#endif
 
       // For every vertex, we have to see whether it is on the boundary.
       // If vertex i is on the boundary, we will have vertexOnBoundary[i] > 0.

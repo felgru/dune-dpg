@@ -5,7 +5,6 @@
 
 #include <type_traits>
 #include <dune/common/tupleutility.hh>
-#include <dune/common/version.hh>
 
 #ifndef DOXYGEN
 namespace std {
@@ -28,18 +27,10 @@ namespace Functions {
   class ConstrainedGlobalBasis;
 
   template<typename GV, int k, class MI>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   class PQkPreBasis;
-#else
-  class PQkNodeFactory;
-#endif
 
   template<typename GV, int k, class MI>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   class LagrangeDGPreBasis;
-#else
-  class LagrangeDGNodeFactory;
-#endif
 
   template<typename GV, int level, int k, class MI>
   class PQkDGRefinedDGPreBasis;
@@ -290,31 +281,15 @@ struct changeGridView<Functions::ConstrainedGlobalBasis<PB>, GridView>
 };
 
 template<typename GV, int k, class MI, class GridView>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
 struct changeGridView<Functions::PQkPreBasis<GV, k, MI>, GridView>
-#else
-struct changeGridView<Functions::PQkNodeFactory<GV, k, MI>, GridView>
-#endif
 {
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   typedef Functions::PQkPreBasis<GridView, k, MI> type;
-#else
-  typedef Functions::PQkNodeFactory<GridView, k, MI> type;
-#endif
 };
 
 template<typename GV, int k, class MI, class GridView>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
 struct changeGridView<Functions::LagrangeDGPreBasis<GV, k, MI>, GridView>
-#else
-struct changeGridView<Functions::LagrangeDGNodeFactory<GV, k, MI>, GridView>
-#endif
 {
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   typedef Functions::LagrangeDGPreBasis<GridView, k, MI> type;
-#else
-  typedef Functions::LagrangeDGNodeFactory<GridView, k, MI> type;
-#endif
 };
 
 template<typename GV, int level, int k, class MI, class GridView>

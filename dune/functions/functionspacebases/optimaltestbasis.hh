@@ -9,7 +9,6 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/hybridutilities.hh>
-#include <dune/common/version.hh>
 
 #include <dune/localfunctions/optimaltestfunctions/optimaltest.hh>
 #include <dune/localfunctions/optimaltestfunctions/refinedoptimaltest.hh>
@@ -23,9 +22,7 @@
 #include <dune/dpg/testspace_coefficient_matrix.hh>
 #include <dune/dpg/type_traits.hh>
 
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
 #include <boost/hana.hpp>
-#endif
 
 
 namespace Dune {
@@ -330,7 +327,6 @@ class OptimalTestBasisNodeIndexSet
   using GV = typename TestspaceCoefficientMatrix::GridView;
   enum {dim = GV::dimension};
 
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It, typename LIS>
   static It computeIndices(It it, const LIS& localIndexSet,
                            size_t globalOffset)
@@ -342,40 +338,6 @@ class OptimalTestBasisNodeIndexSet
     return it;
   }
 
-#else
-  struct computeIndex
-  {
-    computeIndex(size_t& space_index, size_t& index_result, bool& index_found)
-    : space_index(space_index),
-      index_result(index_result),
-      index_found(index_found)
-    {}
-
-    template<class LIS>
-    void operator()(LIS& localIndexSet) const
-    {
-      if (!index_found)
-      {
-        if (localIndexSet.size() > index_result)
-        {
-          index_found  = true;
-          index_result = (localIndexSet.index(index_result))[0];
-        }
-        else
-        {
-          space_index  += 1;
-          index_result -= localIndexSet.size();
-        }
-      }
-    }
-
-  private:
-    size_t& space_index;
-    size_t& index_result;
-    bool&   index_found;
-  };
-#endif
-
 public:
 
   using size_type = std::size_t;
@@ -384,9 +346,6 @@ public:
   using MultiIndex = MI;
 
   using PreBasis = OptimalTestBasisPreBasis<TestspaceCoefficientMatrix, testIndex, MI>;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   using Node = typename PreBasis::template Node<TP>;
 
@@ -439,7 +398,6 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It>
   It indices(It it) const
   {
@@ -455,21 +413,6 @@ public:
                   preBasis_->globalOffsets[i]);
               });
   }
-#else
-  MultiIndex index(size_type i) const
-  {
-    size_t space_index=0;
-    size_t index_result=i;
-    bool index_found=false;
-
-    Hybrid::forEach(solutionLocalIndexSets_,
-                    computeIndex(space_index, index_result, index_found));
-
-    MultiIndex result;
-    result[0]=(preBasis_->globalOffsets[space_index]+index_result);
-    return result;
-  }
-#endif
 
 protected:
   const PreBasis* preBasis_;

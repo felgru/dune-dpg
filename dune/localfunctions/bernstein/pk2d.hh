@@ -5,8 +5,6 @@
 
 #include <cstddef>
 
-#include <dune/common/version.hh>
-
 #include <dune/geometry/type.hh>
 
 #include <dune/localfunctions/common/localfiniteelementtraits.hh>
@@ -26,23 +24,11 @@ namespace Dune
         BernsteinPk2DLocalInterpolation<BernsteinPk2DLocalBasis<D,R,k>>> Traits;
 
     BernsteinPk2DLocalFiniteElement ()
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     {}
-#else
-    {
-      gt.makeTriangle();
-    }
-#endif
 
     BernsteinPk2DLocalFiniteElement (int variant) :
       coefficients(variant)
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     {}
-#else
-    {
-      gt.makeTriangle();
-    }
-#endif
 
     /** Constructor for six variants with permuted vertices.
 
@@ -52,13 +38,7 @@ namespace Dune
      */
     BernsteinPk2DLocalFiniteElement (const unsigned int vertexmap[3]) :
       coefficients(vertexmap)
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     {}
-#else
-    {
-      gt.makeTriangle();
-    }
-#endif
 
     const typename Traits::LocalBasisType& localBasis () const
     {
@@ -81,25 +61,15 @@ namespace Dune
       return basis.size();
     }
 
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     static constexpr GeometryType type ()
     {
       return GeometryTypes::triangle;
     }
-#else
-    GeometryType type () const
-    {
-      return gt;
-    }
-#endif
 
   private:
     BernsteinPk2DLocalBasis<D,R,k> basis;
     BernsteinPk2DLocalCoefficients<k> coefficients;
     BernsteinPk2DLocalInterpolation<BernsteinPk2DLocalBasis<D,R,k> > interpolation;
-#if not(DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6))
-    GeometryType gt;
-#endif
   };
 }
 

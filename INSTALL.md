@@ -76,7 +76,7 @@ will nevertheless find their way.
 Installation of Dune on Debian GNU/Linux
 ----------------------------------------
 
-2) If you are using Debian Stretch, the Dune 2.5 core libraries can be
+2) If you are using Debian unstable, the Dune 2.6 core libraries can be
    installed from the Debian repositories with
 
     apt install libdune-common-dev libdune-geometry-dev libdune-grid-dev \
@@ -100,10 +100,14 @@ Installation of Dune on other Linux distributions and MacOS
 
 2) Download and extract the following dune sources to `$DUNEDIR`:
 
-  - Version >= 2.5 of the following Dune source modules:
+  - Version >= 2.6 of the following Dune core modules:
     dune-common, dune-geometry, dune-grid, dune-istl,
-    dune-localfunctions, dune-uggrid, dune-typetree, dune-functions
-    Link: https://dune-project.org/releases/2.5.0/
+    dune-localfunctions
+    Link: https://dune-project.org/releases/2.6.0/
+  - Version >= 2.6 of the following Dune staging modules:
+    dune-uggrid (https://www.dune-project.org/modules/dune-uggrid/),
+    dune-typetree (https://www.dune-project.org/modules/dune-typetree/),
+    dune-functions (https://www.dune-project.org/modules/dune-functions/)
   - The current developement version 2.7 from the Git master branch
     of dune-subgrid:
     https://git.imp.fu-berlin.de/agnumpde/dune-subgrid

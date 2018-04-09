@@ -73,10 +73,10 @@ int main(int argc, char** argv)
   const FieldVector<double,dim> upper = {1, 1};
   const std::array<unsigned int,dim> elements = {nelements, nelements};
 
-  // std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
+  // std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
   //                                 ::createCubeGrid(lower, upper, elements);
 
-  std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
+  std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
                                   ::createSimplexGrid(lower, upper, elements);
   hostGrid->setClosureType(HostGrid::NONE);
 

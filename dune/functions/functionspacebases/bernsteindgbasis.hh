@@ -88,35 +88,16 @@ public:
       }
       case 2:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         quadrilateralOffset_ = dofsPerTriangle * gridView_.size(Dune::GeometryTypes::triangle);
-#else
-        GeometryType triangle;
-        triangle.makeTriangle();
-        quadrilateralOffset_ = dofsPerTriangle * gridView_.size(triangle);
-#endif
         break;
       }
       case 3:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         prismOffset_         = dofsPerTetrahedron * gridView_.size(Dune::GeometryTypes::tetrahedron);
 
         hexahedronOffset_    = prismOffset_         +   dofsPerPrism * gridView_.size(Dune::GeometryTypes::prism);
 
         pyramidOffset_       = hexahedronOffset_    +   dofsPerHexahedron * gridView_.size(Dune::GeometryTypes::hexahedron);
-#else
-        GeometryType tetrahedron, prism, hexahedron;
-        tetrahedron.makeSimplex(3);
-        prism.makePrism();
-        hexahedron.makeCube(3);
-
-        prismOffset_         = dofsPerTetrahedron * gridView_.size(tetrahedron);
-
-        hexahedronOffset_    = prismOffset_         +   dofsPerPrism * gridView_.size(prism);
-
-        pyramidOffset_       = hexahedronOffset_    +   dofsPerHexahedron * gridView_.size(hexahedron);
-#endif
         break;
       }
     }
@@ -154,35 +135,14 @@ public:
         return dofsPerEdge*gridView_.size(0);
       case 2:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         return dofsPerTriangle*gridView_.size(Dune::GeometryTypes::triangle) + dofsPerQuad*gridView_.size(Dune::GeometryTypes::quadrilateral);
-#else
-        GeometryType triangle, quad;
-        triangle.makeTriangle();
-        quad.makeQuadrilateral();
-
-        return dofsPerTriangle*gridView_.size(triangle) + dofsPerQuad*gridView_.size(quad);
-#endif
       }
       case 3:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         return dofsPerTetrahedron*gridView_.size(Dune::GeometryTypes::tetrahedron)
              + dofsPerPyramid*gridView_.size(Dune::GeometryTypes::pyramid)
              + dofsPerPrism*gridView_.size(Dune::GeometryTypes::prism)
              + dofsPerHexahedron*gridView_.size(Dune::GeometryTypes::hexahedron);
-#else
-        GeometryType tetrahedron, pyramid, prism, hexahedron;
-        tetrahedron.makeTetrahedron();
-        pyramid.makePyramid();
-        prism.makePrism();
-        hexahedron.makeCube(3);
-
-        return dofsPerTetrahedron*gridView_.size(tetrahedron)
-             + dofsPerPyramid*gridView_.size(pyramid)
-             + dofsPerPrism*gridView_.size(prism)
-             + dofsPerHexahedron*gridView_.size(hexahedron);
-#endif
       }
     }
     DUNE_THROW(Dune::NotImplemented, "No size method for " << dim << "d grids available yet!");
@@ -231,9 +191,6 @@ public:
   using MultiIndex = MI;
 
   using PreBasis = BernsteinDGPreBasis<GV, k, MI>;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   using Node = typename PreBasis::template Node<TP>;
 
@@ -266,7 +223,6 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It>
   It indices(It it) const
   {
@@ -327,56 +283,6 @@ public:
       }
     return it;
   }
-#else
-  MultiIndex index(size_type i) const
-  {
-    const auto& gridIndexSet = preBasis_->gridView().indexSet();
-    const auto& element = node_->element();
-
-    switch (dim)
-    {
-      case 1:
-      {
-        return {preBasis_->dofsPerEdge*gridIndexSet.subIndex(element,0,0) + i};
-      }
-      case 2:
-      {
-        if (element.type().isTriangle())
-        {
-          return {preBasis_->dofsPerTriangle*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else if (element.type().isQuadrilateral())
-        {
-          return { preBasis_->quadrilateralOffset_ + preBasis_->dofsPerQuad*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else
-          DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");
-      }
-      case 3:
-      {
-        if (element.type().isTetrahedron())
-        {
-          return {preBasis_->dofsPerTetrahedron*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else if (element.type().isPrism())
-        {
-          return { preBasis_->prismOffset_ + preBasis_->dofsPerPrism*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else if (element.type().isHexahedron())
-        {
-          return { preBasis_->hexahedronOffset_ + preBasis_->dofsPerHexahedron*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else if (element.type().isPyramid())
-        {
-          return { preBasis_->pyramidOffset_ + preBasis_->dofsPerPyramid*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else
-          DUNE_THROW(Dune::NotImplemented, "3d elements have to be tetrahedrons, prisms, hexahedrons or pyramids");
-      }
-    }
-    DUNE_THROW(Dune::NotImplemented, "No index method for " << dim << "d grids available yet!");
-  }
-#endif
 
 protected:
   const PreBasis* preBasis_;

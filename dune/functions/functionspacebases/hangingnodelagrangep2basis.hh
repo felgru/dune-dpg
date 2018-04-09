@@ -6,12 +6,7 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
-#include <dune/common/version.hh>
-#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
 #include <dune/common/std/optional.hh>
-#else
-#include <dune/functions/common/optional.hh>
-#endif
 
 #include <dune/localfunctions/lagrange/pqkfactory.hh>
 
@@ -109,11 +104,7 @@ public:
   {
     const auto& gridIndexSet = gridView_.indexSet();
     std::vector<size_t> edgeDofs(gridView_.size(1), SIZE_MAX);
-#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
     std::vector<Dune::Std::optional<std::array<size_t,3>>>
-#else
-    std::vector<Optional<std::array<size_t,3>>>
-#endif
         edgeConstraints(edgeDofs.size());
     size_t nextEdgeDof = gridView_.size(dim); // edges start after vertices
     for(const auto& e : elements(gridView_)) {
@@ -224,12 +215,7 @@ public:
           if(edgeConstraints[subIndex]) {
             constraintOffsets.push_back(preceedingUnconstrainedIndices);
             preceedingUnconstrainedIndices = 0;
-#if DUNE_VERSION_NEWER(DUNE_COMMON,2,6)
-            for(size_type idx : *edgeConstraints[subIndex])
-#else
-            for(size_type idx : edgeConstraints[subIndex].value())
-#endif
-            {
+            for(size_type idx : *edgeConstraints[subIndex]) {
               localToGlobal.emplace_back(MultiIndex{idx});
             }
           } else {
@@ -394,9 +380,6 @@ public:
   using MultiIndex = MI;
 
   using PreBasis = HangingNodeLagrangeP2PreBasis<GV, MI>;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   using Node = typename PreBasis::template Node<TP>;
 
@@ -484,11 +467,7 @@ struct HangingNodeLagrangeP2PreBasisFactory
   static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   auto makePreBasis(const GridView& gridView) const
-#else
-  auto build(const GridView& gridView) const
-#endif
   {
     return HangingNodeLagrangeP2PreBasis<GridView, MultiIndex>(gridView);
   }

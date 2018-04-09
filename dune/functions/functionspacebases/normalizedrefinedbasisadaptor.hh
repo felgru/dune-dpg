@@ -5,7 +5,6 @@
 
 #include <array>
 #include <cmath>
-#include <dune/common/version.hh>
 
 #include <dune/dpg/assemble_helper.hh>
 
@@ -49,11 +48,7 @@ template<typename InnerProduct>
 class NormalizedRefinedPreBasis
 {
   using Basis = std::tuple_element_t<0, typename InnerProduct::TestSpaces>;
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   using WrappedPreBasis = typename Basis::PreBasis;
-#else
-  using WrappedPreBasis = typename Basis::NodeFactory;
-#endif
 
 public:
 
@@ -77,11 +72,7 @@ public:
 
   /** \brief Constructor for a given grid view object */
   NormalizedRefinedPreBasis(const InnerProduct& ip) :
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
     wrappedPreBasis_(std::get<0>(*ip.getTestSpaces()).preBasis()),
-#else
-    wrappedPreBasis_(std::get<0>(*ip.getTestSpaces()).nodeFactory()),
-#endif
     innerProduct_(ip)
   {}
 
@@ -163,16 +154,9 @@ class NormalizedRefinedNode :
       = Dune::detail::getLocalViews_t<typename InnerProduct::TestSpaces>;
 
   using Base = LeafBasisNode<std::size_t, TP>;
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   using WrappedPreBasis = typename Basis::PreBasis;
-#else
-  using WrappedPreBasis = typename Basis::NodeFactory;
-#endif
   using WrappedNode = typename WrappedPreBasis::template Node<TP>;
   using PreBasis = NormalizedRefinedPreBasis<InnerProduct>;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
 public:
 
@@ -249,11 +233,7 @@ class NormalizedRefinedNodeIndexSet
 {
   using Basis = typename PB::WrappedBasis;
 
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   using WrappedIndexSet = typename Basis::PreBasis::template IndexSet<TP>;
-#else
-  using WrappedIndexSet = typename Basis::NodeFactory::template IndexSet<TP>;
-#endif
 
 public:
 
@@ -263,9 +243,6 @@ public:
   using MultiIndex = typename Basis::MultiIndex;
 
   using PreBasis = PB;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   using Node = typename PreBasis::template Node<TP>;
 
@@ -298,18 +275,11 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
   template<typename It>
   It indices(It it) const
   {
     return wrappedIndexSet_.indices(it);
   }
-#else
-  MultiIndex index(size_type i) const
-  {
-    return wrappedIndexSet_.index(i);
-  }
-#endif
 
 protected:
   WrappedIndexSet wrappedIndexSet_;
