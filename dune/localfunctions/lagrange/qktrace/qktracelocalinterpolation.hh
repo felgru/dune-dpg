@@ -6,11 +6,15 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/common/power.hh>
+#include <dune/common/version.hh>
 
 #include <dune/geometry/type.hh>
 
 #include <dune/localfunctions/common/localbasis.hh>
 #include <dune/localfunctions/common/localfiniteelementtraits.hh>
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+#include <dune/localfunctions/common/localinterpolation.hh>
+#endif
 
 
 namespace Dune
@@ -36,17 +40,22 @@ namespace Dune
 
     //! \brief Local interpolation of a function -> works only for functions with support only on the boundary
     template<typename F, typename C>
-    void interpolate (const F& f, std::vector<C>& out) const
+    void interpolate (const F& ff, std::vector<C>& out) const
     {
       typename LB::Traits::DomainType x;
+
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+      auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
+#else
       typename LB::Traits::RangeType y;
+#endif
 
       out.resize(StaticPower<k+1,d>::power-StaticPower<k-1,d>::power);
       unsigned int i=0;
       for (int l=0; l<StaticPower<k+1,d>::power; l++)
       {
         // convert index i to multiindex
-        Dune::FieldVector<int,d> alpha(multiindex(l));
+        const Dune::FieldVector<int,d> alpha(multiindex(l));
        // check if the corresponding lagrange polynomial has support on any face
         bool is_on_face=false;
         for (unsigned int b=0; b<d && !is_on_face; b++)
@@ -60,8 +69,12 @@ namespace Dune
           {
             x[j] = (1.0*alpha[j])/k;
           }
-          f.evaluate(x,y);
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+          out[i] = f(x);
+#else
+          ff.evaluate(x,y);
           out[i] = y;
+#endif
           i++;
         }
       }
@@ -75,13 +88,23 @@ namespace Dune
   public:
     //! \brief Local interpolation of a function
     template<typename F, typename C>
-    void interpolate (const F& f, std::vector<C>& out) const
+    void interpolate (const F& ff, std::vector<C>& out) const
     {
       typename LB::Traits::DomainType x(0);
+
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+      auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
+#else
       typename LB::Traits::RangeType y;
-      f.evaluate(x,y);
+#endif
+
       out.resize(1);
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+      out[0] = f(x);
+#else
+      ff.evaluate(x,y);
       out[0] = y;
+#endif
     }
   };
 }

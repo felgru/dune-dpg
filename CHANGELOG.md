@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
 ## 0.3.1 (Unreleased)
+### Changed
+* The `interpolate` method of all localfunctions can now be called with
+  a function object f that implements `f(x)` instead of the
+  `f.evaluate(x,y)` interface. This is in accordance with changes in
+  dune-localfunctions 2.7.
 
 ## 0.3 - 2018-04-04
 ### Added
