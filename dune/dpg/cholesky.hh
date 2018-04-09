@@ -6,6 +6,7 @@
 #include <dune/common/exceptions.hh>
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
+#include <dune/istl/io.hh>
 
 namespace Dune {
 
