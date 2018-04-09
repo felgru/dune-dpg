@@ -136,11 +136,11 @@ int main(int argc, char** argv)
   const FieldVector<double,dim> upper = {1,1};
   const std::array<unsigned int,dim> elements = {sizeGrid,sizeGrid};
 
-  //std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+  //std::unique_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
-  std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+  std::unique_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
-  //std::shared_ptr<GridType> grid = std::shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh"));
+  //std::unique_ptr<GridType> grid = GmshReader<GridType>::read("irregular-square.msh");
 
 #ifndef PERITER_USE_UNIFORM_GRID
   // UG by default uses red-green refinements which would create and remove
