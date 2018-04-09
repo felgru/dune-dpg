@@ -5,6 +5,8 @@
 
 #include <vector>
 
+#include <dune/localfunctions/common/localinterpolation.hh>
+
 namespace Dune
 {
   template<class LB>
@@ -22,10 +24,12 @@ namespace Dune
   public:
 
     template<typename F, typename C>
-    void interpolate (const F& f, std::vector<C>& out) const
+    void interpolate (const F& ff, std::vector<C>& out) const
     {
       typename LB::Traits::DomainType x;
-      typename LB::Traits::RangeType y;
+
+      auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
+
       typedef typename LB::Traits::DomainFieldType D;
       out.resize(N);
       int n=0;
@@ -36,8 +40,7 @@ namespace Dune
           {
             x[0] = static_cast<D>(i)/static_cast<D>(kdiv);
             x[1] = static_cast<D>(j)/static_cast<D>(kdiv);
-            f.evaluate(x,y);
-            out[n] = y;
+            out[n] = f(x);
             n++;
           }
         }

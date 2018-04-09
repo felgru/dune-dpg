@@ -11,6 +11,7 @@
 
 #include <dune/localfunctions/common/localbasis.hh>
 #include <dune/localfunctions/common/localfiniteelementtraits.hh>
+#include <dune/localfunctions/common/localinterpolation.hh>
 
 
 namespace Dune
@@ -24,25 +25,9 @@ namespace Dune
 
     //! \brief Local interpolation of a function
     template<typename F, typename C>
-    void interpolate (const F& f, std::vector<C>& out) const
+    void interpolate (const F& ff, std::vector<C>& out) const
     {
       DUNE_THROW(Dune::NotImplemented, "No interpolation method for RefinedOptimalTestLocalFiniteElement available yet!");
-      /*typename LB::Traits::DomainType x;
-      typename LB::Traits::RangeType y;
-
-      out.resize(StaticPower<k+1,d>::power);
-
-      for (int i=0; i<StaticPower<k+1,d>::power; i++)
-      {
-        // convert index i to multiindex
-        Dune::FieldVector<int,d> alpha(multiindex(i));
-
-        // Generate coordinate of the i-th Lagrange point
-        for (int j=0; j<d; j++)
-          x[j] = (1.0*alpha[j])/k;
-
-        f.evaluate(x,y); out[i] = y;
-      }*/
     }
   };
 

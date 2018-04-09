@@ -11,6 +11,7 @@
 
 #include <dune/localfunctions/common/localbasis.hh>
 #include <dune/localfunctions/common/localfiniteelementtraits.hh>
+#include <dune/localfunctions/common/localinterpolation.hh>
 
 
 namespace Dune
@@ -24,30 +25,27 @@ namespace Dune
 
     //! \brief Local interpolation of a function -> works only for functions with support only on the boundary
     template<typename F, typename C>
-    void interpolate (const F& f, std::vector<C>& out) const
+    void interpolate (const F& ff, std::vector<C>& out) const
     {
       typename LB::Traits::DomainType x;
-      typename LB::Traits::RangeType y;
+
+      auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
 
       out.resize(4*(k+1));
       for (unsigned int l=0; l<=k; l++)
       {
         x[0]=0;
         x[1]=1.0*l/k;
-        f.evaluate(x,y);
-        out[l] = y;
+        out[l] = f(x);
         x[0]=1;
         x[1]=1.0*l/k;
-        f.evaluate(x,y);
-        out[l+(k+1)] = y;
+        out[l+(k+1)] = f(x);
         x[0]=1.0*l/k;
         x[1]=0;
-        f.evaluate(x,y);
-        out[l+2*(k+1)] = y;
+        out[l+2*(k+1)] = f(x);
         x[0]=1.0*l/k;
         x[1]=1;
-        f.evaluate(x,y);
-        out[l+3*(k+1)] = y;
+        out[l+3*(k+1)] = f(x);
       }
     }
   };
@@ -59,13 +57,14 @@ namespace Dune
   public:
     //! \brief Local interpolation of a function
     template<typename F, typename C>
-    void interpolate (const F& f, std::vector<C>& out) const
+    void interpolate (const F& ff, std::vector<C>& out) const
     {
       typename LB::Traits::DomainType x(0);
-      typename LB::Traits::RangeType y;
-      f.evaluate(x,y);
+
+      auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
+
       out.resize(1);
-      out[0] = y;
+      out[0] = f(x);
     }
   };
 }

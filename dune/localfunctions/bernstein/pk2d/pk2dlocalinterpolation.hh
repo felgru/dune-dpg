@@ -9,6 +9,8 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 
+#include <dune/localfunctions/common/localinterpolation.hh>
+
 #include "bernsteinbasisevaluation.hh"
 
 namespace Dune
@@ -28,12 +30,13 @@ namespace Dune
   public:
 
     template<typename F, typename C>
-    void interpolate (const F& f, std::vector<C>& out) const
+    void interpolate (const F& ff, std::vector<C>& out) const
     {
-      typename LB::Traits::DomainType x;
-      typename LB::Traits::RangeType y;
       typedef typename LB::Traits::DomainFieldType D;
       typedef typename LB::Traits::RangeFieldType R;
+
+      typename LB::Traits::DomainType x;
+      auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
       FieldMatrix<C, N, N> vandermonde;
       FieldVector<C, N> fEvaluations;
       int n=0;
@@ -43,8 +46,7 @@ namespace Dune
         {
           x[0] = static_cast<D>(i)/static_cast<D>(kdiv);
           x[1] = static_cast<D>(j)/static_cast<D>(kdiv);
-          f.evaluate(x,y);
-          fEvaluations[n] = y;
+          fEvaluations[n] = f(x);
           detail::Pk2DBernsteinBasis<D, R, k>
               ::fillVectorOfEvaluations(x, vandermondeRow->begin());
           ++n;
