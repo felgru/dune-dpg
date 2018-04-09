@@ -6,7 +6,6 @@
 #include <dune/common/reservedvector.hh>
 #include <dune/common/typeutilities.hh>
 #include <dune/common/concept.hh>
-#include <dune/common/version.hh>
 
 #include <dune/functions/common/type_traits.hh>
 #include <dune/functions/functionspacebases/constrainedlocalindexset.hh>
@@ -45,9 +44,6 @@ public:
 
   //! Pre-basis providing the implementation details
   using PreBasis = PB;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   //! The empty prefix path that identifies the root in the local ansatz tree
   using PrefixPath = TypeTree::HybridTreePath<>;
@@ -104,13 +100,6 @@ public:
   {
     return preBasis_;
   }
-
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  const NodeFactory& nodeFactory() const
-  {
-    return preBasis();
-  }
-#endif
 
   /**
    * \brief Update the stored grid view
@@ -179,11 +168,7 @@ template<class GridView, class PreBasisFactory>
 auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFactory)
 {
   using MultiIndex = typename Dune::ReservedVector<std::size_t, PreBasisFactory::requiredMultiIndexSize>;
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   auto preBasis = preBasisFactory.template makePreBasis<MultiIndex>(gridView);
-#else
-  auto preBasis = preBasisFactory.template build<MultiIndex>(gridView);
-#endif
   using PreBasis = std::decay_t<decltype(preBasis)>;
 
   return ConstrainedGlobalBasis<PreBasis>(std::move(preBasis));
@@ -192,11 +177,7 @@ auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFa
 template<class MultiIndex, class GridView, class PreBasisFactory>
 auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFactory)
 {
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   auto preBasis = preBasisFactory.template makePreBasis<MultiIndex>(gridView);
-#else
-  auto preBasis = preBasisFactory.template build<MultiIndex>(gridView);
-#endif
   using PreBasis = std::decay_t<decltype(preBasis)>;
 
   return ConstrainedGlobalBasis<PreBasis>(std::move(preBasis));

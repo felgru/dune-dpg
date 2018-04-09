@@ -4,8 +4,6 @@
 #ifndef DUNE_LOCALFUNCTIONS_QKTRACE_LOCALFINITEELEMENT_HH
 #define DUNE_LOCALFUNCTIONS_QKTRACE_LOCALFINITEELEMENT_HH
 
-#include <dune/common/version.hh>
-
 #include <dune/geometry/type.hh>
 
 #include <dune/localfunctions/common/localfiniteelementtraits.hh>
@@ -40,13 +38,7 @@ namespace Dune
     /** \todo Please doc me !
      */
     QkTraceLocalFiniteElement ()
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     { }
-#else
-    {
-      gt.makeCube(d);
-    }
-#endif
 
     /** \todo Please doc me !
      */
@@ -77,25 +69,15 @@ namespace Dune
 
     /** \todo Please doc me !
      */
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     static constexpr GeometryType type ()
     {
       return GeometryTypes::cube(d);
     }
-#else
-    GeometryType type () const
-    {
-      return gt;
-    }
-#endif
 
   private:
     LocalBasis basis;
     LocalCoefficients coefficients;
     LocalInterpolation interpolation;
-#if not(DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6))
-    GeometryType gt;
-#endif
   };
 
 

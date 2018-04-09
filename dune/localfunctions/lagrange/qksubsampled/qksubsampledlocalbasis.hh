@@ -192,21 +192,6 @@ namespace Dune
       }
     }
 
-    /** \brief Evaluate derivative in a given direction
-     * \param [in]  direction The direction to derive in
-     * \param [in]  in        Position where to evaluate
-     * \param [out] out       The return value
-     */
-    template<int diffOrder>
-    inline void evaluate(
-      const std::array<int,1>& direction,
-      const typename Traits::DomainType& in,
-      std::vector<typename Traits::RangeType>& out) const
-    {
-      DUNE_THROW(Dune::NotImplemented, "Evaluation of arbitrary "
-              "derivatives of QkSubsampledLocalBasis not implemented, yet.");
-    }
-
     //! \brief Polynomial order of the shape functions
     unsigned int order () const
     {

@@ -5,7 +5,6 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
-#include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqkfacefactory.hh>
 
@@ -86,16 +85,9 @@ public:
     {
       DUNE_THROW(Dune::NotImplemented, "PQkFaceNodalBasis for 3D grids is not implemented");
       triangleOffset_      = 0;
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       quadrilateralOffset_ = triangleOffset_
                            + dofsPerTriangle
                              * gridView_.size(GeometryTypes::triangle);
-#else
-      GeometryType triangle;
-      triangle.makeTriangle();
-      quadrilateralOffset_ = triangleOffset_
-                           + dofsPerTriangle * gridView_.size(triangle);
-#endif
     }
   }
 
@@ -137,16 +129,8 @@ public:
       {
         DUNE_THROW(Dune::NotImplemented,
                    "PQkFaceNodalBasis for 3D grids is not implemented");
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         return dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
              + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
-#else
-        GeometryType triangle, quad;
-        triangle.makeTriangle();
-        quad.makeQuadrilateral();
-        return dofsPerTriangle * gridView_.size(triangle)
-             + dofsPerQuad * gridView_.size(quad);
-#endif
       }
     }
     DUNE_THROW(Dune::NotImplemented,
@@ -250,9 +234,6 @@ public:
   using MultiIndex = MI;
 
   using PreBasis = PQkFacePreBasis<GV, k, MI>;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   using Node = typename PreBasis::template Node<TP>;
 
@@ -286,7 +267,6 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It>
   It indices(It it) const
   {
@@ -314,13 +294,8 @@ public:
         }
         else
         {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const Dune::ReferenceElement<double,dim> refElement
               = Dune::referenceElement<double,dim>(element.type());
-#else
-          const Dune::ReferenceElement<double,dim>& refElement
-              = Dune::ReferenceElements<double,dim>::general(element.type());
-#endif
 
           // we have to reverse the numbering if the local triangle edge is
           // not aligned with the global edge
@@ -355,57 +330,6 @@ public:
     }
     return it;
   }
-#else
-  MultiIndex index(size_type i) const
-  {
-    Dune::LocalKey localKey = node_->finiteElement().localCoefficients().localKey(i);
-    const auto& gridIndexSet = preBasis_->gridView().indexSet();
-    const auto& element = node_->element();
-
-    // The dimension of the entity that the current dof is related to
-    size_t dofDim = dim - localKey.codim();
-    if (dofDim==0) {  // vertex dof
-      return { gridIndexSet.subIndex(element,localKey.subEntity(),dim) };
-    }
-
-    if (dofDim==1)
-    {  // edge dof
-      if (dim==1)   // element dof -- any local numbering is fine
-      {
-        DUNE_THROW(Dune::NotImplemented, "faces have no elements of codimension 0");
-      }
-      else
-      {
-        const Dune::ReferenceElement<double,dim>& refElement
-            = Dune::ReferenceElements<double,dim>::general(element.type());
-
-        // we have to reverse the numbering if the local triangle edge is
-        // not aligned with the global edge
-        size_t v0 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),0,dim),dim);
-        size_t v1 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
-        bool flip = (v0 > v1);
-        return { (flip)
-          ? preBasis_->edgeOffset_ + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + k-localKey.index()
-              : preBasis_->edgeOffset_ + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + localKey.index() };
-      }
-    }
-
-    if (dofDim==2)
-    {
-      if (dim==2)   // element dof -- any local numbering is fine
-      {
-        DUNE_THROW(Dune::NotImplemented,
-                   "faces have no elements of codimension 0");
-      } else
-      {
-        DUNE_THROW(Dune::NotImplemented,
-                   "PQkFaceNodalBasis for 3D grids is not implemented");
-      }
-    }
-    DUNE_THROW(Dune::NotImplemented,
-        "Grid contains elements not supported for the PQkFaceNodalBasis");
-  }
-#endif
 
 protected:
   const PreBasis* preBasis_;
@@ -425,11 +349,7 @@ struct PQkFacePreBasisFactory
   static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView, class size_type=std::size_t>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   auto makePreBasis(const GridView& gridView) const
-#else
-  auto build(const GridView& gridView) const
-#endif
   {
     return PQkFacePreBasis<GridView, k, MultiIndex>(gridView);
   }

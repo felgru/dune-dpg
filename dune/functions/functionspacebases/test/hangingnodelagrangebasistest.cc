@@ -23,7 +23,7 @@ int main()
   const FieldVector<double,dim> upper = {1, 1};
   const std::array<unsigned int,dim> numElements = {1, 1};
 
-  std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
+  std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
                                 ::createSimplexGrid(lower, upper, numElements);
   hostGrid->setClosureType(HostGrid::NONE);
 
