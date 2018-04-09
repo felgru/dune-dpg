@@ -65,6 +65,13 @@ namespace detail {
     using Domain = typename Geometry::LocalCoordinate;
     using Range = FieldVector<double, 1>;
 
+    struct Traits
+    {
+      using DomainType = Domain;
+      using RangeType  = Range;
+    };
+
+
     RestoreDataToRefinedGridFunction(
         const FiniteElement& finiteElement,
         const Geometry& childInElementGeometry,
