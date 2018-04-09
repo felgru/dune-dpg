@@ -7,9 +7,7 @@
 
 #include <iostream>
 
-#include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
-#include <dune/geometry/quadraturerules.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
