@@ -35,6 +35,12 @@ namespace detail {
     using Domain = FieldVector<double, GlobalBasis::GridView::dimension>;
     using Range = FieldVector<double, 1>;
 
+    struct Traits
+    {
+       using DomainType = Domain;
+       using RangeType  = Range;
+    };
+
     InterpolateOnCellLocalFunction(
         const FiniteElement& finiteElement,
         const std::vector<Range>& elementData)
@@ -70,6 +76,12 @@ namespace detail {
     using SubGeometryInReferenceElement
         = typename SubGridGlobalBasis::LocalView::Tree::RefinementGrid
               ::template Codim<0>::Entity::Geometry;
+
+    struct Traits
+    {
+       using DomainType = Domain;
+       using RangeType  = Range;
+    };
 
     InterpolateOnSubCellLocalFunction(
         const FiniteElement& finiteElement,

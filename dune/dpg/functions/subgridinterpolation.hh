@@ -41,6 +41,13 @@ private:
     using HostDomain = typename HostGeometry::LocalCoordinate;
     using Range = typename DiscreteGlobalBasisFunction::Range;
 
+
+    struct Traits
+    {
+       using DomainType = HostDomain;
+       using RangeType  = Range;
+    };
+
     SubGridFunction(const SubGridGlobalBasis& subGridBasis,
         const InputVector& subGridCoefficients)
       : subGridFunction(
