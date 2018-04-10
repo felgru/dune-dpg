@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "../subgridprojection.hh"
+#include "../subgrids.hh"
 #include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 #include <dune/functions/functionspacebases/interpolate.hh>
 #include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
@@ -115,7 +116,7 @@ int main() {
   hostGrid->setClosureType(HostGrid::NONE);
   refineNear(*hostGrid, FieldVector<double, dim>{1./3., 2./3.});
 
-  const auto subGrid = createSubGrid(*hostGrid);
+  auto subGrid = createSubGrid(*hostGrid);
   refineNear(*subGrid, FieldVector<double, dim>{1./3., 2./3.});
   refineNear(*subGrid, FieldVector<double, dim>{2./3., 1./3.});
 
@@ -168,6 +169,17 @@ int main() {
   refineNear(*subGrid, FieldVector<double, dim>{1./3., 2./3.});
   refineNear(*subGrid, FieldVector<double, dim>{2./3., 1./3.});
   feBasisSubGrid.update(subGrid->leafGridView());
+  feBasisProjecteeSubGrid.update(subGrid->leafGridView());
+
+  restoredX
+    = subGridData.restoreDataToRefinedSubGrid(feBasisProjecteeSubGrid);
+  success = success && finite_element_data_matches_function(restoredX,
+                                        feBasisProjecteeSubGrid, testFunction);
+
+  std::cout << "Testing projection after restoring from IdSet.\n";
+
+  auto subGridIdSet = saveSubGridToIdSet(*subGrid);
+  subGrid = restoreSubGridFromIdSet<SubGrid>(subGridIdSet, *hostGrid);
   feBasisProjecteeSubGrid.update(subGrid->leafGridView());
 
   restoredX
