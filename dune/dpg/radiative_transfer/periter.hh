@@ -763,21 +763,16 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     // Inner loop
     ////////////////////////////////////////////////////
     ofs << "\n-----------------------------------\n"
-        << "Inner iterations (transport solves)\n"
-        << "-----------------------------------\n";
+             "Inner iterations (transport solves)\n"
+             "-----------------------------------\n";
     double aposterioriTransportGlobal = 0.;
 
     // Loop over the spatial grids.
-    // Directions in the same angular subinterval share the same spatial grid.
-    // The subintervals in the directions are given by the wavelet level.
-        // For example:
-        //  - wlt level 0 --> one subinterval: [-pi,pi]
-        //  - wlt level 1 --> two subintervals: [-pi,0] and [0,pi]
-        //  - wlt level k --> 2^k subintervals
+    // For each angular direction there is one spatial grid.
     for(unsigned int i = 0; i < grids.size(); ++i)
     {
-      ofs << "\nAngular subinterval " << i
-        << "\n----------------------\n";
+      ofs << "\nAngle " << i
+          << "\n--------\n";
 
       grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
                                                hostGrid);
@@ -787,7 +782,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
       double aposteriori_s;
       unsigned int nRefinement = 0;
-      // TODO: refine grid for all all directions in same interval at once.
       for( ; ; )
         // At the end of the loop, we will break if
         // aposteriori_s < kapp3*eta (pointwise in s)
@@ -869,7 +863,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << kappa3 * eta
               << ")\n\n" << std::flush;
         }
-      } // end of spatial refinements in angular subintervals
+      } // end of spatial refinement for angular direction i
       aposterioriTransportGlobal = std::max(aposterioriTransportGlobal,
                                             aposteriori_s);
 
