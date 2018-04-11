@@ -106,6 +106,9 @@ std::unique_ptr<SubGrid> copySubGrid(const SubGrid& subGrid) {
   return gr;
 }
 
+template<class GridView>
+class SubGridSpaces;
+
 /**
  * This class describes the Periter algorithm for radiative transfer problems
  *
@@ -211,14 +214,14 @@ class Periter {
    *
    * \param kernelApproximation an approximation to the scattering kernel
    * \param x  solution to which we want to apply the scattering kernel
-   * \param solutionSpaces
+   * \param subGridSpaces
    * \param accuracy
    */
-  template<class SolutionSpaces, class HostGrid, class Grid>
+  template<class SubGridView, class HostGrid, class Grid>
   static std::vector<VectorType> apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
-      const std::vector<std::shared_ptr<SolutionSpaces>>& solutionSpaces,
+      SubGridSpaces<SubGridView>& subGridSpaces,
       const HostGrid& hostGrid,
       std::vector<Direction>& sVector,
       std::vector<std::unique_ptr<Grid>>& grids,
@@ -239,14 +242,84 @@ class Periter {
   static void create_new_gridIdSets(
       std::vector<GridIdSet>& gridIdSets,
       const std::vector<std::unique_ptr<Grid>>& grids);
+};
+
+template<class GridView>
+class SubGridSpaces {
+  public:
+  using FEBasisInterior = Functions::BernsteinDGBasis<GridView, 1>;
+  using FEBasisTrace = Functions::HangingNodeBernsteinP2Basis<GridView>;
+
+  using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
+  using FEBasisTestEnriched = FEBasisTest;
+
+  using SolutionSpace = decltype(make_space_tuple<FEBasisInterior,
+                                   FEBasisTrace>(std::declval<GridView>()));
+  using TestSpace = decltype(make_space_tuple<FEBasisTest>
+                               (std::declval<GridView>()));
+  using TestSpaceEnriched = decltype(make_space_tuple<FEBasisTestEnriched>
+                                       (std::declval<GridView>()));
+
+  using SolutionSpaces = std::vector<SolutionSpace>;
+  using TestSpaces = std::vector<TestSpace>;
+  using TestSpacesEnriched = std::vector<TestSpaceEnriched>;
+
+  using GridsVector = std::vector<std::unique_ptr<typename GridView::Grid>>;
+
+  SubGridSpaces(const GridsVector& grids)
+  {
+    solutionSpaces_.reserve(grids.size());
+    testSpaces_.reserve(grids.size());
+    testSpacesEnriched_.reserve(grids.size());
+
+    for(const auto& grid : grids)
+    {
+      const auto gridView = grid->leafGridView();
+      solutionSpaces_.push_back(
+          make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView));
+      testSpaces_.push_back(make_space_tuple<FEBasisTest>(gridView));
+      testSpacesEnriched_.push_back(
+          make_space_tuple<FEBasisTestEnriched>(gridView));
+    }
+  }
+
+  void update(size_t i, const GridView& gridView) {
+    detail::updateSpaces(*solutionSpaces_[i],     gridView);
+    detail::updateSpaces(*testSpaces_[i],         gridView);
+    detail::updateSpaces(*testSpacesEnriched_[i], gridView);
+  }
+
+  void create_new_spaces(const GridsVector& grids) {
+    create_new_spaces(solutionSpaces_,     grids);
+    create_new_spaces(testSpaces_,         grids);
+    create_new_spaces(testSpacesEnriched_, grids);
+  }
+
+  const SolutionSpace& solutionSpace(size_t i) {
+    return solutionSpaces_[i];
+  }
+
+  const TestSpace& testSpace(size_t i) {
+    return testSpaces_[i];
+  }
+
+  const TestSpaceEnriched& testSpaceEnriched(size_t i) {
+    return testSpacesEnriched_[i];
+  }
+
+  private:
 
   /**
-   * insert new spaces after apply_scattering added new grids
+   * insert new spaces in apply_scattering after adding new grids
    */
   template<class Grid, class... Spaces>
   static void create_new_spaces(
       std::vector<std::shared_ptr<std::tuple<Spaces...>>>& spaces,
       const std::vector<std::unique_ptr<Grid>>& grids);
+
+  SolutionSpaces solutionSpaces_;
+  TestSpaces testSpaces_;
+  TestSpacesEnriched testSpacesEnriched_;
 };
 
 struct FeRHS {};
@@ -432,49 +505,22 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     gridIdSets.push_back(saveSubGridToIdSet(*grids[i]));
   }
 
-  //////////////////////////////////////////////////////////////////////
-  //   Choose finite element spaces for the solution and test functions
-  //////////////////////////////////////////////////////////////////////
-
-  using FEBasisInterior = Functions::BernsteinDGBasis<LeafGridView, 1>;
-  using FEBasisTrace = Functions::HangingNodeBernsteinP2Basis<LeafGridView>;
-
-  using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<LeafGridView, 1, 3>;
-  using FEBasisTestEnriched = FEBasisTest;
-
   //////////////////////////////////
   //   right hand side vector type
   //////////////////////////////////
   typedef BlockVector<FieldVector<double,1> > VectorType;
 
-  /////////////////////////////////////////////////
+  //////////////////////////////////
   //   Solution vectors
-  /////////////////////////////////////////////////
+  //////////////////////////////////
   std::vector<VectorType> x(numS);
-  std::vector<decltype(
-      make_space_tuple<FEBasisInterior, FEBasisTrace>
-          (std::declval<LeafGridView>()))> solutionSpaces;
-  solutionSpaces.reserve(grids.size());
-  std::vector<decltype(
-      make_space_tuple<FEBasisTest>(std::declval<LeafGridView>()))> testSpaces;
-  testSpaces.reserve(grids.size());
-  std::vector<decltype(
-      make_space_tuple<FEBasisTestEnriched>(std::declval<LeafGridView>()))>
-        testSpacesEnriched;
-  testSpacesEnriched.reserve(grids.size());
+  using Spaces = SubGridSpaces<LeafGridView>;
+  Spaces spaces(grids);
 
   for(unsigned int i = 0; i < grids.size(); ++i)
   {
-    auto gridView = grids[i]->leafGridView();
-    solutionSpaces.push_back(
-        make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView));
-    // v enriched
-    testSpaces.push_back(make_space_tuple<FEBasisTest>(gridView));
-    testSpacesEnriched.push_back(
-        make_space_tuple<FEBasisTestEnriched>(gridView));
-
-    x[i].resize(std::get<0>(*solutionSpaces[i]).size()
-                + std::get<1>(*solutionSpaces[i]).size());
+    x[i].resize(std::get<0>(*spaces.solutionSpace(i)).size()
+                + std::get<1>(*spaces.solutionSpace(i)).size());
     x[i] = 0;
   }
 
@@ -497,9 +543,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     for(size_t i = 0; i < grids.size(); ++i) {
       grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
                                                hostGrid);
-      detail::updateSpaces(*solutionSpaces[i], grids[i]->leafGridView());
-      detail::updateSpaces(*testSpaces[i], grids[i]->leafGridView());
-      detail::updateSpaces(*testSpacesEnriched[i], grids[i]->leafGridView());
+      spaces.update(i, grids[i]->leafGridView());
     }
 
     std::chrono::steady_clock::time_point startScatteringApproximation
@@ -510,10 +554,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
     double kappaNorm = 1.;
     double uNorm = 0.;
-    for(size_t i=0; i<solutionSpaces.size(); ++i) {
+    for(size_t i=0; i<grids.size(); ++i) {
       const double uiNorm =
-        ErrorTools::l2norm(std::get<FEBasisInterior>(*solutionSpaces[i]),
-                           x[i]);
+        ErrorTools::l2norm(std::get<0>(*spaces.solutionSpace(i)), x[i]);
       uNorm += uiNorm * uiNorm
                 / (1 << kernelApproximation.getLevel())
                 * quadWeight[i % kernelApproximation.numSperInterval];
@@ -527,10 +570,10 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         = Functions::BernsteinDGBasis<HostGridView, 2>;
 #else
     using FEBasisHostInterior
-        = changeGridView_t<FEBasisInterior, HostGridView>;
+        = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
 #endif
     using RHSData = std::decay_t<decltype(attachDataToSubGrid(
-              std::declval<FEBasisTest>(),
+              std::declval<typename Spaces::FEBasisTest>(),
 #ifdef PERITER_SKELETAL_SCATTERING
               std::declval<FEBasisHostTraceDiscontinuous>(),
 #else
@@ -539,9 +582,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               std::declval<VectorType>()))>;
     std::vector<RHSData> rhsData;
     using FEBasisHostTrace
-        = changeGridView_t<FEBasisTrace, HostGridView>;
+        = changeGridView_t<typename Spaces::FEBasisTrace, HostGridView>;
     using BVData = std::decay_t<decltype(attachDataToSubGrid(
-              std::declval<FEBasisTest>(),
+              std::declval<typename Spaces::FEBasisTest>(),
               std::declval<FEBasisHostTrace>(),
               std::declval<VectorType>()))>;
     std::vector<Std::optional<BVData>> bvData;
@@ -556,13 +599,11 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
       std::vector<VectorType> rhsFunctional =
           apply_scattering (
-            kernelApproximation, x, solutionSpaces, hostGridGlobalBasis,
+            kernelApproximation, x, spaces,
+            hostGridGlobalBasis,
             sVector, grids,
             accuKernel);
       create_new_gridIdSets(gridIdSets, grids);
-      create_new_spaces(solutionSpaces, grids);
-      create_new_spaces(testSpaces, grids);
-      create_new_spaces(testSpacesEnriched, grids);
 
       numS = sVector.size();
       x.resize(numS);
@@ -597,8 +638,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           sVector,
           f, RHSApproximation{});
       for(size_t i = 0; i < numS; i++) {
-        const FEBasisTest& subGridGlobalBasis
-            = std::get<FEBasisTest>(*testSpaces[i]);
+        const auto& subGridGlobalBasis = std::get<0>(*spaces.testSpace(i));
         rhsData.emplace_back(
           attachDataToSubGrid(
             subGridGlobalBasis,
@@ -622,8 +662,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         if(boundary_is_homogeneous[i]) {
           bvData.emplace_back();
         } else {
-          const FEBasisTest& subGridGlobalBasis
-              = std::get<FEBasisTest>(*testSpaces[i]);
+          const auto& subGridGlobalBasis = std::get<0>(*spaces.testSpace(i));
           bvData.emplace_back(
             attachDataToSubGrid(
               subGridGlobalBasis,
@@ -679,9 +718,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
       grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
                                                hostGrid);
-      detail::updateSpaces(*solutionSpaces[i], grids[i]->leafGridView());
-      detail::updateSpaces(*testSpaces[i], grids[i]->leafGridView());
-      detail::updateSpaces(*testSpacesEnriched[i], grids[i]->leafGridView());
+      spaces.update(i, grids[i]->leafGridView());
 
       double aposteriori_s;
       unsigned int nRefinement = 0;
@@ -693,11 +730,11 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       {
         VectorType bvExtension;
         if(!boundary_is_homogeneous[i]) {
-          FEBasisTest& feBasisTest = std::get<FEBasisTest>(*testSpaces[i]);
+          const auto& feBasisTest = std::get<0>(*spaces.testSpace(i));
           auto newGridData
               = bvData[i]->restoreDataToRefinedSubGrid(feBasisTest);
           bvExtension.resize(newGridData.size(),
-                               false /* don't copy old values */);
+                             false /* don't copy old values */);
           for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
             bvExtension[k] = newGridData[k];
           }
@@ -709,7 +746,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
           aposteriori_s
               = compute_transport_solution(x[i], *grids[i],
-                  testSpaces[i], solutionSpaces[i], testSpacesEnriched[i],
+                  spaces.testSpace(i), spaces.solutionSpace(i),
+                  spaces.testSpaceEnriched(i),
                   sVector[i], sigma, rhsData[i], boundary_is_homogeneous[i],
                   bvExtension);
 
@@ -755,10 +793,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           grids[i]->preAdapt();
           grids[i]->adapt();
           grids[i]->postAdapt();
-          detail::updateSpaces(*solutionSpaces[i], grids[i]->leafGridView());
-          detail::updateSpaces(*testSpaces[i], grids[i]->leafGridView());
-          detail::updateSpaces(*testSpacesEnriched[i],
-                               grids[i]->leafGridView());
+          spaces.update(i, grids[i]->leafGridView());
 
           ofs << "\na posteriori error for current direction: "
               << aposteriori_s
@@ -778,10 +813,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         //  real second-order functions
         //////////////////////////////////////////////////////////////////////
 
-        const FEBasisInterior& feBasisInterior
-            = std::get<FEBasisInterior>(*solutionSpaces[i]);
-        const FEBasisTrace& feBasisTrace
-            = std::get<FEBasisTrace>(*solutionSpaces[i]);
+        const auto& feBasisInterior = std::get<0>(*spaces.solutionSpace(i));
+        const auto& feBasisTrace    = std::get<1>(*spaces.solutionSpace(i));
 
         std::cout << "Plot solution for direction " << i << '\n';
 
@@ -1029,36 +1062,40 @@ compute_transport_solution(
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class SolutionSpaces, class HostGridBasis, class Grid>
+template<class SubGridView, class HostGridBasis, class Grid>
 std::vector<typename Periter<ScatteringKernelApproximation,
                              RHSApproximation>::VectorType>
 Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
-      const std::vector<std::shared_ptr<SolutionSpaces>>& solutionSpaces,
+      SubGridSpaces<SubGridView>& subGridSpaces,
       const HostGridBasis& hostGridBasis,
       std::vector<Direction>& sVector,
       std::vector<std::unique_ptr<Grid>>& grids,
       double accuracy) {
   sVector = kernelApproximation.setAccuracyAndInputSize(accuracy, x.size());
 
+  using Spaces = SubGridSpaces<SubGridView>;
 #ifdef PERITER_SKELETAL_SCATTERING
-  using FEBasisTrace = std::tuple_element_t<1, SolutionSpaces>;
+  using FEBasisTrace = typename Spaces::FEBasisTrace;
 #else
-  using FEBasisInterior = std::tuple_element_t<0, SolutionSpaces>;
+  using FEBasisInterior = typename Spaces::FEBasisInterior;
 #endif
 
   // Interpolate x[i] to hostGridBasis.
   std::vector<VectorType> xHost(x.size());
   for(size_t i = 0, imax = x.size(); i < imax; i++) {
 #ifdef PERITER_SKELETAL_SCATTERING
-    const FEBasisTrace& feBasisTrace = std::get<1>(*solutionSpaces[i]);
-    const size_t  feBasisTraceOffset = std::get<0>(*solutionSpaces[i]).size();
+    const FEBasisTrace& feBasisTrace = std::get<1>(*subGridSpaces
+                                                   .solutionSpace(i));
+    const size_t  feBasisTraceOffset = std::get<0>(*subGridSpaces
+                                                   .solutionSpace(i)).size();
     interpolateFromSubGrid(
         feBasisTrace, x[i].begin() + feBasisTraceOffset,
         hostGridBasis, xHost[i]);
 #else
-    const FEBasisInterior& feBasisInterior = std::get<0>(*solutionSpaces[i]);
+    const FEBasisInterior& feBasisInterior
+        = std::get<0>(*subGridSpaces.solutionSpace(i));
     interpolateFromSubGrid(
         feBasisInterior, x[i],
         hostGridBasis, xHost[i]);
@@ -1073,6 +1110,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
   scatteringAssembler.precomputeScattering(rhsFunctional, xHost);
 
   create_new_grids(grids, numS);
+  subGridSpaces.create_new_spaces(grids);
 
   return rhsFunctional;
 }
@@ -1157,10 +1195,10 @@ create_new_gridIdSets(
   }
 }
 
-template<class ScatteringKernelApproximation, class RHSApproximation>
+template<class GridView>
 template<class Grid, class... Spaces>
 void
-Periter<ScatteringKernelApproximation, RHSApproximation>::create_new_spaces(
+SubGridSpaces<GridView>::create_new_spaces(
       std::vector<std::shared_ptr<std::tuple<Spaces...>>>& spaces,
       const std::vector<std::unique_ptr<Grid>>& grids)
 {
