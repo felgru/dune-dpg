@@ -378,6 +378,93 @@ namespace detail {
         "Implementation of approximate_rhs for non-FE right hand side "
         "functions currently broken.");
   }
+
+  class ApproximationParameters
+  {
+    unsigned int n = 0;
+    // η_n:
+    double eta_ = 1;
+    const double rho;
+    const double rhobar;
+    const double err0;
+    // CT*kappa1 + CT*kappa2 + 2*kappa3 = 1.
+    const double kappa1;
+    const double kappa2;
+    const double kappa3;
+
+    friend std::ostream& operator<<(std::ostream& os,
+                                    const ApproximationParameters& params);
+
+    public:
+
+    ApproximationParameters(double rho, double CT, double err0, FeRHS)
+      : rho(rho)
+      , rhobar(2./rho)
+      , err0(err0)
+      , kappa1(1./(2.*CT))
+      , kappa2(0.)
+      , kappa3(1./4.)
+    {}
+
+    ApproximationParameters(double rho, double CT, double err0, ApproximateRHS)
+      : rho(rho)
+      , rhobar(2./rho)
+      , err0(err0)
+      , kappa1(1./(3.*CT))
+      , kappa2(1./(3.*CT))
+      , kappa3(1./6.)
+    {}
+
+    // TODO: The accuracy also depends on the kappa from K = κG and on \|u\|.
+    //       Adding a factor 1/4. to compensate for that.
+    double finalScatteringAccuracy(double targetAccuracy) const {
+      return kappa1*targetAccuracy/4.;
+    }
+
+    double scatteringAccuracy() const {
+      return kappa1 * eta_;
+    }
+
+    double rhsAccuracy() const {
+      return kappa2 * eta_;
+    }
+
+    double transportAccuracy() const {
+      return kappa3 * eta_;
+    }
+
+    double combinedAccuracy() const {
+      return (rho*err0 + 2) * std::pow(rho,n);
+    }
+
+    double aPosterioriError(const std::vector<double>& aposterioriIter) const {
+      double errorAPosteriori = 0.;
+      for(size_t j=0; j < n+1; j++) {
+        errorAPosteriori += std::pow(rho,j)*aposterioriIter[n-j];
+      }
+      return errorAPosteriori;
+    }
+
+    double eta() const {
+      return eta_;
+    }
+
+    void decreaseEta() {
+      eta_ /= rhobar;
+      n++;
+    }
+  };
+
+  std::ostream& operator<<(std::ostream& os,
+                           const ApproximationParameters& params)
+  {
+    os << "rho = "    << params.rho    << '\n'
+       << "rhobar = " << params.rhobar << '\n'
+       << "kappa1 = " << params.kappa1 << '\n'
+       << "kappa2 = " << params.kappa2 << '\n'
+       << "kappa3 = " << params.kappa3 << '\n';
+    return os;
+  }
 } // end namespace detail
 #endif
 
@@ -409,8 +496,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       || std::is_same<RHSApproximation, ApproximateRHS>::value,
       "Unknown type provided for RHSApproximation!\n"
       "Should be either FeRHS or ApproximateRHS.");
-  constexpr bool rhsIsFeFunction
-      = std::is_same<RHSApproximation, FeRHS>::value;
 
   const unsigned int dim = HostGrid::dimension;
   using Grid = SubGrid<dim, HostGrid, false>;
@@ -429,29 +514,21 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // Parameters for adaptivity
   ///////////////////////////////////
 
-  // η_n:
-  double eta = 1;
   std::vector<double> etaList(maxNumberOfIterations,0.);
   // TODO: estimate norm of rhs f in V'
   // Remark: Here, V=H_{0,+}(D\times S)
   const double fnorm = 1;
   const double err0 = fnorm / cB;
-  // ρ̄:
-  const double rhobar = 2./rho;
 
-  // CT*kappa1 + CT*kappa2 + 2*kappa3 = 1.
-  const double kappa1 = rhsIsFeFunction? 1./(2.*CT) : 1./(3.*CT);
-  const double kappa2 = rhsIsFeFunction? 0.         : 1./(3.*CT);
-  const double kappa3 = rhsIsFeFunction? 1./4.      : 1./6.;
+  detail::ApproximationParameters approximationParameters(rho, CT, err0,
+                                                          RHSApproximation{});
 
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
   ////////////////////////////////////////////
 
-  // TODO: The accuracy also depends on the kappa from K = κG and on \|u\|.
-  //       Adding a factor 1/4. to compensate for that.
   ScatteringKernelApproximation kernelApproximation(kernel,
-                                                    kappa1*targetAccuracy/4.);
+      approximationParameters.finalScatteringAccuracy(targetAccuracy));
 
   ofs << "PERITER algorithm\n"
       << "=================\n"
@@ -466,11 +543,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       << "Maximum number of directions: "
       << kernelApproximation.maxNumS()     << '\n'
       << "Periter parameters:" << '\n'
-      << "rho = "    << rho    << '\n'
-      << "rhobar = " << rhobar << '\n'
-      << "kappa1 = " << kappa1 << '\n'
-      << "kappa2 = " << kappa2 << '\n'
-      << "kappa3 = " << kappa3 << '\n'
+      << approximationParameters
       << "CT = "     << CT     << '\n';
 
   if(kernelApproximation.typeApprox() == "Kernel approximation with: SVD"){
@@ -536,7 +609,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
   {
-    etaList[n] = eta;
+    etaList[n] = approximationParameters.eta();
     ofs << "\nIteration n=" << n << '\n'
         << "================\n";
     std::cout << "\nIteration " << n << "\n\n";
@@ -589,7 +662,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               std::declval<FEBasisHostTrace>(),
               std::declval<VectorType>()))>;
     std::vector<Std::optional<BVData>> bvData;
-    const double accuKernel = kappa1 * eta / (kappaNorm * uNorm);
+    const double accuKernel = approximationParameters.scatteringAccuracy()
+                            / (kappaNorm * uNorm);
     {
 #ifdef PERITER_SKELETAL_SCATTERING
       FEBasisHostTraceDiscontinuous
@@ -633,7 +707,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       detail::approximate_rhs (
           rhsFunctional,
           grids,
-          kappa2*eta,
+          approximationParameters.rhsAccuracy(),
           hostGridGlobalBasis,
           sVector,
           f, RHSApproximation{});
@@ -675,7 +749,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     std::chrono::steady_clock::time_point endScatteringApproximation
         = std::chrono::steady_clock::now();
 
-    ofs << "eta_n = rhobar^{-n}: " << eta << '\n'
+    ofs << "eta_n = rhobar^{-n}: " << approximationParameters.eta() << '\n'
         << "\n--------------------\n"
         << "Info angular approx:\n"
         << "--------------------\n"
@@ -691,7 +765,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << "Kernel approximation:\n"
         << "---------------------\n"
         << "Accuracy required: "
-          << kappa1 * eta << " (kappa1 * eta)\n"
+          << approximationParameters.scatteringAccuracy() << " (kappa1 * eta)\n"
         << "Accuracy introduced in code: "
         << accuKernel << " (kappa1 * eta / (kappaNorm * uNorm))\n"
         << kernelApproximation.info()      << '\n'
@@ -774,17 +848,17 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
 
         if(++nRefinement >= maxNumberOfInnerIterations
-            || aposteriori_s <= kappa3*eta) {
+            || aposteriori_s <= approximationParameters.transportAccuracy()) {
           gridIdSets[i] = saveSubGridToIdSet(*grids[i]);
 
           ofs << "\na posteriori error for current direction: "
               << aposteriori_s;
-          if (aposteriori_s <= kappa3 * eta)
+          if (aposteriori_s <= approximationParameters.transportAccuracy())
           {
             ofs << " (enough";
           } else {
             ofs << " (not enough, required "
-                << kappa3 * eta;
+                << approximationParameters.transportAccuracy();
           }
           ofs << ")\n\n" << std::flush;
 
@@ -798,7 +872,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           ofs << "\na posteriori error for current direction: "
               << aposteriori_s
               << " (required "
-              << kappa3 * eta
+              << approximationParameters.transportAccuracy()
               << ")\n\n" << std::flush;
         }
       } // end of spatial refinement for angular direction i
@@ -843,22 +917,22 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         [](size_t acc, auto vec) { return acc + vec.size(); });
 
     // A posteriori estimation of error ||bar u_n -T^{-1}K bar u_{n-1}||
-    aposterioriIter[n] = aposterioriTransportGlobal + CT * kappa1 * eta;
+    aposterioriIter[n] = aposterioriTransportGlobal
+                       + CT * approximationParameters.scatteringAccuracy();
 
     // Error bound for || u - \bar u_n || based on a priori errors
-    accuracy = (rho*err0 + 2) * std::pow(rho,n);
+    accuracy = approximationParameters.combinedAccuracy();
     // Error bound for || u_n - \bar u_n || based on a posteriori errors
-    double errorAPosteriori = 0.;
-    for(size_t j=0; j < n+1; j++) {
-      errorAPosteriori += std::pow(rho,j)*aposterioriIter[n-j];
-    }
+    double errorAPosteriori
+        = approximationParameters.aPosterioriError(aposterioriIter);
 
     ofs << "---------------------\n"
-        << "End inner iterations \n"
-        << "---------------------\n"
-        << "Error transport solves (a posteriori estimation): "
+           "End inner iterations \n"
+           "---------------------\n"
+           "Error transport solves (a posteriori estimation): "
           << aposterioriTransportGlobal                  << '\n'
-        << "Accuracy kernel: " << kappa1 * eta           << '\n'
+        << "Accuracy kernel: "
+          << approximationParameters.scatteringAccuracy() << '\n'
         << "Error bound ||bar u_n -T^{-1}K bar u_{n-1}|| (a posteriori): "
           << aposterioriIter[n]   << '\n'
         << "Error bound ||u_n - bar u_n|| (a posteriori): "
@@ -874,7 +948,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << aposterioriTransportGlobal << ", using "
               << accumulatedDoFs << " DoFs\n";
 
-    eta /= rhobar;
+    approximationParameters.decreaseEta();
   }
 }
 
