@@ -217,7 +217,7 @@ class Periter {
    * \param subGridSpaces
    * \param accuracy
    */
-  template<class SubGridView, class HostGrid, class Grid>
+  template<class SubGridView, class HostGrid, class Grid, class GridIdSet>
   static std::vector<VectorType> apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
@@ -225,6 +225,7 @@ class Periter {
       const HostGrid& hostGrid,
       std::vector<Direction>& sVector,
       std::vector<std::unique_ptr<Grid>>& grids,
+      std::vector<GridIdSet>& gridIdSets,
       double accuracy);
 
   /**
@@ -236,7 +237,7 @@ class Periter {
       size_t numNewGrids);
 
   /**
-   * insert new gridIdSets after apply_scattering added new grids
+   * insert new gridIdSets in apply_scattering after adding new grids
    */
   template<class GridIdSet, class Grid>
   static void create_new_gridIdSets(
@@ -601,9 +602,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           apply_scattering (
             kernelApproximation, x, spaces,
             hostGridGlobalBasis,
-            sVector, grids,
+            sVector, grids, gridIdSets,
             accuKernel);
-      create_new_gridIdSets(gridIdSets, grids);
 
       numS = sVector.size();
       x.resize(numS);
@@ -1062,7 +1062,7 @@ compute_transport_solution(
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class SubGridView, class HostGridBasis, class Grid>
+template<class SubGridView, class HostGridBasis, class Grid, class GridIdSet>
 std::vector<typename Periter<ScatteringKernelApproximation,
                              RHSApproximation>::VectorType>
 Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
@@ -1072,6 +1072,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       const HostGridBasis& hostGridBasis,
       std::vector<Direction>& sVector,
       std::vector<std::unique_ptr<Grid>>& grids,
+      std::vector<GridIdSet>& gridIdSets,
       double accuracy) {
   sVector = kernelApproximation.setAccuracyAndInputSize(accuracy, x.size());
 
@@ -1110,6 +1111,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
   scatteringAssembler.precomputeScattering(rhsFunctional, xHost);
 
   create_new_grids(grids, numS);
+  create_new_gridIdSets(gridIdSets, grids);
   subGridSpaces.create_new_spaces(grids);
 
   return rhsFunctional;
