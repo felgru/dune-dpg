@@ -91,31 +91,32 @@ createSubGrid(HostGrid& hostGrid)
 }
 
 template<class Grid, class Coordinate>
-void markNear(Grid& grid, const Coordinate& coordinate)
+void markAt(Grid& grid, const Coordinate& coordinate)
 {
   auto leafGridView = grid.leafGridView();
   for(const auto& e : elements(leafGridView)) {
-    Coordinate eCenter = e.geometry().center();
-    if((eCenter - coordinate).two_norm() < 1e-5) {
+    const auto geometry = e.geometry();
+    const auto localCoordinate = geometry.local(coordinate);
+    if(referenceElement(geometry).checkInside(localCoordinate)) {
       grid.mark(1, e);
     }
   }
 }
 
 template<class Grid, class Coordinate>
-void refineNear(Grid& grid, const Coordinate& coordinate)
+void refineAt(Grid& grid, const Coordinate& coordinate)
 {
-  markNear(grid, coordinate);
+  markAt(grid, coordinate);
   grid.preAdapt();
   grid.adapt();
   grid.postAdapt();
 }
 
 template<class Grid, class Coordinate>
-void refineNear(Grid& grid, const std::vector<Coordinate>& coordinates)
+void refineAt(Grid& grid, const std::vector<Coordinate>& coordinates)
 {
   for(const Coordinate& c : coordinates)
-    markNear(grid, c);
+    markAt(grid, c);
   grid.preAdapt();
   grid.adapt();
   grid.postAdapt();
@@ -131,12 +132,12 @@ int main() {
   std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
                                 ::createSimplexGrid(lower, upper, numElements);
   hostGrid->setClosureType(HostGrid::NONE);
-  refineNear(*hostGrid, FieldVector<double, dim>{1./3., 2./3.});
+  refineAt(*hostGrid, FieldVector<double, dim>{1./3., 2./3.});
 
   auto subGrid = createSubGrid(*hostGrid);
-  refineNear(*subGrid, std::vector<FieldVector<double, dim>>
-                       { {1./3., 2./3.}
-                       , {2./3., 1./3.} });
+  refineAt(*subGrid, std::vector<FieldVector<double, dim>>
+                     { {1./3., 2./3.}
+                     , {2./3., 1./3.} });
 
   using SubGrid = decltype(subGrid)::element_type;
   using SubGridView = SubGrid::LeafGridView;
@@ -184,9 +185,9 @@ int main() {
 
   std::cout << "Testing projection with refinement.\n";
 
-  refineNear(*subGrid, std::vector<FieldVector<double, dim>>
-                       { {1./3., 2./3.}
-                       , {2./3., 1./3.} });
+  refineAt(*subGrid, std::vector<FieldVector<double, dim>>
+                     { {1./3., 2./3.}
+                     , {2./3., 1./3.} });
   feBasisSubGrid.update(subGrid->leafGridView());
   feBasisProjecteeSubGrid.update(subGrid->leafGridView());
 
