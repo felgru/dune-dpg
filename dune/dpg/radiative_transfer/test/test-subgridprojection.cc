@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <memory>
+#include <vector>
 
 #include "../subgridprojection.hh"
 #include "../subgrids.hh"
@@ -90,7 +91,7 @@ createSubGrid(HostGrid& hostGrid)
 }
 
 template<class Grid, class Coordinate>
-void refineNear(Grid& grid, const Coordinate& coordinate)
+void markNear(Grid& grid, const Coordinate& coordinate)
 {
   auto leafGridView = grid.leafGridView();
   for(const auto& e : elements(leafGridView)) {
@@ -99,6 +100,22 @@ void refineNear(Grid& grid, const Coordinate& coordinate)
       grid.mark(1, e);
     }
   }
+}
+
+template<class Grid, class Coordinate>
+void refineNear(Grid& grid, const Coordinate& coordinate)
+{
+  markNear(grid, coordinate);
+  grid.preAdapt();
+  grid.adapt();
+  grid.postAdapt();
+}
+
+template<class Grid, class Coordinate>
+void refineNear(Grid& grid, const std::vector<Coordinate>& coordinates)
+{
+  for(const Coordinate& c : coordinates)
+    markNear(grid, c);
   grid.preAdapt();
   grid.adapt();
   grid.postAdapt();
@@ -117,8 +134,9 @@ int main() {
   refineNear(*hostGrid, FieldVector<double, dim>{1./3., 2./3.});
 
   auto subGrid = createSubGrid(*hostGrid);
-  refineNear(*subGrid, FieldVector<double, dim>{1./3., 2./3.});
-  refineNear(*subGrid, FieldVector<double, dim>{2./3., 1./3.});
+  refineNear(*subGrid, std::vector<FieldVector<double, dim>>
+                       { {1./3., 2./3.}
+                       , {2./3., 1./3.} });
 
   using SubGrid = decltype(subGrid)::element_type;
   using SubGridView = SubGrid::LeafGridView;
@@ -166,8 +184,9 @@ int main() {
 
   std::cout << "Testing projection with refinement.\n";
 
-  refineNear(*subGrid, FieldVector<double, dim>{1./3., 2./3.});
-  refineNear(*subGrid, FieldVector<double, dim>{2./3., 1./3.});
+  refineNear(*subGrid, std::vector<FieldVector<double, dim>>
+                       { {1./3., 2./3.}
+                       , {2./3., 1./3.} });
   feBasisSubGrid.update(subGrid->leafGridView());
   feBasisProjecteeSubGrid.update(subGrid->leafGridView());
 
