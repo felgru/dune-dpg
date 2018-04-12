@@ -23,8 +23,6 @@
 #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
-#include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
-#include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
@@ -106,6 +104,9 @@ std::unique_ptr<SubGrid> copySubGrid(const SubGrid& subGrid) {
   return gr;
 }
 
+template<class GridView>
+class SubGridSpaces;
+
 /**
  * This class describes the Periter algorithm for radiative transfer problems
  *
@@ -178,9 +179,7 @@ class Periter {
    *
    * \param[out] x the solution of the transport problem
    * \param grid the grid needed for Döfler marking
-   * \param testSpaces
-   * \param solutionSpaces
-   * \param testSpacesEnriched
+   * \param spaces
    * \param s the transport direction
    * \param sigma the absorbtion coefficient
    * \param rhsData the data for the unmodified rhs
@@ -189,14 +188,11 @@ class Periter {
    *
    * \return the squared a posteriori error of the solution
    */
-  template<class TestSpaces, class SolutionSpaces, class TestSpacesEnriched,
-           class Grid, class Sigma, class RHSData>
+  template<class Spaces, class Grid, class Sigma, class RHSData>
   static double compute_transport_solution(
       VectorType& x,
       Grid& grid,
-      const std::shared_ptr<TestSpaces>& testSpaces,
-      const std::shared_ptr<SolutionSpaces>& solutionSpaces,
-      const std::shared_ptr<TestSpacesEnriched>& testSpacesEnriched,
+      const Spaces& spaces,
       const FieldVector<double, 2>& s,
       const Sigma sigma,
       RHSData& rhsData,
@@ -211,17 +207,18 @@ class Periter {
    *
    * \param kernelApproximation an approximation to the scattering kernel
    * \param x  solution to which we want to apply the scattering kernel
-   * \param solutionSpaces
+   * \param subGridSpaces
    * \param accuracy
    */
-  template<class SolutionSpaces, class HostGrid, class Grid>
+  template<class SubGridView, class HostGrid, class Grid, class GridIdSet>
   static std::vector<VectorType> apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
-      const std::vector<std::shared_ptr<SolutionSpaces>>& solutionSpaces,
+      SubGridSpaces<SubGridView>& subGridSpaces,
       const HostGrid& hostGrid,
       std::vector<Direction>& sVector,
       std::vector<std::unique_ptr<Grid>>& grids,
+      std::vector<GridIdSet>& gridIdSets,
       double accuracy);
 
   /**
@@ -233,24 +230,90 @@ class Periter {
       size_t numNewGrids);
 
   /**
-   * insert new gridIdSets after apply_scattering added new grids
+   * insert new gridIdSets in apply_scattering after adding new grids
    */
   template<class GridIdSet, class Grid>
   static void create_new_gridIdSets(
       std::vector<GridIdSet>& gridIdSets,
       const std::vector<std::unique_ptr<Grid>>& grids);
-
-  /**
-   * insert new spaces after apply_scattering added new grids
-   */
-  template<class Grid, class... Spaces>
-  static void create_new_spaces(
-      std::vector<std::shared_ptr<std::tuple<Spaces...>>>& spaces,
-      const std::vector<std::unique_ptr<Grid>>& grids);
 };
 
-struct FeRHS {};
-struct ApproximateRHS {};
+template<class GridView>
+class SubGridSpaces {
+  public:
+  using Spaces = TransportSpaces<GridView,
+                    Functions::HangingNodeBernsteinP2Basis<GridView>>;
+
+  using FEBasisInterior     = typename Spaces::FEBasisInterior;
+  using FEBasisTrace        = typename Spaces::FEBasisTrace;
+
+  using FEBasisTest         = typename Spaces::FEBasisTest;
+  using FEBasisEnrichedTest = typename Spaces::FEBasisEnrichedTest;
+
+  using SolutionSpacePtr = typename Spaces::SolutionSpacePtr;
+  using TestSpacePtr = typename Spaces::TestSpacePtr;
+  using EnrichedTestSpacePtr = typename Spaces::EnrichedTestSpacePtr;
+
+  using GridsVector = std::vector<std::unique_ptr<typename GridView::Grid>>;
+
+  SubGridSpaces(const GridsVector& grids)
+  {
+    spaces_.reserve(grids.size());
+    for(const auto& grid : grids)
+    {
+      spaces_.emplace_back(grid->leafGridView());
+    }
+  }
+
+  void update(size_t i, const GridView& gridView) {
+    spaces_[i].update(gridView);
+  }
+
+  /**
+   * insert new spaces in apply_scattering after adding new grids
+   */
+  void create_new_spaces(const GridsVector& grids) {
+    if(spaces_.size() != grids.size()) {
+      spaces_.clear();
+      spaces_.reserve(grids.size());
+      for(const auto& grid : grids) {
+        spaces_.emplace_back(grid->leafGridView());
+      }
+    }
+  }
+
+  const FEBasisInterior& interiorSolutionSpace(size_t i) const {
+    return spaces_[i].interiorSolutionSpace();
+  }
+
+  const FEBasisTrace& traceSolutionSpace(size_t i) const {
+    return spaces_[i].traceSolutionSpace();
+  }
+
+  const FEBasisTest& testSpace(size_t i) const {
+    return spaces_[i].testSpace();
+  }
+
+  const Spaces& spaces(size_t i) const {
+    return spaces_[i];
+  }
+
+  const SolutionSpacePtr& solutionSpacePtr(size_t i) const {
+    return spaces_[i].solutionSpacePtr();
+  }
+
+  const TestSpacePtr& testSpacePtr(size_t i) const {
+    return spaces_[i].testSpacePtr();
+  }
+
+  const EnrichedTestSpacePtr& enrichedTestSpacePtr(size_t i) const {
+    return spaces_[i].enrichedTestSpacePtr();
+  }
+
+  private:
+
+  std::vector<Spaces> spaces_;
+};
 
 #ifndef DOXYGEN
 namespace detail {
@@ -303,103 +366,6 @@ namespace detail {
     DUNE_THROW(Dune::NotImplemented,
         "Implementation of approximate_rhs for non-FE right hand side "
         "functions currently broken.");
-    using Grid = typename Grids::value_type::element_type;
-    using EntitySeed = typename Grid::template Codim<0>::Entity::EntitySeed;
-    size_t numS = sVector.size();
-
-    const size_t spaceIndex = 0;
-    using FEBasisInterior = std::tuple_element_t<spaceIndex, FEBases>;
-    static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
-        "Functions::interpolate won't work for refined finite elements");
-
-    std::vector<VectorType> boundaryValues(numS);
-    for(unsigned int i = 0; i < numS; ++i)
-    {
-      auto& feBasisInterior = std::get<spaceIndex>(*solutionSpaces[i]);
-      const unsigned int maxNumberOfRefinements = 3;
-      for(unsigned int refinement = 1; ; refinement++) {
-        {
-          VectorType gInterpolation(feBasisInterior.size());
-          const Direction s = sVector[i];
-          Functions::interpolate(feBasisInterior, gInterpolation,
-              [s,&f](const Direction& x) { return f(x,s); });
-
-          std::swap(boundaryValues[i], gInterpolation);
-        }
-        const Direction s = sVector[i];
-        auto gExact = Functions::makeGridViewFunction(
-              [s,&f](const Direction& x) { return f(x,s); },
-              grids[i]->leafGridView());
-        auto gApprox = Functions::makeDiscreteGlobalBasisFunction<double>(
-              feBasisInterior, boundaryValues[i]);
-
-        auto localGExact = localFunction(gExact);
-        auto localGApprox = localFunction(gApprox);
-        auto localView = feBasisInterior.localView();
-        auto localIndexSet = feBasisInterior.localIndexSet();
-
-        const auto gridView = feBasisInterior->gridView();
-        double rhsError_i = 0.;
-        std::vector<std::tuple<EntitySeed, double>> errorEstimates;
-        errorEstimates.reserve(gridView.size(0));
-        for(const auto& e : elements(gridView)) {
-          localView.bind(e);
-          localIndexSet.bind(localView);
-          localGExact.bind(e);
-          localGApprox.bind(e);
-
-          size_t quadratureOrder = 2*localView.tree().finiteElement()
-                                              .localBasis().order()  + 4;
-          const Dune::QuadratureRule<double, dim>& quad =
-                Dune::QuadratureRules<double, dim>::rule(e.type(),
-                                                         quadratureOrder);
-          auto geometry = e.geometry();
-          double local_error = 0.;
-          for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
-            const FieldVector<double,dim>& quadPos = quad[pt].position();
-            const double diff = localGExact(quadPos) - localGApprox(quadPos);
-            local_error += diff*diff
-                         * geometry.integrationElement(quadPos)
-                         * quad[pt].weight();
-          }
-          errorEstimates.emplace_back(e.seed(), local_error);
-          rhsError_i += local_error;
-        }
-        rhsError_i = std::sqrt(rhsError_i);
-
-        if(rhsError_i <= accuracy / numS ||
-            refinement == maxNumberOfRefinements) {
-          break;
-        } else {
-          ErrorTools::DoerflerMarking(*grids[i], 0.2,
-              std::move(errorEstimates));
-          auto oldGridData = attachDataToGrid(feBasisInterior,
-                                              rhsFunctional[i]);
-          grids[i]->preAdapt();
-          grids[i]->adapt();
-          grids[i]->postAdapt();
-          detail::updateSpaces(*solutionSpaces[i], grids[i]->leafGridView());
-          // TODO: also need to update test spaces.
-          auto newGridData = restoreDataToRefinedGrid(feBasisInterior,
-                                                      oldGridData);
-          rhsFunctional[i].resize(newGridData.size(),
-                                  false /* don't copy old values */);
-          for(size_t j = 0, jmax = newGridData.size(); j < jmax; j++) {
-            rhsFunctional[i][j] = newGridData[j];
-          }
-        }
-      }
-
-      // Add boundaryValues[i] to first feBasisInterior.size() entries of
-      // rhsFunctional[i].
-      using Iterator = std::decay_t<decltype(rhsFunctional[i].begin())>;
-      for(Iterator rIt=rhsFunctional[i].begin(),
-                   rEnd=rhsFunctional[i].begin()+feBasisInterior.size(),
-                   gIt=boundaryValues[i].begin();
-          rIt!=rEnd; ++rIt, ++gIt) {
-        *rIt += *gIt;
-      }
-    }
   }
 } // end namespace detail
 #endif
@@ -432,8 +398,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       || std::is_same<RHSApproximation, ApproximateRHS>::value,
       "Unknown type provided for RHSApproximation!\n"
       "Should be either FeRHS or ApproximateRHS.");
-  constexpr bool rhsIsFeFunction
-      = std::is_same<RHSApproximation, FeRHS>::value;
 
   const unsigned int dim = HostGrid::dimension;
   using Grid = SubGrid<dim, HostGrid, false>;
@@ -452,29 +416,20 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // Parameters for adaptivity
   ///////////////////////////////////
 
-  // η_n:
-  double eta = 1;
-  std::vector<double> etaList(maxNumberOfIterations,0.);
   // TODO: estimate norm of rhs f in V'
   // Remark: Here, V=H_{0,+}(D\times S)
   const double fnorm = 1;
   const double err0 = fnorm / cB;
-  // ρ̄:
-  const double rhobar = 2./rho;
 
-  // CT*kappa1 + CT*kappa2 + 2*kappa3 = 1.
-  const double kappa1 = rhsIsFeFunction? 1./(2.*CT) : 1./(3.*CT);
-  const double kappa2 = rhsIsFeFunction? 0.         : 1./(3.*CT);
-  const double kappa3 = rhsIsFeFunction? 1./4.      : 1./6.;
+  detail::ApproximationParameters approximationParameters(rho, CT, err0,
+                                                          RHSApproximation{});
 
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
   ////////////////////////////////////////////
 
-  // TODO: The accuracy also depends on the kappa from K = κG and on \|u\|.
-  //       Adding a factor 1/4. to compensate for that.
   ScatteringKernelApproximation kernelApproximation(kernel,
-                                                    kappa1*targetAccuracy/4.);
+      approximationParameters.finalScatteringAccuracy(targetAccuracy));
 
   ofs << "PERITER algorithm\n"
       << "=================\n"
@@ -489,11 +444,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       << "Maximum number of directions: "
       << kernelApproximation.maxNumS()     << '\n'
       << "Periter parameters:" << '\n'
-      << "rho = "    << rho    << '\n'
-      << "rhobar = " << rhobar << '\n'
-      << "kappa1 = " << kappa1 << '\n'
-      << "kappa2 = " << kappa2 << '\n'
-      << "kappa3 = " << kappa3 << '\n'
+      << approximationParameters
       << "CT = "     << CT     << '\n';
 
   if(kernelApproximation.typeApprox() == "Kernel approximation with: SVD"){
@@ -529,49 +480,22 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     gridIdSets.push_back(saveSubGridToIdSet(*grids[i]));
   }
 
-  //////////////////////////////////////////////////////////////////////
-  //   Choose finite element spaces for the solution and test functions
-  //////////////////////////////////////////////////////////////////////
-
-  using FEBasisInterior = Functions::BernsteinDGBasis<LeafGridView, 1>;
-  using FEBasisTrace = Functions::HangingNodeBernsteinP2Basis<LeafGridView>;
-
-  using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<LeafGridView, 1, 3>;
-  using FEBasisTestEnriched = FEBasisTest;
-
   //////////////////////////////////
   //   right hand side vector type
   //////////////////////////////////
   typedef BlockVector<FieldVector<double,1> > VectorType;
 
-  /////////////////////////////////////////////////
+  //////////////////////////////////
   //   Solution vectors
-  /////////////////////////////////////////////////
+  //////////////////////////////////
   std::vector<VectorType> x(numS);
-  std::vector<decltype(
-      make_space_tuple<FEBasisInterior, FEBasisTrace>
-          (std::declval<LeafGridView>()))> solutionSpaces;
-  solutionSpaces.reserve(grids.size());
-  std::vector<decltype(
-      make_space_tuple<FEBasisTest>(std::declval<LeafGridView>()))> testSpaces;
-  testSpaces.reserve(grids.size());
-  std::vector<decltype(
-      make_space_tuple<FEBasisTestEnriched>(std::declval<LeafGridView>()))>
-        testSpacesEnriched;
-  testSpacesEnriched.reserve(grids.size());
+  using Spaces = SubGridSpaces<LeafGridView>;
+  Spaces spaces(grids);
 
   for(unsigned int i = 0; i < grids.size(); ++i)
   {
-    auto gridView = grids[i]->leafGridView();
-    solutionSpaces.push_back(
-        make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView));
-    // v enriched
-    testSpaces.push_back(make_space_tuple<FEBasisTest>(gridView));
-    testSpacesEnriched.push_back(
-        make_space_tuple<FEBasisTestEnriched>(gridView));
-
-    x[i].resize(std::get<0>(*solutionSpaces[i]).size()
-                + std::get<1>(*solutionSpaces[i]).size());
+    x[i].resize(spaces.interiorSolutionSpace(i).size()
+                 + spaces.traceSolutionSpace(i).size());
     x[i] = 0;
   }
 
@@ -586,17 +510,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
   {
-    etaList[n] = eta;
-    ofs << "\nIteration n=" << n << '\n'
-        << "================\n";
+    ofs << "\nIteration n=" << n
+        << "\n================\n";
     std::cout << "\nIteration " << n << "\n\n";
 
     for(size_t i = 0; i < grids.size(); ++i) {
       grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
                                                hostGrid);
-      detail::updateSpaces(*solutionSpaces[i], grids[i]->leafGridView());
-      detail::updateSpaces(*testSpaces[i], grids[i]->leafGridView());
-      detail::updateSpaces(*testSpacesEnriched[i], grids[i]->leafGridView());
+      spaces.update(i, grids[i]->leafGridView());
     }
 
     std::chrono::steady_clock::time_point startScatteringApproximation
@@ -607,10 +528,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
     double kappaNorm = 1.;
     double uNorm = 0.;
-    for(size_t i=0; i<solutionSpaces.size(); ++i) {
+    for(size_t i=0; i<grids.size(); ++i) {
       const double uiNorm =
-        ErrorTools::l2norm(std::get<FEBasisInterior>(*solutionSpaces[i]),
-                           x[i]);
+        ErrorTools::l2norm(spaces.interiorSolutionSpace(i), x[i]);
       uNorm += uiNorm * uiNorm
                 / (1 << kernelApproximation.getLevel())
                 * quadWeight[i % kernelApproximation.numSperInterval];
@@ -624,10 +544,10 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         = Functions::BernsteinDGBasis<HostGridView, 2>;
 #else
     using FEBasisHostInterior
-        = changeGridView_t<FEBasisInterior, HostGridView>;
+        = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
 #endif
     using RHSData = std::decay_t<decltype(attachDataToSubGrid(
-              std::declval<FEBasisTest>(),
+              std::declval<typename Spaces::FEBasisTest>(),
 #ifdef PERITER_SKELETAL_SCATTERING
               std::declval<FEBasisHostTraceDiscontinuous>(),
 #else
@@ -636,13 +556,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               std::declval<VectorType>()))>;
     std::vector<RHSData> rhsData;
     using FEBasisHostTrace
-        = changeGridView_t<FEBasisTrace, HostGridView>;
+        = changeGridView_t<typename Spaces::FEBasisTrace, HostGridView>;
     using BVData = std::decay_t<decltype(attachDataToSubGrid(
-              std::declval<FEBasisTest>(),
+              std::declval<typename Spaces::FEBasisTest>(),
               std::declval<FEBasisHostTrace>(),
               std::declval<VectorType>()))>;
     std::vector<Std::optional<BVData>> bvData;
-    const double accuKernel = kappa1 * eta / (kappaNorm * uNorm);
+    const double accuKernel = approximationParameters.scatteringAccuracy()
+                            / (kappaNorm * uNorm);
     {
 #ifdef PERITER_SKELETAL_SCATTERING
       FEBasisHostTraceDiscontinuous
@@ -653,13 +574,10 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
       std::vector<VectorType> rhsFunctional =
           apply_scattering (
-            kernelApproximation, x, solutionSpaces, hostGridGlobalBasis,
-            sVector, grids,
+            kernelApproximation, x, spaces,
+            hostGridGlobalBasis,
+            sVector, grids, gridIdSets,
             accuKernel);
-      create_new_gridIdSets(gridIdSets, grids);
-      create_new_spaces(solutionSpaces, grids);
-      create_new_spaces(testSpaces, grids);
-      create_new_spaces(testSpacesEnriched, grids);
 
       numS = sVector.size();
       x.resize(numS);
@@ -689,13 +607,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       detail::approximate_rhs (
           rhsFunctional,
           grids,
-          kappa2*eta,
+          approximationParameters.rhsAccuracy(),
           hostGridGlobalBasis,
           sVector,
           f, RHSApproximation{});
       for(size_t i = 0; i < numS; i++) {
-        const FEBasisTest& subGridGlobalBasis
-            = std::get<FEBasisTest>(*testSpaces[i]);
+        const auto& subGridGlobalBasis = spaces.testSpace(i);
         rhsData.emplace_back(
           attachDataToSubGrid(
             subGridGlobalBasis,
@@ -719,8 +636,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         if(boundary_is_homogeneous[i]) {
           bvData.emplace_back();
         } else {
-          const FEBasisTest& subGridGlobalBasis
-              = std::get<FEBasisTest>(*testSpaces[i]);
+          const auto& subGridGlobalBasis = spaces.testSpace(i);
           bvData.emplace_back(
             attachDataToSubGrid(
               subGridGlobalBasis,
@@ -733,7 +649,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     std::chrono::steady_clock::time_point endScatteringApproximation
         = std::chrono::steady_clock::now();
 
-    ofs << "eta_n = rhobar^{-n}: " << eta << '\n'
+    ofs << "eta_n = rhobar^{-n}: " << approximationParameters.eta() << '\n'
         << "\n--------------------\n"
         << "Info angular approx:\n"
         << "--------------------\n"
@@ -749,7 +665,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << "Kernel approximation:\n"
         << "---------------------\n"
         << "Accuracy required: "
-          << kappa1 * eta << " (kappa1 * eta)\n"
+          << approximationParameters.scatteringAccuracy() << " (kappa1 * eta)\n"
         << "Accuracy introduced in code: "
         << accuKernel << " (kappa1 * eta / (kappaNorm * uNorm))\n"
         << kernelApproximation.info()      << '\n'
@@ -776,9 +692,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
       grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
                                                hostGrid);
-      detail::updateSpaces(*solutionSpaces[i], grids[i]->leafGridView());
-      detail::updateSpaces(*testSpaces[i], grids[i]->leafGridView());
-      detail::updateSpaces(*testSpacesEnriched[i], grids[i]->leafGridView());
+      spaces.update(i, grids[i]->leafGridView());
 
       double aposteriori_s;
       unsigned int nRefinement = 0;
@@ -790,11 +704,11 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       {
         VectorType bvExtension;
         if(!boundary_is_homogeneous[i]) {
-          FEBasisTest& feBasisTest = std::get<FEBasisTest>(*testSpaces[i]);
+          const auto& feBasisTest = spaces.testSpace(i);
           auto newGridData
               = bvData[i]->restoreDataToRefinedSubGrid(feBasisTest);
           bvExtension.resize(newGridData.size(),
-                               false /* don't copy old values */);
+                             false /* don't copy old values */);
           for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
             bvExtension[k] = newGridData[k];
           }
@@ -806,7 +720,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
           aposteriori_s
               = compute_transport_solution(x[i], *grids[i],
-                  testSpaces[i], solutionSpaces[i], testSpacesEnriched[i],
+                  spaces.spaces(i),
                   sVector[i], sigma, rhsData[i], boundary_is_homogeneous[i],
                   bvExtension);
 
@@ -833,17 +747,17 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
 
         if(++nRefinement >= maxNumberOfInnerIterations
-            || aposteriori_s <= kappa3*eta) {
+            || aposteriori_s <= approximationParameters.transportAccuracy()) {
           gridIdSets[i] = saveSubGridToIdSet(*grids[i]);
 
           ofs << "\na posteriori error for current direction: "
               << aposteriori_s;
-          if (aposteriori_s <= kappa3 * eta)
+          if (aposteriori_s <= approximationParameters.transportAccuracy())
           {
             ofs << " (enough";
           } else {
             ofs << " (not enough, required "
-                << kappa3 * eta;
+                << approximationParameters.transportAccuracy();
           }
           ofs << ")\n\n" << std::flush;
 
@@ -852,15 +766,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           grids[i]->preAdapt();
           grids[i]->adapt();
           grids[i]->postAdapt();
-          detail::updateSpaces(*solutionSpaces[i], grids[i]->leafGridView());
-          detail::updateSpaces(*testSpaces[i], grids[i]->leafGridView());
-          detail::updateSpaces(*testSpacesEnriched[i],
-                               grids[i]->leafGridView());
+          spaces.update(i, grids[i]->leafGridView());
 
           ofs << "\na posteriori error for current direction: "
               << aposteriori_s
               << " (required "
-              << kappa3 * eta
+              << approximationParameters.transportAccuracy()
               << ")\n\n" << std::flush;
         }
       } // end of spatial refinement for angular direction i
@@ -875,10 +786,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         //  real second-order functions
         //////////////////////////////////////////////////////////////////////
 
-        const FEBasisInterior& feBasisInterior
-            = std::get<FEBasisInterior>(*solutionSpaces[i]);
-        const FEBasisTrace& feBasisTrace
-            = std::get<FEBasisTrace>(*solutionSpaces[i]);
+        const auto& feBasisInterior = spaces.interiorSolutionSpace(i);
+        const auto& feBasisTrace    = spaces.traceSolutionSpace(i);
 
         std::cout << "Plot solution for direction " << i << '\n';
 
@@ -907,22 +816,22 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         [](size_t acc, auto vec) { return acc + vec.size(); });
 
     // A posteriori estimation of error ||bar u_n -T^{-1}K bar u_{n-1}||
-    aposterioriIter[n] = aposterioriTransportGlobal + CT * kappa1 * eta;
+    aposterioriIter[n] = aposterioriTransportGlobal
+                       + CT * approximationParameters.scatteringAccuracy();
 
     // Error bound for || u - \bar u_n || based on a priori errors
-    accuracy = (rho*err0 + 2) * std::pow(rho,n);
+    accuracy = approximationParameters.combinedAccuracy();
     // Error bound for || u_n - \bar u_n || based on a posteriori errors
-    double errorAPosteriori = 0.;
-    for(size_t j=0; j < n+1; j++) {
-      errorAPosteriori += std::pow(rho,j)*aposterioriIter[n-j];
-    }
+    double errorAPosteriori
+        = approximationParameters.aPosterioriError(aposterioriIter);
 
     ofs << "---------------------\n"
-        << "End inner iterations \n"
-        << "---------------------\n"
-        << "Error transport solves (a posteriori estimation): "
+           "End inner iterations \n"
+           "---------------------\n"
+           "Error transport solves (a posteriori estimation): "
           << aposterioriTransportGlobal                  << '\n'
-        << "Accuracy kernel: " << kappa1 * eta           << '\n'
+        << "Accuracy kernel: "
+          << approximationParameters.scatteringAccuracy() << '\n'
         << "Error bound ||bar u_n -T^{-1}K bar u_{n-1}|| (a posteriori): "
           << aposterioriIter[n]   << '\n'
         << "Error bound ||u_n - bar u_n|| (a posteriori): "
@@ -938,21 +847,18 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << aposterioriTransportGlobal << ", using "
               << accumulatedDoFs << " DoFs\n";
 
-    eta /= rhobar;
+    approximationParameters.decreaseEta();
   }
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class TestSpaces, class SolutionSpaces, class TestSpacesEnriched,
-         class Grid, class Sigma, class RHSData>
+template<class Spaces, class Grid, class Sigma, class RHSData>
 double
 Periter<ScatteringKernelApproximation, RHSApproximation>::
 compute_transport_solution(
     VectorType& x,
     Grid& grid,
-    const std::shared_ptr<TestSpaces>& testSpaces,
-    const std::shared_ptr<SolutionSpaces>& solutionSpaces,
-    const std::shared_ptr<TestSpacesEnriched>& testSpacesEnriched,
+    const Spaces& spaces,
     const FieldVector<double, 2>& s,
     const Sigma sigma,
     RHSData& rhsData,
@@ -960,7 +866,7 @@ compute_transport_solution(
     const VectorType& bvExtension)
 {
   auto bilinearForm =
-    make_BilinearForm(testSpaces, solutionSpaces,
+    make_BilinearForm(spaces.testSpacePtr(), spaces.solutionSpacePtr(),
         make_tuple(
             make_IntegralTerm<0,0,IntegrationType::valueValue,
                                   DomainOfIntegration::interior>(sigma),
@@ -970,9 +876,9 @@ compute_transport_solution(
             make_IntegralTerm<0,1,IntegrationType::normalVector,
                                   DomainOfIntegration::face>(1., s)));
   auto bilinearFormEnriched =
-      replaceTestSpaces(bilinearForm, testSpacesEnriched);
+      replaceTestSpaces(bilinearForm, spaces.enrichedTestSpacePtr());
   auto innerProduct =
-    make_InnerProduct(testSpaces,
+    make_InnerProduct(spaces.testSpacePtr(),
         make_tuple(
             make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                   DomainOfIntegration::interior>(1., s),
@@ -980,10 +886,12 @@ compute_transport_solution(
                               IntegrationType::travelDistanceWeighted,
                               DomainOfIntegration::face>(1., s)));
   auto innerProductEnriched =
-      replaceTestSpaces(innerProduct, testSpacesEnriched);
+      replaceTestSpaces(innerProduct, spaces.enrichedTestSpacePtr());
 
 
   using LeafGridView = typename Grid::LeafGridView;
+  static_assert(std::is_same<typename Spaces::GridView, LeafGridView>::value,
+                "GridViews don't match!");
   using Geometry = typename LeafGridView::template Codim<0>::Geometry;
   using GeometryBuffer_t = GeometryBuffer<Geometry>;
 
@@ -995,7 +903,7 @@ compute_transport_solution(
 
   VectorType rhsFunctional;
   {
-    auto& feBasisTest = std::get<0>(*testSpaces);
+    auto& feBasisTest = spaces.testSpace();
     auto newGridData
         = rhsData.restoreDataToRefinedSubGrid(feBasisTest);
     rhsFunctional.resize(newGridData.size(),
@@ -1018,7 +926,7 @@ compute_transport_solution(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
             make_LinearFunctionalTerm<0>
-              (rhsFunctional, std::get<0>(*testSpaces))));
+              (rhsFunctional, spaces.testSpace())));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -1028,10 +936,10 @@ compute_transport_solution(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
             make_LinearFunctionalTerm<0>
-              (rhsFunctional, std::get<0>(*testSpaces)),
+              (rhsFunctional, spaces.testSpace()),
             make_SkeletalLinearFunctionalTerm
               <0, IntegrationType::normalVector>
-              (bvExtension, std::get<0>(*testSpaces), -1, s)));
+              (bvExtension, spaces.testSpace(), -1, s)));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -1040,7 +948,7 @@ compute_transport_solution(
     // Determine Dirichlet dofs for theta (inflow boundary)
     std::vector<bool> dirichletNodesInflow;
     BoundaryTools::getInflowBoundaryMask(
-                std::get<1>(*solutionSpaces),
+                spaces.traceSolutionSpace(),
                 dirichletNodesInflow,
                 s);
     systemAssembler.template applyDirichletBoundary<1>
@@ -1058,8 +966,8 @@ compute_transport_solution(
   ////////////////////////////////////
   //   Initialize solution vector
   ////////////////////////////////////
-  x.resize(std::get<0>(*solutionSpaces).size()
-           + std::get<1>(*solutionSpaces).size());
+  x.resize(spaces.interiorSolutionSpace().size()
+           + spaces.traceSolutionSpace().size());
   x = 0;
 
   ////////////////////////////
@@ -1089,7 +997,7 @@ compute_transport_solution(
   // -- Contribution of the scattering term
   if(boundary_is_homogeneous) {
     auto rhsAssemblerEnriched
-      = make_RhsAssembler(testSpacesEnriched);
+      = make_RhsAssembler(spaces.enrichedTestSpacePtr());
     auto rhsFunction = make_LinearForm(
           rhsAssemblerEnriched.getTestSpaces(),
           std::make_tuple(
@@ -1099,7 +1007,7 @@ compute_transport_solution(
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   } else {
     auto rhsAssemblerEnriched
-      = make_RhsAssembler(testSpacesEnriched);
+      = make_RhsAssembler(spaces.enrichedTestSpacePtr());
     auto rhsFunction = make_LinearForm(
           rhsAssemblerEnriched.getTestSpaces(),
           std::make_tuple(
@@ -1126,36 +1034,40 @@ compute_transport_solution(
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class SolutionSpaces, class HostGridBasis, class Grid>
+template<class SubGridView, class HostGridBasis, class Grid, class GridIdSet>
 std::vector<typename Periter<ScatteringKernelApproximation,
                              RHSApproximation>::VectorType>
 Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
-      const std::vector<std::shared_ptr<SolutionSpaces>>& solutionSpaces,
+      SubGridSpaces<SubGridView>& subGridSpaces,
       const HostGridBasis& hostGridBasis,
       std::vector<Direction>& sVector,
       std::vector<std::unique_ptr<Grid>>& grids,
+      std::vector<GridIdSet>& gridIdSets,
       double accuracy) {
   sVector = kernelApproximation.setAccuracyAndInputSize(accuracy, x.size());
 
+  using Spaces = SubGridSpaces<SubGridView>;
 #ifdef PERITER_SKELETAL_SCATTERING
-  using FEBasisTrace = std::tuple_element_t<1, SolutionSpaces>;
+  using FEBasisTrace = typename Spaces::FEBasisTrace;
 #else
-  using FEBasisInterior = std::tuple_element_t<0, SolutionSpaces>;
+  using FEBasisInterior = typename Spaces::FEBasisInterior;
 #endif
 
   // Interpolate x[i] to hostGridBasis.
   std::vector<VectorType> xHost(x.size());
   for(size_t i = 0, imax = x.size(); i < imax; i++) {
 #ifdef PERITER_SKELETAL_SCATTERING
-    const FEBasisTrace& feBasisTrace = std::get<1>(*solutionSpaces[i]);
-    const size_t  feBasisTraceOffset = std::get<0>(*solutionSpaces[i]).size();
+    const FEBasisTrace& feBasisTrace = subGridSpaces.traceSolutionSpace(i);
+    const size_t  feBasisTraceOffset = subGridSpaces.interiorSolutionSpace(i)
+                                                    .size();
     interpolateFromSubGrid(
         feBasisTrace, x[i].begin() + feBasisTraceOffset,
         hostGridBasis, xHost[i]);
 #else
-    const FEBasisInterior& feBasisInterior = std::get<0>(*solutionSpaces[i]);
+    const FEBasisInterior& feBasisInterior
+        = subGridSpaces.interiorSolutionSpace(i);
     interpolateFromSubGrid(
         feBasisInterior, x[i],
         hostGridBasis, xHost[i]);
@@ -1170,6 +1082,8 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
   scatteringAssembler.precomputeScattering(rhsFunctional, xHost);
 
   create_new_grids(grids, numS);
+  create_new_gridIdSets(gridIdSets, grids);
+  subGridSpaces.create_new_spaces(grids);
 
   return rhsFunctional;
 }
@@ -1250,22 +1164,6 @@ create_new_gridIdSets(
     gridIdSets.reserve(grids.size());
     for(auto grid = grids.cbegin(), end = grids.cend(); grid != end; ++grid) {
       gridIdSets.push_back(saveSubGridToIdSet(**grid));
-    }
-  }
-}
-
-template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class Grid, class... Spaces>
-void
-Periter<ScatteringKernelApproximation, RHSApproximation>::create_new_spaces(
-      std::vector<std::shared_ptr<std::tuple<Spaces...>>>& spaces,
-      const std::vector<std::unique_ptr<Grid>>& grids)
-{
-  if(spaces.size() != grids.size()) {
-    spaces.clear();
-    spaces.reserve(grids.size());
-    for(auto grid = grids.cbegin(), end = grids.cend(); grid != end; ++grid) {
-      spaces.push_back(make_space_tuple<Spaces...>((*grid)->leafGridView()));
     }
   }
 }
