@@ -248,79 +248,61 @@ class Periter {
 template<class GridView>
 class SubGridSpaces {
   public:
-  using FEBasisInterior = Functions::BernsteinDGBasis<GridView, 1>;
-  using FEBasisTrace = Functions::HangingNodeBernsteinP2Basis<GridView>;
+  using Spaces = TransportSpaces<GridView>;
 
-  using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
-  using FEBasisTestEnriched = FEBasisTest;
+  using FEBasisInterior     = typename Spaces::FEBasisInterior;
+  using FEBasisTrace        = typename Spaces::FEBasisTrace;
 
-  using SolutionSpace = decltype(make_space_tuple<FEBasisInterior,
-                                   FEBasisTrace>(std::declval<GridView>()));
-  using TestSpace = decltype(make_space_tuple<FEBasisTest>
-                               (std::declval<GridView>()));
-  using TestSpaceEnriched = decltype(make_space_tuple<FEBasisTestEnriched>
-                                       (std::declval<GridView>()));
+  using FEBasisTest         = typename Spaces::FEBasisTest;
+  using FEBasisEnrichedTest = typename Spaces::FEBasisEnrichedTest;
 
-  using SolutionSpaces = std::vector<SolutionSpace>;
-  using TestSpaces = std::vector<TestSpace>;
-  using TestSpacesEnriched = std::vector<TestSpaceEnriched>;
+  using SolutionSpacePtr = typename Spaces::SolutionSpacePtr;
+  using TestSpacePtr = typename Spaces::TestSpacePtr;
+  using EnrichedTestSpacePtr = typename Spaces::EnrichedTestSpacePtr;
 
   using GridsVector = std::vector<std::unique_ptr<typename GridView::Grid>>;
 
   SubGridSpaces(const GridsVector& grids)
   {
-    solutionSpaces_.reserve(grids.size());
-    testSpaces_.reserve(grids.size());
-    testSpacesEnriched_.reserve(grids.size());
-
+    spaces_.reserve(grids.size());
     for(const auto& grid : grids)
     {
-      const auto gridView = grid->leafGridView();
-      solutionSpaces_.push_back(
-          make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView));
-      testSpaces_.push_back(make_space_tuple<FEBasisTest>(gridView));
-      testSpacesEnriched_.push_back(
-          make_space_tuple<FEBasisTestEnriched>(gridView));
+      spaces_.emplace_back(grid->leafGridView());
     }
   }
 
   void update(size_t i, const GridView& gridView) {
-    detail::updateSpaces(*solutionSpaces_[i],     gridView);
-    detail::updateSpaces(*testSpaces_[i],         gridView);
-    detail::updateSpaces(*testSpacesEnriched_[i], gridView);
+    spaces_[i].update(gridView);
   }
-
-  void create_new_spaces(const GridsVector& grids) {
-    create_new_spaces(solutionSpaces_,     grids);
-    create_new_spaces(testSpaces_,         grids);
-    create_new_spaces(testSpacesEnriched_, grids);
-  }
-
-  const SolutionSpace& solutionSpace(size_t i) {
-    return solutionSpaces_[i];
-  }
-
-  const TestSpace& testSpace(size_t i) {
-    return testSpaces_[i];
-  }
-
-  const TestSpaceEnriched& testSpaceEnriched(size_t i) {
-    return testSpacesEnriched_[i];
-  }
-
-  private:
 
   /**
    * insert new spaces in apply_scattering after adding new grids
    */
-  template<class Grid, class... Spaces>
-  static void create_new_spaces(
-      std::vector<std::shared_ptr<std::tuple<Spaces...>>>& spaces,
-      const std::vector<std::unique_ptr<Grid>>& grids);
+  void create_new_spaces(const GridsVector& grids) {
+    if(spaces_.size() != grids.size()) {
+      spaces_.clear();
+      spaces_.reserve(grids.size());
+      for(const auto& grid : grids) {
+        spaces_.emplace_back(grid->leafGridView());
+      }
+    }
+  }
 
-  SolutionSpaces solutionSpaces_;
-  TestSpaces testSpaces_;
-  TestSpacesEnriched testSpacesEnriched_;
+  const SolutionSpacePtr& solutionSpace(size_t i) const {
+    return spaces_[i].solutionSpace();
+  }
+
+  const TestSpacePtr& testSpace(size_t i) const {
+    return spaces_[i].testSpace();
+  }
+
+  const EnrichedTestSpacePtr& enrichedTestSpace(size_t i) const {
+    return spaces_[i].enrichedTestSpace();
+  }
+
+  private:
+
+  std::vector<Spaces> spaces_;
 };
 
 #ifndef DOXYGEN
@@ -729,7 +711,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           aposteriori_s
               = compute_transport_solution(x[i], *grids[i],
                   spaces.testSpace(i), spaces.solutionSpace(i),
-                  spaces.testSpaceEnriched(i),
+                  spaces.enrichedTestSpace(i),
                   sVector[i], sigma, rhsData[i], boundary_is_homogeneous[i],
                   bvExtension);
 
@@ -1175,22 +1157,6 @@ create_new_gridIdSets(
     gridIdSets.reserve(grids.size());
     for(auto grid = grids.cbegin(), end = grids.cend(); grid != end; ++grid) {
       gridIdSets.push_back(saveSubGridToIdSet(**grid));
-    }
-  }
-}
-
-template<class GridView>
-template<class Grid, class... Spaces>
-void
-SubGridSpaces<GridView>::create_new_spaces(
-      std::vector<std::shared_ptr<std::tuple<Spaces...>>>& spaces,
-      const std::vector<std::unique_ptr<Grid>>& grids)
-{
-  if(spaces.size() != grids.size()) {
-    spaces.clear();
-    spaces.reserve(grids.size());
-    for(auto grid = grids.cbegin(), end = grids.cend(); grid != end; ++grid) {
-      spaces.push_back(make_space_tuple<Spaces...>((*grid)->leafGridView()));
     }
   }
 }

@@ -32,6 +32,53 @@ constexpr inline PlotSolutions& operator|=(PlotSolutions& a, PlotSolutions b) {
 struct FeRHS {};
 struct ApproximateRHS {};
 
+template<class GridView>
+class TransportSpaces {
+  public:
+  using FEBasisInterior = Functions::BernsteinDGBasis<GridView, 1>;
+  using FEBasisTrace = Functions::HangingNodeBernsteinP2Basis<GridView>;
+
+  using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
+  using FEBasisEnrichedTest = FEBasisTest;
+
+  using SolutionSpacePtr = decltype(make_space_tuple<FEBasisInterior,
+                                    FEBasisTrace>(std::declval<GridView>()));
+  using TestSpacePtr = decltype(make_space_tuple<FEBasisTest>
+                                (std::declval<GridView>()));
+  using EnrichedTestSpacePtr = decltype(make_space_tuple<FEBasisEnrichedTest>
+                                        (std::declval<GridView>()));
+
+  TransportSpaces(const GridView& gridView)
+    : solutionSpace_(make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView))
+    , testSpace_(make_space_tuple<FEBasisTest>(gridView))
+    , enrichedTestSpace_(make_space_tuple<FEBasisEnrichedTest>(gridView))
+  {}
+
+  void update(const GridView& gridView) {
+    detail::updateSpaces(*solutionSpace_,     gridView);
+    detail::updateSpaces(*testSpace_,         gridView);
+    detail::updateSpaces(*enrichedTestSpace_, gridView);
+  }
+
+  const SolutionSpacePtr& solutionSpace() const {
+    return solutionSpace_;
+  }
+
+  const TestSpacePtr& testSpace() const {
+    return testSpace_;
+  }
+
+  const EnrichedTestSpacePtr& enrichedTestSpace() const {
+    return enrichedTestSpace_;
+  }
+
+  private:
+
+  SolutionSpacePtr solutionSpace_;
+  TestSpacePtr testSpace_;
+  EnrichedTestSpacePtr enrichedTestSpace_;
+};
+
 namespace detail {
   class ApproximationParameters
   {
