@@ -394,8 +394,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   for(unsigned int i = 0; i < numS; ++i)
   {
-    x[i].resize(std::get<0>(*spaces.solutionSpacePtr()).size()
-               + std::get<1>(*spaces.solutionSpacePtr()).size());
+    x[i].resize(spaces.interiorSolutionSpace().size()
+                 + spaces.traceSolutionSpace().size());
     x[i] = 0;
   }
 
@@ -423,7 +423,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     double uNorm = 0.;
     for(size_t i=0; i<numS; ++i) {
       const double uiNorm =
-        ErrorTools::l2norm(std::get<0>(*spaces.solutionSpacePtr()), x[i]);
+        ErrorTools::l2norm(spaces.interiorSolutionSpace(), x[i]);
       uNorm += uiNorm * uiNorm
                 / (1 << kernelApproximation.getLevel())
                 * quadWeight[i % kernelApproximation.numSperInterval];
@@ -447,7 +447,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     if((plotSolutions & PlotSolutions::plotScattering)
         == PlotSolutions::plotScattering) {
       std::cout << "Plot scattering:\n";
-      const auto& feBasisInterior = std::get<0>(*spaces.solutionSpacePtr());
+      const auto& feBasisInterior = spaces.interiorSolutionSpace();
 
       for(unsigned int i = 0; i < numS; ++i)
       {
@@ -465,7 +465,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     }
 
     {
-      const auto& feBasisInterior = std::get<0>(*spaces.solutionSpacePtr());
+      const auto& feBasisInterior = spaces.interiorSolutionSpace();
 
       detail::approximate_rhs (
           rhsFunctional,
@@ -486,7 +486,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     // get bv contribution to rhs
     VectorType boundaryExtension
         = harmonic_extension_of_boundary_values(g,
-            std::get<1>(*spaces.solutionSpacePtr()));
+            spaces.traceSolutionSpace());
 
     ofs << "eta_n = rhobar^{-n}: " << approximationParameters.eta() << '\n'
         << "\n--------------------\n"
@@ -580,7 +580,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                  LevelGridView>;
 
           FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
-          const auto& feBasisInterior = std::get<0>(*spaces.solutionSpacePtr());
+          const auto& feBasisInterior = spaces.interiorSolutionSpace();
 
           std::vector<VectorType> rhsFunctionalCoarse(numS);
           std::swap(rhsFunctional, rhsFunctionalCoarse);
@@ -597,7 +597,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                                       LevelGridView>;
 
           FEBasisCoarseTrace coarseTraceBasis(levelGridView);
-          const auto& feBasisTrace = std::get<1>(*spaces.solutionSpacePtr());
+          const auto& feBasisTrace = spaces.traceSolutionSpace();
 
           VectorType boundaryExtensionFine
               = interpolateToUniformlyRefinedGrid(
@@ -617,8 +617,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       ////////////////////////////////////////////////////////////////////////
       std::cout << "Print solutions:\n";
 
-      const auto& feBasisInterior = std::get<0>(*spaces.solutionSpacePtr());
-      const auto& feBasisTrace = std::get<1>(*spaces.solutionSpacePtr());
+      const auto& feBasisInterior = spaces.interiorSolutionSpace();
+      const auto& feBasisTrace = spaces.traceSolutionSpace();
 
 
       for(unsigned int i = 0; i < numS; ++i)
@@ -733,7 +733,7 @@ compute_transport_solution(
   // Determine Dirichlet dofs for theta (inflow boundary)
   std::vector<bool> dirichletNodesInflow;
   BoundaryTools::getInflowBoundaryMask(
-              std::get<1>(*spaces.solutionSpacePtr()),
+              spaces.traceSolutionSpace(),
               dirichletNodesInflow,
               s);
 
@@ -751,7 +751,7 @@ compute_transport_solution(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
             make_LinearFunctionalTerm<0>
-              (rhsFunctional, std::get<0>(*spaces.solutionSpacePtr()))));
+              (rhsFunctional, spaces.interiorSolutionSpace())));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -761,10 +761,10 @@ compute_transport_solution(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
             make_LinearFunctionalTerm<0>
-              (rhsFunctional, std::get<0>(*spaces.solutionSpacePtr())),
+              (rhsFunctional, spaces.interiorSolutionSpace()),
             make_SkeletalLinearFunctionalTerm
               <0, IntegrationType::normalVector>
-              (bvExtension, std::get<1>(*spaces.solutionSpacePtr()), -1, s)));
+              (bvExtension, spaces.traceSolutionSpace(), -1, s)));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -783,8 +783,8 @@ compute_transport_solution(
   ////////////////////////////////////
   //   Initialize solution vector
   ////////////////////////////////////
-  x.resize(std::get<0>(*spaces.solutionSpacePtr()).size()
-           + std::get<1>(*spaces.solutionSpacePtr()).size());
+  x.resize(spaces.interiorSolutionSpace().size()
+            + spaces.traceSolutionSpace().size());
   x = 0;
 
   ////////////////////////////

@@ -67,6 +67,18 @@ class TransportSpaces {
     detail::updateSpaces(*enrichedTestSpace_, gridView);
   }
 
+  const FEBasisInterior& interiorSolutionSpace() const {
+    return std::get<0>(*solutionSpace_);
+  }
+
+  const FEBasisTrace& traceSolutionSpace() const {
+    return std::get<1>(*solutionSpace_);
+  }
+
+  const FEBasisTest& testSpace() const {
+    return std::get<0>(*testSpace_);
+  }
+
   const SolutionSpacePtr& solutionSpacePtr() const {
     return solutionSpace_;
   }

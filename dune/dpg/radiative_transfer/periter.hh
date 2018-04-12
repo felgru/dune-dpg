@@ -282,6 +282,18 @@ class SubGridSpaces {
     }
   }
 
+  const FEBasisInterior& interiorSolutionSpace(size_t i) const {
+    return spaces_[i].interiorSolutionSpace();
+  }
+
+  const FEBasisTrace& traceSolutionSpace(size_t i) const {
+    return spaces_[i].traceSolutionSpace();
+  }
+
+  const FEBasisTest& testSpace(size_t i) const {
+    return spaces_[i].testSpace();
+  }
+
   const Spaces& spaces(size_t i) const {
     return spaces_[i];
   }
@@ -482,8 +494,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   for(unsigned int i = 0; i < grids.size(); ++i)
   {
-    x[i].resize(std::get<0>(*spaces.solutionSpacePtr(i)).size()
-                + std::get<1>(*spaces.solutionSpacePtr(i)).size());
+    x[i].resize(spaces.interiorSolutionSpace(i).size()
+                 + spaces.traceSolutionSpace(i).size());
     x[i] = 0;
   }
 
@@ -518,7 +530,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     double uNorm = 0.;
     for(size_t i=0; i<grids.size(); ++i) {
       const double uiNorm =
-        ErrorTools::l2norm(std::get<0>(*spaces.solutionSpacePtr(i)), x[i]);
+        ErrorTools::l2norm(spaces.interiorSolutionSpace(i), x[i]);
       uNorm += uiNorm * uiNorm
                 / (1 << kernelApproximation.getLevel())
                 * quadWeight[i % kernelApproximation.numSperInterval];
@@ -600,7 +612,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           sVector,
           f, RHSApproximation{});
       for(size_t i = 0; i < numS; i++) {
-        const auto& subGridGlobalBasis = std::get<0>(*spaces.testSpacePtr(i));
+        const auto& subGridGlobalBasis = spaces.testSpace(i);
         rhsData.emplace_back(
           attachDataToSubGrid(
             subGridGlobalBasis,
@@ -624,7 +636,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         if(boundary_is_homogeneous[i]) {
           bvData.emplace_back();
         } else {
-          const auto& subGridGlobalBasis = std::get<0>(*spaces.testSpacePtr(i));
+          const auto& subGridGlobalBasis = spaces.testSpace(i);
           bvData.emplace_back(
             attachDataToSubGrid(
               subGridGlobalBasis,
@@ -692,7 +704,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       {
         VectorType bvExtension;
         if(!boundary_is_homogeneous[i]) {
-          const auto& feBasisTest = std::get<0>(*spaces.testSpacePtr(i));
+          const auto& feBasisTest = spaces.testSpace(i);
           auto newGridData
               = bvData[i]->restoreDataToRefinedSubGrid(feBasisTest);
           bvExtension.resize(newGridData.size(),
@@ -774,8 +786,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         //  real second-order functions
         //////////////////////////////////////////////////////////////////////
 
-        const auto& feBasisInterior = std::get<0>(*spaces.solutionSpacePtr(i));
-        const auto& feBasisTrace    = std::get<1>(*spaces.solutionSpacePtr(i));
+        const auto& feBasisInterior = spaces.interiorSolutionSpace(i);
+        const auto& feBasisTrace    = spaces.traceSolutionSpace(i);
 
         std::cout << "Plot solution for direction " << i << '\n';
 
@@ -891,7 +903,7 @@ compute_transport_solution(
 
   VectorType rhsFunctional;
   {
-    auto& feBasisTest = std::get<0>(*spaces.testSpacePtr());
+    auto& feBasisTest = spaces.testSpace();
     auto newGridData
         = rhsData.restoreDataToRefinedSubGrid(feBasisTest);
     rhsFunctional.resize(newGridData.size(),
@@ -914,7 +926,7 @@ compute_transport_solution(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
             make_LinearFunctionalTerm<0>
-              (rhsFunctional, std::get<0>(*spaces.testSpacePtr()))));
+              (rhsFunctional, spaces.testSpace())));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -924,10 +936,10 @@ compute_transport_solution(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
             make_LinearFunctionalTerm<0>
-              (rhsFunctional, std::get<0>(*spaces.testSpacePtr())),
+              (rhsFunctional, spaces.testSpace()),
             make_SkeletalLinearFunctionalTerm
               <0, IntegrationType::normalVector>
-              (bvExtension, std::get<0>(*spaces.testSpacePtr()), -1, s)));
+              (bvExtension, spaces.testSpace(), -1, s)));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -936,7 +948,7 @@ compute_transport_solution(
     // Determine Dirichlet dofs for theta (inflow boundary)
     std::vector<bool> dirichletNodesInflow;
     BoundaryTools::getInflowBoundaryMask(
-                std::get<1>(*spaces.solutionSpacePtr()),
+                spaces.traceSolutionSpace(),
                 dirichletNodesInflow,
                 s);
     systemAssembler.template applyDirichletBoundary<1>
@@ -954,8 +966,8 @@ compute_transport_solution(
   ////////////////////////////////////
   //   Initialize solution vector
   ////////////////////////////////////
-  x.resize(std::get<0>(*spaces.solutionSpacePtr()).size()
-           + std::get<1>(*spaces.solutionSpacePtr()).size());
+  x.resize(spaces.interiorSolutionSpace().size()
+           + spaces.traceSolutionSpace().size());
   x = 0;
 
   ////////////////////////////
@@ -1047,16 +1059,15 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
   std::vector<VectorType> xHost(x.size());
   for(size_t i = 0, imax = x.size(); i < imax; i++) {
 #ifdef PERITER_SKELETAL_SCATTERING
-    const FEBasisTrace& feBasisTrace = std::get<1>(*subGridSpaces
-                                                   .solutionSpacePtr(i));
-    const size_t  feBasisTraceOffset = std::get<0>(*subGridSpaces
-                                                   .solutionSpacePtr(i)).size();
+    const FEBasisTrace& feBasisTrace = subGridSpaces.traceSolutionSpace(i);
+    const size_t  feBasisTraceOffset = subGridSpaces.interiorSolutionSpace(i)
+                                                    .size();
     interpolateFromSubGrid(
         feBasisTrace, x[i].begin() + feBasisTraceOffset,
         hostGridBasis, xHost[i]);
 #else
     const FEBasisInterior& feBasisInterior
-        = std::get<0>(*subGridSpaces.solutionSpacePtr(i));
+        = subGridSpaces.interiorSolutionSpace(i);
     interpolateFromSubGrid(
         feBasisInterior, x[i],
         hostGridBasis, xHost[i]);
