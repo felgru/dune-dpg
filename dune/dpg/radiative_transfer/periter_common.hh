@@ -35,9 +35,11 @@ constexpr inline PlotSolutions& operator|=(PlotSolutions& a, PlotSolutions b) {
 struct FeRHS {};
 struct ApproximateRHS {};
 
-template<class GridView, class TraceBasis>
+template<class GV, class TraceBasis>
 class TransportSpaces {
   public:
+  using GridView = GV;
+
   using FEBasisInterior = Functions::BernsteinDGBasis<GridView, 1>;
   using FEBasisTrace = TraceBasis;
   static_assert(std::is_same<typename TraceBasis::GridView, GridView>::value,

@@ -179,9 +179,7 @@ class Periter {
    *
    * \param[out] x the solution of the transport problem
    * \param grid the grid needed for Döfler marking
-   * \param testSpaces
-   * \param solutionSpaces
-   * \param testSpacesEnriched
+   * \param spaces
    * \param s the transport direction
    * \param sigma the absorbtion coefficient
    * \param rhsData the data for the unmodified rhs
@@ -190,14 +188,11 @@ class Periter {
    *
    * \return the squared a posteriori error of the solution
    */
-  template<class TestSpaces, class SolutionSpaces, class TestSpacesEnriched,
-           class Grid, class Sigma, class RHSData>
+  template<class Spaces, class Grid, class Sigma, class RHSData>
   static double compute_transport_solution(
       VectorType& x,
       Grid& grid,
-      const std::shared_ptr<TestSpaces>& testSpaces,
-      const std::shared_ptr<SolutionSpaces>& solutionSpaces,
-      const std::shared_ptr<TestSpacesEnriched>& testSpacesEnriched,
+      const Spaces& spaces,
       const FieldVector<double, 2>& s,
       const Sigma sigma,
       RHSData& rhsData,
@@ -285,6 +280,10 @@ class SubGridSpaces {
         spaces_.emplace_back(grid->leafGridView());
       }
     }
+  }
+
+  const Spaces& spaces(size_t i) const {
+    return spaces_[i];
   }
 
   const SolutionSpacePtr& solutionSpace(size_t i) const {
@@ -709,8 +708,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
           aposteriori_s
               = compute_transport_solution(x[i], *grids[i],
-                  spaces.testSpace(i), spaces.solutionSpace(i),
-                  spaces.enrichedTestSpace(i),
+                  spaces.spaces(i),
                   sVector[i], sigma, rhsData[i], boundary_is_homogeneous[i],
                   bvExtension);
 
@@ -842,16 +840,13 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class TestSpaces, class SolutionSpaces, class TestSpacesEnriched,
-         class Grid, class Sigma, class RHSData>
+template<class Spaces, class Grid, class Sigma, class RHSData>
 double
 Periter<ScatteringKernelApproximation, RHSApproximation>::
 compute_transport_solution(
     VectorType& x,
     Grid& grid,
-    const std::shared_ptr<TestSpaces>& testSpaces,
-    const std::shared_ptr<SolutionSpaces>& solutionSpaces,
-    const std::shared_ptr<TestSpacesEnriched>& testSpacesEnriched,
+    const Spaces& spaces,
     const FieldVector<double, 2>& s,
     const Sigma sigma,
     RHSData& rhsData,
@@ -859,7 +854,7 @@ compute_transport_solution(
     const VectorType& bvExtension)
 {
   auto bilinearForm =
-    make_BilinearForm(testSpaces, solutionSpaces,
+    make_BilinearForm(spaces.testSpace(), spaces.solutionSpace(),
         make_tuple(
             make_IntegralTerm<0,0,IntegrationType::valueValue,
                                   DomainOfIntegration::interior>(sigma),
@@ -869,9 +864,9 @@ compute_transport_solution(
             make_IntegralTerm<0,1,IntegrationType::normalVector,
                                   DomainOfIntegration::face>(1., s)));
   auto bilinearFormEnriched =
-      replaceTestSpaces(bilinearForm, testSpacesEnriched);
+      replaceTestSpaces(bilinearForm, spaces.enrichedTestSpace());
   auto innerProduct =
-    make_InnerProduct(testSpaces,
+    make_InnerProduct(spaces.testSpace(),
         make_tuple(
             make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                   DomainOfIntegration::interior>(1., s),
@@ -879,10 +874,12 @@ compute_transport_solution(
                               IntegrationType::travelDistanceWeighted,
                               DomainOfIntegration::face>(1., s)));
   auto innerProductEnriched =
-      replaceTestSpaces(innerProduct, testSpacesEnriched);
+      replaceTestSpaces(innerProduct, spaces.enrichedTestSpace());
 
 
   using LeafGridView = typename Grid::LeafGridView;
+  static_assert(std::is_same<typename Spaces::GridView, LeafGridView>::value,
+                "GridViews don't match!");
   using Geometry = typename LeafGridView::template Codim<0>::Geometry;
   using GeometryBuffer_t = GeometryBuffer<Geometry>;
 
@@ -894,7 +891,7 @@ compute_transport_solution(
 
   VectorType rhsFunctional;
   {
-    auto& feBasisTest = std::get<0>(*testSpaces);
+    auto& feBasisTest = std::get<0>(*spaces.testSpace());
     auto newGridData
         = rhsData.restoreDataToRefinedSubGrid(feBasisTest);
     rhsFunctional.resize(newGridData.size(),
@@ -917,7 +914,7 @@ compute_transport_solution(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
             make_LinearFunctionalTerm<0>
-              (rhsFunctional, std::get<0>(*testSpaces))));
+              (rhsFunctional, std::get<0>(*spaces.testSpace()))));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -927,10 +924,10 @@ compute_transport_solution(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
             make_LinearFunctionalTerm<0>
-              (rhsFunctional, std::get<0>(*testSpaces)),
+              (rhsFunctional, std::get<0>(*spaces.testSpace())),
             make_SkeletalLinearFunctionalTerm
               <0, IntegrationType::normalVector>
-              (bvExtension, std::get<0>(*testSpaces), -1, s)));
+              (bvExtension, std::get<0>(*spaces.testSpace()), -1, s)));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -939,7 +936,7 @@ compute_transport_solution(
     // Determine Dirichlet dofs for theta (inflow boundary)
     std::vector<bool> dirichletNodesInflow;
     BoundaryTools::getInflowBoundaryMask(
-                std::get<1>(*solutionSpaces),
+                std::get<1>(*spaces.solutionSpace()),
                 dirichletNodesInflow,
                 s);
     systemAssembler.template applyDirichletBoundary<1>
@@ -957,8 +954,8 @@ compute_transport_solution(
   ////////////////////////////////////
   //   Initialize solution vector
   ////////////////////////////////////
-  x.resize(std::get<0>(*solutionSpaces).size()
-           + std::get<1>(*solutionSpaces).size());
+  x.resize(std::get<0>(*spaces.solutionSpace()).size()
+           + std::get<1>(*spaces.solutionSpace()).size());
   x = 0;
 
   ////////////////////////////
@@ -988,7 +985,7 @@ compute_transport_solution(
   // -- Contribution of the scattering term
   if(boundary_is_homogeneous) {
     auto rhsAssemblerEnriched
-      = make_RhsAssembler(testSpacesEnriched);
+      = make_RhsAssembler(spaces.enrichedTestSpace());
     auto rhsFunction = make_LinearForm(
           rhsAssemblerEnriched.getTestSpaces(),
           std::make_tuple(
@@ -998,7 +995,7 @@ compute_transport_solution(
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   } else {
     auto rhsAssemblerEnriched
-      = make_RhsAssembler(testSpacesEnriched);
+      = make_RhsAssembler(spaces.enrichedTestSpace());
     auto rhsFunction = make_LinearForm(
           rhsAssemblerEnriched.getTestSpaces(),
           std::make_tuple(
