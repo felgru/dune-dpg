@@ -23,8 +23,6 @@
 #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
-#include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
-#include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>

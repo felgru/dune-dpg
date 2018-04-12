@@ -6,6 +6,9 @@
 #include <ostream>
 #include <type_traits>
 
+#include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/bernsteindgbasis.hh>
+
 namespace Dune {
 
 enum class PlotSolutions : unsigned char {
