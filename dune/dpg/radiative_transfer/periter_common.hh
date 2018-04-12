@@ -6,6 +6,9 @@
 #include <ostream>
 #include <type_traits>
 
+#include <dune/dpg/assemble_helper.hh>
+#include <dune/dpg/spacetuple.hh>
+
 #include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
 #include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 
