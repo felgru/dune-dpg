@@ -32,11 +32,13 @@ constexpr inline PlotSolutions& operator|=(PlotSolutions& a, PlotSolutions b) {
 struct FeRHS {};
 struct ApproximateRHS {};
 
-template<class GridView>
+template<class GridView, class TraceBasis>
 class TransportSpaces {
   public:
   using FEBasisInterior = Functions::BernsteinDGBasis<GridView, 1>;
-  using FEBasisTrace = Functions::HangingNodeBernsteinP2Basis<GridView>;
+  using FEBasisTrace = TraceBasis;
+  static_assert(std::is_same<typename TraceBasis::GridView, GridView>::value,
+                "GridViews of transport spaces don't match!");
 
   using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
   using FEBasisEnrichedTest = FEBasisTest;

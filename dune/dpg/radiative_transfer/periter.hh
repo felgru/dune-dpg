@@ -248,7 +248,8 @@ class Periter {
 template<class GridView>
 class SubGridSpaces {
   public:
-  using Spaces = TransportSpaces<GridView>;
+  using Spaces = TransportSpaces<GridView,
+                    Functions::HangingNodeBernsteinP2Basis<GridView>>;
 
   using FEBasisInterior     = typename Spaces::FEBasisInterior;
   using FEBasisTrace        = typename Spaces::FEBasisTrace;
