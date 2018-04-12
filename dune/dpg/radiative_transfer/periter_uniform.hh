@@ -154,9 +154,6 @@ class Periter {
       double accuracy);
 };
 
-struct FeRHS {};
-struct ApproximateRHS {};
-
 #ifndef DOXYGEN
 namespace detail {
   constexpr size_t dim = 2;
@@ -329,8 +326,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       || std::is_same<RHSApproximation, ApproximateRHS>::value,
       "Unknown type provided for RHSApproximation!\n"
       "Should be either FeRHS or ApproximateRHS.");
-  constexpr bool rhsIsFeFunction
-      = std::is_same<RHSApproximation, FeRHS>::value;
 
   typedef typename Grid::LeafGridView  LeafGridView;
   typedef typename Grid::LevelGridView LevelGridView;
@@ -347,13 +342,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // TODO: estimate norm of rhs f
   const double fnorm = 1;
   const double err0 = fnorm / cB;
-  // ρ̄:
-  const double rhobar = 2./rho;
-
-  // CT*kappa1 + CT*kappa2 + 2*kappa3 = 1.
-  const double kappa1 = rhsIsFeFunction? 1./(2.*CT) : 1./(3.*CT);
-  const double kappa2 = rhsIsFeFunction? 0.         : 1./(3.*CT);
-  const double kappa3 = rhsIsFeFunction? 1./4.      : 1./6.;
+  detail::ApproximationParameters approximationParameters(rho, CT, err0,
+                                                          RHSApproximation{});
 
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
@@ -377,10 +367,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   auto testSpacesEnriched
     = make_space_tuple<FEBasisTestEnriched>(gridView);
 
-  // TODO: The accuracy also depends on the kappa from K = κG and on \|u\|.
-  //       Adding a factor 1/4. to compensate for that.
   ScatteringKernelApproximation kernelApproximation(kernel,
-                                                    kappa1*targetAccuracy/4.);
+      approximationParameters.finalScatteringAccuracy(targetAccuracy));
 
   ofs << "uniform PERITER algorithm\n"
       << "=================\n"
@@ -395,11 +383,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       << "Maximum number of directions: "
       << kernelApproximation.maxNumS()     << '\n'
       << "Periter parameters:" << '\n'
-      << "rho = "    << rho    << '\n'
-      << "rhobar = " << rhobar << '\n'
-      << "kappa1 = " << kappa1 << '\n'
-      << "kappa2 = " << kappa2 << '\n'
-      << "kappa3 = " << kappa3 << '\n'
+      << approximationParameters
       << "CT = "     << CT     << '\n';
 
   if(kernelApproximation.typeApprox() == "Kernel approximation with: SVD"){
@@ -439,18 +423,16 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
   double accuracy = err0;
-  // η_n:
-  double eta = 1.;
   std::vector<double> etaList(maxNumberOfIterations, 0.);
-  etaList[0] = eta;
 
   std::vector<double> aposterioriIter(maxNumberOfIterations, 0.);
 
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
   {
-    ofs << "\nIteration n=" << n << '\n'
-        << "================\n";
+    etaList[n] = approximationParameters.eta();
+    ofs << "\nIteration n=" << n
+        << "\n================\n";
     std::cout << "\nIteration " << n << "\n\n";
 
     std::chrono::steady_clock::time_point startScatteringApproximation
@@ -472,7 +454,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     // To prevent division by zero.
     if(uNorm == 0.) uNorm = 1e-5;
 
-    const double accuKernel = kappa1 * eta / (kappaNorm * uNorm);
+    const double accuKernel = approximationParameters.scatteringAccuracy()
+                            / (kappaNorm * uNorm);
     std::vector<VectorType> rhsFunctional =
         apply_scattering (
           kernelApproximation, x, *solutionSpaces,
@@ -509,7 +492,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       detail::approximate_rhs (
           rhsFunctional,
           grid,
-          kappa2*eta,
+          approximationParameters.rhsAccuracy(),
           feBasisInterior,
           sVector,
           f,
@@ -527,7 +510,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         = harmonic_extension_of_boundary_values(g,
             std::get<FEBasisTrace>(*solutionSpaces));
 
-    ofs << "eta_n = rhobar^{-n}: " << eta << '\n'
+    ofs << "eta_n = rhobar^{-n}: " << approximationParameters.eta() << '\n'
         << "\n--------------------\n"
         << "Info angular approx:\n"
         << "--------------------\n"
@@ -543,7 +526,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << "Kernel approximation:\n"
         << "---------------------\n"
         << "Accuracy required: "
-          << kappa1 * eta << " (kappa1 * eta)\n"
+          << approximationParameters.scatteringAccuracy() << " (kappa1 * eta)\n"
         << "Accuracy introduced in code: "
         << accuKernel << " (kappa1 * eta / (kappaNorm * uNorm))\n"
         << kernelApproximation.info()      << '\n'
@@ -605,7 +588,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       aposterioriTransportGlobal = std::sqrt(aposterioriTransportGlobal);
 
       if(++nRefinement >= maxNumberOfInnerIterations
-          || aposterioriTransportGlobal <= kappa3*eta) {
+          || aposterioriTransportGlobal <= approximationParameters.transportAccuracy()) {
         break;
       } else {
         grid.globalRefine(1);
@@ -690,22 +673,22 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         [](size_t acc, auto vec) { return acc + vec.size(); });
 
     // A posteriori estimation of error ||bar u_n -T^{-1}K bar u_{n-1}||
-    aposterioriIter[n] = aposterioriTransportGlobal + CT * kappa1 * eta;
+    aposterioriIter[n] = aposterioriTransportGlobal
+                       + CT * approximationParameters.scatteringAccuracy();
 
     // Error bound for || u - \bar u_n || based on a priori errors
-    accuracy = (rho*err0 + 2) * std::pow(rho,n);
+    accuracy = approximationParameters.combinedAccuracy();
     // Error bound for || u_n - \bar u_n || based on a posteriori errors
-    double errorAPosteriori = 0.;
-    for(size_t j=0; j < n+1; j++) {
-      errorAPosteriori += std::pow(rho,j)*aposterioriIter[n-j];
-    }
+    double errorAPosteriori
+        = approximationParameters.aPosterioriError(aposterioriIter);
 
     ofs << "---------------------\n"
-        << "End inner iterations \n"
-        << "---------------------\n"
-        << "Error transport solves (a posteriori estimation): "
+           "End inner iterations \n"
+           "---------------------\n"
+           "Error transport solves (a posteriori estimation): "
           << aposterioriTransportGlobal                  << '\n'
-        << "Accuracy kernel: " << kappa1 * eta           << '\n'
+        << "Accuracy kernel: "
+          << approximationParameters.scatteringAccuracy() << '\n'
         << "Error bound ||bar u_n -T^{-1}K bar u_{n-1}|| (a posteriori): "
           << aposterioriIter[n]   << '\n'
         << "Error bound ||u_n - bar u_n|| (a posteriori): "
@@ -721,8 +704,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               << aposterioriTransportGlobal << ", using "
               << accumulatedDoFs << " DoFs\n";
 
-    eta /= rhobar;
-    etaList[n+1] = eta;
+    approximationParameters.decreaseEta();
   }
 }
 
