@@ -67,15 +67,15 @@ class TransportSpaces {
     detail::updateSpaces(*enrichedTestSpace_, gridView);
   }
 
-  const SolutionSpacePtr& solutionSpace() const {
+  const SolutionSpacePtr& solutionSpacePtr() const {
     return solutionSpace_;
   }
 
-  const TestSpacePtr& testSpace() const {
+  const TestSpacePtr& testSpacePtr() const {
     return testSpace_;
   }
 
-  const EnrichedTestSpacePtr& enrichedTestSpace() const {
+  const EnrichedTestSpacePtr& enrichedTestSpacePtr() const {
     return enrichedTestSpace_;
   }
 

@@ -286,16 +286,16 @@ class SubGridSpaces {
     return spaces_[i];
   }
 
-  const SolutionSpacePtr& solutionSpace(size_t i) const {
-    return spaces_[i].solutionSpace();
+  const SolutionSpacePtr& solutionSpacePtr(size_t i) const {
+    return spaces_[i].solutionSpacePtr();
   }
 
-  const TestSpacePtr& testSpace(size_t i) const {
-    return spaces_[i].testSpace();
+  const TestSpacePtr& testSpacePtr(size_t i) const {
+    return spaces_[i].testSpacePtr();
   }
 
-  const EnrichedTestSpacePtr& enrichedTestSpace(size_t i) const {
-    return spaces_[i].enrichedTestSpace();
+  const EnrichedTestSpacePtr& enrichedTestSpacePtr(size_t i) const {
+    return spaces_[i].enrichedTestSpacePtr();
   }
 
   private:
@@ -482,8 +482,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   for(unsigned int i = 0; i < grids.size(); ++i)
   {
-    x[i].resize(std::get<0>(*spaces.solutionSpace(i)).size()
-                + std::get<1>(*spaces.solutionSpace(i)).size());
+    x[i].resize(std::get<0>(*spaces.solutionSpacePtr(i)).size()
+                + std::get<1>(*spaces.solutionSpacePtr(i)).size());
     x[i] = 0;
   }
 
@@ -518,7 +518,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     double uNorm = 0.;
     for(size_t i=0; i<grids.size(); ++i) {
       const double uiNorm =
-        ErrorTools::l2norm(std::get<0>(*spaces.solutionSpace(i)), x[i]);
+        ErrorTools::l2norm(std::get<0>(*spaces.solutionSpacePtr(i)), x[i]);
       uNorm += uiNorm * uiNorm
                 / (1 << kernelApproximation.getLevel())
                 * quadWeight[i % kernelApproximation.numSperInterval];
@@ -600,7 +600,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
           sVector,
           f, RHSApproximation{});
       for(size_t i = 0; i < numS; i++) {
-        const auto& subGridGlobalBasis = std::get<0>(*spaces.testSpace(i));
+        const auto& subGridGlobalBasis = std::get<0>(*spaces.testSpacePtr(i));
         rhsData.emplace_back(
           attachDataToSubGrid(
             subGridGlobalBasis,
@@ -624,7 +624,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         if(boundary_is_homogeneous[i]) {
           bvData.emplace_back();
         } else {
-          const auto& subGridGlobalBasis = std::get<0>(*spaces.testSpace(i));
+          const auto& subGridGlobalBasis = std::get<0>(*spaces.testSpacePtr(i));
           bvData.emplace_back(
             attachDataToSubGrid(
               subGridGlobalBasis,
@@ -692,7 +692,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       {
         VectorType bvExtension;
         if(!boundary_is_homogeneous[i]) {
-          const auto& feBasisTest = std::get<0>(*spaces.testSpace(i));
+          const auto& feBasisTest = std::get<0>(*spaces.testSpacePtr(i));
           auto newGridData
               = bvData[i]->restoreDataToRefinedSubGrid(feBasisTest);
           bvExtension.resize(newGridData.size(),
@@ -774,8 +774,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         //  real second-order functions
         //////////////////////////////////////////////////////////////////////
 
-        const auto& feBasisInterior = std::get<0>(*spaces.solutionSpace(i));
-        const auto& feBasisTrace    = std::get<1>(*spaces.solutionSpace(i));
+        const auto& feBasisInterior = std::get<0>(*spaces.solutionSpacePtr(i));
+        const auto& feBasisTrace    = std::get<1>(*spaces.solutionSpacePtr(i));
 
         std::cout << "Plot solution for direction " << i << '\n';
 
@@ -854,7 +854,7 @@ compute_transport_solution(
     const VectorType& bvExtension)
 {
   auto bilinearForm =
-    make_BilinearForm(spaces.testSpace(), spaces.solutionSpace(),
+    make_BilinearForm(spaces.testSpacePtr(), spaces.solutionSpacePtr(),
         make_tuple(
             make_IntegralTerm<0,0,IntegrationType::valueValue,
                                   DomainOfIntegration::interior>(sigma),
@@ -864,9 +864,9 @@ compute_transport_solution(
             make_IntegralTerm<0,1,IntegrationType::normalVector,
                                   DomainOfIntegration::face>(1., s)));
   auto bilinearFormEnriched =
-      replaceTestSpaces(bilinearForm, spaces.enrichedTestSpace());
+      replaceTestSpaces(bilinearForm, spaces.enrichedTestSpacePtr());
   auto innerProduct =
-    make_InnerProduct(spaces.testSpace(),
+    make_InnerProduct(spaces.testSpacePtr(),
         make_tuple(
             make_IntegralTerm<0,0,IntegrationType::gradGrad,
                                   DomainOfIntegration::interior>(1., s),
@@ -874,7 +874,7 @@ compute_transport_solution(
                               IntegrationType::travelDistanceWeighted,
                               DomainOfIntegration::face>(1., s)));
   auto innerProductEnriched =
-      replaceTestSpaces(innerProduct, spaces.enrichedTestSpace());
+      replaceTestSpaces(innerProduct, spaces.enrichedTestSpacePtr());
 
 
   using LeafGridView = typename Grid::LeafGridView;
@@ -891,7 +891,7 @@ compute_transport_solution(
 
   VectorType rhsFunctional;
   {
-    auto& feBasisTest = std::get<0>(*spaces.testSpace());
+    auto& feBasisTest = std::get<0>(*spaces.testSpacePtr());
     auto newGridData
         = rhsData.restoreDataToRefinedSubGrid(feBasisTest);
     rhsFunctional.resize(newGridData.size(),
@@ -914,7 +914,7 @@ compute_transport_solution(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
             make_LinearFunctionalTerm<0>
-              (rhsFunctional, std::get<0>(*spaces.testSpace()))));
+              (rhsFunctional, std::get<0>(*spaces.testSpacePtr()))));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -924,10 +924,10 @@ compute_transport_solution(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
             make_LinearFunctionalTerm<0>
-              (rhsFunctional, std::get<0>(*spaces.testSpace())),
+              (rhsFunctional, std::get<0>(*spaces.testSpacePtr())),
             make_SkeletalLinearFunctionalTerm
               <0, IntegrationType::normalVector>
-              (bvExtension, std::get<0>(*spaces.testSpace()), -1, s)));
+              (bvExtension, std::get<0>(*spaces.testSpacePtr()), -1, s)));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -936,7 +936,7 @@ compute_transport_solution(
     // Determine Dirichlet dofs for theta (inflow boundary)
     std::vector<bool> dirichletNodesInflow;
     BoundaryTools::getInflowBoundaryMask(
-                std::get<1>(*spaces.solutionSpace()),
+                std::get<1>(*spaces.solutionSpacePtr()),
                 dirichletNodesInflow,
                 s);
     systemAssembler.template applyDirichletBoundary<1>
@@ -954,8 +954,8 @@ compute_transport_solution(
   ////////////////////////////////////
   //   Initialize solution vector
   ////////////////////////////////////
-  x.resize(std::get<0>(*spaces.solutionSpace()).size()
-           + std::get<1>(*spaces.solutionSpace()).size());
+  x.resize(std::get<0>(*spaces.solutionSpacePtr()).size()
+           + std::get<1>(*spaces.solutionSpacePtr()).size());
   x = 0;
 
   ////////////////////////////
@@ -985,7 +985,7 @@ compute_transport_solution(
   // -- Contribution of the scattering term
   if(boundary_is_homogeneous) {
     auto rhsAssemblerEnriched
-      = make_RhsAssembler(spaces.enrichedTestSpace());
+      = make_RhsAssembler(spaces.enrichedTestSpacePtr());
     auto rhsFunction = make_LinearForm(
           rhsAssemblerEnriched.getTestSpaces(),
           std::make_tuple(
@@ -995,7 +995,7 @@ compute_transport_solution(
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   } else {
     auto rhsAssemblerEnriched
-      = make_RhsAssembler(spaces.enrichedTestSpace());
+      = make_RhsAssembler(spaces.enrichedTestSpacePtr());
     auto rhsFunction = make_LinearForm(
           rhsAssemblerEnriched.getTestSpaces(),
           std::make_tuple(
@@ -1048,15 +1048,15 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
   for(size_t i = 0, imax = x.size(); i < imax; i++) {
 #ifdef PERITER_SKELETAL_SCATTERING
     const FEBasisTrace& feBasisTrace = std::get<1>(*subGridSpaces
-                                                   .solutionSpace(i));
+                                                   .solutionSpacePtr(i));
     const size_t  feBasisTraceOffset = std::get<0>(*subGridSpaces
-                                                   .solutionSpace(i)).size();
+                                                   .solutionSpacePtr(i)).size();
     interpolateFromSubGrid(
         feBasisTrace, x[i].begin() + feBasisTraceOffset,
         hostGridBasis, xHost[i]);
 #else
     const FEBasisInterior& feBasisInterior
-        = std::get<0>(*subGridSpaces.solutionSpace(i));
+        = std::get<0>(*subGridSpaces.solutionSpacePtr(i));
     interpolateFromSubGrid(
         feBasisInterior, x[i],
         hostGridBasis, xHost[i]);
