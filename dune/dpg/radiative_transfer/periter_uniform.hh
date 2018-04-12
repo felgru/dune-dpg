@@ -423,14 +423,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
   double accuracy = err0;
-  std::vector<double> etaList(maxNumberOfIterations, 0.);
 
   std::vector<double> aposterioriIter(maxNumberOfIterations, 0.);
 
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
   {
-    etaList[n] = approximationParameters.eta();
     ofs << "\nIteration n=" << n
         << "\n================\n";
     std::cout << "\nIteration " << n << "\n\n";
