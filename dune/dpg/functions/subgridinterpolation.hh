@@ -27,7 +27,7 @@ public:
   using HostGrid = typename Grid::HostGridType;
   using HostElement = typename HostGrid::template Codim<0>::Entity;
 
-  enum {dim = Grid::dimension};
+  static constexpr int dim = Grid::dimension;
 
 private:
   struct SubGridFunction {

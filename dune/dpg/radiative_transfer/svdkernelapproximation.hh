@@ -17,7 +17,7 @@ namespace Dune {
 namespace ScatteringKernelApproximation {
   class SVD {
     public:
-      enum : unsigned int { dim = 2 };
+      static constexpr int dim = 2;
       using Direction = FieldVector<double, dim>;
 
       SVD() = delete;

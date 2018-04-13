@@ -31,7 +31,7 @@ template<class SolutionSpace,
 class ApproximateScatteringAssembler
 {
 public:
-  enum : unsigned int { dim = SolutionSpace::GridView::dimension };
+  static constexpr int dim = SolutionSpace::GridView::dimension;
   using Direction = FieldVector<double, dim>;
 
   using GridData = BlockVector<FieldVector<double,1>>;
