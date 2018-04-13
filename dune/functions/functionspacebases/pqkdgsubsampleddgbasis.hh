@@ -317,7 +317,7 @@ protected:
 
 
 
-namespace BasisBuilder {
+namespace BasisFactory {
 
 namespace Imp {
 
@@ -333,7 +333,7 @@ struct PQkDGSubsampledDGPreBasisFactory
   }
 };
 
-} // end namespace BasisBuilder::Imp
+} // end namespace BasisFactory::Imp
 
 template<std::size_t s, std::size_t k>
 auto pqDGSubsampledDG()
@@ -341,7 +341,7 @@ auto pqDGSubsampledDG()
   return Imp::PQkDGSubsampledDGPreBasisFactory<s, k>();
 }
 
-} // end namespace BasisBuilder
+} // end namespace BasisFactory
 
 
 

@@ -479,7 +479,7 @@ protected:
 
 
 
-namespace BasisBuilder {
+namespace BasisFactory {
 
 namespace Imp {
 
@@ -494,7 +494,7 @@ struct HangingNodeBernsteinP2PreBasisFactory
   }
 };
 
-} // end namespace BasisBuilder::Imp
+} // end namespace BasisFactory::Imp
 
 
 
@@ -508,7 +508,7 @@ auto hangingNodeP2()
   return Imp::HangingNodeBernsteinP2PreBasisFactory();
 }
 
-} // end namespace BasisBuilder
+} // end namespace BasisFactory
 
 
 

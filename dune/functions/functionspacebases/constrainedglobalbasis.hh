@@ -162,7 +162,7 @@ protected:
 
 
 
-namespace BasisBuilder {
+namespace BasisFactory {
 
 template<class GridView, class PreBasisFactory>
 auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFactory)
@@ -183,7 +183,7 @@ auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFa
   return ConstrainedGlobalBasis<PreBasis>(std::move(preBasis));
 }
 
-} // end namespace BasisBuilder
+} // end namespace BasisFactory
 
 
 
