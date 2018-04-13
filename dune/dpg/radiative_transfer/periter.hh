@@ -298,18 +298,6 @@ class SubGridSpaces {
     return spaces_[i];
   }
 
-  const SolutionSpacePtr& solutionSpacePtr(size_t i) const {
-    return spaces_[i].solutionSpacePtr();
-  }
-
-  const TestSpacePtr& testSpacePtr(size_t i) const {
-    return spaces_[i].testSpacePtr();
-  }
-
-  const EnrichedTestSpacePtr& enrichedTestSpacePtr(size_t i) const {
-    return spaces_[i].enrichedTestSpacePtr();
-  }
-
   private:
 
   std::vector<Spaces> spaces_;
