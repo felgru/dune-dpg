@@ -124,12 +124,6 @@ computeScattering(std::vector<GridData>& scattering,
 
     kernelApproximation.applyToVector(uValues);
 
-    // TODO: This only works as we use a summed midpoint rule.
-    //       Otherwise we'd have to multiply the quadrature weights to
-    //       uValues before applying the kernelApproximation.
-    // TODO: Are the quadrature weights already included in the kernel?
-    // uValues /= static_cast<double>(numS);
-
     for (size_t scatteringAngle=0;
          scatteringAngle<numSscattered; ++scatteringAngle) {
       scattering[scatteringAngle][row] = uValues(scatteringAngle);
