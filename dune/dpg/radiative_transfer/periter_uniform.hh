@@ -868,7 +868,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
   auto scatteringAssembler =
       make_ApproximateScatteringAssembler(feBasisInterior,
                                           kernelApproximation);
-  scatteringAssembler.precomputeScattering(rhsFunctional, x);
+  scatteringAssembler.computeScattering(rhsFunctional, x);
 
   return rhsFunctional;
 }

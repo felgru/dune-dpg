@@ -65,7 +65,7 @@ public:
    * \param[in]  x           the vectors of the solutions of the
    *                           previous iteration
    */
-  void precomputeScattering
+  void computeScattering
           (std::vector<GridData>& scattering,
            const std::vector<GridData>& x) const;
 
@@ -98,7 +98,7 @@ auto make_ApproximateScatteringAssembler(
 template<class SolutionSpace,
          class KernelApproximation>
 void ApproximateScatteringAssembler<SolutionSpace, KernelApproximation>::
-precomputeScattering(std::vector<GridData>& scattering,
+computeScattering(std::vector<GridData>& scattering,
                      const std::vector<GridData>& x) const
 {
   using namespace Dune::detail;
