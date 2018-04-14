@@ -104,6 +104,20 @@ std::unique_ptr<SubGrid> copySubGrid(const SubGrid& subGrid) {
   return gr;
 }
 
+template<class SubGrid, class HostGrid>
+std::unique_ptr<SubGrid> fullSubGrid(HostGrid& hostGrid) {
+  std::unique_ptr<SubGrid> gr
+      = std::make_unique<SubGrid>(hostGrid);
+  gr->createBegin();
+  const auto gridView = hostGrid.leafGridView();
+  for(const auto& e : elements(gridView)) {
+    gr->insert(e);
+  }
+  gr->createEnd();
+  gr->setMaxLevelDifference(1);
+  return gr;
+}
+
 template<class GridView>
 class SubGridSpaces;
 
@@ -278,6 +292,10 @@ class SubGridSpaces {
       spaces_.reserve(grids.size());
       for(const auto& grid : grids) {
         spaces_.emplace_back(grid->leafGridView());
+      }
+    } else {
+      for(size_t i = 0, iend = grids.size(); i < iend; i++) {
+        update(i, grids[i]->leafGridView());
       }
     }
   }
@@ -1113,28 +1131,12 @@ create_new_grids(
       std::vector<std::unique_ptr<Grid>>& grids,
       size_t numNewGrids)
 {
-  const size_t numOldGrids = grids.size();
-  if(numOldGrids == numNewGrids) {
-    // no new grids need to be added
-    return;
-  }
   std::vector<std::unique_ptr<Grid>> newGrids;
   newGrids.reserve(numNewGrids);
-  const size_t numCopies = numNewGrids / numOldGrids;
-  const size_t lastOldGrid = numOldGrids-1;
-  for(size_t i = 0; i < lastOldGrid; i++) {
-    newGrids.push_back(intersectSubGrids(*grids[i], *grids[i+1]));
-    const Grid& intersectionGrid = *newGrids.back();
-    for(size_t copies = 1; copies < numCopies; ++copies) {
-      newGrids.push_back(copySubGrid(intersectionGrid));
-    }
-  }
-  // last one needs to be handled extra, as one of the neighboring grids is
-  // the first one (since the direction parameter lives on the unit sphere).
-  newGrids.push_back(intersectSubGrids(*grids[lastOldGrid], *grids[0]));
-  const Grid& intersectionGrid = *newGrids.back();
-  for(size_t copies = 1; copies < numCopies; ++copies) {
-    newGrids.push_back(copySubGrid(intersectionGrid));
+  newGrids.push_back(fullSubGrid<Grid>(grids[0]->getHostGrid()));
+  const auto& subGrid = *newGrids.back();
+  for(size_t i = 1; i < numNewGrids; i++) {
+    newGrids.push_back(copySubGrid(subGrid));
   }
 
   std::swap(grids, newGrids);
@@ -1148,13 +1150,11 @@ create_new_gridIdSets(
       std::vector<GridIdSet>& gridIdSets,
       const std::vector<std::unique_ptr<Grid>>& grids)
 {
-  if(gridIdSets.size() != grids.size()) {
-    gridIdSets.clear();
-    gridIdSets.reserve(grids.size());
-    for(const auto& gridPtr : grids) {
-      const auto& grid = *gridPtr;
-      gridIdSets.push_back(saveSubGridToIdSet(grid));
-    }
+  gridIdSets.clear();
+  gridIdSets.reserve(grids.size());
+  for(const auto& gridPtr : grids) {
+    const auto& grid = *gridPtr;
+    gridIdSets.push_back(saveSubGridToIdSet(grid));
   }
 }
 
