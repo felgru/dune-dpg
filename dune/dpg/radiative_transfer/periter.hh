@@ -464,8 +464,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   std::vector<GridIdSet> gridIdSets;
   gridIdSets.reserve(grids.size());
-  for(size_t i = 0, imax = grids.size(); i < imax; i++) {
-    gridIdSets.push_back(saveSubGridToIdSet(*grids[i]));
+  for(const auto& gridPtr : grids) {
+    const auto& grid = *gridPtr;
+    gridIdSets.push_back(saveSubGridToIdSet(grid));
   }
 
   //////////////////////////////////
@@ -1150,8 +1151,9 @@ create_new_gridIdSets(
   if(gridIdSets.size() != grids.size()) {
     gridIdSets.clear();
     gridIdSets.reserve(grids.size());
-    for(auto grid = grids.cbegin(), end = grids.cend(); grid != end; ++grid) {
-      gridIdSets.push_back(saveSubGridToIdSet(**grid));
+    for(const auto& gridPtr : grids) {
+      const auto& grid = *gridPtr;
+      gridIdSets.push_back(saveSubGridToIdSet(grid));
     }
   }
 }
