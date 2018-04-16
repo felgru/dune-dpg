@@ -247,7 +247,7 @@ class Periter {
    * insert new gridIdSets in apply_scattering after adding new grids
    */
   template<class GridIdSet, class Grid>
-  static void create_new_gridIdSets(
+  static void save_grids_to_gridIdSets(
       std::vector<GridIdSet>& gridIdSets,
       const std::vector<std::unique_ptr<Grid>>& grids);
 };
@@ -481,11 +481,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   }
 
   std::vector<GridIdSet> gridIdSets;
-  gridIdSets.reserve(grids.size());
-  for(const auto& gridPtr : grids) {
-    const auto& grid = *gridPtr;
-    gridIdSets.push_back(saveSubGridToIdSet(grid));
-  }
+  save_grids_to_gridIdSets(gridIdSets, grids);
 
   //////////////////////////////////
   //   right hand side vector type
@@ -1089,7 +1085,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
   scatteringAssembler.computeScattering(rhsFunctional, xHost);
 
   create_new_grids(grids, numS);
-  create_new_gridIdSets(gridIdSets, grids);
+  save_grids_to_gridIdSets(gridIdSets, grids);
   subGridSpaces.create_new_spaces(grids);
 
   return rhsFunctional;
@@ -1146,7 +1142,7 @@ template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class GridIdSet, class Grid>
 void
 Periter<ScatteringKernelApproximation, RHSApproximation>::
-create_new_gridIdSets(
+save_grids_to_gridIdSets(
       std::vector<GridIdSet>& gridIdSets,
       const std::vector<std::unique_ptr<Grid>>& grids)
 {
