@@ -32,10 +32,10 @@
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/functionplotter.hh>
-#include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/functions/interpolate.hh>
-#include <dune/dpg/functions/subgridinterpolation.hh>
+#include <dune/dpg/functions/normalizedspaces.hh>
 #include <dune/dpg/functions/refinementinterpolation.hh>
+#include <dune/dpg/functions/subgridinterpolation.hh>
 #include <dune/dpg/linearfunctionalterm.hh>
 #include <dune/dpg/radiative_transfer/approximate_scattering.hh>
 #include <dune/dpg/radiative_transfer/boundary_extension.hh>
@@ -269,12 +269,12 @@ class SubGridSpaces {
 
   using GridsVector = std::vector<std::unique_ptr<typename GridView::Grid>>;
 
-  SubGridSpaces(const GridsVector& grids)
+  SubGridSpaces(const GridsVector& grids,
+                const std::vector<FieldVector<double, 2>>& directions)
   {
     spaces_.reserve(grids.size());
-    for(const auto& grid : grids)
-    {
-      spaces_.emplace_back(grid->leafGridView());
+    for(size_t i = 0, iend = grids.size(); i < iend; i++) {
+      spaces_.emplace_back(grids[i]->leafGridView(), directions[i]);
     }
   }
 
@@ -285,12 +285,14 @@ class SubGridSpaces {
   /**
    * insert new spaces in apply_scattering after adding new grids
    */
-  void create_new_spaces(const GridsVector& grids) {
+  void create_new_spaces(const GridsVector& grids,
+                         const std::vector<FieldVector<double, 2>>& directions)
+  {
     if(spaces_.size() != grids.size()) {
       spaces_.clear();
       spaces_.reserve(grids.size());
-      for(const auto& grid : grids) {
-        spaces_.emplace_back(grid->leafGridView());
+      for(size_t i = 0, iend = grids.size(); i < iend; i++) {
+        spaces_.emplace_back(grids[i]->leafGridView(), directions[i]);
       }
     }
   }
@@ -804,7 +806,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   //////////////////////////////////
   std::vector<VectorType> x(numS);
   using Spaces = SubGridSpaces<LeafGridView>;
-  Spaces spaces(grids);
+  Spaces spaces(grids, sVector);
 
   for(unsigned int i = 0; i < grids.size(); ++i)
   {
@@ -988,6 +990,7 @@ computeScatteringData(
                                    n, numS);
 
   for(size_t i = 0; i < numS; i++) {
+    // TODO: subGridGlobalBasis should be normalized in L2!?
     const auto& subGridGlobalBasis = subGridSpaces.testSpace(i);
     scatteringData.emplace_back(
       attachDataToSubGrid(
@@ -1080,6 +1083,7 @@ computeRhsData(
   // TODO: restore grids from gridIdSets and update spaces
   //       shouldn't be necessary, as long as RHSApproximation == FeRHS
   for(size_t i = 0; i < numS; i++) {
+    // TODO: subGridGlobalBasis should be normalized in L2!
     const auto& subGridGlobalBasis = subGridSpaces.testSpace(i);
     rhsData.emplace_back(
       attachDataToSubGrid(
@@ -1118,6 +1122,7 @@ computeBvData(
     if(is_inflow_boundary_homogeneous(sVector[i])) {
       bvData.emplace_back();
     } else {
+      // TODO: subGridGlobalBasis should be normalized in L2!
       const auto& subGridGlobalBasis = subGridSpaces.testSpace(i);
       bvData.emplace_back(
         attachDataToSubGrid(
@@ -1155,12 +1160,8 @@ compute_transport_solution(
   auto bilinearFormEnriched =
       replaceTestSpaces(bilinearForm, spaces.enrichedTestSpacePtr());
   auto innerProduct =
-    innerProductWithSpace(spaces.testSpacePtr())
-    .template addIntegralTerm<0,0, IntegrationType::gradGrad,
-                                   DomainOfIntegration::interior>(1., s)
-    .template addIntegralTerm<0,0, IntegrationType::travelDistanceWeighted,
-                                   DomainOfIntegration::face>(1., s)
-    .create();
+    replaceTestSpaces(spaces.testSpace().preBasis().innerProduct(),
+                      spaces.testSpacePtr());
   auto innerProductEnriched =
       replaceTestSpaces(innerProduct, spaces.enrichedTestSpacePtr());
 
@@ -1315,9 +1316,10 @@ compute_adaptive_transport_solution(
   {
     Std::optional<VectorType> bvExtension;
     if(bvData) {
-      const auto& feBasisTest = spaces.testSpace();
+      // TODO: subGridGlobalBasis should be normalized in L2!
+      const auto& subGridGlobalBasis = spaces.testSpace();
       auto newGridData
-          = bvData->restoreDataToRefinedSubGrid(feBasisTest,
+          = bvData->restoreDataToRefinedSubGrid(subGridGlobalBasis,
                                                 bvHostGridGlobalBasis);
       bvExtension = VectorType(newGridData.size());
       for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
@@ -1432,7 +1434,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
 
   create_new_grids(grids, numS);
   save_grids_to_gridIdSets(gridIdSets, grids);
-  subGridSpaces.create_new_spaces(grids);
+  subGridSpaces.create_new_spaces(grids, sVector);
 
   return rhsFunctional;
 }

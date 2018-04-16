@@ -10,6 +10,7 @@
 #include <boost/math/special_functions/zeta.hpp>
 
 #include <dune/dpg/assemble_helper.hh>
+#include <dune/dpg/integralterm.hh>
 #include <dune/dpg/spacetuple.hh>
 
 #include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
@@ -57,27 +58,59 @@ class TransportSpaces {
   static_assert(std::is_same<typename TraceBasis::GridView, GV>::value,
                 "GridViews of transport spaces don't match!");
 
+  template<typename FEBasisTest>
+  static auto
+  make_test_spaces(const typename FEBasisTest::GridView& gridView,
+                   const FieldVector<double, 2> direction)
+  {
+    auto unnormalizedTestSpaces = make_space_tuple<FEBasisTest>(gridView);
+    auto innerProduct
+      = innerProductWithSpace(unnormalizedTestSpaces)
+        .template addIntegralTerm<0,0,IntegrationType::gradGrad,
+                                      DomainOfIntegration::interior>
+                                 (1., direction)
+        .template addIntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                      DomainOfIntegration::face>
+                                 (1., direction)
+        .create();
+
+    return make_normalized_space_tuple(innerProduct);
+  }
+
+  using UnnormalizedFEBasisInterior = Functions::BernsteinDGBasis<GV, 1>;
+  using UnnormalizedFEBasisTrace = TraceBasis;
+
+  using UnnormalizedFEBasisTest
+      = Functions::BernsteinDGRefinedDGBasis<GV, 1, 3>;
+  using UnnormalizedFEBasisEnrichedTest
+      = Functions::BernsteinDGRefinedDGBasis<GV, 1, 4>;
+
   public:
   using GridView = GV;
 
-  using FEBasisInterior = Functions::BernsteinDGBasis<GridView, 1>;
-  using FEBasisTrace = TraceBasis;
-
-  using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
-  using FEBasisEnrichedTest
-      = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 4>;
+  using FEBasisInterior = UnnormalizedFEBasisInterior;
+  using FEBasisTrace = UnnormalizedFEBasisTrace;
 
   using SolutionSpacePtr = decltype(make_space_tuple<FEBasisInterior,
                                     FEBasisTrace>(std::declval<GridView>()));
-  using TestSpacePtr = decltype(make_space_tuple<FEBasisTest>
-                                (std::declval<GridView>()));
-  using EnrichedTestSpacePtr = decltype(make_space_tuple<FEBasisEnrichedTest>
-                                        (std::declval<GridView>()));
+  using TestSpacePtr = decltype(make_test_spaces<UnnormalizedFEBasisTest>
+                                (std::declval<GridView>(),
+                                 std::declval<FieldVector<double, 2>>()));
+  using EnrichedTestSpacePtr
+      = decltype(make_test_spaces<UnnormalizedFEBasisEnrichedTest>
+                 (std::declval<GridView>(),
+                  std::declval<FieldVector<double, 2>>()));
 
-  TransportSpaces(const GridView& gridView)
+  using FEBasisTest
+      = std::tuple_element_t<0, typename TestSpacePtr::element_type>;
+  using FEBasisEnrichedTest
+      = std::tuple_element_t<0, typename EnrichedTestSpacePtr::element_type>;
+
+  TransportSpaces(const GridView& gridView, FieldVector<double, 2> direction)
     : solutionSpace_(make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView))
-    , testSpace_(make_space_tuple<FEBasisTest>(gridView))
-    , enrichedTestSpace_(make_space_tuple<FEBasisEnrichedTest>(gridView))
+    , testSpace_(make_test_spaces<UnnormalizedFEBasisTest>(gridView, direction))
+    , enrichedTestSpace_(make_test_spaces<UnnormalizedFEBasisEnrichedTest>
+                                         (gridView, direction))
   {}
 
   void update(const GridView& gridView) {
