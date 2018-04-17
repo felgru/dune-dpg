@@ -107,7 +107,8 @@ int main(int argc, char** argv)
   const unsigned int sizeGrid = atoi(argv[optind+3]);
 #if PERITER_PEAKY_BV
   checkSizeGrid(sizeGrid, 8);
-#elif PERITER_CHECKERBOARD
+#endif
+#if PERITER_CHECKERBOARD
   checkSizeGrid(sizeGrid, 7);
 #endif
 
@@ -151,31 +152,7 @@ int main(int argc, char** argv)
   grid->setClosureType(Grid::NONE);
 #endif
 
-#if PERITER_PEAKY_BV
-  const auto f
-    = [](const GridView)
-      { return [](const Domain& x){ return 1.; }; };
-  const auto g = [](const Domain& x)
-      {
-        if(x[0] < .1) {
-          const double xProj = x[1];
-          if(xProj>=.5+.125 || xProj<=.5-.125) {
-            return 0.;
-          } else if(xProj<=.5) {
-            return 8*(xProj-(.5-.125));
-          } else {
-            return 1-8*(xProj-.5);
-          }
-        } else {
-          return 0.;
-        }
-      };
-  const auto homogeneous_inflow_boundary =
-    [](const Direction& s) { return !(s[0] > 0.); };
-  const double sigma = 5.;
-  const double sigmaMin = sigma;
-  const double sigmaMax = sigma;
-#elif PERITER_CHECKERBOARD
+#if PERITER_CHECKERBOARD
   const auto f
     = [](const GridView gridView)
       {
@@ -195,9 +172,6 @@ int main(int argc, char** argv)
         return Functions::makePiecewiseConstantGridViewFunction(
               std::move(rhs), gridView);
       };
-  const auto g = [](const Domain& x) { return 0.; };
-  const auto homogeneous_inflow_boundary =
-    [](const Direction& s) { return true; };
   const auto sigma = [](const Domain& x)
       {
         const int n=7;
@@ -215,8 +189,38 @@ int main(int argc, char** argv)
   const double sigmaMin = 2.;
   const double sigmaMax = 10.;
 #else
-#  error "Not specified which problem to solve."
+  const auto f
+    = [](const GridView)
+      { return [](const Domain& x){ return 1.; }; };
+  const double sigma = 5.;
+  const double sigmaMin = sigma;
+  const double sigmaMax = sigma;
 #endif
+
+#if PERITER_PEAKY_BV
+  const auto g = [](const Domain& x)
+      {
+        if(x[0] < .1) {
+          const double xProj = x[1];
+          if(xProj>=.5+.125 || xProj<=.5-.125) {
+            return 0.;
+          } else if(xProj<=.5) {
+            return 8*(xProj-(.5-.125));
+          } else {
+            return 1-8*(xProj-.5);
+          }
+        } else {
+          return 0.;
+        }
+      };
+  const auto homogeneous_inflow_boundary =
+    [](const Direction& s) { return !(s[0] > 0.); };
+#else
+  const auto g = [](const Domain& x) { return 0.; };
+  const auto homogeneous_inflow_boundary =
+    [](const Direction& s) { return true; };
+#endif
+
   const double domainDiameter = std::sqrt(2.);
   // Formula from Lemma 2.8 paper [DGM]
   const double CT
