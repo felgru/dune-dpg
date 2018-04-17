@@ -431,7 +431,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
 
-    // TODO: shouldn't LFIndices be taken from rhsLinearFrom.getTerms()?
+    // TODO: shouldn't LFIndices be taken from rhsLinearForm.getTerms()?
     namespace hana = boost::hana;
     using BilinearTerms = std::decay_t<decltype(bilinearForm_.getTerms())>;
     auto lfIndices = hana::to<hana::set_tag>(
