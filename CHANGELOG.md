@@ -6,6 +6,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
 ## 0.4 (Unreleased)
 ### Added
+* A new `ConstrainedLocalView` was added that provides the indexing
+  methods of `ConstrainedLocalIndexSet` like `DefaultLocalView` now
+  provides indexing methods in dune-functions 2.7.
 
 ### Changed
 * dune-dpg now requires Version 2.6 of the Dune core modules.
