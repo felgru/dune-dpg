@@ -69,9 +69,8 @@ class TransportSpaces {
         .template addIntegralTerm<0,0,IntegrationType::gradGrad,
                                       DomainOfIntegration::interior>
                                  (1., direction)
-        .template addIntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                      DomainOfIntegration::face>
-                                 (1., direction)
+        .template addIntegralTerm<0,0,IntegrationType::valueValue,
+                                      DomainOfIntegration::interior>(1.)
         .create();
 
     return make_normalized_space_tuple(innerProduct);
