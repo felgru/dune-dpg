@@ -6,6 +6,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
 ## 0.4 (Unreleased)
 ### Added
+* A new `ConstrainedLocalView` was added that provides the indexing
+  methods of `ConstrainedLocalIndexSet` like `DefaultLocalView` now
+  provides indexing methods in dune-functions 2.7.
 
 ### Changed
 * dune-dpg now requires Version 2.6 of the Dune core modules.
@@ -15,16 +18,23 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   a function object f that implements `f(x)` instead of the
   `f.evaluate(x,y)` interface. This is in accordance with changes in
   dune-localfunctions 2.7.
+* `iterateOverLocalIndexSet` has been renamed to `iterateOverLocalIndices`.
+* The `BasisBuilder` namespace has been renamed to `BasisFactory` in
+  accordance with a rename in dune-functions 2.7.
+  (Since we never use the members of this namespace, this rename will
+   probably not affect you.)
 
 ### Fixed
 
 ### Deprecated
+* The `localIndexSet()` method of `ConstrainedGlobalBasis` has been
+  marked as deprecated when using dune-functions >= 2.7.
 
 ### Removed
 * The workarounds for missing dune-subgrid functionality have been removed
   as everything is now implemented in SubGrid itself.
   Be sure to use at least commit 5706c70d8c4472f39e5bd61d1de1caf22381b8b9
-  of due-subgrid which implements all required methods in the SubGrid class.
+  of dune-subgrid which implements all required methods in the SubGrid class.
 
 ## 0.3 - 2018-04-04
 ### Added

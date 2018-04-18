@@ -8,6 +8,7 @@ before_script:
   - duneci-install-module https://gitlab.dune-project.org/core/dune-istl.git
   - duneci-install-module https://gitlab.dune-project.org/staging/dune-typetree.git
   - duneci-install-module https://gitlab.dune-project.org/staging/dune-functions.git
+  - duneci-install-module https://gitlab.dune-project.org/felix.gruber/dune-subgrid.git
 
 debian:10  gcc:
   image: duneci/base:10

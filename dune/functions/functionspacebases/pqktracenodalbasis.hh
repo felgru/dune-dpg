@@ -349,7 +349,7 @@ protected:
 
 
 
-namespace BasisBuilder {
+namespace BasisFactory {
 
 namespace Imp {
 
@@ -365,7 +365,7 @@ struct PQkTracePreBasisFactory
   }
 };
 
-} // end namespace BasisBuilder::Imp
+} // end namespace BasisFactory::Imp
 
 template<std::size_t k>
 auto pqTrace()
@@ -373,7 +373,7 @@ auto pqTrace()
   return Imp::PQkTracePreBasisFactory<k>();
 }
 
-} // end namespace BasisBuilder
+} // end namespace BasisFactory
 
 
 

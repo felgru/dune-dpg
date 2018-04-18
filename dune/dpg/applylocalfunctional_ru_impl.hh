@@ -37,7 +37,7 @@ inline static void interiorImpl(
   BlockVector<FieldVector<double,1>>
       localFunctionalVector(solutionLocalView.size());
 
-  iterateOverLocalIndexSet(
+  iterateOverLocalIndices(
     solutionLocalIndexSet,
     [&](size_t j, auto gj) {
       localFunctionalVector[j] = functionalVector[gj[0]];
@@ -138,7 +138,7 @@ faceImpl(const TestLocalView& testLocalView,
   BlockVector<FieldVector<double,1>>
       localFunctionalVector(solutionLocalView.size());
 
-  iterateOverLocalIndexSet(
+  iterateOverLocalIndices(
     solutionLocalIndexSet,
     [&](size_t j, auto gj) {
       localFunctionalVector[j] = functionalVector[gj[0]];

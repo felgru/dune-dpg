@@ -458,7 +458,7 @@ protected:
 
 
 
-namespace BasisBuilder {
+namespace BasisFactory {
 
 namespace Imp {
 
@@ -473,7 +473,7 @@ struct HangingNodeLagrangeP2PreBasisFactory
   }
 };
 
-} // end namespace BasisBuilder::Imp
+} // end namespace BasisFactory::Imp
 
 
 
@@ -487,7 +487,7 @@ auto hangingNodeP2()
   return Imp::HangingNodeLagrangeP2PreBasisFactory();
 }
 
-} // end namespace BasisBuilder
+} // end namespace BasisFactory
 
 
 

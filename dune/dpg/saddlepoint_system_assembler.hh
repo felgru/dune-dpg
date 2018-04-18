@@ -10,6 +10,8 @@
 #include <type_traits>
 #include <utility>
 
+#include <dune/common/version.hh>
+
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 #include <dune/istl/matrix.hh>
@@ -316,16 +318,20 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   auto solutionLocalViews = getLocalViews(*solutionSpaces);
   auto testLocalViews     = getLocalViews(*testSpaces);
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto solutionLocalIndexSets = getLocalIndexSets(*solutionSpaces);
   auto testLocalIndexSets = getLocalIndexSets(*testSpaces);
+#endif
 
   for(const auto& e : elements(gridView)) {
 
     bindLocalViews(solutionLocalViews, e);
     bindLocalViews(testLocalViews, e);
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
+#endif
 
     bilinearForm.bind(testLocalViews, solutionLocalViews);
     innerProduct.bind(testLocalViews);
@@ -349,19 +355,35 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     copyLocalToGlobalMatrix<IPIndices>(
         ipElementMatrix,
         matrix,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        testLocalViews,
+#else
         testLocalIndexSets,
+#endif
         localTestSpaceOffsets,
         globalTestSpaceOffsets,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        testLocalViews,
+#else
         testLocalIndexSets,
+#endif
         localTestSpaceOffsets,
         globalTestSpaceOffsets);
     copyLocalToGlobalMatrixSymmetric<BFIndices>(
         bfElementMatrix,
         matrix,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        testLocalViews,
+#else
         testLocalIndexSets,
+#endif
         localTestSpaceOffsets,
         globalTestSpaceOffsets,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        solutionLocalViews,
+#else
         solutionLocalIndexSets,
+#endif
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
   }
@@ -394,13 +416,17 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   // Views on the FE bases of test and solution spaces on a single element
   auto localViews = getLocalViews(*spaces);
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto localIndexSets = getLocalIndexSets(*spaces);
+#endif
 
 
   for(const auto& e : elements(gridView)) {
 
     bindLocalViews(localViews, e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     bindLocalIndexSets(localIndexSets, localViews);
+#endif
 
     // Now get the local contribution to the right-hand side vector
     BlockVector<FieldVector<double,1> > localRhs;
@@ -429,7 +455,11 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     copyLocalToGlobalVector<LFIndices>(
         localRhs,
         rhs,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        localViews,
+#else
         localIndexSets,
+#endif
         rhsLinearForm.getLocalSpaceOffsets(),
         globalSpaceOffsets);
   }

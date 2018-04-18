@@ -339,7 +339,7 @@ protected:
 
 
 
-namespace BasisBuilder {
+namespace BasisFactory {
 
 namespace Imp {
 
@@ -355,7 +355,7 @@ struct PQkFacePreBasisFactory
   }
 };
 
-} // end namespace BasisBuilder::Imp
+} // end namespace BasisFactory::Imp
 
 template<std::size_t k>
 auto pqFace()
@@ -363,7 +363,7 @@ auto pqFace()
   return Imp::PQkFacePreBasisFactory<k>();
 }
 
-} // end namespace BasisBuilder
+} // end namespace BasisFactory
 
 
 

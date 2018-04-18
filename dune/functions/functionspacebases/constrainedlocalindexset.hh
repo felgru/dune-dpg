@@ -19,17 +19,17 @@ public:
   using NodeIndexSet = NIS;
 
   /** \brief Type used for global numbering of the basis vectors */
-  using MultiIndex = typename NodeIndexSet::MultiIndex;
-  using ConstraintWeights = typename NodeIndexSet::ConstraintWeights;
-  using size_type = std::size_t;
+  using MultiIndex = typename LocalView::MultiIndex;
+  using ConstraintWeights = typename LocalView::ConstraintWeights;
+  using size_type = typename LocalView::size_type;
 
 
-  ConstrainedLocalIndexSet(const NodeIndexSet& nodeIndexSet) :
-    nodeIndexSet_(nodeIndexSet)
+  ConstrainedLocalIndexSet() :
+    localView_(nullptr)
   {}
 
-  ConstrainedLocalIndexSet(NodeIndexSet&& nodeIndexSet) :
-    nodeIndexSet_(nodeIndexSet)
+  ConstrainedLocalIndexSet(const NodeIndexSet& nodeIndexSet) :
+    localView_(nullptr)
   {}
 
   /** \brief Bind the index set to a LocalView
@@ -37,7 +37,6 @@ public:
   void bind(const LocalView& localView)
   {
     localView_ = &localView;
-    nodeIndexSet_.bind(localView_->tree());
   }
 
   /** \brief Bind the index set to a SubspaceLocalView
@@ -53,34 +52,33 @@ public:
   void unbind()
   {
     localView_ = nullptr;
-    nodeIndexSet_.unbind();
   }
 
   /** \brief Size of subtree rooted in this node (element-local)
    */
   size_type size() const
   {
-    return nodeIndexSet_.size();
+    return localView_->size();
   }
 
   const std::vector<MultiIndex>& indicesLocalGlobal() const
   {
-    return nodeIndexSet_.indicesLocalGlobal();
+    return localView_->indicesLocalGlobal();
   }
 
   size_type constraintsSize() const
   {
-    return nodeIndexSet_.constraintsSize();
+    return localView_->constraintsSize();
   }
 
   size_type constraintOffset(size_type i) const
   {
-    return nodeIndexSet_.constraintOffset(i);
+    return localView_->constraintOffset(i);
   }
 
   const ConstraintWeights& constraintWeights(size_type i) const
   {
-    return nodeIndexSet_.constraintWeights(i);
+    return localView_->constraintWeights(i);
   }
 
   /** \brief Return the local view that we are attached to
@@ -93,8 +91,6 @@ public:
 protected:
 
   const LocalView* localView_;
-
-  NodeIndexSet nodeIndexSet_;
 };
 
 

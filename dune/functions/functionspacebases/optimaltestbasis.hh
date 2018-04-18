@@ -9,6 +9,7 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/hybridutilities.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/optimaltestfunctions/optimaltest.hh>
 #include <dune/localfunctions/optimaltestfunctions/refinedoptimaltest.hh>
@@ -350,14 +351,21 @@ public:
   using Node = typename PreBasis::template Node<TP>;
 
   typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+  typedef Dune::detail::getLocalViews_t<SolutionSpaces>
+      SolutionLocalViews;
+#else
   typedef Dune::detail::getLocalIndexSets_t<SolutionSpaces>
       SolutionLocalIndexSets;
+#endif
 
   OptimalTestBasisNodeIndexSet(const PreBasis& preBasis) :
     preBasis_(&preBasis),
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     solutionLocalIndexSets_(Dune::detail::getLocalIndexSets(
                       *preBasis.testspaceCoefficientMatrix_
                           .bilinearForm().getSolutionSpaces()))
+#endif
   {}
 
   constexpr OptimalTestBasisNodeIndexSet(const OptimalTestBasisNodeIndexSet&)
@@ -375,8 +383,10 @@ public:
   {
     node_ = &node;
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     Dune::detail::bindLocalIndexSets(solutionLocalIndexSets_,
                                      node.localViewsSolution());
+#endif
   }
 
   /** \brief Unbind the view
@@ -384,9 +394,11 @@ public:
   void unbind()
   {
     node_ = nullptr;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     Hybrid::forEach(solutionLocalIndexSets_, [](auto& lis) {
           lis.unbind();
         });
+#endif
   }
 
   /** \brief Size of subtree rooted in this node (element-local)
@@ -404,12 +416,21 @@ public:
     assert(node_ != nullptr);
     using namespace boost::hana;
     return fold_left(
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+              make_range(int_c<0>,
+                int_c<std::tuple_size<SolutionLocalViews>::value>),
+#else
               make_range(int_c<0>,
                 int_c<std::tuple_size<SolutionLocalIndexSets>::value>),
+#endif
               it,
               [&](It it, auto i) {
                 return computeIndices(it,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+                  std::get<i>(node.localViewsSolution())
+#else
                   std::get<i>(solutionLocalIndexSets_),
+#endif
                   preBasis_->globalOffsets[i]);
               });
   }
@@ -419,7 +440,9 @@ protected:
 
   const Node* node_;
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   SolutionLocalIndexSets solutionLocalIndexSets_;
+#endif
 };
 
 
