@@ -9,7 +9,7 @@
 
 #include <dune/functions/common/type_traits.hh>
 #include <dune/functions/functionspacebases/constrainedlocalindexset.hh>
-#include <dune/functions/functionspacebases/defaultlocalview.hh>
+#include <dune/functions/functionspacebases/constrainedlocalview.hh>
 #include <dune/dpg/functions/concepts.hh>
 
 
@@ -58,7 +58,7 @@ public:
   using size_type = std::size_t;
 
   //! Type of the local view on the restriction of the basis to a single element
-  using LocalView = DefaultLocalView<ConstrainedGlobalBasis<PreBasis>>;
+  using LocalView = ConstrainedLocalView<ConstrainedGlobalBasis<PreBasis>>;
 
   //! Node index set provided by PreBasis
   using NodeIndexSet = typename PreBasis::template IndexSet<PrefixPath>;
