@@ -38,7 +38,7 @@ attachDataToGrid(
 
     *(localEntitySeed++) = e.seed();
 
-    iterateOverLocalIndexSet(
+    iterateOverLocalIndices(
       localIndexSet,
       [&](size_t i, auto gi)
       {
@@ -138,7 +138,7 @@ restoreDataToRefinedGrid(
     auto localData = storedData.second.begin() + eIdx * maxEntityDoFs;
     if(e.isLeaf()) {
       // directly copy cell data
-      iterateOverLocalIndexSet(
+      iterateOverLocalIndices(
         localIndexSet,
         [&](size_t i, auto gi)
         {
@@ -167,7 +167,7 @@ restoreDataToRefinedGrid(
         localFiniteElement.localInterpolation().interpolate(oldGridFunction,
             childLocalData);
 
-        iterateOverLocalIndexSet(
+        iterateOverLocalIndices(
           localIndexSet,
           [&](size_t i, auto gi)
           {

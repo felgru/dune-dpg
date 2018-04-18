@@ -1244,14 +1244,14 @@ applyMinimization
     }
 
     using MultiIndex = typename std::decay_t<LocalIndexSet>::MultiIndex;
-    iterateOverLocalIndexSet(
+    iterateOverLocalIndices(
       localIndexSet,
       [&](size_t i, MultiIndex gi)
       {
         if (relevantDOFs[i])
         {
           auto row = gi[0];
-          iterateOverLocalIndexSet(
+          iterateOverLocalIndices(
             localIndexSet,
             [&](size_t j, MultiIndex gj)
             {
@@ -1277,7 +1277,7 @@ applyMinimization
         if (relevantDOFs[i])
         {
           auto row = gi[0];
-          iterateOverLocalIndexSet(
+          iterateOverLocalIndices(
             localIndexSet,
             [&](size_t j, MultiIndex gj)
             {

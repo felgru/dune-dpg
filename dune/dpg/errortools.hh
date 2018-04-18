@@ -42,7 +42,7 @@ namespace Dune {
               std::tuple_size<LocalIndexSets>::value>{},
           [&](auto i) {
             auto const & localIndexSet = std::get<i>(localIndexSets);
-            iterateOverLocalIndexSet(
+            iterateOverLocalIndices(
               localIndexSet,
               [&](size_t j, auto gj) {
                 solutionElement[j + localOffsets[i]]

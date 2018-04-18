@@ -181,7 +181,7 @@ namespace Dune {
       // For each dof, we check whether it belongs to the inflow boundary
       using size_type = typename LocalIndexSet::size_type;
       using MultiIndex = typename LocalIndexSet::MultiIndex;
-      iterateOverLocalIndexSet(localIndexSet,
+      iterateOverLocalIndices(localIndexSet,
         [&](size_type i, MultiIndex gi)
         {
           unsigned int dofOnInflowBoundary = 0;
@@ -309,7 +309,7 @@ namespace Dune {
       // For each dof, we check whether it belongs to the boundary
       using size_type = typename LocalIndexSet::size_type;
       using MultiIndex = typename LocalIndexSet::MultiIndex;
-      iterateOverLocalIndexSet(localIndexSet,
+      iterateOverLocalIndices(localIndexSet,
         [&](size_type i, MultiIndex gi)
         {
           unsigned int dofOnBoundary = 0;
@@ -405,7 +405,7 @@ namespace Dune {
 
       using size_type = typename LocalIndexSet::size_type;
       using MultiIndex = typename LocalIndexSet::MultiIndex;
-      iterateOverLocalIndexSet(localIndexSet,
+      iterateOverLocalIndices(localIndexSet,
         [&](size_type i, MultiIndex gi) {
           rhsContrib[ gi[0] ] = out[i];
         },

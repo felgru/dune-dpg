@@ -99,7 +99,7 @@ public:
       localIndexSet_.bind(localBasisView_);
 
       localDoFs_.resize(localBasisView_.size());
-      iterateOverLocalIndexSet(
+      iterateOverLocalIndices(
         localIndexSet_,
         [&](size_type i, auto gi) {
           localDoFs_[i] = globalFunction_.dofs()[gi];

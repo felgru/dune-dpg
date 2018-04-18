@@ -15,6 +15,7 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   a function object f that implements `f(x)` instead of the
   `f.evaluate(x,y)` interface. This is in accordance with changes in
   dune-localfunctions 2.7.
+* `iterateOverLocalIndexSet` has been renamed to `iterateOverLocalIndices`.
 * The `BasisBuilder` namespace has been renamed to `BasisFactory` in
   accordance with a rename in dune-functions 2.7.
   (Since we never use the members of this namespace, this rename will

@@ -100,14 +100,14 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
               .evaluateFunction(quadPosDominated, valuesDominated);
             const auto& localCoefficientsDominating
               = localView.tree().finiteElement().localCoefficients();
-            iterateOverLocalIndexSet(
+            iterateOverLocalIndices(
                 localIndexSet,
                 [&](size_t j, auto gj)
                 {
                   if(std::fabs(valuesDominating[j]) > eps) {
                     double valueDominated = 0.;
                     std::vector<std::pair<double, double>> constraints;
-                    iterateOverLocalIndexSet(
+                    iterateOverLocalIndices(
                         dominatedElementLocalIndexSet,
                         [&](size_t i, auto gi)
                         {

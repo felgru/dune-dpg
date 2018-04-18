@@ -20,7 +20,7 @@ namespace detail {
            typename std::enable_if<models<Concept::LocalIndexSet<typename
                                 std::decay_t<LocalIndexSet>::LocalView>,
                           std::decay_t<LocalIndexSet>>()>::type* = nullptr>
-  void iterateOverLocalIndexSet_impl(
+  void iterateOverLocalIndices_impl(
       LocalIndexSet&& localIndexSet,
       UnconstrainedEvaluation&& unconstrainedEvaluation,
       ConstrainedSetUp&&,
@@ -38,7 +38,7 @@ namespace detail {
            typename std::enable_if<models<Concept::ConstrainedLocalIndexSet<
                           typename std::decay_t<LocalIndexSet>::LocalView>,
                         std::decay_t<LocalIndexSet>>()>::type* = nullptr>
-  void iterateOverLocalIndexSet_impl(
+  void iterateOverLocalIndices_impl(
       LocalIndexSet&& localIndexSet,
       UnconstrainedEvaluation&& unconstrainedEvaluation,
       ConstrainedSetUp&& constrainedSetUp,
@@ -69,12 +69,12 @@ template<class LocalIndexSet,
          class UnconstrainedEvaluation,
          class ConstrainedSetUp,
          class ConstrainedEvaluation>
-void iterateOverLocalIndexSet(
+void iterateOverLocalIndices(
     LocalIndexSet&& localIndexSet,
     UnconstrainedEvaluation&& unconstrainedEvaluation,
     ConstrainedSetUp&& constrainedSetUp,
     ConstrainedEvaluation&& constrainedEvaluation) {
-  detail::iterateOverLocalIndexSet_impl(
+  detail::iterateOverLocalIndices_impl(
       std::forward<LocalIndexSet>(localIndexSet),
       std::forward<UnconstrainedEvaluation>(unconstrainedEvaluation),
       std::forward<ConstrainedSetUp>(constrainedSetUp),
@@ -93,11 +93,11 @@ void addToGlobalMatrix(
   using TestMultiIndex = typename std::decay_t<TestLocalIndexSet>::MultiIndex;
   using SolutionMultiIndex
       = typename std::decay_t<SolutionLocalIndexSet>::MultiIndex;
-  iterateOverLocalIndexSet(
+  iterateOverLocalIndices(
     std::forward<TestLocalIndexSet>(testLocalIndexSet),
     [&](size_t i, TestMultiIndex gi)
     {
-      iterateOverLocalIndexSet(
+      iterateOverLocalIndices(
         solutionLocalIndexSet,
         [&](size_t j, SolutionMultiIndex gj)
         {
@@ -113,7 +113,7 @@ void addToGlobalMatrix(
     [](size_t /* i */){},
     [&](size_t i, TestMultiIndex gi, double wi)
     {
-      iterateOverLocalIndexSet(
+      iterateOverLocalIndices(
         solutionLocalIndexSet,
         [&](size_t j, SolutionMultiIndex gj)
         {
