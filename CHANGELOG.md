@@ -27,6 +27,8 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 ### Deprecated
+* The `localIndexSet()` method of `ConstrainedGlobalBasis` has been
+  marked as deprecated when using dune-functions >= 2.7.
 
 ### Removed
 * The workarounds for missing dune-subgrid functionality have been removed
