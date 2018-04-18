@@ -257,7 +257,7 @@ class SubGridSpaces {
     return spaces_[i].testSpace();
   }
 
-  const Spaces& spaces(size_t i) const {
+  const Spaces& operator[](size_t i) const {
     return spaces_[i];
   }
 
@@ -668,7 +668,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
           aposteriori_s
               = compute_transport_solution(x[i], *grids[i],
-                  spaces.spaces(i),
+                  spaces[i],
                   sVector[i], sigma, rhsData[i], boundary_is_homogeneous[i],
                   bvExtension);
 
