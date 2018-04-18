@@ -8,6 +8,7 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
 
 #include <dune/dpg/functions/localindexsetiteration.hh>
 
@@ -117,8 +118,12 @@ namespace Dune {
     std::vector<unsigned int> dirichletNodesInt(dofs,0);
 
     auto localView = feBasis.localView();
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+    using LocalView = decltype(localView);
+#else
     auto localIndexSet = feBasis.localIndexSet();
     using LocalIndexSet = decltype(localIndexSet);
+#endif
 
 
     for(const auto& e : elements(gridView))
@@ -126,7 +131,9 @@ namespace Dune {
       localView.bind(e);
       const auto& localFE = localView.tree().finiteElement();
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       localIndexSet.bind(localView);
+#endif
 
       const unsigned int nFace
           = referenceElement<double, dim>(e.type()).size(dim-1);
@@ -179,10 +186,17 @@ namespace Dune {
       }
 
       // For each dof, we check whether it belongs to the inflow boundary
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+      using size_type = typename LocalView::size_type;
+      using MultiIndex = typename LocalView::MultiIndex;
+      iterateOverLocalIndices(localView,
+        [&](size_type i, MultiIndex gi)
+#else
       using size_type = typename LocalIndexSet::size_type;
       using MultiIndex = typename LocalIndexSet::MultiIndex;
       iterateOverLocalIndices(localIndexSet,
         [&](size_type i, MultiIndex gi)
+#endif
         {
           unsigned int dofOnInflowBoundary = 0;
 
@@ -259,8 +273,12 @@ namespace Dune {
     std::vector<unsigned int> dirichletNodesInt(dofs,0);
 
     auto localView = feBasis.localView();
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+    using LocalView = decltype(localView);
+#else
     auto localIndexSet = feBasis.localIndexSet();
     using LocalIndexSet = decltype(localIndexSet);
+#endif
 
 
     for(const auto& e : elements(gridView))
@@ -268,7 +286,9 @@ namespace Dune {
       localView.bind(e);
       const auto& localFE = localView.tree().finiteElement();
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       localIndexSet.bind(localView);
+#endif
 
       const unsigned int nFace
           = referenceElement<double, dim>(e.type()).size(dim-1);
@@ -307,10 +327,17 @@ namespace Dune {
       }
 
       // For each dof, we check whether it belongs to the boundary
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+      using size_type = typename LocalView::size_type;
+      using MultiIndex = typename LocalView::MultiIndex;
+      iterateOverLocalIndices(localView,
+        [&](size_type i, MultiIndex gi)
+#else
       using size_type = typename LocalIndexSet::size_type;
       using MultiIndex = typename LocalIndexSet::MultiIndex;
       iterateOverLocalIndices(localIndexSet,
         [&](size_type i, MultiIndex gi)
+#endif
         {
           unsigned int dofOnBoundary = 0;
 
@@ -386,8 +413,12 @@ namespace Dune {
     rhsContrib.resize(feBasis.size());
 
     auto localView = feBasis.localView();
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+    using LocalView = decltype(localView);
+#else
     auto localIndexSet = feBasis.localIndexSet();
     using LocalIndexSet = decltype(localIndexSet);
+#endif
 
     auto localG = localFunction(Functions::makeGridViewFunction(g,
                                                 feBasis.gridView()));
@@ -397,16 +428,25 @@ namespace Dune {
     for(const auto& e : elements(gridView))
     {
       localView.bind(e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       localIndexSet.bind(localView);
+#endif
       localG.bind(e);
 
       localView.tree().finiteElement().localInterpolation()
                .interpolate(BoundaryCondition<decltype(localG)>(localG), out);
 
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+      using size_type = typename LocalView::size_type;
+      using MultiIndex = typename LocalView::MultiIndex;
+      iterateOverLocalIndices(localView,
+        [&](size_type i, MultiIndex gi) {
+#else
       using size_type = typename LocalIndexSet::size_type;
       using MultiIndex = typename LocalIndexSet::MultiIndex;
       iterateOverLocalIndices(localIndexSet,
         [&](size_type i, MultiIndex gi) {
+#endif
           rhsContrib[ gi[0] ] = out[i];
         },
         [](size_type) {},

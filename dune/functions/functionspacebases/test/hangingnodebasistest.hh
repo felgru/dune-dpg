@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include <dune/common/exceptions.hh>
+#include <dune/common/version.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/geometry/quadraturerules.hh>
 
@@ -22,15 +23,23 @@ bool globalIndicesFormConsecutiveRange(const GlobalBasis& feBasis)
   std::vector<bool> seen(feBasis.size(), false);
 
   auto localView = feBasis.localView();
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto localIndexSet = feBasis.localIndexSet();
+#endif
   auto gridView = feBasis.gridView();
 
   for (const auto& element : elements(gridView))
   {
     localView.bind(element);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     localIndexSet.bind(localView);
+#endif
 
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+    const auto& indicesLocalGlobal = localView.indicesLocalGlobal();
+#else
     const auto& indicesLocalGlobal = localIndexSet.indicesLocalGlobal();
+#endif
     for (const auto index : indicesLocalGlobal)
     {
       if (index[0] >= seen.size()) {
@@ -56,9 +65,13 @@ template<class GlobalBasis>
 bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
 {
   auto localView = feBasis.localView();
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto localIndexSet = feBasis.localIndexSet();
+#endif
   auto dominatedElementLocalView = feBasis.localView();
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto dominatedElementLocalIndexSet = feBasis.localIndexSet();
+#endif
   auto gridView = feBasis.gridView();
 
   bool success = true;
@@ -67,7 +80,9 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
   for (const auto& element : elements(gridView))
   {
     localView.bind(element);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     localIndexSet.bind(localView);
+#endif
     for(auto&& intersection : intersections(gridView, element))
     {
       if(!intersection.conforming())
@@ -75,7 +90,9 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
           // inside dominates outside (with one level difference)
         {
           dominatedElementLocalView.bind(intersection.outside());
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
           dominatedElementLocalIndexSet.bind(dominatedElementLocalView);
+#endif
 
           const auto geometryInDominatingElement
               = intersection.geometryInInside();
@@ -101,14 +118,22 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
             const auto& localCoefficientsDominating
               = localView.tree().finiteElement().localCoefficients();
             iterateOverLocalIndices(
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+                localView,
+#else
                 localIndexSet,
+#endif
                 [&](size_t j, auto gj)
                 {
                   if(std::fabs(valuesDominating[j]) > eps) {
                     double valueDominated = 0.;
                     std::vector<std::pair<double, double>> constraints;
                     iterateOverLocalIndices(
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+                        dominatedElementLocalView,
+#else
                         dominatedElementLocalIndexSet,
+#endif
                         [&](size_t i, auto gi)
                         {
                           if(gi == gj) {

@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <vector>
 
+#include <dune/common/version.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/functions/functionspacebases/defaultnodetorangemap.hh>
 #include <dune/functions/gridfunctions/gridviewentityset.hh>
@@ -41,7 +42,9 @@ public:
   class LocalFunction
   {
     using LocalBasisView = typename Basis::LocalView;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     using LocalIndexSet = typename Basis::LocalIndexSet;
+#endif
     using size_type = typename Basis::size_type;
 
     using LocalBasisRange = typename
@@ -59,7 +62,9 @@ public:
     LocalFunction(const ConstrainedDiscreteGlobalBasisFunction& globalFunction)
       : globalFunction_(globalFunction)
       , localBasisView_(globalFunction.basis().localView())
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       , localIndexSet_(globalFunction.basis().localIndexSet())
+#endif
       , node_(localBasisView_.tree())
     {
       shapeFunctionValues_.reserve(localBasisView_.maxSize());
@@ -69,7 +74,9 @@ public:
     LocalFunction(const LocalFunction& other)
       : globalFunction_(other.globalFunction_)
       , localBasisView_(globalFunction_.basis().localView())
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       , localIndexSet_(globalFunction_.basis().localIndexSet())
+#endif
       , node_(localBasisView_.tree())
     {
       shapeFunctionValues_.reserve(localBasisView_.maxSize());
@@ -80,7 +87,9 @@ public:
     {
       globalFunction_ = other.globalFunction_;
       localBasisView_ = other.localBasisView_;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       localIndexSet_ = other.localIndexSet_;
+#endif
       node_ = localBasisView_.tree();
 
       shapeFunctionValues_.reserve(localBasisView_.maxSize());
@@ -96,11 +105,17 @@ public:
     void bind(const Element& element)
     {
       localBasisView_.bind(element);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       localIndexSet_.bind(localBasisView_);
+#endif
 
       localDoFs_.resize(localBasisView_.size());
       iterateOverLocalIndices(
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        localBasisView_,
+#else
         localIndexSet_,
+#endif
         [&](size_type i, auto gi) {
           localDoFs_[i] = globalFunction_.dofs()[gi];
         },
@@ -115,7 +130,9 @@ public:
 
     void unbind()
     {
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       localIndexSet_.unbind();
+#endif
       localBasisView_.unbind();
     }
 
@@ -159,7 +176,9 @@ public:
 
     const ConstrainedDiscreteGlobalBasisFunction& globalFunction_;
     LocalBasisView localBasisView_;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     LocalIndexSet localIndexSet_;
+#endif
 
     mutable std::vector<typename V::value_type> shapeFunctionValues_;
     std::vector<typename V::value_type> localDoFs_;

@@ -5,6 +5,8 @@
 
 #include <type_traits>
 
+#include <dune/common/version.hh>
+
 #include <dune/dpg/functions/concepts.hh>
 #include <dune/functions/functionspacebases/concepts.hh>
 
@@ -17,9 +19,16 @@ namespace detail {
            class UnconstrainedEvaluation,
            class ConstrainedSetUp,
            class ConstrainedEvaluation,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+           typename std::enable_if<models<Concept::LocalView<typename
+                                std::decay_t<LocalIndexSet>::GlobalBasis>,
+                          std::decay_t<LocalIndexSet>>()>::type* = nullptr
+#else
            typename std::enable_if<models<Concept::LocalIndexSet<typename
                                 std::decay_t<LocalIndexSet>::LocalView>,
-                          std::decay_t<LocalIndexSet>>()>::type* = nullptr>
+                          std::decay_t<LocalIndexSet>>()>::type* = nullptr
+#endif
+                            >
   void iterateOverLocalIndices_impl(
       LocalIndexSet&& localIndexSet,
       UnconstrainedEvaluation&& unconstrainedEvaluation,
@@ -35,9 +44,15 @@ namespace detail {
            class UnconstrainedEvaluation,
            class ConstrainedSetUp,
            class ConstrainedEvaluation,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+           typename std::enable_if<models<Concept::ConstrainedLocalView<
+                          typename std::decay_t<LocalIndexSet>::GlobalBasis>,
+                        std::decay_t<LocalIndexSet>>()>::type* = nullptr>
+#else
            typename std::enable_if<models<Concept::ConstrainedLocalIndexSet<
                           typename std::decay_t<LocalIndexSet>::LocalView>,
                         std::decay_t<LocalIndexSet>>()>::type* = nullptr>
+#endif
   void iterateOverLocalIndices_impl(
       LocalIndexSet&& localIndexSet,
       UnconstrainedEvaluation&& unconstrainedEvaluation,
