@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
 
 #include <dune/dpg/assemble_types.hh>
 #include <dune/dpg/assemble_helper.hh>
@@ -38,7 +39,9 @@ namespace Dune {
   class LinearFunctionalTerm
   {
     using SolutionLocalView = typename SolutionSpace::LocalView;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     using SolutionLocalIndexSet = typename SolutionSpace::LocalIndexSet;
+#endif
   public:
 
     LinearFunctionalTerm () = delete;
@@ -52,7 +55,9 @@ namespace Dune {
                           const SolutionSpace& solutionSpace)
         : functionalVector(functionalVector)
         , solutionLocalView(solutionSpace.localView())
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
         , solutionLocalIndexSet(solutionSpace.localIndexSet())
+#endif
     {};
 
     /**
@@ -76,7 +81,9 @@ namespace Dune {
   private:
     const FunctionalVector& functionalVector;
     mutable SolutionLocalView solutionLocalView;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     mutable SolutionLocalIndexSet solutionLocalIndexSet;
+#endif
   };
 
 /**
@@ -165,7 +172,9 @@ getLocalVector(const LocalView& localView,
                const size_t spaceOffset) const
 {
   solutionLocalView.bind(localView.element());
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   solutionLocalIndexSet.bind(solutionLocalView);
+#endif
 
   // Now get the local contribution to the right-hand side vector
   detail::ApplyLocalFunctional
@@ -177,7 +186,9 @@ getLocalVector(const LocalView& localView,
           solutionLocalView,
           elementVector,
           spaceOffset,
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
           solutionLocalIndexSet,
+#endif
           localView.element(),
           functionalVector);
 }
@@ -207,7 +218,9 @@ getLocalVector(const LocalView& localView,
   class SkeletalLinearFunctionalTerm
   {
     using SolutionLocalView = typename SolutionSpace::LocalView;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     using SolutionLocalIndexSet = typename SolutionSpace::LocalIndexSet;
+#endif
   public:
 
     SkeletalLinearFunctionalTerm () = delete;
@@ -226,7 +239,9 @@ getLocalVector(const LocalView& localView,
         , beta(beta)
         , functionalVector(functionalVector)
         , solutionLocalView(solutionSpace.localView())
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
         , solutionLocalIndexSet(solutionSpace.localIndexSet())
+#endif
     {};
 
     /**
@@ -252,7 +267,9 @@ getLocalVector(const LocalView& localView,
     DirectionType beta;
     const FunctionalVector& functionalVector;
     mutable SolutionLocalView solutionLocalView;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     mutable SolutionLocalIndexSet solutionLocalIndexSet;
+#endif
   };
 
 /**
@@ -314,7 +331,9 @@ getLocalVector(const LocalView& localView,
                size_t spaceOffset) const
 {
   solutionLocalView.bind(localView.element());
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   solutionLocalIndexSet.bind(solutionLocalView);
+#endif
 
   // Now get the local contribution to the right-hand side vector
   detail::ApplyLocalFunctional
@@ -326,7 +345,9 @@ getLocalVector(const LocalView& localView,
           solutionLocalView,
           elementVector,
           spaceOffset,
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
           solutionLocalIndexSet,
+#endif
           localView.element(),
           functionalVector,
           factor,

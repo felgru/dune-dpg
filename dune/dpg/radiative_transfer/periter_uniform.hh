@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <dune/common/version.hh>
+
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -228,12 +230,16 @@ namespace detail {
         auto localGExact = localFunction(gExact);
         auto localGApprox = localFunction(gApprox);
         auto localView = feBasisInterior.localView();
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
         auto localIndexSet = feBasisInterior.localIndexSet();
+#endif
 
         double rhsError_i = 0.;
         for(const auto& e : elements(gridView)) {
           localView.bind(e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
           localIndexSet.bind(localView);
+#endif
           localGExact.bind(e);
           localGApprox.bind(e);
 
