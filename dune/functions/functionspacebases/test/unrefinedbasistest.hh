@@ -157,8 +157,13 @@ void testScalarBasis(const Basis& feBasis)
   typedef typename Basis::MultiIndex MultiIndex;
 
   // And this type must be indexable
+#if DUNE_VERSION_NEWER(DUNE_COMMON,2,7)
+  static_assert(IsIndexable<MultiIndex>(),
+      "MultiIndex must support operator[]");
+#else
   static_assert(is_indexable<MultiIndex>(),
       "MultiIndex must support operator[]");
+#endif
 
   checkRangeOfGlobalIndices(feBasis);
   checkConsistencyOfLocalViewAndIndexSet(feBasis);
