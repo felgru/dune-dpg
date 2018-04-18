@@ -12,6 +12,8 @@
 
 #include <boost/hana.hpp>
 
+#include <dune/common/version.hh>
+
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -123,12 +125,16 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
   // Views on the FE bases on a single element
   auto testLocalViews     = getLocalViews(*testSpaces);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto testLocalIndexSets = getLocalIndexSets(*testSpaces);
+#endif
 
   for(const auto& e : elements(gridView)) {
 
     bindLocalViews(testLocalViews, e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     bindLocalIndexSets(testLocalIndexSets, testLocalViews);
+#endif
 
     // Now get the local contribution to the right-hand side vector
     BlockVector<FieldVector<double,1> > localRhs;
@@ -147,7 +153,11 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     copyLocalToGlobalVector<decltype(lfIndices)>(
         localRhs,
         rhs,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        testLocalViews,
+#else
         testLocalIndexSets,
+#endif
         rhsLinearForm.getLocalSpaceOffsets(),
         globalTestSpaceOffsets);
   }

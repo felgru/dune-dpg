@@ -263,7 +263,7 @@ struct getOccupationPatternHelper
                            gi[0]+globalTestSpaceOffset);
                 }
               };
-          iterateOverLocalIndexSet(
+          iterateOverLocalIndices(
               solutionLIS,
               fillOccupationPatternInner,
               [](size_t /* j */){},
@@ -273,7 +273,7 @@ struct getOccupationPatternHelper
               }
           );
         };
-    iterateOverLocalIndexSet(
+    iterateOverLocalIndices(
         testLIS,
         fillOccupationPattern,
         [](size_t /* i */){},
@@ -491,7 +491,7 @@ struct localToGlobalRHSCopier
     using MultiIndex
         = typename std::decay_t<decltype(testLocalIndexSet)>::MultiIndex;
 
-    iterateOverLocalIndexSet(
+    iterateOverLocalIndices(
         testLocalIndexSet,
         [&](size_t i, MultiIndex gi)
         {

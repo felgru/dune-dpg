@@ -5,6 +5,8 @@
 
 #include <type_traits>
 
+#include <dune/common/version.hh>
+
 #include <dune/dpg/functions/concepts.hh>
 #include <dune/functions/functionspacebases/concepts.hh>
 
@@ -17,10 +19,17 @@ namespace detail {
            class UnconstrainedEvaluation,
            class ConstrainedSetUp,
            class ConstrainedEvaluation,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+           typename std::enable_if<models<Concept::LocalView<typename
+                                std::decay_t<LocalIndexSet>::GlobalBasis>,
+                          std::decay_t<LocalIndexSet>>()>::type* = nullptr
+#else
            typename std::enable_if<models<Concept::LocalIndexSet<typename
                                 std::decay_t<LocalIndexSet>::LocalView>,
-                          std::decay_t<LocalIndexSet>>()>::type* = nullptr>
-  void iterateOverLocalIndexSet_impl(
+                          std::decay_t<LocalIndexSet>>()>::type* = nullptr
+#endif
+                            >
+  void iterateOverLocalIndices_impl(
       LocalIndexSet&& localIndexSet,
       UnconstrainedEvaluation&& unconstrainedEvaluation,
       ConstrainedSetUp&&,
@@ -35,10 +44,16 @@ namespace detail {
            class UnconstrainedEvaluation,
            class ConstrainedSetUp,
            class ConstrainedEvaluation,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+           typename std::enable_if<models<Concept::ConstrainedLocalView<
+                          typename std::decay_t<LocalIndexSet>::GlobalBasis>,
+                        std::decay_t<LocalIndexSet>>()>::type* = nullptr>
+#else
            typename std::enable_if<models<Concept::ConstrainedLocalIndexSet<
                           typename std::decay_t<LocalIndexSet>::LocalView>,
                         std::decay_t<LocalIndexSet>>()>::type* = nullptr>
-  void iterateOverLocalIndexSet_impl(
+#endif
+  void iterateOverLocalIndices_impl(
       LocalIndexSet&& localIndexSet,
       UnconstrainedEvaluation&& unconstrainedEvaluation,
       ConstrainedSetUp&& constrainedSetUp,
@@ -69,12 +84,12 @@ template<class LocalIndexSet,
          class UnconstrainedEvaluation,
          class ConstrainedSetUp,
          class ConstrainedEvaluation>
-void iterateOverLocalIndexSet(
+void iterateOverLocalIndices(
     LocalIndexSet&& localIndexSet,
     UnconstrainedEvaluation&& unconstrainedEvaluation,
     ConstrainedSetUp&& constrainedSetUp,
     ConstrainedEvaluation&& constrainedEvaluation) {
-  detail::iterateOverLocalIndexSet_impl(
+  detail::iterateOverLocalIndices_impl(
       std::forward<LocalIndexSet>(localIndexSet),
       std::forward<UnconstrainedEvaluation>(unconstrainedEvaluation),
       std::forward<ConstrainedSetUp>(constrainedSetUp),
@@ -93,11 +108,11 @@ void addToGlobalMatrix(
   using TestMultiIndex = typename std::decay_t<TestLocalIndexSet>::MultiIndex;
   using SolutionMultiIndex
       = typename std::decay_t<SolutionLocalIndexSet>::MultiIndex;
-  iterateOverLocalIndexSet(
+  iterateOverLocalIndices(
     std::forward<TestLocalIndexSet>(testLocalIndexSet),
     [&](size_t i, TestMultiIndex gi)
     {
-      iterateOverLocalIndexSet(
+      iterateOverLocalIndices(
         solutionLocalIndexSet,
         [&](size_t j, SolutionMultiIndex gj)
         {
@@ -113,7 +128,7 @@ void addToGlobalMatrix(
     [](size_t /* i */){},
     [&](size_t i, TestMultiIndex gi, double wi)
     {
-      iterateOverLocalIndexSet(
+      iterateOverLocalIndices(
         solutionLocalIndexSet,
         [&](size_t j, SolutionMultiIndex gj)
         {

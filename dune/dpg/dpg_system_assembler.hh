@@ -13,6 +13,8 @@
 
 #include <boost/hana.hpp>
 
+#include <dune/common/version.hh>
+
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 #include <dune/istl/matrix.hh>
@@ -345,7 +347,9 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   auto testLocalViews = getLocalViews(*testSearchSpaces_);
 
   auto solutionLocalViews = getLocalViews(*solutionSpaces_);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto solutionLocalIndexSets = getLocalIndexSets(*solutionSpaces_);
+#endif
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
@@ -362,14 +366,24 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   for(const auto& e : elements(gridView))
   {
     bindLocalViews(solutionLocalViews, e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+#endif
 
     detail::getOccupationPattern<Indices, false>
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+                        (solutionLocalViews,
+                         solutionLocalViews,
+                         globalSolutionSpaceOffsets,
+                         globalSolutionSpaceOffsets,
+                         occupationPattern);
+#else
                         (solutionLocalIndexSets,
                          solutionLocalIndexSets,
                          globalSolutionSpaceOffsets,
                          globalSolutionSpaceOffsets,
                          occupationPattern);
+#endif
   }
 
   occupationPattern.exportIdx(matrix);
@@ -384,7 +398,9 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   for(const auto& e : elements(gridView)) {
 
     bindLocalViews(solutionLocalViews, e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+#endif
 
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
     computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
@@ -424,10 +440,18 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     copyLocalToGlobalMatrix<Indices>(
         elementMatrix,
         matrix,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        solutionLocalViews,
+#else
         solutionLocalIndexSets,
+#endif
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        solutionLocalViews,
+#else
         solutionLocalIndexSets,
+#endif
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
 
@@ -448,7 +472,11 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     copyLocalToGlobalVector<LFIndices>(
         localRhs,
         rhs,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        solutionLocalViews,
+#else
         solutionLocalIndexSets,
+#endif
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
   }
@@ -471,7 +499,9 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 
   // Views on the FE bases on a single element
   auto solutionLocalViews = getLocalViews(*solutionSpaces_);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto solutionLocalIndexSets = getLocalIndexSets(*solutionSpaces_);
+#endif
 
   // MatrixIndexSets store the occupation pattern of a sparse matrix.
   // TODO: Might be too large??
@@ -488,11 +518,18 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   for(const auto& e : elements(gridView))
   {
     bindLocalViews(solutionLocalViews, e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+#endif
 
-    detail::getOccupationPattern<Indices, false>
-                        (solutionLocalIndexSets,
+    detail::getOccupationPattern<Indices, false>(
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+                         solutionLocalViews,
+                         solutionLocalViews,
+#else
                          solutionLocalIndexSets,
+                         solutionLocalIndexSets,
+#endif
                          globalSolutionSpaceOffsets,
                          globalSolutionSpaceOffsets,
                          occupationPattern);
@@ -506,7 +543,9 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   for(const auto& e : elements(gridView)) {
 
     bindLocalViews(solutionLocalViews, e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+#endif
 
     testspaceCoefficientMatrix_.bind(e);
     const Matrix<FieldMatrix<double,1,1> >& elementMatrix
@@ -521,10 +560,18 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     copyLocalToGlobalMatrix<Indices>(
         elementMatrix,
         matrix,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        solutionLocalViews,
+#else
         solutionLocalIndexSets,
+#endif
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        solutionLocalViews,
+#else
         solutionLocalIndexSets,
+#endif
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
   }
@@ -557,12 +604,16 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   auto testLocalViews = getLocalViews(*testSearchSpaces_);
 
   auto solutionLocalViews = getLocalViews(*solutionSpaces_);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto solutionLocalIndexSets = getLocalIndexSets(*solutionSpaces_);
+#endif
 
   for(const auto& e : elements(gridView)) {
 
     bindLocalViews(solutionLocalViews, e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+#endif
 
     size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
     computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
@@ -611,7 +662,11 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     copyLocalToGlobalVector<LFIndices>(
         localRhs,
         rhs,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        solutionLocalViews,
+#else
         solutionLocalIndexSets,
+#endif
         localSolutionSpaceOffsets,
         globalSolutionSpaceOffsets);
 
@@ -890,12 +945,16 @@ defineCharacteristicFaces_impl(
         detail::computeOffset<spaceIndex>(*solutionSpaces_);
 
   auto solutionLocalView = std::get<spaceIndex>(*solutionSpaces_).localView();
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto localIndexSet = std::get<spaceIndex>(*solutionSpaces_).localIndexSet();
+#endif
 
   for(const auto& e : elements(gridView))
   {
     solutionLocalView.bind(e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     localIndexSet.bind(solutionLocalView);
+#endif
 
     const auto& localFiniteElement = solutionLocalView.tree().finiteElement();
 
@@ -965,7 +1024,11 @@ defineCharacteristicFaces_impl(
         std::tie(left, right) = endpoints[face];
         for(auto&& dof: dofs)
         {
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+          const auto row = solutionLocalView.index(dof.first)[0];
+#else
           const auto row = localIndexSet.index(dof.first)[0];
+#endif
           auto col = row;
           const size_t k = dofs.size()+1;
 
@@ -973,10 +1036,18 @@ defineCharacteristicFaces_impl(
            * by an interpolation of the two endpoints of the
            * characteristic face. */
           matrix[row+globalOffset][col+globalOffset] = -1;
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+          col = solutionLocalView.index(left)[0];
+#else
           col = localIndexSet.index(left)[0];
+#endif
           matrix[row+globalOffset][col+globalOffset]
               = static_cast<double>(k-dof.second-1)/k;
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+          col = solutionLocalView.index(right)[0];
+#else
           col = localIndexSet.index(right)[0];
+#endif
           matrix[row+globalOffset][col+globalOffset]
               = static_cast<double>(dof.second+1)/k;
 
@@ -1190,15 +1261,22 @@ applyMinimization
   // (necessary if we want to use inner product) // TODO inefficient (why?)
   auto solutionLocalViews = getLocalViews(*solutionSpaces_);
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto localIndexSet = std::get<spaceIndex>(*solutionSpaces_).localIndexSet();
   using LocalIndexSet = decltype(localIndexSet);
+#else
+  using LocalView = std::tuple_element_t<spaceIndex,
+                                         decltype(solutionLocalViews)>;
+#endif
 
   const bool epsilonSmallerDelta = epsilon<delta;
 
   for(const auto& e : elements(gridView))
   {
     bindLocalViews(solutionLocalViews, e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     localIndexSet.bind(std::get<spaceIndex>(solutionLocalViews));
+#endif
 
     /* set up local offsets */
     computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
@@ -1243,16 +1321,28 @@ applyMinimization
       // never be both (almost) characteristic.
     }
 
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+    using MultiIndex = typename std::decay_t<LocalView>::MultiIndex;
+#else
     using MultiIndex = typename std::decay_t<LocalIndexSet>::MultiIndex;
-    iterateOverLocalIndexSet(
+#endif
+    iterateOverLocalIndices(
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+      std::get<spaceIndex>(solutionLocalViews),
+#else
       localIndexSet,
+#endif
       [&](size_t i, MultiIndex gi)
       {
         if (relevantDOFs[i])
         {
           auto row = gi[0];
-          iterateOverLocalIndexSet(
+          iterateOverLocalIndices(
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+            std::get<spaceIndex>(solutionLocalViews),
+#else
             localIndexSet,
+#endif
             [&](size_t j, MultiIndex gj)
             {
               auto col = gj[0];
@@ -1277,8 +1367,12 @@ applyMinimization
         if (relevantDOFs[i])
         {
           auto row = gi[0];
-          iterateOverLocalIndexSet(
+          iterateOverLocalIndices(
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+            std::get<spaceIndex>(solutionLocalViews),
+#else
             localIndexSet,
+#endif
             [&](size_t j, MultiIndex gj)
             {
               auto col = gj[0];

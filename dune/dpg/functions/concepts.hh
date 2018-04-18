@@ -94,6 +94,39 @@ struct ConstrainedPreBasis
   );
 };
 
+template<class GlobalBasis>
+struct ConstrainedLocalView
+{
+  template<class V>
+  auto require(const V& localView) -> decltype(
+    requireType<typename V::size_type>(),
+    requireType<typename V::MultiIndex>(),
+    requireType<typename V::GlobalBasis>(),
+    requireType<typename V::Tree>(),
+    requireType<typename V::GridView>(),
+    requireType<typename V::Element>(),
+    requireSameType<typename V::GlobalBasis, GlobalBasis>(),
+    requireSameType<typename V::GridView, typename GlobalBasis::GridView>(),
+    requireSameType<typename V::size_type, typename GlobalBasis::size_type>(),
+    requireSameType<typename V::Element, typename GlobalBasis::GridView::template Codim<0>::Entity>(),
+    const_cast<V&>(localView).bind(std::declval<typename V::Element>()),
+    const_cast<V&>(localView).unbind(),
+    requireConvertible<typename V::Tree>(localView.tree()),
+    requireConvertible<typename V::size_type>(localView.size()),
+    requireConvertible<typename V::size_type>(localView.maxSize()),
+    requireConvertible<const std::vector<typename V::MultiIndex>&>
+        (localView.indicesLocalGlobal()),
+    requireConvertible<typename V::size_type>(localView.constraintsSize()),
+    requireConvertible<typename V::size_type>(
+        localView.constraintOffset(std::declval<typename V::size_type>())),
+    requireConvertible<const typename V::ConstraintWeights&>(
+        localView.constraintWeights(std::declval<typename V::size_type>())),
+    requireConvertible<typename V::GlobalBasis>(localView.globalBasis()),
+    requireConcept<BasisTree<typename V::GridView>>(localView.tree()),
+    0
+  );
+};
+
 template<class GridView>
 struct ConstrainedGlobalBasis
 {
@@ -114,7 +147,7 @@ struct ConstrainedGlobalBasis
     requireConvertible<typename B::size_type>(basis.dimension()),
     requireConcept<ConstrainedLocalIndexSet<typename B::LocalView>>
         (basis.localIndexSet()),
-    requireConcept<LocalView<B>>(basis.localView())
+    requireConcept<ConstrainedLocalView<B>>(basis.localView())
   );
 };
 

@@ -6,10 +6,12 @@
 #include <dune/common/reservedvector.hh>
 #include <dune/common/typeutilities.hh>
 #include <dune/common/concept.hh>
+#include <dune/common/deprecated.hh>
+#include <dune/common/version.hh>
 
 #include <dune/functions/common/type_traits.hh>
 #include <dune/functions/functionspacebases/constrainedlocalindexset.hh>
-#include <dune/functions/functionspacebases/defaultlocalview.hh>
+#include <dune/functions/functionspacebases/constrainedlocalview.hh>
 #include <dune/dpg/functions/concepts.hh>
 
 
@@ -58,7 +60,7 @@ public:
   using size_type = std::size_t;
 
   //! Type of the local view on the restriction of the basis to a single element
-  using LocalView = DefaultLocalView<ConstrainedGlobalBasis<PreBasis>>;
+  using LocalView = ConstrainedLocalView<ConstrainedGlobalBasis<PreBasis>>;
 
   //! Node index set provided by PreBasis
   using NodeIndexSet = typename PreBasis::template IndexSet<PrefixPath>;
@@ -138,7 +140,11 @@ public:
   }
 
   //! Return local index set for basis
-  LocalIndexSet localIndexSet() const
+  LocalIndexSet
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+    DUNE_DEPRECATED_MSG("localIndexSet() is deprecated. The indexing method are now available in the ConstrainedLocalView. Indices are computed when binding the ConstrainedLocalView.")
+#endif
+    localIndexSet() const
   {
     return LocalIndexSet(preBasis_.template indexSet<PrefixPath>());
   }
