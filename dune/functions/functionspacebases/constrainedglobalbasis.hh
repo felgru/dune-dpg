@@ -3,16 +3,21 @@
 #ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_CONSTRAINEDGLOBALBASIS_HH
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_CONSTRAINEDGLOBALBASIS_HH
 
+#include <cstddef>
+#include <type_traits>
+#include <utility>
+
 #include <dune/common/reservedvector.hh>
 #include <dune/common/typeutilities.hh>
 #include <dune/common/concept.hh>
 #include <dune/common/deprecated.hh>
 #include <dune/common/version.hh>
 
+#include <dune/dpg/functions/concepts.hh>
 #include <dune/functions/common/type_traits.hh>
 #include <dune/functions/functionspacebases/constrainedlocalindexset.hh>
 #include <dune/functions/functionspacebases/constrainedlocalview.hh>
-#include <dune/dpg/functions/concepts.hh>
+#include <dune/functions/functionspacebases/flatmultiindex.hh>
 
 
 
@@ -173,7 +178,10 @@ namespace BasisFactory {
 template<class GridView, class PreBasisFactory>
 auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFactory)
 {
-  using MultiIndex = typename Dune::ReservedVector<std::size_t, PreBasisFactory::requiredMultiIndexSize>;
+  using MultiIndex = std::conditional_t<
+    PreBasisFactory::requiredMultiIndexSize==1,
+    FlatMultiIndex<std::size_t>,
+    Dune::ReservedVector<std::size_t, PreBasisFactory::requiredMultiIndexSize>>;
   auto preBasis = preBasisFactory.template makePreBasis<MultiIndex>(gridView);
   using PreBasis = std::decay_t<decltype(preBasis)>;
 
