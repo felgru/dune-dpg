@@ -108,7 +108,7 @@ public:
   }
 
 private:
-  std::string filename;
+  const std::string filename;
 };
 
 } // end namespace Dune
