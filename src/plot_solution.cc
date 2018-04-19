@@ -166,8 +166,8 @@ int main(int argc, char** argv)
     typedef BlockVector<FieldVector<double,1> > VectorType;
     typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
 
-    VectorType rhs, rhs1;
-    MatrixType stiffnessMatrix, stiffnessMatrix1;
+    VectorType rhs;
+    MatrixType stiffnessMatrix;
 
     /////////////////////////////////////////////////////////
     //  Assemble the system
