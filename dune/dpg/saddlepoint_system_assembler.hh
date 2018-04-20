@@ -280,8 +280,6 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
 {
   using namespace Dune::detail;
 
-  constexpr bool isSaddlepoint = true;
-
   const auto gridView = std::get<0>(*testSpaces).gridView();
 
   /* set up global offsets */
@@ -298,6 +296,7 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   // They are not particularly efficient, but simple to use.
   MatrixIndexSet occupationPattern;
   occupationPattern.resize(globalTotalSpaceSize, globalTotalSpaceSize);
+  constexpr bool isSaddlepoint = true;
   bilinearForm.template getOccupationPattern<isSaddlepoint>
                (occupationPattern,
                 0, globalTotalTestSize);
