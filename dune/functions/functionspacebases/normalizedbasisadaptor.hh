@@ -88,9 +88,10 @@ public:
     return wrappedPreBasis_.gridView();
   }
 
-  void update (const GridView& gv)
+  void update(const GridView& gv)
   {
     wrappedPreBasis_.update(gv);
+    Dune::detail::updateSpaces(*innerProduct_.getTestSpaces(), gv);
   }
 
   template<class TP>
