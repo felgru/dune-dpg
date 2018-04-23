@@ -142,7 +142,6 @@ class Periter {
    * \param s the transport direction
    * \param sigma the absorbtion coefficient
    * \param rhsData the data for the unmodified rhs
-   * \param boundary_is_homogeneous
    * \param bvExtension a lifting of the boundary values
    *
    * \return the squared a posteriori error of the solution
@@ -155,8 +154,7 @@ class Periter {
       const FieldVector<double, 2>& s,
       const Sigma sigma,
       RHSData& rhsData,
-      bool boundary_is_homogeneous,
-      const VectorType& bvExtension);
+      const Std::optional<VectorType>& bvExtension);
 
   /**
    * Apply the scattering integral to a solution x
@@ -650,15 +648,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         // or ++nRefinement >= maxNumberOfInnerIterations
         // thus the inner loop terminates eventually.
       {
-        VectorType bvExtension;
+        Std::optional<VectorType> bvExtension;
         if(!boundary_is_homogeneous[i]) {
           const auto& feBasisTest = spaces.testSpace(i);
           auto newGridData
               = bvData[i]->restoreDataToRefinedSubGrid(feBasisTest);
-          bvExtension.resize(newGridData.size(),
-                             false /* don't copy old values */);
+          bvExtension = VectorType(newGridData.size());
           for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
-            bvExtension[k] = newGridData[k];
+            (*bvExtension)[k] = newGridData[k];
           }
         }
 
@@ -668,9 +665,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
           aposteriori_s
               = compute_transport_solution(x[i], *grids[i],
-                  spaces[i],
-                  sVector[i], sigma, rhsData[i], boundary_is_homogeneous[i],
-                  bvExtension);
+                  spaces[i], sVector[i], sigma, rhsData[i], bvExtension);
 
           aposteriori_s = std::sqrt(aposteriori_s);
 
@@ -810,8 +805,7 @@ compute_transport_solution(
     const FieldVector<double, 2>& s,
     const Sigma sigma,
     RHSData& rhsData,
-    bool boundary_is_homogeneous,
-    const VectorType& bvExtension)
+    const Std::optional<VectorType>& bvExtension)
 {
   auto bilinearForm =
     make_BilinearForm(spaces.testSpacePtr(), spaces.solutionSpacePtr(),
@@ -869,7 +863,7 @@ compute_transport_solution(
   /////////////////////////////////////////////////////////
   //  Assemble the systems
   /////////////////////////////////////////////////////////
-  if(boundary_is_homogeneous) {
+  if(!bvExtension) {
     auto rhsFunction = make_LinearForm(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
@@ -879,7 +873,7 @@ compute_transport_solution(
         stiffnessMatrix, rhs,
         rhsFunction);
   } else {
-    assert(bvExtension.size() > 0);
+    assert(bvExtension->size() == spaces.testSpace().size());
     auto rhsFunction = make_LinearForm(
           systemAssembler.getTestSearchSpaces(),
           std::make_tuple(
@@ -887,7 +881,7 @@ compute_transport_solution(
               (rhsFunctional, spaces.testSpace()),
             make_SkeletalLinearFunctionalTerm
               <0, IntegrationType::normalVector>
-              (bvExtension, spaces.testSpace(), -1, s)));
+              (*bvExtension, spaces.testSpace(), -1, s)));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -943,7 +937,7 @@ compute_transport_solution(
   // -- Contribution of the source term f that has an
   //    analytic expression
   // -- Contribution of the scattering term
-  if(boundary_is_homogeneous) {
+  if(!bvExtension) {
     auto rhsAssemblerEnriched
       = make_RhsAssembler(spaces.enrichedTestSpacePtr());
     auto rhsFunction = make_LinearForm(
@@ -964,7 +958,7 @@ compute_transport_solution(
                std::get<0>(*systemAssembler.getTestSearchSpaces())),
             make_SkeletalLinearFunctionalTerm
               <0, IntegrationType::normalVector>
-              (bvExtension,
+              (*bvExtension,
                std::get<0>(*systemAssembler.getTestSearchSpaces()),
                -1, s)));
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
