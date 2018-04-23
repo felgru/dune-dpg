@@ -68,6 +68,7 @@ class SubGridSpaces;
 
 class PeriterLogger;
 class TransportLogger;
+class TransportPlotter;
 
 /**
  * This class describes the Periter algorithm for radiative transfer problems
@@ -144,19 +145,19 @@ class Periter {
    * \param spaces
    * \param s the transport direction
    * \param sigma the absorbtion coefficient
-   * \param rhsData the data for the unmodified rhs
+   * \param rhsVector the data for the unmodified rhs
    * \param bvExtension a lifting of the boundary values
    *
    * \return the squared a posteriori error of the solution
    */
-  template<class Spaces, class Grid, class Sigma, class RHSData>
+  template<class Spaces, class Grid, class Sigma, class RHSVector>
   static double compute_transport_solution(
       VectorType& x,
       Grid& grid,
       const Spaces& spaces,
       const FieldVector<double, 2>& s,
       const Sigma sigma,
-      RHSData& rhsData,
+      RHSVector& rhsVector,
       const Std::optional<VectorType>& bvExtension);
 
   /**
@@ -176,8 +177,10 @@ class Periter {
       const FieldVector<double, 2>& s,
       const Sigma sigma,
       RHSData& rhsData,
+      RHSData& scatteringData,
       Std::optional<BVData>& bvData,
       TransportLogger transportLogger,
+      TransportPlotter transportPlotter,
       double transportAccuracy,
       unsigned int maxNumberOfInnerIterations);
 
@@ -503,6 +506,58 @@ class PeriterLogger {
   std::ofstream ofs;
 };
 
+class TransportPlotter {
+  public:
+  TransportPlotter(
+      PeriterPlotFlags plotFlags,
+      std::string outputfolder,
+      unsigned int outerIteration,
+      unsigned int direction)
+    : plotFlags(plotFlags)
+    , outputfolder(outputfolder)
+    , n(outerIteration)
+    , i(direction)
+  {};
+
+  template<class RhsGlobalBasis, class VectorType>
+  void plotRhsAndScattering(
+      const RhsGlobalBasis& feBasisTest,
+      const VectorType& rhsValues,
+      const VectorType& scatteringValues,
+      const unsigned int nRefinement) const
+  {
+    if(plotRhsEnabled()) {
+      std::string name = outputfolder
+                        + "/rhs_rad_trans_n"
+                        + std::to_string(n)
+                        + "_s"
+                        + std::to_string(i)
+                        + '_' + std::to_string(nRefinement);
+      FunctionPlotter rhsPlotter(name);
+      rhsPlotter.plot("rhs", rhsValues, feBasisTest, 1);
+
+      name = outputfolder
+                        + "/scattering_rad_trans_n"
+                        + std::to_string(n)
+                        + "_s"
+                        + std::to_string(i)
+                        + '_' + std::to_string(nRefinement);
+      FunctionPlotter scatteringPlotter(name);
+      scatteringPlotter.plot("rhs", scatteringValues, feBasisTest, 1);
+    }
+  }
+
+  private:
+  bool plotRhsEnabled() const {
+    return (plotFlags & PeriterPlotFlags::plotRhs) == PeriterPlotFlags::plotRhs;
+  }
+
+  const PeriterPlotFlags plotFlags;
+  const std::string outputfolder;
+  const unsigned int n;
+  const unsigned int i;
+};
+
 class PeriterPlotter {
   public:
   PeriterPlotter(PeriterPlotFlags plotFlags, std::string outputfolder)
@@ -516,6 +571,13 @@ class PeriterPlotter {
       std::exit(1);
     }
   };
+
+  TransportPlotter transportPlotter(unsigned int outerIteration,
+                                    unsigned int direction)
+  {
+    return TransportPlotter(plotFlags, outputfolder,
+                            outerIteration, direction);
+  }
 
   template<class Spaces, class VectorType>
   void plotSolutions(
@@ -802,6 +864,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               std::declval<FEBasisHostInterior>(),
 #endif
               std::declval<VectorType>()))>;
+    std::vector<RHSData> scatteringData;
     std::vector<RHSData> rhsData;
     using FEBasisHostTrace
         = changeGridView_t<typename Spaces::FEBasisTrace, HostGridView>;
@@ -829,6 +892,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
       numS = sVector.size();
       x.resize(numS);
+      scatteringData.reserve(numS);
       rhsData.reserve(numS);
 
       plotter.plotScatteringOnHostGrid(hostGridGlobalBasis, rhsFunctional,
@@ -836,6 +900,16 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
       // TODO: restore grids from gridIdSets and update spaces
       //       shouldn't be necessary, as long as RHSApproximation == FeRHS
+      for(size_t i = 0; i < numS; i++) {
+        const auto& subGridGlobalBasis = spaces.testSpace(i);
+        scatteringData.emplace_back(
+          attachDataToSubGrid(
+            subGridGlobalBasis,
+            hostGridGlobalBasis,
+            rhsFunctional[i]));
+        rhsFunctional[i] = 0;
+      }
+
       detail::approximate_rhs (
           rhsFunctional,
           grids,
@@ -897,7 +971,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
       const double aposteriori_s = compute_adaptive_transport_solution(
           x[i], spaces[i], *grids[i], gridIdSets[i], sVector[i], sigma,
-          rhsData[i], bvData[i], logger.transportLogger(n, i),
+          rhsData[i], scatteringData[i], bvData[i],
+          logger.transportLogger(n, i),
+          plotter.transportPlotter(n, i),
           approximationParameters.transportAccuracy(),
           maxNumberOfInnerIterations);
       aposterioriTransportGlobal = std::max(aposterioriTransportGlobal,
@@ -920,7 +996,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class Spaces, class Grid, class Sigma, class RHSData>
+template<class Spaces, class Grid, class Sigma, class RHSVector>
 double
 Periter<ScatteringKernelApproximation, RHSApproximation>::
 compute_transport_solution(
@@ -929,7 +1005,7 @@ compute_transport_solution(
     const Spaces& spaces,
     const FieldVector<double, 2>& s,
     const Sigma sigma,
-    RHSData& rhsData,
+    RHSVector& rhsFunctional,
     const Std::optional<VectorType>& bvExtension)
 {
   auto bilinearForm =
@@ -967,18 +1043,6 @@ compute_transport_solution(
       make_DPGSystemAssembler(bilinearForm,
                               innerProduct,
                               geometryBuffer);
-
-  VectorType rhsFunctional;
-  {
-    auto& feBasisTest = spaces.testSpace();
-    auto newGridData
-        = rhsData.restoreDataToRefinedSubGrid(feBasisTest);
-    rhsFunctional.resize(newGridData.size(),
-                         false /* don't copy old values */);
-    for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
-      rhsFunctional[k] = newGridData[k];
-    }
-  }
 
   typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
 
@@ -1113,8 +1177,10 @@ compute_adaptive_transport_solution(
     const FieldVector<double, 2>& s,
     const Sigma sigma,
     RHSData& rhsData,
+    RHSData& scatteringData,
     Std::optional<BVData>& bvData,
     TransportLogger transportLogger,
+    TransportPlotter transportPlotter,
     const double transportAccuracy,
     const unsigned int maxNumberOfInnerIterations)
 {
@@ -1140,9 +1206,28 @@ compute_adaptive_transport_solution(
     {
       transportLogger.printCurrentIteration(nRefinement);
 
+      VectorType rhsFunctional;
+      {
+        auto& feBasisTest = spaces.testSpace();
+        auto rhsValues
+            = rhsData.restoreDataToRefinedSubGrid(feBasisTest);
+
+        auto scatteringValues
+            = scatteringData.restoreDataToRefinedSubGrid(feBasisTest);
+
+        transportPlotter.plotRhsAndScattering(feBasisTest,
+                                rhsValues, scatteringValues, nRefinement);
+
+        rhsFunctional.resize(rhsValues.size(),
+                             false /* don't copy old values */);
+        for(size_t k = 0, kmax = rhsValues.size(); k < kmax; k++) {
+          rhsFunctional[k] = rhsValues[k] + scatteringValues[k];
+        }
+      }
+
       aposteriori_s
           = compute_transport_solution(x, grid,
-              spaces, s, sigma, rhsData, bvExtension);
+              spaces, s, sigma, rhsFunctional, bvExtension);
 
       aposteriori_s = std::sqrt(aposteriori_s);
 

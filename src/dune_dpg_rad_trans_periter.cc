@@ -81,11 +81,12 @@ int main(int argc, char** argv)
 
   {
     int opt;
-    while ((opt = getopt(argc,argv,"n:o:psh")) != EOF)
+    while ((opt = getopt(argc,argv,"n:o:psrh")) != EOF)
       switch(opt)
       {
         case 'p': plotFlags |= PeriterPlotFlags::plotOuterIterations; break;
         case 's': plotFlags |= PeriterPlotFlags::plotScattering; break;
+        case 'r': plotFlags |= PeriterPlotFlags::plotRhs; break;
         case 'n': maxNumberOfInnerIterations = atoi(optarg); break;
         case 'o': basedir = optarg; break;
         default:
