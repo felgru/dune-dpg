@@ -156,6 +156,34 @@ class Periter {
       RHSData& rhsData,
       const Std::optional<VectorType>& bvExtension);
 
+  struct Iteration {
+    unsigned int n;
+    unsigned int i;
+  };
+
+  /**
+   * Adaptively compute transport solution
+   *
+   * This function calls compute_transport_solution iteratively
+   * until the given accuracy or the maximal number of iterations
+   * is reached.
+   */
+  template<class Spaces, class Grid, class GridIdSet, class Sigma,
+           class RHSData, class BVData>
+  static double compute_adaptive_transport_solution(
+      VectorType& x,
+      Spaces& spaces,
+      Grid& grid,
+      GridIdSet& gridIdSet,
+      const FieldVector<double, 2>& s,
+      const Sigma sigma,
+      RHSData& rhsData,
+      Std::optional<BVData>& bvData,
+      std::ofstream& ofs,
+      double transportAccuracy,
+      unsigned int maxNumberOfInnerIterations,
+      Iteration it);
+
   /**
    * Apply the scattering integral to a solution x
    *
@@ -255,7 +283,7 @@ class SubGridSpaces {
     return spaces_[i].testSpace();
   }
 
-  const Spaces& operator[](size_t i) const {
+  Spaces& operator[](size_t i) {
     return spaces_[i];
   }
 
@@ -640,84 +668,11 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                                                hostGrid);
       spaces.update(i, grids[i]->leafGridView());
 
-      double aposteriori_s;
-      unsigned int nRefinement = 0;
-      for( ; ; )
-        // At the end of the loop, we will break if
-        // aposteriori_s < kapp3*eta (pointwise in s)
-        // or ++nRefinement >= maxNumberOfInnerIterations
-        // thus the inner loop terminates eventually.
-      {
-        Std::optional<VectorType> bvExtension;
-        if(!boundary_is_homogeneous[i]) {
-          const auto& feBasisTest = spaces.testSpace(i);
-          auto newGridData
-              = bvData[i]->restoreDataToRefinedSubGrid(feBasisTest);
-          bvExtension = VectorType(newGridData.size());
-          for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
-            (*bvExtension)[k] = newGridData[k];
-          }
-        }
-
-        {
-          std::cout << "Direction " << i
-                    << ", inner iteration " << nRefinement << '\n';
-
-          aposteriori_s
-              = compute_transport_solution(x[i], *grids[i],
-                  spaces[i], sVector[i], sigma, rhsData[i], bvExtension);
-
-          aposteriori_s = std::sqrt(aposteriori_s);
-
-          // TODO: Add (interpolation of) g to theta part of x[i]?
-
-          ofs << "Iteration " << n << '.' << nRefinement
-              << " for direction " << i << ": \n"
-              << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
-              << aposteriori_s
-              << "\n  - Grid level: "     << grids[i]->maxLevel()
-              << "\n  - Number of DOFs: " << x[i].size()
-              << std::endl;
-
-          std::cout << "\nIteration " << n << '.' << nRefinement
-              << " for direction " << i << ": \n"
-              << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
-              << aposteriori_s
-              << "\n  - Grid level: " << grids[i]->maxLevel()
-              << "\n  - Number of DOFs: " << x[i].size()
-              << std::endl;
-        }
-
-
-        if(++nRefinement >= maxNumberOfInnerIterations
-            || aposteriori_s <= approximationParameters.transportAccuracy()) {
-          gridIdSets[i] = saveSubGridToIdSet(*grids[i]);
-
-          ofs << "\na posteriori error for current direction: "
-              << aposteriori_s;
-          if (aposteriori_s <= approximationParameters.transportAccuracy())
-          {
-            ofs << " (enough";
-          } else {
-            ofs << " (not enough, required "
-                << approximationParameters.transportAccuracy();
-          }
-          ofs << ")\n\n" << std::flush;
-
-          break;
-        } else {
-          grids[i]->preAdapt();
-          grids[i]->adapt();
-          grids[i]->postAdapt();
-          spaces.update(i, grids[i]->leafGridView());
-
-          ofs << "\na posteriori error for current direction: "
-              << aposteriori_s
-              << " (required "
-              << approximationParameters.transportAccuracy()
-              << ")\n\n" << std::flush;
-        }
-      } // end of spatial refinement for angular direction i
+      const double aposteriori_s = compute_adaptive_transport_solution(
+          x[i], spaces[i], *grids[i], gridIdSets[i], sVector[i], sigma,
+          rhsData[i], bvData[i], ofs,
+          approximationParameters.transportAccuracy(),
+          maxNumberOfInnerIterations, {n, i});
       aposterioriTransportGlobal = std::max(aposterioriTransportGlobal,
                                             aposteriori_s);
 
@@ -972,6 +927,106 @@ compute_transport_solution(
                                                 innerProductEnriched,
                                                 x, rhs));
 
+  return aposteriori_s;
+}
+
+template<class ScatteringKernelApproximation, class RHSApproximation>
+template<class Spaces, class Grid, class GridIdSet, class Sigma,
+         class RHSData, class BVData>
+double
+Periter<ScatteringKernelApproximation, RHSApproximation>::
+compute_adaptive_transport_solution(
+    VectorType& x,
+    Spaces& spaces,
+    Grid& grid,
+    GridIdSet& gridIdSet,
+    const FieldVector<double, 2>& s,
+    const Sigma sigma,
+    RHSData& rhsData,
+    Std::optional<BVData>& bvData,
+    std::ofstream& ofs,
+    const double transportAccuracy,
+    const unsigned int maxNumberOfInnerIterations,
+    const Iteration it)
+{
+  double aposteriori_s = 0.;
+  unsigned int nRefinement = 0;
+  for( ; ; )
+    // At the end of the loop, we will break if
+    // aposteriori_s < kapp3*eta (pointwise in s)
+    // or ++nRefinement >= maxNumberOfInnerIterations
+    // thus the inner loop terminates eventually.
+  {
+    Std::optional<VectorType> bvExtension;
+    if(bvData) {
+      const auto& feBasisTest = spaces.testSpace();
+      auto newGridData
+          = bvData->restoreDataToRefinedSubGrid(feBasisTest);
+      bvExtension = VectorType(newGridData.size());
+      for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
+        (*bvExtension)[k] = newGridData[k];
+      }
+    }
+
+    {
+      std::cout << "Direction " << it.i
+                << ", inner iteration " << nRefinement << '\n';
+
+      aposteriori_s
+          = compute_transport_solution(x, grid,
+              spaces, s, sigma, rhsData, bvExtension);
+
+      aposteriori_s = std::sqrt(aposteriori_s);
+
+      // TODO: Add (interpolation of) g to theta part of x?
+
+      ofs << "Iteration " << it.n << '.' << nRefinement
+          << " for direction " << it.i << ": \n"
+          << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
+          << aposteriori_s
+          << "\n  - Grid level: "     << grid.maxLevel()
+          << "\n  - Number of DOFs: " << x.size()
+          << std::endl;
+
+      std::cout << "\nIteration " << it.n << '.' << nRefinement
+          << " for direction " << it.i << ": \n"
+          << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
+          << aposteriori_s
+          << "\n  - Grid level: " << grid.maxLevel()
+          << "\n  - Number of DOFs: " << x.size()
+          << std::endl;
+    }
+
+
+    if(++nRefinement >= maxNumberOfInnerIterations
+        || aposteriori_s <= transportAccuracy) {
+      gridIdSet = saveSubGridToIdSet(grid);
+
+      ofs << "\na posteriori error for current direction: "
+          << aposteriori_s;
+      if (aposteriori_s <= transportAccuracy)
+      {
+        ofs << " (enough";
+      } else {
+        ofs << " (not enough, required "
+            << transportAccuracy;
+      }
+      ofs << ")\n\n" << std::flush;
+
+      break;
+    } else {
+      grid.preAdapt();
+      grid.adapt();
+      grid.postAdapt();
+      spaces.update(grid.leafGridView());
+
+      ofs << "\na posteriori error for current direction: "
+          << aposteriori_s
+          << " (required "
+          << transportAccuracy
+          << ")\n\n" << std::flush;
+    }
+  }
   return aposteriori_s;
 }
 
