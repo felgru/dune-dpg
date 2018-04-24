@@ -149,6 +149,103 @@ class Periter {
       double accuracy);
 };
 
+class PeriterPlotter {
+  public:
+  PeriterPlotter(PlotSolutions plotSolutions, std::string outputfolder)
+    : plotFlags(plotSolutions)
+    , outputfolder(outputfolder)
+  {
+    if((plotFlags & PlotSolutions::plotLastIteration)
+        == PlotSolutions::plotLastIteration) {
+      std::cerr
+          << "Plotting of only the last iteration is not implemented yet!\n";
+      std::exit(1);
+    }
+  };
+
+  template<class Spaces, class VectorType>
+  void plotSolutions(
+      const Spaces& spaces,
+      const std::vector<VectorType>& x,
+      const unsigned int n,
+      const unsigned int numS) const
+  {
+    if(plotOuterIterationsEnabled()) {
+      //////////////////////////////////////////////////////////////////////
+      //  Write result to VTK file
+      //  We need to subsample, because VTK cannot natively display
+      //  real second-order functions
+      //////////////////////////////////////////////////////////////////////
+      std::cout << "Print solutions:\n";
+
+      const auto& feBasisInterior = spaces.interiorSolutionSpace();
+      const auto& feBasisTrace    = spaces.traceSolutionSpace();
+
+
+      for(unsigned int i = 0; i < numS; ++i)
+      {
+        std::cout << "Direction " << i << '\n';
+
+        std::string name = outputfolder
+                        + std::string("/u_rad_trans_n")
+                        + std::to_string(n)
+                        + std::string("_s")
+                        + std::to_string(i);
+        FunctionPlotter uPlotter(name);
+        uPlotter.plot("u", x[i], feBasisInterior, 0, 0);
+        name = outputfolder
+                        + std::string("/theta_rad_trans_n")
+                        + std::to_string(n)
+                        + std::string("_s")
+                        + std::to_string(i);
+        FunctionPlotter thetaPlotter(name);
+        thetaPlotter.plot("theta", x[i], feBasisTrace, 2,
+                          feBasisInterior.size());
+      }
+    }
+  }
+
+  template<class ScatteringBasis, class VectorType>
+  void plotScatteringOnHostGrid(
+      const ScatteringBasis& hostGridGlobalBasis,
+      const std::vector<VectorType>& scattering,
+      const unsigned int n,
+      const size_t numS) const
+  {
+    if(plotScatteringEnabled()) {
+      std::cout << "Plot scattering:\n";
+
+      for(unsigned int i = 0; i < numS; ++i)
+      {
+        std::cout << "Direction " << i << '\n';
+
+        std::string name = outputfolder
+                        + std::string("/scattering_n")
+                        + std::to_string(n)
+                        + std::string("_s")
+                        + std::to_string(i);
+        FunctionPlotter scatteringPlotter(name);
+        scatteringPlotter.plot("scattering", scattering[i],
+                               hostGridGlobalBasis, 0);
+      }
+    }
+  }
+
+  private:
+  bool plotOuterIterationsEnabled() const {
+    return (plotFlags & PlotSolutions::plotOuterIterations)
+           == PlotSolutions::plotOuterIterations;
+  }
+
+  bool plotScatteringEnabled() const {
+    return (plotFlags & PlotSolutions::plotScattering)
+           == PlotSolutions::plotScattering;
+  }
+
+  const PlotSolutions plotFlags;
+  const std::string outputfolder;
+};
+
 #ifndef DOXYGEN
 namespace detail {
   constexpr size_t dim = 2;
@@ -315,12 +412,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            unsigned int maxNumberOfInnerIterations,
            const std::string& outputfolder,
            PlotSolutions plotSolutions) {
-  if((plotSolutions & PlotSolutions::plotLastIteration)
-      == PlotSolutions::plotLastIteration) {
-    std::cerr
-        << "Plotting of only the last iteration is not implemented yet!\n";
-    std::exit(1);
-  }
   static_assert(std::is_same<RHSApproximation, FeRHS>::value
       || std::is_same<RHSApproximation, ApproximateRHS>::value,
       "Unknown type provided for RHSApproximation!\n"
@@ -337,6 +428,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   /////////////////////////////////////////////
 
   std::ofstream ofs(outputfolder+"/output");
+  PeriterPlotter plotter(plotSolutions, outputfolder);
 
   // TODO: estimate norm of rhs f
   const double fnorm = 1;
@@ -448,25 +540,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
     auto endScatteringApproximation = std::chrono::steady_clock::now();
 
-    if((plotSolutions & PlotSolutions::plotScattering)
-        == PlotSolutions::plotScattering) {
-      std::cout << "Plot scattering:\n";
-      const auto& feBasisInterior = spaces.interiorSolutionSpace();
-
-      for(unsigned int i = 0; i < numS; ++i)
-      {
-        std::cout << "Direction " << i << '\n';
-
-        std::string name = outputfolder
-                        + std::string("/scattering_n")
-                        + std::to_string(n)
-                        + std::string("_s")
-                        + std::to_string(i);
-        FunctionPlotter scatteringPlotter(name);
-        scatteringPlotter.plot("scattering", rhsFunctional[i],
-                               feBasisInterior, 0);
-      }
-    }
+    plotter.plotScatteringOnHostGrid(spaces.interiorSolutionSpace(),
+                                     rhsFunctional, n, numS);
 
     {
       const auto& feBasisInterior = spaces.interiorSolutionSpace();
@@ -612,40 +687,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       }
     }
 
-    if((plotSolutions & PlotSolutions::plotOuterIterations)
-        == PlotSolutions::plotOuterIterations) {
-      ////////////////////////////////////////////////////////////////////////
-      //  Write result to VTK file
-      //  We need to subsample, because VTK cannot natively display
-      //  real second-order functions
-      ////////////////////////////////////////////////////////////////////////
-      std::cout << "Print solutions:\n";
-
-      const auto& feBasisInterior = spaces.interiorSolutionSpace();
-      const auto& feBasisTrace = spaces.traceSolutionSpace();
-
-
-      for(unsigned int i = 0; i < numS; ++i)
-      {
-        std::cout << "Direction " << i << '\n';
-
-        std::string name = outputfolder
-                        + std::string("/u_rad_trans_n")
-                        + std::to_string(n)
-                        + std::string("_s")
-                        + std::to_string(i);
-        FunctionPlotter uPlotter(name);
-        uPlotter.plot("u", x[i], feBasisInterior, 0, 0);
-        name = outputfolder
-                        + std::string("/theta_rad_trans_n")
-                        + std::to_string(n)
-                        + std::string("_s")
-                        + std::to_string(i);
-        FunctionPlotter thetaPlotter(name);
-        thetaPlotter.plot("theta", x[i], feBasisTrace, 2,
-                          feBasisInterior.size());
-      }
-    }
+    plotter.plotSolutions(spaces, x, n, numS);
 
     const size_t accumulatedDoFs = std::accumulate(x.cbegin(), x.cend(),
         static_cast<size_t>(0),
