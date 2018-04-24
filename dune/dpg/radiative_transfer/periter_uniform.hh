@@ -131,6 +131,30 @@ class Periter {
       const VectorType& bvExtension);
 
   /**
+   * Adaptively compute transport solution
+   *
+   * This function calls compute_transport_solution iteratively
+   * until the given accuracy or the maximal number of iterations
+   * is reached.
+   */
+  template<class Spaces, class Grid, class Sigma, class KernelApproximation>
+  static double compute_adaptive_transport_solution(
+      std::vector<VectorType>& x,
+      Spaces& spaces,
+      Grid& grid,
+      const std::vector<FieldVector<double, 2>>& sVector,
+      const Sigma sigma,
+      std::vector<VectorType>& rhsFunctional,
+      VectorType& boundaryExtension,
+      const std::vector<bool>& boundary_is_homogeneous,
+      PeriterLogger& logger,
+      unsigned int n,
+      double transportAccuracy,
+      const KernelApproximation& kernelApproximation,
+      const std::vector<double>& quadWeight,
+      unsigned int maxNumberOfInnerIterations);
+
+  /**
    * Apply the scattering integral to a solution x
    *
    * This corresponds to [K, u_n, κ_1 * η] in the Periter algorithm
@@ -606,7 +630,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       "Should be either FeRHS or ApproximateRHS.");
 
   typedef typename Grid::LeafGridView  LeafGridView;
-  typedef typename Grid::LevelGridView LevelGridView;
   LeafGridView gridView = grid.leafGridView();
 
   const unsigned int dim = LeafGridView::dimension;
@@ -740,81 +763,13 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     // Inner loop
     ////////////////////////////////////////////////////
     logger.logInnerIterationsHeader();
-    double aposterioriTransportGlobal = 0.;
-
-    for(unsigned int nRefinement = 0; ; )
-        // At the end of the loop, we will break if
-        // aposterioriTransportGlobal < kapp3*eta
-        // or ++nRefinement >= maxNumberOfInnerIterations
-        // thus the inner loop terminates eventually.
-    {
-      aposterioriTransportGlobal = 0.;
-      for(unsigned int i = 0; i < numS; ++i)
-      {
-        auto transportLogger = logger.transportLogger(n, i);
-        transportLogger.printCurrentIteration(nRefinement);
-
-        const double aposteriori_s
-            = compute_transport_solution(x[i], spaces,
-                sVector[i], sigma, rhsFunctional[i],
-                boundary_is_homogeneous[i],
-                boundaryExtension);
-
-        aposterioriTransportGlobal
-          += 1. / (1 << kernelApproximation.getLevel())
-            * quadWeight[i % kernelApproximation.numSperInterval]
-            * aposteriori_s;
-
-        // TODO: Add (interpolation of) g to theta part of x?
-
-        transportLogger.logSolverStats(nRefinement, std::sqrt(aposteriori_s),
-            grid.maxLevel(), x[i].size());
-      }
-      aposterioriTransportGlobal = std::sqrt(aposterioriTransportGlobal);
-
-      if(++nRefinement >= maxNumberOfInnerIterations
-          || aposterioriTransportGlobal <= approximationParameters.transportAccuracy()) {
-        break;
-      } else {
-        grid.globalRefine(1);
-        spaces.update(grid.leafGridView());
-
-        const LevelGridView levelGridView
-            = grid.levelGridView(grid.maxLevel()-1);
-
-        {
-          using FEBasisCoarseInterior
-              = changeGridView_t<typename Spaces::FEBasisInterior,
-                                 LevelGridView>;
-
-          FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
-          const auto& feBasisInterior = spaces.interiorSolutionSpace();
-
-          std::vector<VectorType> rhsFunctionalCoarse(numS);
-          std::swap(rhsFunctional, rhsFunctionalCoarse);
-
-          for(unsigned int i = 0; i < numS; ++i)
-          {
-            rhsFunctional[i] = interpolateToUniformlyRefinedGrid(
-                coarseInteriorBasis, feBasisInterior,
-                rhsFunctionalCoarse[i]);
-          }
-        }
-        {
-          using FEBasisCoarseTrace = changeGridView_t<FEBasisTrace,
-                                                      LevelGridView>;
-
-          FEBasisCoarseTrace coarseTraceBasis(levelGridView);
-          const auto& feBasisTrace = spaces.traceSolutionSpace();
-
-          VectorType boundaryExtensionFine
-              = interpolateToUniformlyRefinedGrid(
-                    coarseTraceBasis, feBasisTrace,
-                    boundaryExtension);
-          std::swap(boundaryExtension, boundaryExtensionFine);
-        }
-      }
-    }
+    const double aposterioriTransportGlobal =
+        compute_adaptive_transport_solution(
+          x, spaces, grid, sVector, sigma, rhsFunctional,
+          boundaryExtension, boundary_is_homogeneous, logger, n,
+          approximationParameters.transportAccuracy(),
+          kernelApproximation, quadWeight,
+          maxNumberOfInnerIterations);
 
     plotter.plotSolutions(spaces, x, n, numS);
 
@@ -994,6 +949,106 @@ compute_transport_solution(
                                      x, rhs);
 
   return aposteriori_s;
+}
+
+template<class ScatteringKernelApproximation, class RHSApproximation>
+template<class Spaces, class Grid, class Sigma, class KernelApproximation>
+double
+Periter<ScatteringKernelApproximation, RHSApproximation>::
+compute_adaptive_transport_solution(
+    std::vector<VectorType>& x,
+    Spaces& spaces,
+    Grid& grid,
+    const std::vector<FieldVector<double, 2>>& sVector,
+    const Sigma sigma,
+    std::vector<VectorType>& rhsFunctional,
+    VectorType& boundaryExtension,
+    const std::vector<bool>& boundary_is_homogeneous,
+    PeriterLogger& logger,
+    const unsigned int n,
+    const double transportAccuracy,
+    const KernelApproximation& kernelApproximation,
+    const std::vector<double>& quadWeight,
+    const unsigned int maxNumberOfInnerIterations)
+{
+  const size_t numS = sVector.size();
+  double aposterioriTransportGlobal = 0.;
+
+  for(unsigned int nRefinement = 0; ; )
+    // At the end of the loop, we will break if
+    // aposterioriTransportGlobal < kapp3*eta
+    // or ++nRefinement >= maxNumberOfInnerIterations
+    // thus the inner loop terminates eventually.
+  {
+    aposterioriTransportGlobal = 0.;
+    for(unsigned int i = 0; i < numS; ++i)
+    {
+      auto transportLogger = logger.transportLogger(n, i);
+      transportLogger.printCurrentIteration(nRefinement);
+
+      const double aposteriori_s
+          = compute_transport_solution(x[i], spaces,
+              sVector[i], sigma, rhsFunctional[i],
+              boundary_is_homogeneous[i],
+              boundaryExtension);
+
+      aposterioriTransportGlobal
+        += 1. / (1 << kernelApproximation.getLevel())
+          * quadWeight[i % kernelApproximation.numSperInterval]
+          * aposteriori_s;
+
+      // TODO: Add (interpolation of) g to theta part of x?
+
+      transportLogger.logSolverStats(nRefinement, std::sqrt(aposteriori_s),
+          grid.maxLevel(), x[i].size());
+    }
+    aposterioriTransportGlobal = std::sqrt(aposterioriTransportGlobal);
+
+    if(++nRefinement >= maxNumberOfInnerIterations
+        || aposterioriTransportGlobal <= transportAccuracy) {
+      break;
+    } else {
+      grid.globalRefine(1);
+      spaces.update(grid.leafGridView());
+
+      using LevelGridView = typename Grid::LevelGridView;
+      const LevelGridView levelGridView
+          = grid.levelGridView(grid.maxLevel()-1);
+
+      {
+        using FEBasisCoarseInterior
+            = changeGridView_t<typename Spaces::FEBasisInterior,
+                               LevelGridView>;
+
+        FEBasisCoarseInterior coarseInteriorBasis(levelGridView);
+        const auto& feBasisInterior = spaces.interiorSolutionSpace();
+
+        std::vector<VectorType> rhsFunctionalCoarse(numS);
+        std::swap(rhsFunctional, rhsFunctionalCoarse);
+
+        for(unsigned int i = 0; i < numS; ++i)
+        {
+          rhsFunctional[i] = interpolateToUniformlyRefinedGrid(
+              coarseInteriorBasis, feBasisInterior,
+              rhsFunctionalCoarse[i]);
+        }
+      }
+      {
+        using FEBasisCoarseTrace
+            = changeGridView_t<typename Spaces::FEBasisTrace, LevelGridView>;
+
+        FEBasisCoarseTrace coarseTraceBasis(levelGridView);
+        const auto& feBasisTrace = spaces.traceSolutionSpace();
+
+        VectorType boundaryExtensionFine
+            = interpolateToUniformlyRefinedGrid(
+                  coarseTraceBasis, feBasisTrace,
+                  boundaryExtension);
+        std::swap(boundaryExtension, boundaryExtensionFine);
+      }
+    }
+  }
+  return aposterioriTransportGlobal;
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>

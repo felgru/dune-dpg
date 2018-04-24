@@ -1119,8 +1119,8 @@ compute_adaptive_transport_solution(
     const unsigned int maxNumberOfInnerIterations)
 {
   double aposteriori_s = 0.;
-  unsigned int nRefinement = 0;
-  for( ; ; )
+
+  for(unsigned int nRefinement = 0; ; )
     // At the end of the loop, we will break if
     // aposteriori_s < kapp3*eta (pointwise in s)
     // or ++nRefinement >= maxNumberOfInnerIterations
