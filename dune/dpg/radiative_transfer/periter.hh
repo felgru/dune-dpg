@@ -782,20 +782,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             rhsFunctional[i]));
       }
     }
-    std::vector<bool> boundary_is_homogeneous(numS, false);
     {
-      for(size_t i = 0; i < numS; i++) {
-        boundary_is_homogeneous[i]
-            = is_inflow_boundary_homogeneous(sVector[i]);
-        // TODO: write a generic test for homogeneous inflow boundary
-      }
       // get bv contribution to rhs
       FEBasisHostTrace hostGridGlobalBasis(hostGrid.leafGridView());
       const VectorType boundaryExtension
           = harmonic_extension_of_boundary_values(g, hostGridGlobalBasis);
       bvData.reserve(numS);
       for(size_t i = 0; i < numS; i++) {
-        if(boundary_is_homogeneous[i]) {
+        if(is_inflow_boundary_homogeneous(sVector[i])) {
           bvData.emplace_back();
         } else {
           const auto& subGridGlobalBasis = spaces.testSpace(i);
