@@ -111,8 +111,7 @@ int main(int argc, char** argv)
 
   std::string foldername;
   {
-    const std::chrono::system_clock::time_point now
-        = std::chrono::system_clock::now();
+    const auto now = std::chrono::system_clock::now();
     const std::time_t cnow = std::chrono::system_clock::to_time_t(now);
     std::stringstream folderstream;
     folderstream << basedir

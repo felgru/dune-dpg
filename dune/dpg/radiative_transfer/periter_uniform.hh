@@ -419,8 +419,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         << "\n================\n";
     std::cout << "\nIteration " << n << "\n\n";
 
-    std::chrono::steady_clock::time_point startScatteringApproximation
-        = std::chrono::steady_clock::now();
+    auto startScatteringApproximation = std::chrono::steady_clock::now();
 
     const std::vector<double> quadWeight
       = kernelApproximation.getQuadWeightSubinterval();
@@ -447,8 +446,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     numS = sVector.size();
     x.resize(numS);
 
-    std::chrono::steady_clock::time_point endScatteringApproximation
-        = std::chrono::steady_clock::now();
+    auto endScatteringApproximation = std::chrono::steady_clock::now();
 
     if((plotSolutions & PlotSolutions::plotScattering)
         == PlotSolutions::plotScattering) {
