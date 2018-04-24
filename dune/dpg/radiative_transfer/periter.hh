@@ -36,12 +36,12 @@
 #include <dune/dpg/linearfunctionalterm.hh>
 #include <dune/dpg/radiative_transfer/approximate_scattering.hh>
 #include <dune/dpg/radiative_transfer/boundary_extension.hh>
+#include <dune/dpg/radiative_transfer/passkey.hh>
+#include <dune/dpg/radiative_transfer/periter_common.hh>
 #include <dune/dpg/radiative_transfer/subgridprojection.hh>
 #include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/type_traits.hh>
-
-#include <dune/dpg/radiative_transfer/periter_common.hh>
 
 #include "subgrids.hh"
 
@@ -65,6 +65,9 @@ std::unique_ptr<SubGrid> fullSubGrid(HostGrid& hostGrid) {
 
 template<class GridView>
 class SubGridSpaces;
+
+class PeriterLogger;
+class TransportLogger;
 
 /**
  * This class describes the Periter algorithm for radiative transfer problems
@@ -156,11 +159,6 @@ class Periter {
       RHSData& rhsData,
       const Std::optional<VectorType>& bvExtension);
 
-  struct Iteration {
-    unsigned int n;
-    unsigned int i;
-  };
-
   /**
    * Adaptively compute transport solution
    *
@@ -179,10 +177,9 @@ class Periter {
       const Sigma sigma,
       RHSData& rhsData,
       Std::optional<BVData>& bvData,
-      std::ofstream& ofs,
+      TransportLogger transportLogger,
       double transportAccuracy,
-      unsigned int maxNumberOfInnerIterations,
-      Iteration it);
+      unsigned int maxNumberOfInnerIterations);
 
   /**
    * Apply the scattering integral to a solution x
@@ -292,6 +289,220 @@ class SubGridSpaces {
   std::vector<Spaces> spaces_;
 };
 
+class TransportLogger {
+  public:
+  explicit TransportLogger(std::ofstream& ofs,
+                           unsigned int outerIteration,
+                           unsigned int direction,
+                           PassKey<PeriterLogger>)
+    : ofs(ofs)
+    , n(outerIteration)
+    , i(direction) {};
+
+  void printCurrentIteration(const unsigned int nRefinement) const {
+    std::cout << "Direction " << i
+              << ", inner iteration " << nRefinement << '\n';
+  }
+
+  void logSolverStats(
+      const unsigned int nRefinement,
+      const double aposteriori_s,
+      const int maxGridLevel,
+      const size_t numDofs) {
+    ofs << "Iteration " << n << '.' << nRefinement
+        << " for direction " << i << ": \n"
+        << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
+        << aposteriori_s
+        << "\n  - Grid level: "     << maxGridLevel
+        << "\n  - Number of DOFs: " << numDofs
+        << std::endl;
+
+    std::cout << "\nIteration " << n << '.' << nRefinement
+        << " for direction " << i << ": \n"
+        << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
+        << aposteriori_s
+        << "\n  - Grid level: " << maxGridLevel
+        << "\n  - Number of DOFs: " << numDofs
+        << std::endl;
+  }
+
+  void logFinalAccuracy(const double aposteriori_s,
+                        const double transportAccuracy)
+  {
+    ofs << "\na posteriori error for current direction: "
+        << aposteriori_s;
+    if (aposteriori_s <= transportAccuracy)
+    {
+      ofs << " (enough";
+    } else {
+      ofs << " (not enough, required "
+          << transportAccuracy;
+    }
+    ofs << ")\n\n" << std::flush;
+  }
+
+  void logAccuracyAfterRefinement(const double aposteriori_s,
+                                  const double transportAccuracy)
+  {
+    ofs << "\na posteriori error for current direction: "
+        << aposteriori_s
+        << " (required "
+        << transportAccuracy
+        << ")\n\n" << std::flush;
+  }
+
+  private:
+  std::ofstream& ofs;
+  const unsigned int n;
+  const unsigned int i;
+};
+
+class PeriterLogger {
+  public:
+  template<class ScatteringKernelApproximation, class RHSApproximation>
+  explicit PeriterLogger(std::string filename,
+                         PassKey<Periter<ScatteringKernelApproximation,
+                                         RHSApproximation>>) : ofs(filename) {}
+
+  TransportLogger transportLogger(unsigned int outerIteration,
+                                  unsigned int direction)
+  {
+    return TransportLogger(ofs, outerIteration, direction, {});
+  }
+
+  template<class Kernel, class KernelApproximation>
+  void logPeriterOverview(
+      const double targetAccuracy,
+      const Kernel& kernel,
+      const KernelApproximation& kernelApproximation,
+      const detail::ApproximationParameters& approximationParameters,
+      const double CT)
+  {
+    ofs << "PERITER algorithm\n"
+        << "=================\n"
+        << "Prescribed final accuracy: "
+        << targetAccuracy << '\n'
+        << kernel.info()  << '\n'
+        << "Wavelet order: "
+        << kernelApproximation.getWltOrder() << '\n'
+        << kernelApproximation.typeApprox()  << '\n'
+        << "Maximum wavelet level: "
+        << kernelApproximation.getMaxLevel() << '\n'
+        << "Maximum number of directions: "
+        << kernelApproximation.maxNumS()     << '\n'
+        << "Periter parameters:" << '\n'
+        << approximationParameters
+        << "CT = "     << CT     << '\n';
+
+    if(kernelApproximation.typeApprox() == "Kernel approximation with: SVD"){
+      const std::vector<double> singularValues
+        = kernelApproximation.getSingularValues();
+      ofs << "Singular values of kernel matrix:\n";
+      for(size_t i=0; i<singularValues.size(); i++){
+        ofs << singularValues[i] << '\n';
+      }
+    }
+  }
+
+  void logOuterIterationHeader(const unsigned int n)
+  {
+    ofs << "\nIteration n=" << n
+        << "\n================\n";
+    std::cout << "\nIteration " << n << "\n\n";
+  }
+
+  template<class KernelApproximation>
+  void logKernelApproximationInfo(
+      const detail::ApproximationParameters& approximationParameters,
+      const KernelApproximation& kernelApproximation,
+      const double accuKernel,
+      const std::vector<FieldVector<double, 2>>& sVector,
+      const std::chrono::steady_clock::time_point startScatteringApproximation,
+      const std::chrono::steady_clock::time_point endScatteringApproximation)
+  {
+    ofs << "eta_n = rhobar^{-n}: " << approximationParameters.eta() << '\n'
+        << "\n--------------------\n"
+        << "Info angular approx:\n"
+        << "--------------------\n"
+        << "Current wavelet level: "
+        << kernelApproximation.getLevel() << '\n'
+        << "Number of directions: "
+        << kernelApproximation.getNumS()  << '\n'
+        << "Directions are:\n";
+    for(const auto& s : sVector) {
+      ofs << s << '\n';
+    }
+    ofs << "\n---------------------\n"
+        << "Kernel approximation:\n"
+        << "---------------------\n"
+        << "Accuracy required: "
+          << approximationParameters.scatteringAccuracy() << " (kappa1 * eta)\n"
+        << "Accuracy introduced in code: "
+        << accuKernel << " (kappa1 * eta / (kappaNorm * uNorm))\n"
+        << kernelApproximation.info()      << '\n'
+        << "Computing time: "
+          << std::chrono::duration_cast<std::chrono::microseconds>
+          (endScatteringApproximation - startScatteringApproximation).count()
+          << "us\n" << std::flush;
+  }
+
+  void logInnerIterationsHeader()
+  {
+    ofs << "\n-----------------------------------\n"
+             "Inner iterations (transport solves)\n"
+             "-----------------------------------\n";
+  }
+
+  void logInnerIterationIndex(const unsigned int i)
+  {
+    ofs << "\nAngle " << i
+        << "\n--------\n";
+  }
+
+  template<class VectorType>
+  void logInnerIterationStats(
+      const std::vector<VectorType>& x,
+      const double aposterioriTransportGlobal,
+      const detail::ApproximationParameters& approximationParameters,
+      const std::vector<double>& aposterioriIter,
+      const double accuracy,
+      const unsigned int n)
+  {
+    const size_t accumulatedDoFs = std::accumulate(x.cbegin(), x.cend(),
+        static_cast<size_t>(0),
+        [](size_t acc, auto vec) { return acc + vec.size(); });
+
+    // Error bound for || u_n - \bar u_n || based on a posteriori errors
+    const double errorAPosteriori
+        = approximationParameters.aPosterioriError(aposterioriIter);
+
+    ofs << "---------------------\n"
+           "End inner iterations \n"
+           "---------------------\n"
+           "Error transport solves (a posteriori estimation): "
+          << aposterioriTransportGlobal                  << '\n'
+        << "Accuracy kernel: "
+          << approximationParameters.scatteringAccuracy() << '\n'
+        << "Error bound ||bar u_n -T^{-1}K bar u_{n-1}|| (a posteriori): "
+          << aposterioriIter[n]   << '\n'
+        << "Error bound ||u_n - bar u_n|| (a posteriori): "
+          << errorAPosteriori << '\n'
+        << "Bound global accuracy ||u - bar u_n|| (a priori + a posteriori): "
+          << accuracy
+          << " (rho * err0 + 2) * rho^n\n"
+        << "Total number of DoFs: "
+          << accumulatedDoFs
+        << "\n\n" << std::flush;
+
+    std::cout << "Error at end of Iteration " << n << ": "
+              << aposterioriTransportGlobal << ", using "
+              << accumulatedDoFs << " DoFs\n";
+  }
+
+  private:
+  std::ofstream ofs;
+};
+
 #ifndef DOXYGEN
 namespace detail {
   constexpr size_t dim = 2;
@@ -387,7 +598,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // To print information in dune-dpg/results/
   /////////////////////////////////////////////
 
-  std::ofstream ofs(outputfolder+"/output");
+  PeriterLogger logger(outputfolder+"/output",
+      PassKey<Periter<ScatteringKernelApproximation, RHSApproximation>>{});
 
   ///////////////////////////////////
   // Parameters for adaptivity
@@ -408,30 +620,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   ScatteringKernelApproximation kernelApproximation(kernel,
       approximationParameters.finalScatteringAccuracy(targetAccuracy));
 
-  ofs << "PERITER algorithm\n"
-      << "=================\n"
-      << "Prescribed final accuracy: "
-      << targetAccuracy << '\n'
-      << kernel.info()  << '\n'
-      << "Wavelet order: "
-      << kernelApproximation.getWltOrder() << '\n'
-      << kernelApproximation.typeApprox()  << '\n'
-      << "Maximum wavelet level: "
-      << kernelApproximation.getMaxLevel() << '\n'
-      << "Maximum number of directions: "
-      << kernelApproximation.maxNumS()     << '\n'
-      << "Periter parameters:" << '\n'
-      << approximationParameters
-      << "CT = "     << CT     << '\n';
-
-  if(kernelApproximation.typeApprox() == "Kernel approximation with: SVD"){
-    std::vector<double> singularValues
-      = kernelApproximation.getSingularValues();
-    ofs << "Singular values of kernel matrix:\n";
-    for(size_t i=0; i<singularValues.size(); i++){
-      ofs << singularValues[i] << '\n';
-    }
-  }
+  logger.logPeriterOverview(targetAccuracy, kernel,
+      kernelApproximation, approximationParameters, CT);
 
   // As the solution u we use for the initial scattering is 0, and the
   // formula for the accuracy contains a 1/\|u\|, we set the initial
@@ -484,9 +674,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
   {
-    ofs << "\nIteration n=" << n
-        << "\n================\n";
-    std::cout << "\nIteration " << n << "\n\n";
+    logger.logOuterIterationHeader(n);
 
     for(size_t i = 0; i < grids.size(); ++i) {
       grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
@@ -623,46 +811,22 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     std::chrono::steady_clock::time_point endScatteringApproximation
         = std::chrono::steady_clock::now();
 
-    ofs << "eta_n = rhobar^{-n}: " << approximationParameters.eta() << '\n'
-        << "\n--------------------\n"
-        << "Info angular approx:\n"
-        << "--------------------\n"
-        << "Current wavelet level: "
-        << kernelApproximation.getLevel() << '\n'
-        << "Number of directions: "
-        << kernelApproximation.getNumS()  << '\n'
-        << "Directions are:\n";
-    for(size_t i = 0; i<numS; i++){
-      ofs << sVector[i] << '\n';
-    }
-    ofs << "\n---------------------\n"
-        << "Kernel approximation:\n"
-        << "---------------------\n"
-        << "Accuracy required: "
-          << approximationParameters.scatteringAccuracy() << " (kappa1 * eta)\n"
-        << "Accuracy introduced in code: "
-        << accuKernel << " (kappa1 * eta / (kappaNorm * uNorm))\n"
-        << kernelApproximation.info()      << '\n'
-        << "Computing time: "
-          << std::chrono::duration_cast<std::chrono::microseconds>
-          (endScatteringApproximation - startScatteringApproximation).count()
-          << "us\n" << std::flush;
+    logger.logKernelApproximationInfo(approximationParameters,
+        kernelApproximation, accuKernel, sVector,
+        startScatteringApproximation, endScatteringApproximation);
 
 
     ////////////////////////////////////////////////////
     // Inner loop
     ////////////////////////////////////////////////////
-    ofs << "\n-----------------------------------\n"
-             "Inner iterations (transport solves)\n"
-             "-----------------------------------\n";
+    logger.logInnerIterationsHeader();
     double aposterioriTransportGlobal = 0.;
 
     // Loop over the spatial grids.
     // For each angular direction there is one spatial grid.
     for(unsigned int i = 0; i < grids.size(); ++i)
     {
-      ofs << "\nAngle " << i
-          << "\n--------\n";
+      logger.logInnerIterationIndex(i);
 
       grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
                                                hostGrid);
@@ -670,9 +834,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
       const double aposteriori_s = compute_adaptive_transport_solution(
           x[i], spaces[i], *grids[i], gridIdSets[i], sVector[i], sigma,
-          rhsData[i], bvData[i], ofs,
+          rhsData[i], bvData[i], logger.transportLogger(n, i),
           approximationParameters.transportAccuracy(),
-          maxNumberOfInnerIterations, {n, i});
+          maxNumberOfInnerIterations);
       aposterioriTransportGlobal = std::max(aposterioriTransportGlobal,
                                             aposteriori_s);
 
@@ -709,41 +873,15 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       }
     }
 
-    const size_t accumulatedDoFs = std::accumulate(x.cbegin(), x.cend(),
-        static_cast<size_t>(0),
-        [](size_t acc, auto vec) { return acc + vec.size(); });
-
     // A posteriori estimation of error ||bar u_n -T^{-1}K bar u_{n-1}||
     aposterioriIter[n] = aposterioriTransportGlobal
                        + CT * approximationParameters.scatteringAccuracy();
 
     // Error bound for || u - \bar u_n || based on a priori errors
     accuracy = approximationParameters.combinedAccuracy();
-    // Error bound for || u_n - \bar u_n || based on a posteriori errors
-    double errorAPosteriori
-        = approximationParameters.aPosterioriError(aposterioriIter);
 
-    ofs << "---------------------\n"
-           "End inner iterations \n"
-           "---------------------\n"
-           "Error transport solves (a posteriori estimation): "
-          << aposterioriTransportGlobal                  << '\n'
-        << "Accuracy kernel: "
-          << approximationParameters.scatteringAccuracy() << '\n'
-        << "Error bound ||bar u_n -T^{-1}K bar u_{n-1}|| (a posteriori): "
-          << aposterioriIter[n]   << '\n'
-        << "Error bound ||u_n - bar u_n|| (a posteriori): "
-          << errorAPosteriori << '\n'
-        << "Bound global accuracy ||u - bar u_n|| (a priori + a posteriori): "
-          << accuracy
-          << " (rho * err0 + 2) * rho^n\n"
-        << "Total number of DoFs: "
-          << accumulatedDoFs
-        << "\n\n" << std::flush;
-
-    std::cout << "Error at end of Iteration " << n << ": "
-              << aposterioriTransportGlobal << ", using "
-              << accumulatedDoFs << " DoFs\n";
+    logger.logInnerIterationStats(x, aposterioriTransportGlobal,
+        approximationParameters, aposterioriIter, accuracy, n);
 
     approximationParameters.decreaseEta();
   }
@@ -944,10 +1082,9 @@ compute_adaptive_transport_solution(
     const Sigma sigma,
     RHSData& rhsData,
     Std::optional<BVData>& bvData,
-    std::ofstream& ofs,
+    TransportLogger transportLogger,
     const double transportAccuracy,
-    const unsigned int maxNumberOfInnerIterations,
-    const Iteration it)
+    const unsigned int maxNumberOfInnerIterations)
 {
   double aposteriori_s = 0.;
   unsigned int nRefinement = 0;
@@ -969,8 +1106,7 @@ compute_adaptive_transport_solution(
     }
 
     {
-      std::cout << "Direction " << it.i
-                << ", inner iteration " << nRefinement << '\n';
+      transportLogger.printCurrentIteration(nRefinement);
 
       aposteriori_s
           = compute_transport_solution(x, grid,
@@ -980,21 +1116,8 @@ compute_adaptive_transport_solution(
 
       // TODO: Add (interpolation of) g to theta part of x?
 
-      ofs << "Iteration " << it.n << '.' << nRefinement
-          << " for direction " << it.i << ": \n"
-          << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
-          << aposteriori_s
-          << "\n  - Grid level: "     << grid.maxLevel()
-          << "\n  - Number of DOFs: " << x.size()
-          << std::endl;
-
-      std::cout << "\nIteration " << it.n << '.' << nRefinement
-          << " for direction " << it.i << ": \n"
-          << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
-          << aposteriori_s
-          << "\n  - Grid level: " << grid.maxLevel()
-          << "\n  - Number of DOFs: " << x.size()
-          << std::endl;
+      transportLogger.logSolverStats(nRefinement, aposteriori_s,
+          grid.maxLevel(), x.size());
     }
 
 
@@ -1002,16 +1125,7 @@ compute_adaptive_transport_solution(
         || aposteriori_s <= transportAccuracy) {
       gridIdSet = saveSubGridToIdSet(grid);
 
-      ofs << "\na posteriori error for current direction: "
-          << aposteriori_s;
-      if (aposteriori_s <= transportAccuracy)
-      {
-        ofs << " (enough";
-      } else {
-        ofs << " (not enough, required "
-            << transportAccuracy;
-      }
-      ofs << ")\n\n" << std::flush;
+      transportLogger.logFinalAccuracy(aposteriori_s, transportAccuracy);
 
       break;
     } else {
@@ -1020,11 +1134,8 @@ compute_adaptive_transport_solution(
       grid.postAdapt();
       spaces.update(grid.leafGridView());
 
-      ofs << "\na posteriori error for current direction: "
-          << aposteriori_s
-          << " (required "
-          << transportAccuracy
-          << ")\n\n" << std::flush;
+      transportLogger.logAccuracyAfterRefinement(aposteriori_s,
+                                                 transportAccuracy);
     }
   }
   return aposteriori_s;
