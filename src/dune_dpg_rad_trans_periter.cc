@@ -75,7 +75,7 @@ int main(int argc, char** argv)
   // argv[4]: size of grid
   ///////////////////////////////////
 
-  PlotSolutions plotSolutions = PlotSolutions::doNotPlot;
+  PeriterPlotFlags plotFlags = PeriterPlotFlags::doNotPlot;
   std::string basedir = "../results/";
   unsigned int maxNumberOfInnerIterations = 64;
 
@@ -84,8 +84,8 @@ int main(int argc, char** argv)
     while ((opt = getopt(argc,argv,"n:o:psh")) != EOF)
       switch(opt)
       {
-        case 'p': plotSolutions |= PlotSolutions::plotOuterIterations; break;
-        case 's': plotSolutions |= PlotSolutions::plotScattering; break;
+        case 'p': plotFlags |= PeriterPlotFlags::plotOuterIterations; break;
+        case 's': plotFlags |= PeriterPlotFlags::plotScattering; break;
         case 'n': maxNumberOfInnerIterations = atoi(optarg); break;
         case 'o': basedir = optarg; break;
         default:
@@ -227,7 +227,7 @@ int main(int argc, char** argv)
       .solve(*grid, f, g, homogeneous_inflow_boundary, sigma,
              HenyeyGreensteinScattering(gamma),
              rho, CT, cB, targetAccuracy, N, maxNumberOfInnerIterations,
-             foldername, plotSolutions);
+             foldername, plotFlags);
 
   return 0;
 }

@@ -100,8 +100,8 @@ class Periter {
    * \param targetAccuracy  periter solves up to this accuracy
    * \param maxNumberOfIterations  ... or up to the given number of iterations
    *                               (whatever comes first)
-   * \param plotSolutions  specifies when to create .vtu files for plotting
-   *                       the solution
+   * \param plotFlags  specifies when to create .vtu files for plotting
+   *                   the solution, scattering or rhs
    * \note By default, the scattering is computed from the inner degrees
    *       of freedom of the SolutionSpace. To use the skeletal degrees of
    *       freedom instead, define the preprocessor variable
@@ -122,7 +122,7 @@ class Periter {
              unsigned int maxNumberOfIterations,
              unsigned int maxNumberOfInnerIterations,
              const std::string& outputfolder,
-             PlotSolutions plotSolutions = PlotSolutions::doNotPlot);
+             PeriterPlotFlags plotFlags = PeriterPlotFlags::doNotPlot);
 
   private:
   using VectorType = BlockVector<FieldVector<double,1>>;
@@ -505,12 +505,12 @@ class PeriterLogger {
 
 class PeriterPlotter {
   public:
-  PeriterPlotter(PlotSolutions plotSolutions, std::string outputfolder)
-    : plotFlags(plotSolutions)
+  PeriterPlotter(PeriterPlotFlags plotFlags, std::string outputfolder)
+    : plotFlags(plotFlags)
     , outputfolder(outputfolder)
   {
-    if((plotFlags & PlotSolutions::plotLastIteration)
-        == PlotSolutions::plotLastIteration) {
+    if((plotFlags & PeriterPlotFlags::plotLastIteration)
+        == PeriterPlotFlags::plotLastIteration) {
       std::cerr
           << "Plotting of only the last iteration is not implemented yet!\n";
       std::exit(1);
@@ -582,16 +582,16 @@ class PeriterPlotter {
 
   private:
   bool plotOuterIterationsEnabled() const {
-    return (plotFlags & PlotSolutions::plotOuterIterations)
-           == PlotSolutions::plotOuterIterations;
+    return (plotFlags & PeriterPlotFlags::plotOuterIterations)
+           == PeriterPlotFlags::plotOuterIterations;
   }
 
   bool plotScatteringEnabled() const {
-    return (plotFlags & PlotSolutions::plotScattering)
-           == PlotSolutions::plotScattering;
+    return (plotFlags & PeriterPlotFlags::plotScattering)
+           == PeriterPlotFlags::plotScattering;
   }
 
-  const PlotSolutions plotFlags;
+  const PeriterPlotFlags plotFlags;
   const std::string outputfolder;
 };
 
@@ -667,7 +667,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            unsigned int maxNumberOfIterations,
            unsigned int maxNumberOfInnerIterations,
            const std::string& outputfolder,
-           PlotSolutions plotSolutions) {
+           PeriterPlotFlags plotFlags) {
   static_assert(std::is_same<RHSApproximation, FeRHS>::value
       || std::is_same<RHSApproximation, ApproximateRHS>::value,
       "Unknown type provided for RHSApproximation!\n"
@@ -686,7 +686,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   PeriterLogger logger(outputfolder+"/output",
       PassKey<Periter<ScatteringKernelApproximation, RHSApproximation>>{});
-  PeriterPlotter plotter(plotSolutions, outputfolder);
+  PeriterPlotter plotter(plotFlags, outputfolder);
 
   ///////////////////////////////////
   // Parameters for adaptivity

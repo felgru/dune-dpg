@@ -14,24 +14,27 @@
 
 namespace Dune {
 
-enum class PlotSolutions : unsigned char {
+enum class PeriterPlotFlags : unsigned char {
   doNotPlot = 0,
   plotOuterIterations = 1 << 0,
   plotLastIteration = 1 << 1,
   plotScattering = 1 << 2
 };
 
-constexpr inline PlotSolutions operator|(PlotSolutions a, PlotSolutions b) {
-  using T = std::underlying_type_t<PlotSolutions>;
-  return static_cast<PlotSolutions>(static_cast<T>(a) | static_cast<T>(b));
+constexpr inline
+PeriterPlotFlags operator|(PeriterPlotFlags a, PeriterPlotFlags b) {
+  using T = std::underlying_type_t<PeriterPlotFlags>;
+  return static_cast<PeriterPlotFlags>(static_cast<T>(a) | static_cast<T>(b));
 }
 
-constexpr inline PlotSolutions operator&(PlotSolutions a, PlotSolutions b) {
-  using T = std::underlying_type_t<PlotSolutions>;
-  return static_cast<PlotSolutions>(static_cast<T>(a) & static_cast<T>(b));
+constexpr inline
+PeriterPlotFlags operator&(PeriterPlotFlags a, PeriterPlotFlags b) {
+  using T = std::underlying_type_t<PeriterPlotFlags>;
+  return static_cast<PeriterPlotFlags>(static_cast<T>(a) & static_cast<T>(b));
 }
 
-constexpr inline PlotSolutions& operator|=(PlotSolutions& a, PlotSolutions b) {
+constexpr inline
+PeriterPlotFlags& operator|=(PeriterPlotFlags& a, PeriterPlotFlags b) {
   return a = (a | b);
 }
 
