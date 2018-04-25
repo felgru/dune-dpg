@@ -73,6 +73,7 @@ class Periter {
    * \param kernel  the scattering kernel, e.g. a Henyey–Greenstein kernel
    * \param rho  the contraction parameter ρ
    * \param CT  the constant C_T from the paper
+   * \param cB  the inf-sup constant of the operator B = T - K
    * \param targetAccuracy  periter solves up to this accuracy
    * \param maxNumberOfIterations  ... or up to the given number of iterations
    *                               (whatever comes first)
