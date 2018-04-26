@@ -198,7 +198,7 @@ int main(int argc, char** argv)
         const double v1 = 2.;
         const double v2 = 10.;
         if(i<=0 or i>=6 or j<=0 or j>=6 or
-            (i+j) % 2 == 0 or (i==3 and j==5)) {
+            (i+j) % 2 != 0 or (i==3 and (j==3 or j==5))) {
           return v1;
         } else {
           return v2;
