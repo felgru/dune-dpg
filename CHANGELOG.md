@@ -9,6 +9,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * A new `ConstrainedLocalView` was added that provides the indexing
   methods of `ConstrainedLocalIndexSet` like `DefaultLocalView` now
   provides indexing methods in dune-functions 2.7.
+* FunctionPlotter can now be used to plot functions defined over a
+  finite element space with local grid refinement. This is useful to
+  plot data defined in the test search space.
 
 ### Changed
 * dune-dpg now requires Version 2.6 of the Dune core modules.

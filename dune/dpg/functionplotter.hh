@@ -8,6 +8,9 @@
 
 #include <dune/dpg/functions/constraineddiscreteglobalbasisfunction.hh>
 #include <dune/dpg/functions/discreteglobalbasisfunction.hh>
+#include <dune/dpg/functions/io/vtkrefinedfunctionwriter.hh>
+#include <dune/dpg/type_traits.hh>
+
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
 #include <type_traits>
@@ -21,7 +24,9 @@ public:
 
   FunctionPlotter(std::string filename) : filename(filename) {}
 
-  template<class VectorType, class FEBasis>
+  template<class VectorType, class FEBasis,
+      typename std::enable_if<!is_RefinedFiniteElement<FEBasis>::value
+                             >::type* = nullptr>
   void plot(const std::string& functionname,
             const VectorType&  u,
             const FEBasis&     feBasis,
@@ -47,6 +52,20 @@ public:
                                            VTK::FieldInfo::Type::scalar,
                                            1));
     vtkWriter.write(filename);
+  }
+
+  template<class VectorType, class FEBasis,
+      typename std::enable_if<is_RefinedFiniteElement<FEBasis>::value
+                             >::type* = nullptr>
+  void plot(const std::string& functionname,
+            const VectorType&  u,
+            const FEBasis&     feBasis,
+            unsigned int       subsampling) const
+  {
+    // TODO: currently subsampling is ignored for refined finite elements
+    std::ofstream file(filename+".vtu");
+    VTKRefinedFunctionWriter writer(file);
+    writer.writeFunction(feBasis, u, functionname);
   }
 
   template<class VectorType, class FEBasis>

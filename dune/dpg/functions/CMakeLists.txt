@@ -1,3 +1,5 @@
+add_subdirectory(io)
+
 install(FILES
         concepts.hh
         constraineddiscreteglobalbasisfunction.hh
