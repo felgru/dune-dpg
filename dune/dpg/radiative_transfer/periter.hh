@@ -128,6 +128,20 @@ class Periter {
   private:
   using VectorType = BlockVector<FieldVector<double,1>>;
 
+  template<class HostGridView, class SubGridView, class Grid,
+           class GridIdSet, class Plotter>
+  static auto computeScatteringData(
+        HostGridView hostGridView,
+        ScatteringKernelApproximation& kernelApproximation,
+        std::vector<VectorType>& x,
+        SubGridSpaces<SubGridView>& subGridSpaces,
+        std::vector<Direction>& sVector,
+        std::vector<std::unique_ptr<Grid>>& grids,
+        std::vector<GridIdSet>& gridIdSets,
+        double accuKernel,
+        const Plotter& plotter,
+        unsigned int n);
+
   /**
    * Compute the solution of a transport problem
    *
@@ -840,10 +854,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     // To prevent division by zero.
     if(uNorm == 0.) uNorm = 1e-5;
 
-#ifdef PERITER_SKELETAL_SCATTERING
-    using FEBasisHostTraceDiscontinuous
-        = Functions::BernsteinDGBasis<HostGridView, 2>;
-#endif
     using FEBasisHostInterior
         = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
     using FEBasisHostTrace
@@ -852,47 +862,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     const double accuKernel = approximationParameters.scatteringAccuracy()
                             / (kappaNorm * uNorm);
 
-    using ScatteringData = std::decay_t<decltype(attachDataToSubGrid(
-              std::declval<typename Spaces::FEBasisTest>(),
-#ifdef PERITER_SKELETAL_SCATTERING
-              std::declval<FEBasisHostTraceDiscontinuous>(),
-#else
-              std::declval<FEBasisHostInterior>(),
-#endif
-              std::declval<VectorType>()))>;
-    std::vector<ScatteringData> scatteringData;
-    {
-#ifdef PERITER_SKELETAL_SCATTERING
-      FEBasisHostTraceDiscontinuous
-          hostGridGlobalBasis(hostGrid.leafGridView());
-#else
-      FEBasisHostInterior hostGridGlobalBasis(hostGrid.leafGridView());
-#endif
-
-      std::vector<VectorType> scatteringFunctional =
-          apply_scattering (
-            kernelApproximation, x, spaces,
-            hostGridGlobalBasis,
-            sVector, grids, gridIdSets,
-            accuKernel);
-
-      numS = sVector.size();
-      x.resize(numS);
-      scatteringData.reserve(numS);
-
-      plotter.plotScatteringOnHostGrid(hostGridGlobalBasis,
-                                       scatteringFunctional,
-                                       n, numS);
-
-      for(size_t i = 0; i < numS; i++) {
-        const auto& subGridGlobalBasis = spaces.testSpace(i);
-        scatteringData.emplace_back(
-          attachDataToSubGrid(
-            subGridGlobalBasis,
-            hostGridGlobalBasis,
-            scatteringFunctional[i]));
-      }
-    }
+    auto scatteringData = computeScatteringData
+                            (hostGrid.leafGridView(),
+                             kernelApproximation, x, spaces,
+                             sVector, grids, gridIdSets, accuKernel,
+                             plotter, n);
+    numS = sVector.size();
 
     using RHSData = std::decay_t<decltype(attachDataToSubGrid(
               std::declval<typename Spaces::FEBasisTest>(),
@@ -996,6 +971,66 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
     approximationParameters.decreaseEta();
   }
+}
+
+template<class ScatteringKernelApproximation, class RHSApproximation>
+template<class HostGridView, class SubGridView, class Grid, class GridIdSet,
+         class Plotter>
+auto
+Periter<ScatteringKernelApproximation, RHSApproximation>::
+computeScatteringData(
+      HostGridView hostGridView,
+      ScatteringKernelApproximation& kernelApproximation,
+      std::vector<VectorType>& x,
+      SubGridSpaces<SubGridView>& subGridSpaces,
+      std::vector<Direction>& sVector,
+      std::vector<std::unique_ptr<Grid>>& grids,
+      std::vector<GridIdSet>& gridIdSets,
+      double accuKernel,
+      const Plotter& plotter,
+      unsigned int n)
+{
+  using Spaces = SubGridSpaces<SubGridView>;
+#ifdef PERITER_SKELETAL_SCATTERING
+  // Discontinuous version of the trace space
+  using FEBasisHost
+      = Functions::BernsteinDGBasis<HostGridView, 2>;
+#else
+  using FEBasisHost
+      = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
+#endif
+  using ScatteringData = std::decay_t<decltype(attachDataToSubGrid(
+          std::declval<typename Spaces::FEBasisTest>(),
+          std::declval<FEBasisHost>(),
+          std::declval<VectorType>()))>;
+  std::vector<ScatteringData> scatteringData;
+
+  FEBasisHost hostGridGlobalBasis(hostGridView);
+
+  std::vector<VectorType> scatteringFunctional =
+      apply_scattering (
+        kernelApproximation, x, subGridSpaces,
+        hostGridGlobalBasis,
+        sVector, grids, gridIdSets,
+        accuKernel);
+
+  size_t numS = sVector.size();
+  x.resize(numS);
+  scatteringData.reserve(numS);
+
+  plotter.plotScatteringOnHostGrid(hostGridGlobalBasis,
+                                   scatteringFunctional,
+                                   n, numS);
+
+  for(size_t i = 0; i < numS; i++) {
+    const auto& subGridGlobalBasis = subGridSpaces.testSpace(i);
+    scatteringData.emplace_back(
+      attachDataToSubGrid(
+        subGridGlobalBasis,
+        hostGridGlobalBasis,
+        scatteringFunctional[i]));
+  }
+  return scatteringData;
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
