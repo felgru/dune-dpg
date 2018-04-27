@@ -24,6 +24,7 @@
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
+#include <dune/dpg/functions/gridviewfunctions.hh>
 #ifndef PERITER_USE_UNIFORM_GRID
 #  include <dune/dpg/radiative_transfer/periter.hh>
 #else
@@ -128,6 +129,7 @@ int main(int argc, char** argv)
 
   constexpr int dim = 2;
   using Grid = UGGrid<dim>;
+  using GridView = typename Grid::LeafGridView;
 
   using Domain = Grid::template Codim<0>::Geometry::GlobalCoordinate;
   using Direction = FieldVector<double, dim>;
@@ -151,8 +153,8 @@ int main(int argc, char** argv)
 
 #if PERITER_PEAKY_BV
   const auto f
-    = [](const Domain& x, const Direction& s)
-      { return 1.; };
+    = [](const GridView)
+      { return [](const Domain& x){ return 1.; }; };
   const auto g = [](const Domain& x)
       {
         if(x[0] < .1) {
@@ -175,18 +177,23 @@ int main(int argc, char** argv)
   const double sigmaMax = sigma;
 #elif PERITER_CHECKERBOARD
   const auto f
-    = [](const Domain& x, const Direction& s)
+    = [](const GridView gridView)
       {
-        const int n=7;
-        const int i = static_cast<int>(n*x[0]);
-        const int j = static_cast<int>(n*x[1]);
-        const double v1 = 0.;
-        const double v2 = 1.;
-        if(i==3 and j==3) {
-          return v2;
-        } else {
-          return v1;
-        }
+        auto rhs = [](const Domain& x)
+        {
+          const int n=7;
+          const int i = static_cast<int>(n*x[0]);
+          const int j = static_cast<int>(n*x[1]);
+          const double v1 = 0.;
+          const double v2 = 1.;
+          if(i==3 and j==3) {
+            return v2;
+          } else {
+            return v1;
+          }
+        };
+        return Functions::makePiecewiseConstantGridViewFunction(
+              std::move(rhs), gridView);
       };
   const auto g = [](const Domain& x) { return 0.; };
   const auto homogeneous_inflow_boundary =

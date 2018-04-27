@@ -472,17 +472,16 @@ namespace detail {
       double,
       FEBasisInterior& feBasisInterior,
       const std::vector<Direction>& sVector,
-      F& f,
+      const F& f,
       FeRHS) {
     static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
         "Functions::interpolate won't work for refined finite elements");
     const size_t numS = sVector.size();
+    auto rhsFunction = f(feBasisInterior.gridView());
     for(unsigned int i = 0; i < numS; ++i)
     {
       VectorType gInterpolation(feBasisInterior.size());
-      const Direction s = sVector[i];
-      Functions::interpolate(feBasisInterior, gInterpolation,
-          [s,&f](const Direction& x) { return f(x,s); });
+      Functions::interpolate(feBasisInterior, gInterpolation, rhsFunction);
 
       // Add gInterpolate to first feBasisInterior.size() entries of
       // rhsFunctional[i].
@@ -505,7 +504,7 @@ namespace detail {
       double accuracy,
       FEBasisInterior& feBasisInterior,
       const std::vector<Direction>& sVector,
-      F& f,
+      const F& f,
       ApproximateRHS) {
     using LevelGridView = typename Grid::LevelGridView;
     using FEBasisCoarseInterior =
@@ -517,27 +516,21 @@ namespace detail {
     for(unsigned int refinement = 1; ; refinement++) {
       static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
           "Functions::interpolate won't work for refined finite elements");
+      auto rhsFunction = f(gridView);
       for(unsigned int i = 0; i < numS; ++i)
       {
         VectorType gInterpolation(feBasisInterior.size());
-        const Direction s = sVector[i];
-        Functions::interpolate(feBasisInterior, gInterpolation,
-            [s,&f](const Direction& x) { return f(x,s); });
-
+        Functions::interpolate(feBasisInterior, gInterpolation, rhsFunction);
         std::swap(boundaryValues[i], gInterpolation);
       }
 
       double rhsError = 0.;
       for(unsigned int i = 0; i < numS; ++i)
       {
-        const Direction s = sVector[i];
-        auto gExact = Functions::makeGridViewFunction(
-              [s,&f](const Direction& x) { return f(x,s); },
-              gridView);
         auto gApprox = Functions::makeDiscreteGlobalBasisFunction<double>(
               feBasisInterior, boundaryValues[i]);
 
-        auto localGExact = localFunction(gExact);
+        auto localGExact = localFunction(rhsFunction);
         auto localGApprox = localFunction(gApprox);
         auto localView = feBasisInterior.localView();
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
