@@ -142,6 +142,15 @@ class Periter {
         const Plotter& plotter,
         unsigned int n);
 
+  template<class HostGridView, class SubGridView, class Grid, class F>
+  static auto computeRhsData(
+        HostGridView hostGridView,
+        SubGridSpaces<SubGridView>& subGridSpaces,
+        std::vector<std::unique_ptr<Grid>>& grids,
+        double accuracy,
+        const std::vector<Direction>& sVector,
+        const F& f);
+
   /**
    * Compute the solution of a transport problem
    *
@@ -683,7 +692,7 @@ namespace detail {
       double,
       const FEHostBasis& hostGridBasis,
       const std::vector<Direction>& sVector,
-      F& f,
+      const F& f,
       FeRHS) {
     static_assert(!is_RefinedFiniteElement<FEHostBasis>::value,
         "Functions::interpolate won't work for refined finite elements");
@@ -708,7 +717,7 @@ namespace detail {
       double accuracy,
       const std::vector<std::shared_ptr<FEBases>>& solutionSpaces,
       const std::vector<Direction>& sVector,
-      F& f,
+      const F& f,
       ApproximateRHS) {
     DUNE_THROW(Dune::NotImplemented,
         "Implementation of approximate_rhs for non-FE right hand side "
@@ -854,11 +863,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     // To prevent division by zero.
     if(uNorm == 0.) uNorm = 1e-5;
 
-    using FEBasisHostInterior
-        = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
-    using FEBasisHostTrace
-        = changeGridView_t<typename Spaces::FEBasisTrace, HostGridView>;
-
     const double accuKernel = approximationParameters.scatteringAccuracy()
                             / (kappaNorm * uNorm);
 
@@ -869,36 +873,13 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                              plotter, n);
     numS = sVector.size();
 
-    using RHSData = std::decay_t<decltype(attachDataToSubGrid(
-              std::declval<typename Spaces::FEBasisTest>(),
-              std::declval<FEBasisHostInterior>(),
-              std::declval<VectorType>()))>;
-    std::vector<RHSData> rhsData;
-    {
-      FEBasisHostInterior hostGridGlobalBasis(hostGrid.leafGridView());
+    auto rhsData = computeRhsData
+                     (hostGrid.leafGridView(), spaces,
+                      grids, approximationParameters.rhsAccuracy(),
+                      sVector, f);
 
-      std::vector<VectorType> rhsFunctional =
-          detail::approximate_rhs (
-              grids,
-              approximationParameters.rhsAccuracy(),
-              hostGridGlobalBasis,
-              sVector,
-              f, RHSApproximation{});
-
-      rhsData.reserve(numS);
-
-      // TODO: restore grids from gridIdSets and update spaces
-      //       shouldn't be necessary, as long as RHSApproximation == FeRHS
-      for(size_t i = 0; i < numS; i++) {
-        const auto& subGridGlobalBasis = spaces.testSpace(i);
-        rhsData.emplace_back(
-          attachDataToSubGrid(
-            subGridGlobalBasis,
-            hostGridGlobalBasis,
-            rhsFunctional[i]));
-      }
-    }
-
+    using FEBasisHostTrace
+        = changeGridView_t<typename Spaces::FEBasisTrace, HostGridView>;
     using BVData = std::decay_t<decltype(attachDataToSubGrid(
               std::declval<typename Spaces::FEBasisTest>(),
               std::declval<FEBasisHostTrace>(),
@@ -1031,6 +1012,52 @@ computeScatteringData(
         scatteringFunctional[i]));
   }
   return scatteringData;
+}
+
+template<class ScatteringKernelApproximation, class RHSApproximation>
+template<class HostGridView, class SubGridView, class Grid, class F>
+auto
+Periter<ScatteringKernelApproximation, RHSApproximation>::
+computeRhsData(
+      HostGridView hostGridView,
+      SubGridSpaces<SubGridView>& subGridSpaces,
+      std::vector<std::unique_ptr<Grid>>& grids,
+      double accuracy,
+      const std::vector<Direction>& sVector,
+      const F& f)
+{
+  using Spaces = SubGridSpaces<SubGridView>;
+  using FEBasisHostInterior
+      = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
+  using RHSData = std::decay_t<decltype(attachDataToSubGrid(
+            std::declval<typename Spaces::FEBasisTest>(),
+            std::declval<FEBasisHostInterior>(),
+            std::declval<VectorType>()))>;
+  std::vector<RHSData> rhsData;
+  FEBasisHostInterior hostGridGlobalBasis(hostGridView);
+
+  std::vector<VectorType> rhsFunctional =
+      detail::approximate_rhs (
+          grids,
+          accuracy,
+          hostGridGlobalBasis,
+          sVector,
+          f, RHSApproximation{});
+
+  const size_t numS = sVector.size();
+  rhsData.reserve(numS);
+
+  // TODO: restore grids from gridIdSets and update spaces
+  //       shouldn't be necessary, as long as RHSApproximation == FeRHS
+  for(size_t i = 0; i < numS; i++) {
+    const auto& subGridGlobalBasis = subGridSpaces.testSpace(i);
+    rhsData.emplace_back(
+      attachDataToSubGrid(
+        subGridGlobalBasis,
+        hostGridGlobalBasis,
+        rhsFunctional[i]));
+  }
+  return rhsData;
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
