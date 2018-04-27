@@ -688,52 +688,6 @@ class PeriterPlotter {
   const std::string outputfolder;
 };
 
-#ifndef DOXYGEN
-namespace detail {
-  constexpr size_t dim = 2;
-  using VectorType = BlockVector<FieldVector<double,1>>;
-  using Direction = FieldVector<double, dim>;
-
-  template<class FEHostBasis, class Grids, class F>
-  inline std::vector<VectorType> approximate_rhs (
-      Grids&,
-      double,
-      const FEHostBasis& hostGridBasis,
-      const std::vector<Direction>& sVector,
-      const F& f,
-      FeRHS) {
-    static_assert(!is_RefinedFiniteElement<FEHostBasis>::value,
-        "Functions::interpolate won't work for refined finite elements");
-    const size_t numS = sVector.size();
-    std::vector<VectorType> rhsFunctional(numS);
-    for(unsigned int i = 0; i < numS; ++i)
-    {
-      rhsFunctional[i].resize(hostGridBasis.size());
-      const Direction s = sVector[i];
-      Functions::interpolate(hostGridBasis, rhsFunctional[i],
-          [s,&f](const Direction& x) { return f(x,s); });
-    }
-    return rhsFunctional;
-  }
-
-
-  // Refine grid until accuracy kappa2*eta is reached for
-  // approximation of rhs.
-  template<class FEBases, class Grids, class F>
-  inline std::vector<VectorType> approximate_rhs (
-      Grids& grids,
-      double accuracy,
-      const std::vector<std::shared_ptr<FEBases>>& solutionSpaces,
-      const std::vector<Direction>& sVector,
-      const F& f,
-      ApproximateRHS) {
-    DUNE_THROW(Dune::NotImplemented,
-        "Implementation of approximate_rhs for non-FE right hand side "
-        "functions currently broken.");
-  }
-} // end namespace detail
-#endif
-
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class HostGrid, class F, class G, class HB,
          class Sigma, class Kernel>
@@ -995,6 +949,52 @@ computeScatteringData(
   }
   return scatteringData;
 }
+
+#ifndef DOXYGEN
+namespace detail {
+  constexpr size_t dim = 2;
+  using VectorType = BlockVector<FieldVector<double,1>>;
+  using Direction = FieldVector<double, dim>;
+
+  template<class FEHostBasis, class Grids, class F>
+  inline std::vector<VectorType> approximate_rhs (
+      Grids&,
+      double,
+      const FEHostBasis& hostGridBasis,
+      const std::vector<Direction>& sVector,
+      const F& f,
+      FeRHS) {
+    static_assert(!is_RefinedFiniteElement<FEHostBasis>::value,
+        "Functions::interpolate won't work for refined finite elements");
+    const size_t numS = sVector.size();
+    std::vector<VectorType> rhsFunctional(numS);
+    for(unsigned int i = 0; i < numS; ++i)
+    {
+      rhsFunctional[i].resize(hostGridBasis.size());
+      const Direction s = sVector[i];
+      Functions::interpolate(hostGridBasis, rhsFunctional[i],
+          [s,&f](const Direction& x) { return f(x,s); });
+    }
+    return rhsFunctional;
+  }
+
+
+  // Refine grid until accuracy kappa2*eta is reached for
+  // approximation of rhs.
+  template<class FEBases, class Grids, class F>
+  inline std::vector<VectorType> approximate_rhs (
+      Grids& grids,
+      double accuracy,
+      const std::vector<std::shared_ptr<FEBases>>& solutionSpaces,
+      const std::vector<Direction>& sVector,
+      const F& f,
+      ApproximateRHS) {
+    DUNE_THROW(Dune::NotImplemented,
+        "Implementation of approximate_rhs for non-FE right hand side "
+        "functions currently broken.");
+  }
+} // end namespace detail
+#endif
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class HostGridView, class SubGridView, class Grid, class F>
