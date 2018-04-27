@@ -127,26 +127,26 @@ int main(int argc, char** argv)
   ///////////////////////////////////
 
   constexpr int dim = 2;
-  typedef UGGrid<dim> GridType;
+  using Grid = UGGrid<dim>;
 
-  using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
+  using Domain = Grid::template Codim<0>::Geometry::GlobalCoordinate;
   using Direction = FieldVector<double, dim>;
 
   const FieldVector<double,dim> lower = {0,0};
   const FieldVector<double,dim> upper = {1,1};
   const std::array<unsigned int,dim> elements = {sizeGrid,sizeGrid};
 
-  //std::unique_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+  //std::unique_ptr<Grid> grid = StructuredGridFactory<Grid>::createCubeGrid(lower, upper, elements);
 
-  std::unique_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+  std::unique_ptr<Grid> grid = StructuredGridFactory<Grid>::createSimplexGrid(lower, upper, elements);
 
-  //std::unique_ptr<GridType> grid = GmshReader<GridType>::read("irregular-square.msh");
+  //std::unique_ptr<Grid> grid = GmshReader<Grid>::read("irregular-square.msh");
 
 #ifndef PERITER_USE_UNIFORM_GRID
   // UG by default uses red-green refinements which would create and remove
   // auxiliary cells. This doesn't play well with the SubGrids we use, so
   // disable it here.
-  grid->setClosureType(GridType::NONE);
+  grid->setClosureType(Grid::NONE);
 #endif
 
 #if PERITER_PEAKY_BV
