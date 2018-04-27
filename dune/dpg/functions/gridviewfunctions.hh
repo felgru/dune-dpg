@@ -3,6 +3,9 @@
 #ifndef DUNE_FUNCTIONS_DPG_GRIDVIEWFUNCTIONS_HH
 #define DUNE_FUNCTIONS_DPG_GRIDVIEWFUNCTIONS_HH
 
+#include <type_traits>
+
+#include <dune/functions/common/functionconcepts.hh>
 #include <dune/functions/gridfunctions/gridviewentityset.hh>
 
 namespace Dune {
