@@ -168,7 +168,7 @@ class Periter {
    * is reached.
    */
   template<class Spaces, class Grid, class GridIdSet, class Sigma,
-           class RHSData, class BVData>
+           class RHSData, class ScatteringData, class BVData>
   static double compute_adaptive_transport_solution(
       VectorType& x,
       Spaces& spaces,
@@ -177,7 +177,7 @@ class Periter {
       const FieldVector<double, 2>& s,
       const Sigma sigma,
       RHSData& rhsData,
-      RHSData& scatteringData,
+      ScatteringData& scatteringData,
       Std::optional<BVData>& bvData,
       TransportLogger transportLogger,
       TransportPlotter transportPlotter,
@@ -664,8 +664,7 @@ namespace detail {
   using Direction = FieldVector<double, dim>;
 
   template<class FEHostBasis, class Grids, class F>
-  inline void approximate_rhs (
-      std::vector<VectorType>& rhsFunctional,
+  inline std::vector<VectorType> approximate_rhs (
       Grids&,
       double,
       const FEHostBasis& hostGridBasis,
@@ -675,30 +674,22 @@ namespace detail {
     static_assert(!is_RefinedFiniteElement<FEHostBasis>::value,
         "Functions::interpolate won't work for refined finite elements");
     const size_t numS = sVector.size();
+    std::vector<VectorType> rhsFunctional(numS);
     for(unsigned int i = 0; i < numS; ++i)
     {
-      VectorType gInterpolation(hostGridBasis.size());
+      rhsFunctional[i].resize(hostGridBasis.size());
       const Direction s = sVector[i];
-      Functions::interpolate(hostGridBasis, gInterpolation,
+      Functions::interpolate(hostGridBasis, rhsFunctional[i],
           [s,&f](const Direction& x) { return f(x,s); });
-
-      // Add gInterpolate to first hostGridBasis.size() entries of
-      // rhsFunctional[i].
-      using Iterator = std::decay_t<decltype(rhsFunctional[i].begin())>;
-      for(Iterator rIt=rhsFunctional[i].begin(),
-                   rEnd=rhsFunctional[i].begin()+hostGridBasis.size(),
-                   gIt=gInterpolation.begin(); rIt!=rEnd; ++rIt, ++gIt) {
-        *rIt += *gIt;
-      }
     }
+    return rhsFunctional;
   }
 
 
   // Refine grid until accuracy kappa2*eta is reached for
   // approximation of rhs.
   template<class FEBases, class Grids, class F>
-  inline void approximate_rhs (
-      std::vector<VectorType>& rhsFunctional,
+  inline std::vector<VectorType> approximate_rhs (
       Grids& grids,
       double accuracy,
       const std::vector<std::shared_ptr<FEBases>>& solutionSpaces,
@@ -852,11 +843,16 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 #ifdef PERITER_SKELETAL_SCATTERING
     using FEBasisHostTraceDiscontinuous
         = Functions::BernsteinDGBasis<HostGridView, 2>;
-#else
+#endif
     using FEBasisHostInterior
         = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
-#endif
-    using RHSData = std::decay_t<decltype(attachDataToSubGrid(
+    using FEBasisHostTrace
+        = changeGridView_t<typename Spaces::FEBasisTrace, HostGridView>;
+
+    const double accuKernel = approximationParameters.scatteringAccuracy()
+                            / (kappaNorm * uNorm);
+
+    using ScatteringData = std::decay_t<decltype(attachDataToSubGrid(
               std::declval<typename Spaces::FEBasisTest>(),
 #ifdef PERITER_SKELETAL_SCATTERING
               std::declval<FEBasisHostTraceDiscontinuous>(),
@@ -864,17 +860,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
               std::declval<FEBasisHostInterior>(),
 #endif
               std::declval<VectorType>()))>;
-    std::vector<RHSData> scatteringData;
-    std::vector<RHSData> rhsData;
-    using FEBasisHostTrace
-        = changeGridView_t<typename Spaces::FEBasisTrace, HostGridView>;
-    using BVData = std::decay_t<decltype(attachDataToSubGrid(
-              std::declval<typename Spaces::FEBasisTest>(),
-              std::declval<FEBasisHostTrace>(),
-              std::declval<VectorType>()))>;
-    std::vector<Std::optional<BVData>> bvData;
-    const double accuKernel = approximationParameters.scatteringAccuracy()
-                            / (kappaNorm * uNorm);
+    std::vector<ScatteringData> scatteringData;
     {
 #ifdef PERITER_SKELETAL_SCATTERING
       FEBasisHostTraceDiscontinuous
@@ -883,7 +869,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       FEBasisHostInterior hostGridGlobalBasis(hostGrid.leafGridView());
 #endif
 
-      std::vector<VectorType> rhsFunctional =
+      std::vector<VectorType> scatteringFunctional =
           apply_scattering (
             kernelApproximation, x, spaces,
             hostGridGlobalBasis,
@@ -893,30 +879,41 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       numS = sVector.size();
       x.resize(numS);
       scatteringData.reserve(numS);
-      rhsData.reserve(numS);
 
-      plotter.plotScatteringOnHostGrid(hostGridGlobalBasis, rhsFunctional,
+      plotter.plotScatteringOnHostGrid(hostGridGlobalBasis,
+                                       scatteringFunctional,
                                        n, numS);
 
-      // TODO: restore grids from gridIdSets and update spaces
-      //       shouldn't be necessary, as long as RHSApproximation == FeRHS
       for(size_t i = 0; i < numS; i++) {
         const auto& subGridGlobalBasis = spaces.testSpace(i);
         scatteringData.emplace_back(
           attachDataToSubGrid(
             subGridGlobalBasis,
             hostGridGlobalBasis,
-            rhsFunctional[i]));
-        rhsFunctional[i] = 0;
+            scatteringFunctional[i]));
       }
+    }
 
-      detail::approximate_rhs (
-          rhsFunctional,
-          grids,
-          approximationParameters.rhsAccuracy(),
-          hostGridGlobalBasis,
-          sVector,
-          f, RHSApproximation{});
+    using RHSData = std::decay_t<decltype(attachDataToSubGrid(
+              std::declval<typename Spaces::FEBasisTest>(),
+              std::declval<FEBasisHostInterior>(),
+              std::declval<VectorType>()))>;
+    std::vector<RHSData> rhsData;
+    {
+      FEBasisHostInterior hostGridGlobalBasis(hostGrid.leafGridView());
+
+      std::vector<VectorType> rhsFunctional =
+          detail::approximate_rhs (
+              grids,
+              approximationParameters.rhsAccuracy(),
+              hostGridGlobalBasis,
+              sVector,
+              f, RHSApproximation{});
+
+      rhsData.reserve(numS);
+
+      // TODO: restore grids from gridIdSets and update spaces
+      //       shouldn't be necessary, as long as RHSApproximation == FeRHS
       for(size_t i = 0; i < numS; i++) {
         const auto& subGridGlobalBasis = spaces.testSpace(i);
         rhsData.emplace_back(
@@ -926,6 +923,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
             rhsFunctional[i]));
       }
     }
+
+    using BVData = std::decay_t<decltype(attachDataToSubGrid(
+              std::declval<typename Spaces::FEBasisTest>(),
+              std::declval<FEBasisHostTrace>(),
+              std::declval<VectorType>()))>;
+    std::vector<Std::optional<BVData>> bvData;
     {
       // get bv contribution to rhs
       FEBasisHostTrace hostGridGlobalBasis(hostGrid.leafGridView());
@@ -1166,7 +1169,7 @@ compute_transport_solution(
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class Spaces, class Grid, class GridIdSet, class Sigma,
-         class RHSData, class BVData>
+         class RHSData, class ScatteringData, class BVData>
 double
 Periter<ScatteringKernelApproximation, RHSApproximation>::
 compute_adaptive_transport_solution(
@@ -1177,7 +1180,7 @@ compute_adaptive_transport_solution(
     const FieldVector<double, 2>& s,
     const Sigma sigma,
     RHSData& rhsData,
-    RHSData& scatteringData,
+    ScatteringData& scatteringData,
     Std::optional<BVData>& bvData,
     TransportLogger transportLogger,
     TransportPlotter transportPlotter,
