@@ -968,12 +968,11 @@ namespace detail {
         "Functions::interpolate won't work for refined finite elements");
     const size_t numS = sVector.size();
     std::vector<VectorType> rhsFunctional(numS);
+    auto rhsFunction = f(hostGridBasis.gridView());
     for(unsigned int i = 0; i < numS; ++i)
     {
       rhsFunctional[i].resize(hostGridBasis.size());
-      const Direction s = sVector[i];
-      Functions::interpolate(hostGridBasis, rhsFunctional[i],
-          [s,&f](const Direction& x) { return f(x,s); });
+      Functions::interpolate(hostGridBasis, rhsFunctional[i], rhsFunction);
     }
     return rhsFunctional;
   }

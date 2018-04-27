@@ -4,6 +4,7 @@ install(FILES
         concepts.hh
         constraineddiscreteglobalbasisfunction.hh
         discreteglobalbasisfunction.hh
+        gridviewfunctions.hh
         interpolate.hh
         localindexsetiteration.hh
         normedspaces.hh
