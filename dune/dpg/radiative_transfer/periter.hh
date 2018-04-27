@@ -151,6 +151,14 @@ class Periter {
         const std::vector<Direction>& sVector,
         const F& f);
 
+  template<class HostGridView, class SubGridView, class G, class HB>
+  static auto computeBvData(
+        HostGridView hostGridView,
+        const SubGridSpaces<SubGridView>& subGridSpaces,
+        const std::vector<Direction>& sVector,
+        const G& g,
+        const HB& is_inflow_boundary_homogeneous);
+
   /**
    * Compute the solution of a transport problem
    *
@@ -752,7 +760,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   const unsigned int dim = HostGrid::dimension;
   using Grid = SubGrid<dim, HostGrid, false>;
   using LeafGridView = typename Grid::LeafGridView;
-  using HostGridView = typename HostGrid::LeafGridView;
   using Direction = FieldVector<double, dim>;
   using GridIdSet = std::set<typename HostGrid::GlobalIdSet::IdType>;
 
@@ -871,39 +878,14 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                              kernelApproximation, x, spaces,
                              sVector, grids, gridIdSets, accuKernel,
                              plotter, n);
-    numS = sVector.size();
-
     auto rhsData = computeRhsData
                      (hostGrid.leafGridView(), spaces,
                       grids, approximationParameters.rhsAccuracy(),
                       sVector, f);
-
-    using FEBasisHostTrace
-        = changeGridView_t<typename Spaces::FEBasisTrace, HostGridView>;
-    using BVData = std::decay_t<decltype(attachDataToSubGrid(
-              std::declval<typename Spaces::FEBasisTest>(),
-              std::declval<FEBasisHostTrace>(),
-              std::declval<VectorType>()))>;
-    std::vector<Std::optional<BVData>> bvData;
-    {
-      // get bv contribution to rhs
-      FEBasisHostTrace hostGridGlobalBasis(hostGrid.leafGridView());
-      const VectorType boundaryExtension
-          = harmonic_extension_of_boundary_values(g, hostGridGlobalBasis);
-      bvData.reserve(numS);
-      for(size_t i = 0; i < numS; i++) {
-        if(is_inflow_boundary_homogeneous(sVector[i])) {
-          bvData.emplace_back();
-        } else {
-          const auto& subGridGlobalBasis = spaces.testSpace(i);
-          bvData.emplace_back(
-            attachDataToSubGrid(
-              subGridGlobalBasis,
-              hostGridGlobalBasis,
-              boundaryExtension));
-        }
-      }
-    }
+    auto bvData = computeBvData
+                    (hostGrid.leafGridView(), spaces,
+                     sVector, g, is_inflow_boundary_homogeneous);
+    numS = sVector.size();
 
     auto endScatteringApproximation = std::chrono::steady_clock::now();
 
@@ -1058,6 +1040,46 @@ computeRhsData(
         rhsFunctional[i]));
   }
   return rhsData;
+}
+
+template<class ScatteringKernelApproximation, class RHSApproximation>
+template<class HostGridView, class SubGridView, class G, class HB>
+auto
+Periter<ScatteringKernelApproximation, RHSApproximation>::
+computeBvData(
+      HostGridView hostGridView,
+      const SubGridSpaces<SubGridView>& subGridSpaces,
+      const std::vector<Direction>& sVector,
+      const G& g,
+      const HB& is_inflow_boundary_homogeneous)
+{
+  using Spaces = SubGridSpaces<SubGridView>;
+  using FEBasisHostTrace
+      = changeGridView_t<typename Spaces::FEBasisTrace, HostGridView>;
+  using BVData = std::decay_t<decltype(attachDataToSubGrid(
+            std::declval<typename Spaces::FEBasisTest>(),
+            std::declval<FEBasisHostTrace>(),
+            std::declval<VectorType>()))>;
+  std::vector<Std::optional<BVData>> bvData;
+
+  FEBasisHostTrace hostGridGlobalBasis(hostGridView);
+  const VectorType boundaryExtension
+      = harmonic_extension_of_boundary_values(g, hostGridGlobalBasis);
+  const size_t numS = sVector.size();
+  bvData.reserve(numS);
+  for(size_t i = 0; i < numS; i++) {
+    if(is_inflow_boundary_homogeneous(sVector[i])) {
+      bvData.emplace_back();
+    } else {
+      const auto& subGridGlobalBasis = subGridSpaces.testSpace(i);
+      bvData.emplace_back(
+        attachDataToSubGrid(
+          subGridGlobalBasis,
+          hostGridGlobalBasis,
+          boundaryExtension));
+    }
+  }
+  return bvData;
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
