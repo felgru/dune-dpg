@@ -43,6 +43,7 @@ namespace Dune {
     using SolutionLocalIndexSet = typename SolutionSpace::LocalIndexSet;
 #endif
   public:
+    using Element = typename SolutionLocalView::Element;
 
     LinearFunctionalTerm () = delete;
 
@@ -225,7 +226,9 @@ getLocalVector(const LocalView& localView,
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     using SolutionLocalIndexSet = typename SolutionSpace::LocalIndexSet;
 #endif
+    using LocalFactor = typename Factor::LocalFunction;
   public:
+    using Element = typename SolutionLocalView::Element;
 
     SkeletalLinearFunctionalTerm () = delete;
 
@@ -274,6 +277,7 @@ getLocalVector(const LocalView& localView,
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       solutionLocalIndexSet.bind(solutionLocalView);
 #endif
+      localFactor.bind(element);
     }
 
   private:
