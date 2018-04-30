@@ -93,7 +93,7 @@ class Periter {
    * \param g  lifting of the boundary values
    * \param is_inflow_boundary_homogeneous
    *            checks if g is 0 on the inflow boundary
-   * \param sigma   absorbtion coefficient
+   * \param sigma   absorption coefficient
    * \param kernel  the scattering kernel, e.g. a Henyey–Greenstein kernel
    * \param rho  the contraction parameter ρ
    * \param CT  an upper bound for the norm of the transport solver
@@ -175,7 +175,7 @@ class Periter {
    * \param grid the grid needed for Döfler marking
    * \param spaces
    * \param s the transport direction
-   * \param sigma the absorbtion coefficient
+   * \param sigma the absorption coefficient
    * \param rhsVector the data for the unmodified rhs
    * \param bvExtension a lifting of the boundary values
    *
