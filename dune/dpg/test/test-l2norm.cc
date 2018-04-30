@@ -11,7 +11,7 @@
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include "../errortools.hh"
 
-int main() try {
+int main() {
   std::cout << "Testing L2 norm of constant FE function on unform 2D grid."
             << std::endl;
 
@@ -34,7 +34,4 @@ int main() try {
   } else {
     return 0;
   }
-} catch (Dune::Exception e) {
-  std::cout << e << std::endl;
-  return 1;
 }

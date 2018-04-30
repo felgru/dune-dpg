@@ -5,6 +5,7 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/typetraits.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/test/test-localfe.hh>
 
@@ -45,23 +46,40 @@ void checkRangeOfGlobalIndices(const Basis& feBasis)
 
   const auto gridView = feBasis.gridView();
 
-  typename Basis::LocalView localView(feBasis);
+  auto localView = feBasis.localView();
 
   std::vector<bool> seen(feBasis.size(), false);
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto localIndexSet = feBasis.localIndexSet();
+#endif
 
   // Loop over all leaf elements
   for (const auto& element : elements(gridView))
   {
     localView.bind(element);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     localIndexSet.bind(localView);
+#endif
 
     for (size_t i=0; i<localView.tree().size(); i++)
     {
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+      if (localView.index(i)[0] < 0)
+#else
       if (localIndexSet.index(i)[0] < 0)
+#endif
         DUNE_THROW(Exception, "Index is negative, which is not allowed");
 
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+      if (localView.index(i)[0] >= seen.size())
+        DUNE_THROW(Exception, "Local index " << i
+                           << " is mapped to global index "
+                           << localView.index(i)
+                           << ", which is larger than allowed");
+
+      seen[localView.index(i)[0]] = true;
+#else
       if (localIndexSet.index(i)[0] >= seen.size())
         DUNE_THROW(Exception, "Local index " << i
                            << " is mapped to global index "
@@ -69,6 +87,7 @@ void checkRangeOfGlobalIndices(const Basis& feBasis)
                            << ", which is larger than allowed");
 
       seen[localIndexSet.index(i)[0]] = true;
+#endif
     }
   }
 
@@ -83,25 +102,37 @@ void checkConsistencyOfLocalViewAndIndexSet(const Basis& feBasis)
 {
   const auto gridView = feBasis.gridView();
   typename Basis::LocalView localView(feBasis);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto localIndexSet = feBasis.localIndexSet();
 
   // Objects required in the local context
   auto localIndexSet2 = feBasis.localIndexSet();
+#else
+  auto localView2 = feBasis.localView();
+#endif
 
   for (const auto& element : elements(gridView))
   {
     localView.bind(element);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     localIndexSet.bind(localView);
     localIndexSet2.bind(localView);
+#else
+    localView2.bind(element);
+#endif
 
     // paranoia checks
-    assert(localView.size() == localIndexSet.size());
     assert(&(localView.globalBasis()) == &(feBasis));
-    assert(&(localIndexSet.localView()) == &(localView));
 
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+    assert(localView.size() == localView2.size());
+    for (size_t i=0; i<localView.size(); i++)
+      assert(localView.index(i) == localView2.index(i));
+#else
     assert(localIndexSet.size() == localIndexSet2.size());
     for (size_t i=0; i<localIndexSet.size(); i++)
       assert(localIndexSet.index(i) == localIndexSet2.index(i));
+#endif
 
     typedef typename Basis::LocalView::Tree Tree;
     const Tree& tree = localView.tree();
@@ -110,7 +141,9 @@ void checkConsistencyOfLocalViewAndIndexSet(const Basis& feBasis)
     assert(localView.size() == tree.size());
     assert(localView.size() == tree.finiteElement().localBasis().size());
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     localIndexSet.unbind();
+#endif
     localView.unbind();
   }
 }
@@ -124,8 +157,13 @@ void testScalarBasis(const Basis& feBasis)
   typedef typename Basis::MultiIndex MultiIndex;
 
   // And this type must be indexable
+#if DUNE_VERSION_NEWER(DUNE_COMMON,2,7)
+  static_assert(IsIndexable<MultiIndex>(),
+      "MultiIndex must support operator[]");
+#else
   static_assert(is_indexable<MultiIndex>(),
       "MultiIndex must support operator[]");
+#endif
 
   checkRangeOfGlobalIndices(feBasis);
   checkConsistencyOfLocalViewAndIndexSet(feBasis);

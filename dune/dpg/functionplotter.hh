@@ -3,13 +3,13 @@
 #ifndef DUNE_DPG_FUNCTIONPLOTTER_HH
 #define DUNE_DPG_FUNCTIONPLOTTER_HH
 
-#include <dune/common/version.hh>
-
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk.hh>
 
 #include <dune/dpg/functions/concepts.hh>
 #include <dune/dpg/functions/constraineddiscreteglobalbasisfunction.hh>
+#include <dune/dpg/functions/io/vtkrefinedfunctionwriter.hh>
+#include <dune/dpg/type_traits.hh>
 
 #include <dune/functions/functionspacebases/concepts.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
@@ -48,7 +48,9 @@ public:
 
   FunctionPlotter(std::string filename) : filename(filename) {}
 
-  template<class VectorType, class FEBasis>
+  template<class VectorType, class FEBasis,
+      typename std::enable_if<!is_RefinedFiniteElement<FEBasis>::value
+                             >::type* = nullptr>
   void plot(const std::string& functionname,
             const VectorType&  u,
             const FEBasis&     feBasis,
@@ -68,16 +70,26 @@ public:
     //////////////////////////////////////////////////////////////////////////
 
     SubsamplingVTKWriter<typename FEBasis::GridView>
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
         vtkWriter(feBasis.gridView(), Dune::refinementLevels(subsampling));
-#else
-        vtkWriter(feBasis.gridView(), subsampling);
-#endif
     vtkWriter.addVertexData(localUFunction,
                             VTK::FieldInfo(functionname,
                                            VTK::FieldInfo::Type::scalar,
                                            1));
     vtkWriter.write(filename);
+  }
+
+  template<class VectorType, class FEBasis,
+      typename std::enable_if<is_RefinedFiniteElement<FEBasis>::value
+                             >::type* = nullptr>
+  void plot(const std::string& functionname,
+            const VectorType&  u,
+            const FEBasis&     feBasis,
+            unsigned int       subsampling) const
+  {
+    // TODO: currently subsampling is ignored for refined finite elements
+    std::ofstream file(filename+".vtu");
+    VTKRefinedFunctionWriter writer(file);
+    writer.writeFunction(feBasis, u, functionname);
   }
 
   template<class VectorType, class FEBasis>
@@ -96,7 +108,7 @@ public:
   }
 
 private:
-  std::string filename;
+  const std::string filename;
 };
 
 } // end namespace Dune

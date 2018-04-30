@@ -119,16 +119,9 @@ public:
     edgeOffset_          = vertexOffset_          + dofsPerVertex * static_cast<size_type>(gridView_.size(dim));
     triangleOffset_      = edgeOffset_            + dofsPerEdge * static_cast<size_type>(gridView_.size(dim-1));
 
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     quadrilateralOffset_ = triangleOffset_        + dofsPerTriangle * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::triangle));
-#else
-    GeometryType triangle;
-    triangle.makeTriangle();
-    quadrilateralOffset_ = triangleOffset_        + dofsPerTriangle * gridView_.size(triangle);
-#endif
 
     if (dim==3) {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       tetrahedronOffset_   = quadrilateralOffset_ + dofsPerQuad * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::quadrilateral));
 
       prismOffset_         = tetrahedronOffset_   +   dofsPerTetrahedron * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::tetrahedron));
@@ -136,23 +129,6 @@ public:
       hexahedronOffset_    = prismOffset_         +   dofsPerPrism * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::prism));
 
       pyramidOffset_       = hexahedronOffset_    +   dofsPerHexahedron * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::hexahedron));
-#else
-      Dune::GeometryType quadrilateral;
-      quadrilateral.makeQuadrilateral();
-      tetrahedronOffset_   = quadrilateralOffset_ + dofsPerQuad * static_cast<size_type>(gridView_.size(quadrilateral));
-
-      GeometryType tetrahedron;
-      tetrahedron.makeSimplex(3);
-      prismOffset_         = tetrahedronOffset_   +   dofsPerTetrahedron * static_cast<size_type>(gridView_.size(tetrahedron));
-
-      GeometryType prism;
-      prism.makePrism();
-      hexahedronOffset_    = prismOffset_         +   dofsPerPrism * static_cast<size_type>(gridView_.size(prism));
-
-      GeometryType hexahedron;
-      hexahedron.makeCube(3);
-      pyramidOffset_       = hexahedronOffset_    +   dofsPerHexahedron * static_cast<size_type>(gridView_.size(hexahedron));
-#endif
     }
   }
 
@@ -209,25 +185,13 @@ public:
           + dofsPerEdge*static_cast<size_type>(gridView_.size(dim-1));
       case 2:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         return dofsPerVertex * static_cast<size_type>(gridView_.size(dim))
           + dofsPerEdge * static_cast<size_type>(gridView_.size(dim-1))
           + dofsPerTriangle * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::triangle))
           + dofsPerQuad * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::quadrilateral));
-#else
-        GeometryType triangle, quad;
-        triangle.makeTriangle();
-        quad.makeQuadrilateral();
-
-        return dofsPerVertex * static_cast<size_type>(gridView_.size(dim))
-          + dofsPerEdge * static_cast<size_type>(gridView_.size(dim-1))
-          + dofsPerTriangle * static_cast<size_type>(gridView_.size(triangle))
-          + dofsPerQuad * static_cast<size_type>(gridView_.size(quad));
-#endif
       }
       case 3:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         return dofsPerVertex * static_cast<size_type>(gridView_.size(dim))
           + dofsPerEdge * static_cast<size_type>(gridView_.size(dim-1))
           + dofsPerTriangle * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::triangle))
@@ -236,24 +200,6 @@ public:
           + dofsPerPyramid * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::pyramid))
           + dofsPerPrism * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::prism))
           + dofsPerHexahedron * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::hexahedron));
-#else
-        GeometryType triangle, quad, tetrahedron, pyramid, prism, hexahedron;
-        triangle.makeTriangle();
-        quad.makeQuadrilateral();
-        tetrahedron.makeTetrahedron();
-        pyramid.makePyramid();
-        prism.makePrism();
-        hexahedron.makeCube(3);
-
-        return dofsPerVertex * static_cast<size_type>(gridView_.size(dim))
-          + dofsPerEdge * static_cast<size_type>(gridView_.size(dim-1))
-          + dofsPerTriangle * static_cast<size_type>(gridView_.size(triangle))
-          + dofsPerQuad * static_cast<size_type>(gridView_.size(quad))
-          + dofsPerTetrahedron * static_cast<size_type>(gridView_.size(tetrahedron))
-          + dofsPerPyramid * static_cast<size_type>(gridView_.size(pyramid))
-          + dofsPerPrism * static_cast<size_type>(gridView_.size(prism))
-          + dofsPerHexahedron * static_cast<size_type>(gridView_.size(hexahedron));
-#endif
       }
     }
     DUNE_THROW(Dune::NotImplemented, "No size method for " << dim << "d grids available yet!");
@@ -362,9 +308,6 @@ public:
   using MultiIndex = MI;
 
   using PreBasis = BernsteinPreBasis<GV, k, MI>;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   using Node = typename PreBasis::template Node<TP>;
 
@@ -399,7 +342,6 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It>
   It indices(It it) const
   {
@@ -519,98 +461,6 @@ public:
       }
     return it;
   }
-#else
-  MultiIndex index(size_type i) const
-  {
-    assert(node_ != nullptr);
-    Dune::LocalKey localKey = node_->finiteElement().localCoefficients().localKey(i);
-    const auto& gridIndexSet = preBasis_->gridView().indexSet();
-    const auto& element = node_->element();
-
-    // The dimension of the entity that the current dof is related to
-    auto dofDim = dim - localKey.codim();
-
-    if (dofDim==0) {  // vertex dof
-      return {{ static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),dim)) }};
-    }
-
-    if (dofDim==1)
-    {  // edge dof
-      if (dim==1)  // element dof -- any local numbering is fine
-        return {{ preBasis_->edgeOffset_
-            + preBasis_->dofsPerEdge * static_cast<size_type>(gridIndexSet.subIndex(element,0,0))
-            + localKey.index() }};
-      else
-      {
-        const Dune::ReferenceElement<double,dim>& refElement
-            = Dune::ReferenceElements<double,dim>::general(element.type());
-
-        // we have to reverse the numbering if the local triangle edge is
-        // not aligned with the global edge
-        auto v0 = static_cast<size_type>(gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),0,dim),dim);
-        auto v1 = static_cast<size_type>(gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
-        bool flip = (v0 > v1);
-        return {{ (flip)
-              ? preBasis_->edgeOffset_
-                + preBasis_->dofsPerEdge*static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
-                + (preBasis_->dofsPerEdge-1)-localKey.index()
-              : preBasis_->edgeOffset_
-                + preBasis_->dofsPerEdge*static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
-                + localKey.index() }};
-      }
-    }
-
-    if (dofDim==2)
-    {
-      if (dim==2)   // element dof -- any local numbering is fine
-      {
-        if (element.type().isTriangle())
-        {
-          const int interiorLagrangeNodesPerTriangle = (k-1)*(k-2)/2;
-          return {{ preBasis_->triangleOffset_ + interiorLagrangeNodesPerTriangle*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
-        }
-        else if (element.type().isQuadrilateral())
-        {
-          const int interiorLagrangeNodesPerQuadrilateral = (k-1)*(k-1);
-          return {{ preBasis_->quadrilateralOffset_ + interiorLagrangeNodesPerQuadrilateral*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
-        }
-        else
-          DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");
-      } else
-      {
-        const Dune::ReferenceElement<double,dim>& refElement
-            = Dune::ReferenceElements<double,dim>::general(element.type());
-
-        if (k>3)
-          DUNE_THROW(Dune::NotImplemented, "BernsteinBasis for 3D grids is only implemented if k<=3");
-
-        if (k==3 and !refElement.type(localKey.subEntity(), localKey.codim()).isTriangle())
-          DUNE_THROW(Dune::NotImplemented, "BernsteinBasis for 3D grids with k==3 is only implemented if the grid is a simplex grid");
-
-        return {{ preBasis_->triangleOffset_ + static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())) }};
-      }
-    }
-
-    if (dofDim==3)
-    {
-      if (dim==3)   // element dof -- any local numbering is fine
-      {
-        if (element.type().isTetrahedron())
-          return {{ preBasis_->tetrahedronOffset_ + PreBasis::dofsPerTetrahedron*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
-        else if (element.type().isHexahedron())
-          return {{ preBasis_->hexahedronOffset_ + PreBasis::dofsPerHexahedron*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
-        else if (element.type().isPrism())
-          return {{ preBasis_->prismOffset_ + PreBasis::dofsPerPrism*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
-        else if (element.type().isPyramid())
-          return {{ preBasis_->pyramidOffset_ + PreBasis::dofsPerPyramid*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
-        else
-          DUNE_THROW(Dune::NotImplemented, "3d elements have to be tetrahedra, hexahedra, prisms, or pyramids");
-      } else
-        DUNE_THROW(Dune::NotImplemented, "Grids of dimension larger than 3 are no supported");
-    }
-    DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the BernsteinBasis");
-  }
-#endif
 
 protected:
   const PreBasis* preBasis_;
@@ -620,7 +470,7 @@ protected:
 
 
 
-namespace BasisBuilder {
+namespace BasisFactory {
 
 namespace Imp {
 
@@ -630,17 +480,13 @@ struct BernsteinPreBasisFactory
   static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   auto makePreBasis(const GridView& gridView) const
-#else
-  auto build(const GridView& gridView) const
-#endif
   {
     return BernsteinPreBasis<GridView, k, MultiIndex>(gridView);
   }
 };
 
-} // end namespace BasisBuilder::Imp
+} // end namespace BasisFactory::Imp
 
 
 
@@ -657,7 +503,7 @@ auto bernstein()
   return Imp::BernsteinPreBasisFactory<k>();
 }
 
-} // end namespace BasisBuilder
+} // end namespace BasisFactory
 
 
 

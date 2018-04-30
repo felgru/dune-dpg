@@ -23,9 +23,7 @@
 #include <dune/dpg/testspace_coefficient_matrix.hh>
 #include <dune/dpg/type_traits.hh>
 
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
 #include <boost/hana.hpp>
-#endif
 
 
 namespace Dune {
@@ -330,7 +328,6 @@ class OptimalTestBasisNodeIndexSet
   using GV = typename TestspaceCoefficientMatrix::GridView;
   enum {dim = GV::dimension};
 
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It, typename LIS>
   static It computeIndices(It it, const LIS& localIndexSet,
                            size_t globalOffset)
@@ -342,40 +339,6 @@ class OptimalTestBasisNodeIndexSet
     return it;
   }
 
-#else
-  struct computeIndex
-  {
-    computeIndex(size_t& space_index, size_t& index_result, bool& index_found)
-    : space_index(space_index),
-      index_result(index_result),
-      index_found(index_found)
-    {}
-
-    template<class LIS>
-    void operator()(LIS& localIndexSet) const
-    {
-      if (!index_found)
-      {
-        if (localIndexSet.size() > index_result)
-        {
-          index_found  = true;
-          index_result = (localIndexSet.index(index_result))[0];
-        }
-        else
-        {
-          space_index  += 1;
-          index_result -= localIndexSet.size();
-        }
-      }
-    }
-
-  private:
-    size_t& space_index;
-    size_t& index_result;
-    bool&   index_found;
-  };
-#endif
-
 public:
 
   using size_type = std::size_t;
@@ -384,21 +347,25 @@ public:
   using MultiIndex = MI;
 
   using PreBasis = OptimalTestBasisPreBasis<TestspaceCoefficientMatrix, testIndex, MI>;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   using Node = typename PreBasis::template Node<TP>;
 
   typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+  typedef Dune::detail::getLocalViews_t<SolutionSpaces>
+      SolutionLocalViews;
+#else
   typedef Dune::detail::getLocalIndexSets_t<SolutionSpaces>
       SolutionLocalIndexSets;
+#endif
 
   OptimalTestBasisNodeIndexSet(const PreBasis& preBasis) :
     preBasis_(&preBasis),
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     solutionLocalIndexSets_(Dune::detail::getLocalIndexSets(
                       *preBasis.testspaceCoefficientMatrix_
                           .bilinearForm().getSolutionSpaces()))
+#endif
   {}
 
   constexpr OptimalTestBasisNodeIndexSet(const OptimalTestBasisNodeIndexSet&)
@@ -416,8 +383,10 @@ public:
   {
     node_ = &node;
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     Dune::detail::bindLocalIndexSets(solutionLocalIndexSets_,
                                      node.localViewsSolution());
+#endif
   }
 
   /** \brief Unbind the view
@@ -425,9 +394,11 @@ public:
   void unbind()
   {
     node_ = nullptr;
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     Hybrid::forEach(solutionLocalIndexSets_, [](auto& lis) {
           lis.unbind();
         });
+#endif
   }
 
   /** \brief Size of subtree rooted in this node (element-local)
@@ -439,44 +410,39 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It>
   It indices(It it) const
   {
     assert(node_ != nullptr);
     using namespace boost::hana;
     return fold_left(
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+              make_range(int_c<0>,
+                int_c<std::tuple_size<SolutionLocalViews>::value>),
+#else
               make_range(int_c<0>,
                 int_c<std::tuple_size<SolutionLocalIndexSets>::value>),
+#endif
               it,
               [&](It it, auto i) {
                 return computeIndices(it,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+                  std::get<i>(node.localViewsSolution())
+#else
                   std::get<i>(solutionLocalIndexSets_),
+#endif
                   preBasis_->globalOffsets[i]);
               });
   }
-#else
-  MultiIndex index(size_type i) const
-  {
-    size_t space_index=0;
-    size_t index_result=i;
-    bool index_found=false;
-
-    Hybrid::forEach(solutionLocalIndexSets_,
-                    computeIndex(space_index, index_result, index_found));
-
-    MultiIndex result;
-    result[0]=(preBasis_->globalOffsets[space_index]+index_result);
-    return result;
-  }
-#endif
 
 protected:
   const PreBasis* preBasis_;
 
   const Node* node_;
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   SolutionLocalIndexSets solutionLocalIndexSets_;
+#endif
 };
 
 

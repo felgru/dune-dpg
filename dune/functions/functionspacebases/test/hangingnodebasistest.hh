@@ -14,7 +14,6 @@
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #include <dune/subgrid/subgrid.hh>
 #pragma GCC diagnostic pop
-#include <dune/dpg/subgrid_workarounds.hh>
 
 namespace Dune {
 
@@ -24,15 +23,23 @@ bool globalIndicesFormConsecutiveRange(const GlobalBasis& feBasis)
   std::vector<bool> seen(feBasis.size(), false);
 
   auto localView = feBasis.localView();
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto localIndexSet = feBasis.localIndexSet();
+#endif
   auto gridView = feBasis.gridView();
 
   for (const auto& element : elements(gridView))
   {
     localView.bind(element);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     localIndexSet.bind(localView);
+#endif
 
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+    const auto& indicesLocalGlobal = localView.indicesLocalGlobal();
+#else
     const auto& indicesLocalGlobal = localIndexSet.indicesLocalGlobal();
+#endif
     for (const auto index : indicesLocalGlobal)
     {
       if (index[0] >= seen.size()) {
@@ -58,9 +65,13 @@ template<class GlobalBasis>
 bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
 {
   auto localView = feBasis.localView();
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto localIndexSet = feBasis.localIndexSet();
+#endif
   auto dominatedElementLocalView = feBasis.localView();
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto dominatedElementLocalIndexSet = feBasis.localIndexSet();
+#endif
   auto gridView = feBasis.gridView();
 
   bool success = true;
@@ -69,29 +80,26 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
   for (const auto& element : elements(gridView))
   {
     localView.bind(element);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     localIndexSet.bind(localView);
+#endif
     for(auto&& intersection : intersections(gridView, element))
     {
-      if(!conforming(intersection))
+      if(!intersection.conforming())
         if(intersection.inside().level() < intersection.outside().level())
           // inside dominates outside (with one level difference)
         {
           dominatedElementLocalView.bind(intersection.outside());
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
           dominatedElementLocalIndexSet.bind(dominatedElementLocalView);
+#endif
 
           const auto geometryInDominatingElement
-              = geometryInInside(intersection);
+              = intersection.geometryInInside();
           const auto geometryInDominatedElement
-              = geometryInOutside(intersection);
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
+              = intersection.geometryInOutside();
           const auto& quad // TODO: replace 3 with degree of basis
               = QuadratureRules<double, 1>::rule(GeometryTypes::line, 3);
-#else
-          GeometryType line;
-          line.makeLine();
-          const auto& quad // TODO: replace 3 with degree of basis
-              = QuadratureRules<double, 1>::rule(line, 3);
-#endif
           for(size_t pt=0; pt < quad.size(); pt++)
           {
             // point-wise check of continuity condition
@@ -109,15 +117,23 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
               .evaluateFunction(quadPosDominated, valuesDominated);
             const auto& localCoefficientsDominating
               = localView.tree().finiteElement().localCoefficients();
-            iterateOverLocalIndexSet(
+            iterateOverLocalIndices(
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+                localView,
+#else
                 localIndexSet,
+#endif
                 [&](size_t j, auto gj)
                 {
                   if(std::fabs(valuesDominating[j]) > eps) {
                     double valueDominated = 0.;
                     std::vector<std::pair<double, double>> constraints;
-                    iterateOverLocalIndexSet(
+                    iterateOverLocalIndices(
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+                        dominatedElementLocalView,
+#else
                         dominatedElementLocalIndexSet,
+#endif
                         [&](size_t i, auto gi)
                         {
                           if(gi == gj) {

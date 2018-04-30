@@ -38,7 +38,7 @@ attachDataToGrid(
 
     *(localEntitySeed++) = e.seed();
 
-    iterateOverLocalIndexSet(
+    iterateOverLocalIndices(
       localIndexSet,
       [&](size_t i, auto gi)
       {
@@ -64,6 +64,13 @@ namespace detail {
     using FiniteElement = typename GlobalBasis::LocalView::Tree::FiniteElement;
     using Domain = typename Geometry::LocalCoordinate;
     using Range = FieldVector<double, 1>;
+
+    struct Traits
+    {
+      using DomainType = Domain;
+      using RangeType  = Range;
+    };
+
 
     RestoreDataToRefinedGridFunction(
         const FiniteElement& finiteElement,
@@ -131,7 +138,7 @@ restoreDataToRefinedGrid(
     auto localData = storedData.second.begin() + eIdx * maxEntityDoFs;
     if(e.isLeaf()) {
       // directly copy cell data
-      iterateOverLocalIndexSet(
+      iterateOverLocalIndices(
         localIndexSet,
         [&](size_t i, auto gi)
         {
@@ -160,7 +167,7 @@ restoreDataToRefinedGrid(
         localFiniteElement.localInterpolation().interpolate(oldGridFunction,
             childLocalData);
 
-        iterateOverLocalIndexSet(
+        iterateOverLocalIndices(
           localIndexSet,
           [&](size_t i, auto gi)
           {

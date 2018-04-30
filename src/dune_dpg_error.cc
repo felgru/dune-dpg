@@ -10,8 +10,6 @@
 #include <tuple>
 #include <vector>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
@@ -69,8 +67,6 @@ double fieldExact(const Dune::FieldVector<double, 2>& x) {
 
 int main()
 {
-  try{
-
   ///////////////////////////////////
   //   Generate the grid
   ///////////////////////////////////
@@ -84,12 +80,12 @@ int main()
   const std::array<unsigned int,dim> elements = {1, 1};
 
   // Square mesh
-  //std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>::createCubeGrid(lower, upper, elements);
+  //std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>::createCubeGrid(lower, upper, elements);
   // Triangular mesh
-  std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>::createSimplexGrid(lower, upper, elements);
+  std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>::createSimplexGrid(lower, upper, elements);
   // Read mesh from an input file
-  // std::shared_ptr<HostGrid> hostGrid(GmshReader<HostGrid>::read("irregular-square.msh")); // for an irregular mesh square
-  // std::shared_ptr<HostGrid> hostGrid(GmshReader<HostGrid>::read("circle.msh")); // for a circle-shaped mesh
+  // std::unique_ptr<HostGrid> hostGrid = GmshReader<HostGrid>::read("irregular-square.msh"); // for an irregular mesh square
+  // std::unique_ptr<HostGrid> hostGrid = GmshReader<HostGrid>::read("circle.msh"); // for a circle-shaped mesh
   hostGrid->setClosureType(HostGrid::NONE);
 
   // We use a SubGrid as it will automatically make sure that we do
@@ -327,11 +323,4 @@ int main()
   }
 
   return 0;
-  }
-  catch (Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
 }

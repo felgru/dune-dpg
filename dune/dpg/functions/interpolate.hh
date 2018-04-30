@@ -7,7 +7,6 @@
 #include <dune/common/version.hh>
 #include <dune/functions/common/functionfromcallable.hh>
 #include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/geometry/affinegeometry.hh>
 #include <dune/geometry/referenceelements.hh>
 
@@ -37,20 +36,28 @@ VectorType interpolateToUniformlyRefinedGrid(
   auto coarseLocalView = coarseBasis.localView();
   auto fineLocalView = fineBasis.localView();
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto coarseLocalIndexSet = coarseBasis.localIndexSet();
   auto fineLocalIndexSet = fineBasis.localIndexSet();
+#endif
 
   VectorType v_fine(fineBasis.size()); v_fine = 0;
 
   for(const auto& e : elements(coarseGridView)) {
     coarseLocalView.bind(e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     coarseLocalIndexSet.bind(coarseLocalView);
+#endif
 
     VectorType local_v_coarse(coarseLocalView.size());
 
     for (size_t i=0, nCoarse=coarseLocalView.size(); i<nCoarse; i++)
     {
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+      auto row = coarseLocalView.index(i)[0];
+#else
       auto row = coarseLocalIndexSet.index(i)[0];
+#endif
       local_v_coarse[i] = v_coarse[row];
     }
 
@@ -68,7 +75,9 @@ VectorType interpolateToUniformlyRefinedGrid(
     for (const auto& subE : descendantElements(e, e.level()+1))
     {
       fineLocalView.bind(subE);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       fineLocalIndexSet.bind(fineLocalView);
+#endif
 
       auto globalSubGeometry = subE.geometry();
 
@@ -76,13 +85,8 @@ VectorType interpolateToUniformlyRefinedGrid(
       const AffineGeometry<double, dim, dim> subGeometry
           (subE.type(),
            globalGeometry.local(
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
              globalSubGeometry.global(referenceElement<double, dim>
                (subE.type()).position(0,dim))),
-#else
-             globalSubGeometry.global(ReferenceElements<double, dim>
-               ::general(subE.type()).position(0,dim))),
-#endif
            globalSubGeometry.jacobianTransposed({})
              .leftmultiply(globalGeometry.jacobianTransposed({})));
       auto localF = [&subGeometry, &coarseLocalBasis, &local_v_coarse]
@@ -105,7 +109,11 @@ VectorType interpolateToUniformlyRefinedGrid(
 
       for (size_t i=0, nFine=fineLocalView.size(); i<nFine; i++)
       {
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        const auto row = fineLocalView.index(i)[0];
+#else
         const auto row = fineLocalIndexSet.index(i)[0];
+#endif
         v_fine[row] = interpolationValues[i];
       }
     }

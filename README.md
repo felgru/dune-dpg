@@ -25,22 +25,25 @@ libraries installed on your system:
 
   - Programs:
     - a C++14-compatible compiler (e.g. GCC >= 6)
-    - cmake >= 2.8.12
+    - cmake >= 3.1
   - Libraries:
     - Boost >= 1.63
       (Boost versions as low as 1.61, which introduced Boost::Hana, might
        work but have not been tested.)
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
-    - DUNE core libraries 2.5
+    - DUNE core libraries 2.6
       including the staging modules dune-typetree and dune-functions
-      (https://dune-project.org/releases/2.5.0/)
+      (https://dune-project.org/releases/2.6.0/)
+      For dune-istl's UMFPACK interface to work with matrices > 2GB, you
+      have to apply the patch `contrib/umfpack_dl.diff`. Refer to
+      [INSTALL.md](INSTALL.md) for instructions.
     - A grid manager. Our examples use dune-uggrid
-      which has been added as a staging module in DUNE 2.5
-      (https://dune-project.org/releases/2.5.0/)
+      (https://www.dune-project.org/modules/dune-uggrid/)
       but one could also use other managers, e.g., ALBERTA or YASPgrid.
       (https://dune-project.org/groups/grid/)
     - for the plot_solution test program, you will also need the
-      dune-subgrid module
+      dune-subgrid module from Git (Version >= 2.7-git, including
+      commit 5706c70d8c4472f39e5bd61d1de1caf22381b8b9)
       (https://git.imp.fu-berlin.de/agnumpde/dune-subgrid)
 
 Instructions on how to build dune-dpg can be found in [INSTALL.md](INSTALL.md).
@@ -96,6 +99,24 @@ pvpython interpreter shipped with ParaView, you can also run
 (This script was run with ParaView 4.2.0. As the Python interface of ParaView
 seems to be highly unstable we cannot guarantee that the script will run
 unmodified on another version of ParaView.)
+
+Description of src/manufactured_transport.cc and src/manufactured_transport_uniform.cc
+--------------------------------------------------------------------------------------
+
+manufactured_transport.cc and manufactured_transport_uniform.cc compute
+the Discontinuous Petrov-Galerkin solution of a transport problem whose
+solution is known. Thus, we can compare the DPG error estimates with
+the exact errors.
+
+manufactured_transport.cc uses adaptive refinement while
+manufactured_transport_uniform.cc uses uniform refinement.
+
+You can run each of those programs from the build directory as
+
+    src/manufactured_transport <n>
+    src/manufactured_transport_uniform <n>
+
+where `<n>` is the desired grid resolution.
 
 Description of src/convergence_test.cc
 --------------------------------------

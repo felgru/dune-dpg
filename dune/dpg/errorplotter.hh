@@ -3,6 +3,8 @@
 #ifndef DUNE_DPG_ERRORPLOTTER_HH
 #define DUNE_DPG_ERRORPLOTTER_HH
 
+#include <dune/common/version.hh>
+
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 #include <dune/grid/io/file/vtk.hh>
 
@@ -88,19 +90,25 @@ public:
     VectorType u(feBasis.size());
 
     auto localView = feBasis.localView();
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     auto localIndexSet = feBasis.localIndexSet();
+#endif
     for(const auto& cellTuple : errors) {
       const auto e = grid.entity(std::get<0>(cellTuple));
       localView.bind(e);
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+      u[localView.index(0)] = std::get<1>(cellTuple);
+#else
       localIndexSet.bind(localView);
       u[localIndexSet.index(0)] = std::get<1>(cellTuple);
+#endif
     }
 
     plot(functionname, u, feBasis);
   }
 
 private:
-  std::string filename;
+  const std::string filename;
 };
 
 } // end namespace Dune

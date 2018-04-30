@@ -7,10 +7,7 @@
 
 #include <iostream>
 
-#include <dune/common/exceptions.hh>
-#include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
-#include <dune/geometry/quadraturerules.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
@@ -18,7 +15,7 @@
 
 using namespace Dune;
 
-int main() try
+int main()
 {
   constexpr int dim = 2;
   using HostGrid = UGGrid<dim>;
@@ -26,7 +23,7 @@ int main() try
   const FieldVector<double,dim> upper = {1, 1};
   const std::array<unsigned int,dim> numElements = {1, 1};
 
-  std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
+  std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
                                 ::createSimplexGrid(lower, upper, numElements);
   hostGrid->setClosureType(HostGrid::NONE);
 
@@ -51,9 +48,4 @@ int main() try
   success &= constraintsFulfillContinuityEquation(hangingNodeBasis);
 
   return success ? 0 : 1;
-}
-catch (Dune::Exception e)
-{
-  std::cout << e << std::endl;
-  return 1;
 }

@@ -7,7 +7,7 @@
 
 #include <config.h>
 
-#include <dune/common/version.hh>
+#include <dune/common/exceptions.hh>
 
 #include <dune/geometry/referenceelements.hh>
 #include <dune/geometry/quadraturerules.hh>
@@ -52,11 +52,7 @@ ctype analyticalSolution (Dune::GeometryType t, int p, int direction )
     const int pdim = (dim > 0 ? dim-1 : 0);
     if( direction < dim-1 )
     {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       GeometryType nt = Dune::GeometryTypes::simplex( dim-1 );
-#else
-      GeometryType nt( GeometryType::simplex, dim-1 );
-#endif
       if( dim > 0 )
         exact = analyticalSolution< ctype, pdim >( nt, p, direction );
       else
@@ -93,11 +89,7 @@ void checkQuadrature(const QuadratureRule &quad)
   typedef typename QuadratureRule::CoordType ctype;
   const unsigned int dim = QuadratureRule::d;
   const unsigned int p = quad.order();
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
   const Dune::GeometryType t = quad.type();
-#else
-  const Dune::GeometryType& t = quad.type();
-#endif
   FieldVector<ctype,dim> integral(0);
   for (const auto& qp : quad)
   {
@@ -140,57 +132,32 @@ void checkWeights(const QuadratureRule &quad)
   typedef typename QuadratureRule::CoordType ctype;
   const unsigned int dim = QuadratureRule::d;
   const unsigned int p = quad.order();
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
   const Dune::GeometryType t = quad.type();
-#else
-  const Dune::GeometryType& t = quad.type();
-#endif
   double volume = 0;
   for (const auto& qp : quad)
   {
     volume += qp.weight();
   }
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
   if (std::abs(volume - Dune::referenceElement<ctype, dim>(t).volume())
       > quad.size()*std::numeric_limits<double>::epsilon())
-#else
-  if (std::abs(volume -
-               Dune::ReferenceElements<ctype, dim>::general(t).volume())
-      > quad.size()*std::numeric_limits<double>::epsilon())
-#endif
   {
     std::cerr << "Error: Quadrature for " << t << " and order=" << p
               << " does not sum to volume of RefElem" << std::endl;
     std::cerr << "\tSums to " << volume << "( RefElem.volume() = "
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
               << Dune::referenceElement<ctype, dim>(t).volume()
               << ")" << "(difference "
               << volume - Dune::referenceElement<ctype, dim>(t).volume()
-#else
-              << Dune::ReferenceElements<ctype, dim>::general(t).volume()
-              << ")" << "(difference " << volume -
-                  Dune::ReferenceElements<ctype, dim>::general(t).volume()
-#endif
               << ")" << std::endl;
     success = false;
   }
 }
 
 template<class ctype, int dim>
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
 void check(Dune::GeometryType type,
            unsigned int maxOrder,
            Dune::QuadratureType::Enum qt = Dune::QuadratureType::GaussLegendre)
-#else
-void check(const Dune::GeometryType::BasicType &btype,
-           unsigned int maxOrder,
-           Dune::QuadratureType::Enum qt = Dune::QuadratureType::GaussLegendre)
-#endif
 {
   typedef Dune::QuadratureRule<ctype, dim> Quad;
-#if not(DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6))
-  Dune::GeometryType type(btype,dim);
-#endif
 
   for (unsigned int p=0; p<=maxOrder; ++p)
   {
@@ -208,33 +175,19 @@ void check(const Dune::GeometryType::BasicType &btype,
   }
   if (dim>0 && (dim>3 || type.isCube() || type.isSimplex()))
   {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     type = type.isCube() ? Dune::GeometryTypes::cube(dim-1) : Dune::GeometryTypes::simplex(dim-1);
     check<ctype,((dim==0) ? 0 : dim-1)>(type, maxOrder, qt);
-#else
-    check<ctype,((dim==0) ? 0 : dim-1)>(btype, maxOrder, qt);
-#endif
   }
 }
 
 template<class ctype, int refinement, int dim>
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
 void checkSubsampledRule(Dune::GeometryType type,
                          unsigned int maxOrder,
                          Dune::QuadratureType::Enum qt
                            = Dune::QuadratureType::GaussLegendre)
-#else
-void checkSubsampledRule(const Dune::GeometryType::BasicType &btype,
-                         unsigned int maxOrder,
-                         Dune::QuadratureType::Enum qt
-                           = Dune::QuadratureType::GaussLegendre)
-#endif
 {
   typedef Dune::QuadratureRule<ctype, dim> BaseQuad;
   typedef Dune::SubsampledQuadratureRule<ctype, refinement, dim> Quad;
-#if not(DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6))
-  const Dune::GeometryType type(btype,dim);
-#endif
 
   for (unsigned int p=0; p<=maxOrder; ++p)
   {
@@ -246,12 +199,8 @@ void checkSubsampledRule(const Dune::GeometryType::BasicType &btype,
   }
   if (dim>0 && (dim>3 || type.isCube() || type.isSimplex()))
   {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
     type = type.isCube() ? Dune::GeometryTypes::cube(dim-1) : Dune::GeometryTypes::simplex(dim-1);
     check<ctype,((dim==0) ? 0 : dim-1)>(type, maxOrder, qt);
-#else
-    check<ctype,((dim==0) ? 0 : dim-1)>(btype, maxOrder, qt);
-#endif
   }
 }
 
@@ -263,32 +212,13 @@ int main (int argc, char** argv)
     maxOrder = std::atoi(argv[1]);
     std::cout << "maxOrder = " << maxOrder << std::endl;
   }
-  try {
-    static const unsigned int refinement = 2;
-    static const unsigned int dim = 2;
+  static const unsigned int refinement = 2;
+  static const unsigned int dim = 2;
 
-    checkSubsampledRule<double,refinement,dim>
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
-        (Dune::GeometryTypes::simplex(dim), maxOrder);
-#else
-        (Dune::GeometryType::simplex, maxOrder);
-#endif
-    checkSubsampledRule<double,refinement,dim>
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
-        (Dune::GeometryTypes::cube(dim), maxOrder);
-#else
-        (Dune::GeometryType::cube, maxOrder);
-#endif
-  }
-  catch( const Dune::Exception &e )
-  {
-    std::cerr << e << std::endl;
-    throw;
-  }
-  catch (...) {
-    std::cerr << "Generic exception!" << std::endl;
-    throw;
-  }
+  checkSubsampledRule<double,refinement,dim>
+      (Dune::GeometryTypes::simplex(dim), maxOrder);
+  checkSubsampledRule<double,refinement,dim>
+      (Dune::GeometryTypes::cube(dim), maxOrder);
 
   return success ? 0 : 1;
 }

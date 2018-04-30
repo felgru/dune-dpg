@@ -12,8 +12,6 @@
 
 #include <boost/math/constants/constants.hpp>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
@@ -25,7 +23,6 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/functionspacebases/bernsteinbasis.hh>
 #include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 #include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
@@ -49,7 +46,6 @@ auto f(const Direction& s)
 
 int main(int argc, char** argv)
 {
-  try{
   if(argc != 5 && argc != 2) {
     std::cerr << "Usage: " << argv[0] << " n [c βx βy]\n\n"
               << "Solves the transport problem β.∇ϕ + c ϕ = 1"
@@ -78,9 +74,9 @@ int main(int argc, char** argv)
   const FieldVector<double,dim> upper = {1, 1};
   const std::array<unsigned int,dim> elements = {nelements, nelements};
 
-  // std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+  // std::unique_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
-  std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+  std::unique_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
   typedef GridType::LeafGridView GridView;
   const GridView gridView = grid->leafGridView();
@@ -216,11 +212,4 @@ int main(int argc, char** argv)
 
 
   return 0;
-  }
-  catch (Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
 }

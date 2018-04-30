@@ -12,8 +12,6 @@
 
 #include <boost/math/constants/constants.hpp>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/io/file/vtk.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/uggrid.hh>
@@ -67,7 +65,6 @@ auto f(const Direction& s)
 
 int main(int argc, char** argv)
 {
-  try{
   if(argc != 2) {
     std::cerr << "Usage: " << argv[0] << " n" << std::endl << std::endl
               << "Solves the transport problem on an nxn grid." << std::endl;
@@ -86,9 +83,9 @@ int main(int argc, char** argv)
   const FieldVector<double,dim> upper = {1, 1};
   const std::array<unsigned int,dim> elements = {nelements, nelements};
 
-  // std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+  // std::unique_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
-  std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+  std::unique_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
   typedef GridType::LeafGridView GridView;
   const GridView gridView = grid->leafGridView();
@@ -288,11 +285,4 @@ int main(int argc, char** argv)
 
 
   return 0;
-  }
-  catch (Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
 }

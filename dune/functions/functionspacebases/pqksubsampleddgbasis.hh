@@ -6,7 +6,6 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
-#include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqksubsampledfactory.hh>
 
@@ -94,19 +93,12 @@ public:
       }
       case 2:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         quadrilateralOffset_ = dofsPerTriangle
                                * gridView_.size(GeometryTypes::triangle);
-#else
-        GeometryType triangle;
-        triangle.makeTriangle();
-        quadrilateralOffset_ = dofsPerTriangle * gridView_.size(triangle);
-#endif
         break;
       }
       case 3:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         prismOffset_         = dofsPerTetrahedron
                                * gridView_.size(GeometryTypes::tetrahedron);
 
@@ -117,21 +109,6 @@ public:
         pyramidOffset_       = hexahedronOffset_
                                + dofsPerHexahedron
                                  * gridView_.size(GeometryTypes::hexahedron);
-#else
-        GeometryType tetrahedron;
-        tetrahedron.makeSimplex(3);
-        prismOffset_         = dofsPerTetrahedron * gridView_.size(tetrahedron);
-
-        GeometryType prism;
-        prism.makePrism();
-        hexahedronOffset_    = prismOffset_
-                             + dofsPerPrism * gridView_.size(prism);
-
-        GeometryType hexahedron;
-        hexahedron.makeCube(3);
-        pyramidOffset_       = hexahedronOffset_
-                             + dofsPerHexahedron * gridView_.size(hexahedron);
-#endif
         break;
       }
     }
@@ -169,35 +146,15 @@ public:
         return dofsPerEdge*gridView_.size(0);
       case 2:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         return dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
              + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
-#else
-        GeometryType triangle, quad;
-        triangle.makeTriangle();
-        quad.makeQuadrilateral();
-        return dofsPerTriangle * gridView_.size(triangle)
-             + dofsPerQuad * gridView_.size(quad);
-#endif
       }
       case 3:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         return dofsPerTetrahedron * gridView_.size(GeometryTypes::tetrahedron)
              + dofsPerPyramid * gridView_.size(GeometryTypes::pyramid)
              + dofsPerPrism * gridView_.size(GeometryTypes::prism)
              + dofsPerHexahedron * gridView_.size(GeometryTypes::hexahedron);
-#else
-        GeometryType tetrahedron, pyramid, prism, hexahedron;
-        tetrahedron.makeTetrahedron();
-        pyramid.makePyramid();
-        prism.makePrism();
-        hexahedron.makeCube(3);
-        return dofsPerTetrahedron * gridView_.size(tetrahedron)
-             + dofsPerPyramid * gridView_.size(pyramid)
-             + dofsPerPrism * gridView_.size(prism)
-             + dofsPerHexahedron * gridView_.size(hexahedron);
-#endif
       }
 
     }
@@ -305,9 +262,6 @@ public:
   using MultiIndex = MI;
 
   using PreBasis = PQkSubsampledDGPreBasis<GV, s, k, MI>;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   using Node = typename PreBasis::template Node<TP>;
 
@@ -341,7 +295,6 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It>
   It indices(It it) const
   {
@@ -414,56 +367,6 @@ public:
     }
     return it;
   }
-#else
-  MultiIndex index(size_type i) const
-  {
-    const auto& gridIndexSet = preBasis_->gridView().indexSet();
-    const auto& element = node_->element();
-
-    switch (dim)
-    {
-      case 1:
-      {
-        return {preBasis_->dofsPerEdge*gridIndexSet.subIndex(element,0,0) + i};
-      }
-      case 2:
-      {
-        if (element.type().isTriangle())
-        {
-          return {preBasis_->dofsPerTriangle*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else if (element.type().isQuadrilateral())
-        {
-          return { preBasis_->quadrilateralOffset_ + preBasis_->dofsPerQuad*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else
-          DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");
-      }
-      case 3:
-      {
-        if (element.type().isTetrahedron())
-        {
-          return {preBasis_->dofsPerTetrahedron*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else if (element.type().isPrism())
-        {
-          return { preBasis_->prismOffset_ + preBasis_->dofsPerPrism*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else if (element.type().isHexahedron())
-        {
-          return { preBasis_->hexahedronOffset_ + preBasis_->dofsPerHexahedron*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else if (element.type().isPyramid())
-        {
-          return { preBasis_->pyramidOffset_ + preBasis_->dofsPerPyramid*gridIndexSet.subIndex(element,0,0) + i};
-        }
-        else
-          DUNE_THROW(Dune::NotImplemented, "3d elements have to be tetrahedrons, prisms, hexahedrons or pyramids");
-      }
-    }
-    DUNE_THROW(Dune::NotImplemented, "No index method for " << dim << "d grids available yet!");
-  }
-#endif
 
 protected:
   const PreBasis* preBasis_;
@@ -473,7 +376,7 @@ protected:
 
 
 
-namespace BasisBuilder {
+namespace BasisFactory {
 
 namespace Imp {
 
@@ -483,17 +386,13 @@ struct PQkSubsampledDGPreBasisFactory
   static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   auto makePreBasis(const GridView& gridView) const
-#else
-  auto build(const GridView& gridView) const
-#endif
   {
     return PQkSubsampledDGPreBasis<GridView, s, k, MultiIndex>(gridView);
   }
 };
 
-} // end namespace BasisBuilder::Imp
+} // end namespace BasisFactory::Imp
 
 template<std::size_t s, std::size_t k>
 auto pqSubsampledDG()
@@ -501,7 +400,7 @@ auto pqSubsampledDG()
   return Imp::PQkSubsampledDGPreBasisFactory<s, k>();
 }
 
-} // end namespace BasisBuilder
+} // end namespace BasisFactory
 
 
 

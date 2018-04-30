@@ -11,8 +11,6 @@
 
 #include <boost/math/constants/constants.hpp>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
@@ -25,7 +23,6 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/pqkfacenodalbasis.hh>
@@ -44,7 +41,6 @@ using namespace Dune;
 
 int main(int argc, char** argv)
 {
-  try{
   if(argc != 2) {
     std::cerr << "Usage: " << argv[0] << " n" << std::endl << std::endl
               << "Solves the transport problem on an nxn grid." << std::endl;
@@ -63,11 +59,11 @@ int main(int argc, char** argv)
   const FieldVector<double,dim> upper = {1, 1};
   const std::array<unsigned int,dim> elements = {nelements, nelements};
 
-  //std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+  // std::unique_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
-  std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+  std::unique_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
-  //std::shared_ptr<GridType> grid = std::shared_ptr<GridType>(GmshReader<GridType>::read("irregular-square.msh"));
+  // std::unique_ptr<GridType> grid = GmshReader<GridType>::read("irregular-square.msh");
 
   typedef GridType::LeafGridView GridView;
   const GridView gridView = grid->leafGridView();
@@ -198,11 +194,4 @@ int main(int argc, char** argv)
                    feBasisInterior.size());
 
   return 0;
-  }
-  catch (Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
 }

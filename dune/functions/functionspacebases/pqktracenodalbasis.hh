@@ -6,7 +6,6 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
-#include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqktracefactory.hh>
 
@@ -89,16 +88,9 @@ public:
       triangleOffset_      = edgeOffset_
                            + dofsPerEdge * gridView_.size(dim-1);
 
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
       quadrilateralOffset_ = triangleOffset_
                              + dofsPerTriangle
                                * gridView_.size(GeometryTypes::triangle);
-#else
-      GeometryType triangle;
-      triangle.makeTriangle();
-      quadrilateralOffset_ = triangleOffset_
-                           + dofsPerTriangle * gridView_.size(triangle);
-#endif
     }
   }
 
@@ -136,18 +128,9 @@ public:
         return gridView_.size(dim) + dofsPerEdge * gridView_.size(1);
       case 3:
       {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
         return gridView_.size(dim) + dofsPerEdge * gridView_.size(2)
              + dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
              + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
-#else
-        GeometryType triangle, quad;
-        triangle.makeTriangle();
-        quad.makeQuadrilateral();
-        return gridView_.size(dim) + dofsPerEdge * gridView_.size(2)
-             + dofsPerTriangle * gridView_.size(triangle)
-             + dofsPerQuad * gridView_.size(quad);
-#endif
       }
     }
     DUNE_THROW(Dune::NotImplemented,
@@ -253,9 +236,6 @@ public:
   using MultiIndex = MI;
 
   using PreBasis = PQkTracePreBasis<GV, k, MI>;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   using Node = typename PreBasis::template Node<TP>;
 
@@ -289,7 +269,6 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   template<typename It>
   It indices(It it) const
   {
@@ -317,13 +296,8 @@ public:
         }
         else
         {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const auto refElement
               = Dune::referenceElement<double,dim>(element.type());
-#else
-          const Dune::ReferenceElement<double,dim>& refElement
-              = Dune::ReferenceElements<double,dim>::general(element.type());
-#endif
 
           // we have to reverse the numbering if the local triangle edge is
           // not aligned with the global edge
@@ -349,13 +323,8 @@ public:
               "traces have no elements of codimension 0");
         } else
         {
-#if DUNE_VERSION_NEWER(DUNE_GEOMETRY,2,6)
           const auto refElement
               = Dune::referenceElement<double,dim>(element.type());
-#else
-          const Dune::ReferenceElement<double,dim>& refElement
-              = Dune::ReferenceElements<double,dim>::general(element.type());
-#endif
 
           if (! refElement.type(localKey.subEntity(), localKey.codim()).isTriangle()
               or k>3)
@@ -371,61 +340,6 @@ public:
     }
     return it;
   }
-#else
-  MultiIndex index(size_type i) const
-  {
-    Dune::LocalKey localKey = node_->finiteElement().localCoefficients().localKey(i);
-    const auto& gridIndexSet = preBasis_->gridView().indexSet();
-    const auto& element = node_->element();
-
-    // The dimension of the entity that the current dof is related to
-    size_t dofDim = dim - localKey.codim();
-    if (dofDim==0) {  // vertex dof
-      return { gridIndexSet.subIndex(element,localKey.subEntity(),dim) };
-    }
-
-    if (dofDim==1)
-    {  // edge dof
-      if (dim==1)   // element dof -- any local numbering is fine
-      {
-        DUNE_THROW(Dune::NotImplemented, "traces have no elements of codimension 0");
-      }
-      else
-      {
-        const Dune::ReferenceElement<double,dim>& refElement
-            = Dune::ReferenceElements<double,dim>::general(element.type());
-
-        // we have to reverse the numbering if the local triangle edge is
-        // not aligned with the global edge
-        size_t v0 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),0,dim),dim);
-        size_t v1 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
-        bool flip = (v0 > v1);
-        return { (flip)
-          ? preBasis_->edgeOffset_ + (k-1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + (k-2)-localKey.index()
-              : preBasis_->edgeOffset_ + (k-1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) + localKey.index() };
-      }
-    }
-
-    if (dofDim==2)
-    {
-      if (dim==2)   // element dof -- any local numbering is fine
-      {
-        DUNE_THROW(Dune::NotImplemented, "traces have no elements of codimension 0");
-      } else
-      {
-        const Dune::ReferenceElement<double,dim>& refElement
-            = Dune::ReferenceElements<double,dim>::general(element.type());
-
-        if (! refElement.type(localKey.subEntity(), localKey.codim()).isTriangle()
-            or k>3)
-          DUNE_THROW(Dune::NotImplemented, "PQkTraceNodalBasis for 3D grids is only implemented if k<=3 and if the grid is a simplex grid");
-
-        return { preBasis_->triangleOffset_ + gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()) };
-      }
-    }
-    DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the PQkTraceNodalBasis");
-  }
-#endif
 
 protected:
   const PreBasis* preBasis_;
@@ -435,7 +349,7 @@ protected:
 
 
 
-namespace BasisBuilder {
+namespace BasisFactory {
 
 namespace Imp {
 
@@ -445,17 +359,13 @@ struct PQkTracePreBasisFactory
   static const std::size_t requiredMultiIndexSize = 1;
 
   template<class MultiIndex, class GridView>
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   auto makePreBasis(const GridView& gridView) const
-#else
-  auto build(const GridView& gridView) const
-#endif
   {
     return PQkTracePreBasis<GridView, k, MultiIndex>(gridView);
   }
 };
 
-} // end namespace BasisBuilder::Imp
+} // end namespace BasisFactory::Imp
 
 template<std::size_t k>
 auto pqTrace()
@@ -463,7 +373,7 @@ auto pqTrace()
   return Imp::PQkTracePreBasisFactory<k>();
 }
 
-} // end namespace BasisBuilder
+} // end namespace BasisFactory
 
 
 

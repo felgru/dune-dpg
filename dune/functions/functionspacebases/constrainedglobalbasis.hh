@@ -3,15 +3,21 @@
 #ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_CONSTRAINEDGLOBALBASIS_HH
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_CONSTRAINEDGLOBALBASIS_HH
 
+#include <cstddef>
+#include <type_traits>
+#include <utility>
+
 #include <dune/common/reservedvector.hh>
 #include <dune/common/typeutilities.hh>
 #include <dune/common/concept.hh>
+#include <dune/common/deprecated.hh>
 #include <dune/common/version.hh>
 
+#include <dune/dpg/functions/concepts.hh>
 #include <dune/functions/common/type_traits.hh>
 #include <dune/functions/functionspacebases/constrainedlocalindexset.hh>
-#include <dune/functions/functionspacebases/defaultlocalview.hh>
-#include <dune/dpg/functions/concepts.hh>
+#include <dune/functions/functionspacebases/constrainedlocalview.hh>
+#include <dune/functions/functionspacebases/flatmultiindex.hh>
 
 
 
@@ -45,9 +51,6 @@ public:
 
   //! Pre-basis providing the implementation details
   using PreBasis = PB;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   //! The empty prefix path that identifies the root in the local ansatz tree
   using PrefixPath = TypeTree::HybridTreePath<>;
@@ -62,7 +65,7 @@ public:
   using size_type = std::size_t;
 
   //! Type of the local view on the restriction of the basis to a single element
-  using LocalView = DefaultLocalView<ConstrainedGlobalBasis<PreBasis>>;
+  using LocalView = ConstrainedLocalView<ConstrainedGlobalBasis<PreBasis>>;
 
   //! Node index set provided by PreBasis
   using NodeIndexSet = typename PreBasis::template IndexSet<PrefixPath>;
@@ -105,13 +108,6 @@ public:
     return preBasis_;
   }
 
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  const NodeFactory& nodeFactory() const
-  {
-    return preBasis();
-  }
-#endif
-
   /**
    * \brief Update the stored grid view
    *
@@ -149,7 +145,11 @@ public:
   }
 
   //! Return local index set for basis
-  LocalIndexSet localIndexSet() const
+  LocalIndexSet
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+    DUNE_DEPRECATED_MSG("localIndexSet() is deprecated. The indexing method are now available in the ConstrainedLocalView. Indices are computed when binding the ConstrainedLocalView.")
+#endif
+    localIndexSet() const
   {
     return LocalIndexSet(preBasis_.template indexSet<PrefixPath>());
   }
@@ -173,17 +173,16 @@ protected:
 
 
 
-namespace BasisBuilder {
+namespace BasisFactory {
 
 template<class GridView, class PreBasisFactory>
 auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFactory)
 {
-  using MultiIndex = typename Dune::ReservedVector<std::size_t, PreBasisFactory::requiredMultiIndexSize>;
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
+  using MultiIndex = std::conditional_t<
+    PreBasisFactory::requiredMultiIndexSize==1,
+    FlatMultiIndex<std::size_t>,
+    Dune::ReservedVector<std::size_t, PreBasisFactory::requiredMultiIndexSize>>;
   auto preBasis = preBasisFactory.template makePreBasis<MultiIndex>(gridView);
-#else
-  auto preBasis = preBasisFactory.template build<MultiIndex>(gridView);
-#endif
   using PreBasis = std::decay_t<decltype(preBasis)>;
 
   return ConstrainedGlobalBasis<PreBasis>(std::move(preBasis));
@@ -192,17 +191,13 @@ auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFa
 template<class MultiIndex, class GridView, class PreBasisFactory>
 auto makeConstrainedBasis(const GridView& gridView, PreBasisFactory&& preBasisFactory)
 {
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   auto preBasis = preBasisFactory.template makePreBasis<MultiIndex>(gridView);
-#else
-  auto preBasis = preBasisFactory.template build<MultiIndex>(gridView);
-#endif
   using PreBasis = std::decay_t<decltype(preBasis)>;
 
   return ConstrainedGlobalBasis<PreBasis>(std::move(preBasis));
 }
 
-} // end namespace BasisBuilder
+} // end namespace BasisFactory
 
 
 

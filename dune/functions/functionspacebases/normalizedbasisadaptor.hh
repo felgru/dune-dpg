@@ -4,7 +4,7 @@
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_NORMALIZEDBASISADAPTOR_HH
 
 #include <array>
-#include <dune/common/version.hh>
+#include <cmath>
 
 #include <dune/dpg/assemble_helper.hh>
 
@@ -47,11 +47,7 @@ template<typename InnerProduct>
 class NormalizedPreBasis
 {
   using Basis = std::tuple_element_t<0, typename InnerProduct::TestSpaces>;
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   using WrappedPreBasis = typename Basis::PreBasis;
-#else
-  using WrappedPreBasis = typename Basis::NodeFactory;
-#endif
 
 public:
 
@@ -75,11 +71,7 @@ public:
 
   /** \brief Constructor for a given grid view object */
   NormalizedPreBasis(const InnerProduct& ip) :
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
     wrappedPreBasis_(std::get<0>(*ip.getTestSpaces()).preBasis()),
-#else
-    wrappedPreBasis_(std::get<0>(*ip.getTestSpaces()).nodeFactory()),
-#endif
     innerProduct_(ip)
   {}
 
@@ -96,9 +88,10 @@ public:
     return wrappedPreBasis_.gridView();
   }
 
-  void update (const GridView& gv)
+  void update(const GridView& gv)
   {
     wrappedPreBasis_.update(gv);
+    Dune::detail::updateSpaces(*innerProduct_.getTestSpaces(), gv);
   }
 
   template<class TP>
@@ -161,16 +154,9 @@ class NormalizedNode :
       = Dune::detail::getLocalViews_t<typename InnerProduct::TestSpaces>;
 
   using Base = LeafBasisNode<std::size_t, TP>;
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   using WrappedPreBasis = typename Basis::PreBasis;
-#else
-  using WrappedPreBasis = typename Basis::NodeFactory;
-#endif
   using WrappedNode = typename WrappedPreBasis::template Node<TP>;
   using PreBasis = NormalizedPreBasis<InnerProduct>;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
 public:
 
@@ -213,7 +199,7 @@ public:
     innerProduct_.getLocalMatrix(localGramian);
     scalingWeights_.resize(localGramian.N());
     for(size_t i = 0, size = scalingWeights_.size(); i < size; i++)
-      scalingWeights_[i] = 1./localGramian[i][i];
+      scalingWeights_[i] = 1./std::sqrt(localGramian[i][i]);
 
     finiteElement_.setWrappedFiniteElementAndWeights(
         wrappedNode_.finiteElement(), scalingWeights_.begin());
@@ -240,11 +226,7 @@ class NormalizedNodeIndexSet
 {
   using Basis = typename PB::WrappedBasis;
 
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6)
   using WrappedIndexSet = typename Basis::PreBasis::template IndexSet<TP>;
-#else
-  using WrappedIndexSet = typename Basis::NodeFactory::template IndexSet<TP>;
-#endif
 
 public:
 
@@ -254,9 +236,6 @@ public:
   using MultiIndex = typename Basis::MultiIndex;
 
   using PreBasis = PB;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,6))
-  using NodeFactory = PreBasis;
-#endif
 
   using Node = typename PreBasis::template Node<TP>;
 
@@ -289,18 +268,11 @@ public:
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,6)
   template<typename It>
   It indices(It it) const
   {
     return wrappedIndexSet_.indices(it);
   }
-#else
-  MultiIndex index(size_type i) const
-  {
-    return wrappedIndexSet_.index(i);
-  }
-#endif
 
 protected:
   WrappedIndexSet wrappedIndexSet_;

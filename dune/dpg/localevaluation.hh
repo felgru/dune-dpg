@@ -8,7 +8,6 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
-#include <dune/common/version.hh>
 
 #include "assemble_types.hh"
 #include "type_traits.hh"
@@ -205,7 +204,7 @@ struct LocalLinearTermFunctionEvaluation {
 
 /* We need to make this a class, as partial specializations of
  * function templates are not allowed. */
-template<bool isDGRefined>
+template<bool isContinuouslyRefined>
 struct LocalRefinedFunctionEvaluationHelper {
 
   template <int dim, class LocalFiniteElement,
@@ -340,7 +339,7 @@ struct LocalRefinedFunctionEvaluation {
        integrationType == IntegrationType::gradValue)
       ? EvaluationType::value : EvaluationType::grad;
 
-  template<bool isDGRefined,
+  template<bool isContinuouslyRefined,
            class LocalFiniteElement, class Geometry, class SubGeometry,
            class LocalCoefficients>
   static std::vector<FieldVector<double,1> >
@@ -351,7 +350,7 @@ struct LocalRefinedFunctionEvaluation {
               const SubGeometry& subGeometryInReferenceElement,
               const LocalCoefficients& localCoefficients)
   {
-    return evaluateLhs_<lhsType, isDGRefined>
+    return evaluateLhs_<lhsType, isContinuouslyRefined>
             (localFiniteElement,
              subElement,
              quadPos,
@@ -360,7 +359,7 @@ struct LocalRefinedFunctionEvaluation {
              localCoefficients);
   }
 
-  template<bool isDGRefined,
+  template<bool isContinuouslyRefined,
            class LocalFiniteElement, class Geometry, class SubGeometry,
            class LocalCoefficients>
   static std::vector<FieldVector<double,1> >
@@ -371,7 +370,7 @@ struct LocalRefinedFunctionEvaluation {
               const SubGeometry& subGeometryInReferenceElement,
               const LocalCoefficients& localCoefficients)
   {
-    return evaluateRhs_<rhsType, isDGRefined>
+    return evaluateRhs_<rhsType, isContinuouslyRefined>
             (localFiniteElement,
              subElement,
              quadPos,
@@ -382,7 +381,7 @@ struct LocalRefinedFunctionEvaluation {
 
   private:
 
-  template<EvaluationType type, bool isDGRefined,
+  template<EvaluationType type, bool isContinuouslyRefined,
            class LocalFiniteElement, class Geometry, class SubGeometry,
            class LocalCoefficients,
            std::enable_if_t<type == EvaluationType::value>* = nullptr>
@@ -393,11 +392,11 @@ struct LocalRefinedFunctionEvaluation {
                const Geometry& ,
                const SubGeometry& ,
                const LocalCoefficients& ) {
-    return LocalRefinedFunctionEvaluationHelper<isDGRefined>::
+    return LocalRefinedFunctionEvaluationHelper<isContinuouslyRefined>::
               evaluateValue(localFiniteElement, subElement, quadPos);
   }
 
-  template<EvaluationType type, bool isDGRefined,
+  template<EvaluationType type, bool isContinuouslyRefined,
            class LocalFiniteElement, class Geometry, class SubGeometry,
            class LocalCoefficients,
            std::enable_if_t<type == EvaluationType::grad>* = nullptr>
@@ -408,7 +407,7 @@ struct LocalRefinedFunctionEvaluation {
                const Geometry& geometry,
                const SubGeometry& subGeometryInReferenceElement,
                const LocalCoefficients& localCoefficients) {
-    return LocalRefinedFunctionEvaluationHelper<isDGRefined>::
+    return LocalRefinedFunctionEvaluationHelper<isContinuouslyRefined>::
               evaluateGrad(localFiniteElement,
                            subElement,
                            quadPos,
@@ -417,7 +416,7 @@ struct LocalRefinedFunctionEvaluation {
                            localCoefficients.localDirection()(quadPos));
   }
 
-  template<EvaluationType type, bool isDGRefined,
+  template<EvaluationType type, bool isContinuouslyRefined,
            class LocalFiniteElement, class Geometry, class SubGeometry,
            class LocalCoefficients,
            std::enable_if_t<type == EvaluationType::value>* = nullptr>
@@ -428,11 +427,11 @@ struct LocalRefinedFunctionEvaluation {
                const Geometry& ,
                const SubGeometry& ,
                const LocalCoefficients& ) {
-    return LocalRefinedFunctionEvaluationHelper<isDGRefined>::
+    return LocalRefinedFunctionEvaluationHelper<isContinuouslyRefined>::
               evaluateValue(localFiniteElement, subElement, quadPos);
   }
 
-  template<EvaluationType type, bool isDGRefined,
+  template<EvaluationType type, bool isContinuouslyRefined,
            class LocalFiniteElement, class Geometry, class SubGeometry,
            class LocalCoefficients,
            std::enable_if_t<type == EvaluationType::grad>* = nullptr>
@@ -443,7 +442,7 @@ struct LocalRefinedFunctionEvaluation {
                const Geometry& geometry,
                const SubGeometry& subGeometryInReferenceElement,
                const LocalCoefficients& localCoefficients) {
-    return LocalRefinedFunctionEvaluationHelper<isDGRefined>::
+    return LocalRefinedFunctionEvaluationHelper<isContinuouslyRefined>::
               evaluateGrad(localFiniteElement,
                            subElement,
                            quadPos,
@@ -459,7 +458,7 @@ struct LocalRefinedLinearTermFunctionEvaluation {
                       LinearIntegrationType::valueFunction)
                       ? EvaluationType::value : EvaluationType::grad;
 
-  template<bool isDGRefined,
+  template<bool isContinuouslyRefined,
            class LocalFiniteElement, class Geometry, class SubGeometry,
            class LocalCoefficients>
   static std::vector<FieldVector<double,1> >
@@ -470,7 +469,7 @@ struct LocalRefinedLinearTermFunctionEvaluation {
            const SubGeometry& subGeometryInReferenceElement,
            const LocalCoefficients& localCoefficients)
   {
-    return evaluate_<evaluationType, isDGRefined>
+    return evaluate_<evaluationType, isContinuouslyRefined>
             (localFiniteElement,
              subElement,
              quadPos,
@@ -481,7 +480,7 @@ struct LocalRefinedLinearTermFunctionEvaluation {
 
   private:
 
-  template<EvaluationType type, bool isDGRefined,
+  template<EvaluationType type, bool isContinuouslyRefined,
            class LocalFiniteElement, class Geometry, class SubGeometry,
            class LocalCoefficients,
            std::enable_if_t<type == EvaluationType::value>* = nullptr>
@@ -492,11 +491,11 @@ struct LocalRefinedLinearTermFunctionEvaluation {
             const Geometry& ,
             const SubGeometry& ,
             const LocalCoefficients& ) {
-    return LocalRefinedFunctionEvaluationHelper<isDGRefined>::
+    return LocalRefinedFunctionEvaluationHelper<isContinuouslyRefined>::
               evaluateValue(localFiniteElement, subElement, quadPos);
   }
 
-  template<EvaluationType type, bool isDGRefined,
+  template<EvaluationType type, bool isContinuouslyRefined,
            class LocalFiniteElement, class Geometry, class SubGeometry,
            class LocalCoefficients,
            std::enable_if_t<type == EvaluationType::grad>* = nullptr>
@@ -507,7 +506,7 @@ struct LocalRefinedLinearTermFunctionEvaluation {
             const Geometry& geometry,
             const SubGeometry& subGeometryInReferenceElement,
             const LocalCoefficients& localCoefficients) {
-    return LocalRefinedFunctionEvaluationHelper<isDGRefined>::
+    return LocalRefinedFunctionEvaluationHelper<isContinuouslyRefined>::
               evaluateGrad(localFiniteElement,
                            subElement,
                            quadPos,

@@ -12,8 +12,6 @@
 
 #include <boost/math/constants/constants.hpp>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
@@ -25,7 +23,6 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
 #include <dune/functions/functionspacebases/bernsteinbasis.hh>
 #include <dune/functions/functionspacebases/bernsteindgbasis.hh>
@@ -175,9 +172,9 @@ int main(int argc, char** argv)
   FieldVector<double,dim> upper = {1,1};
   std::array<unsigned int,dim> elements = {nelements,nelements};
 
-  // std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
+  // std::unique_ptr<GridType> grid = StructuredGridFactory<GridType>::createCubeGrid(lower, upper, elements);
 
-  std::shared_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
+  std::unique_ptr<GridType> grid = StructuredGridFactory<GridType>::createSimplexGrid(lower, upper, elements);
 
   typedef GridType::LeafGridView GridView;
   GridView gridView = grid->leafGridView();

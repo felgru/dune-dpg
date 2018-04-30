@@ -14,8 +14,6 @@
 
 #include <boost/math/constants/constants.hpp>
 
-#include <dune/common/exceptions.hh> // We use exceptions
-
 #include <dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
@@ -56,7 +54,6 @@ auto f(const Direction& s)
 
 int main(int argc, char** argv)
 {
-  try{
   if(argc != 2) {
     std::cerr << "Usage: " << argv[0] << " n" << std::endl << std::endl
               << "Solves the transport problem on an nxn grid." << std::endl;
@@ -76,10 +73,10 @@ int main(int argc, char** argv)
   const FieldVector<double,dim> upper = {1, 1};
   const std::array<unsigned int,dim> elements = {nelements, nelements};
 
-  // std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
+  // std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
   //                                 ::createCubeGrid(lower, upper, elements);
 
-  std::shared_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
+  std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
                                   ::createSimplexGrid(lower, upper, elements);
   hostGrid->setClosureType(HostGrid::NONE);
 
@@ -145,22 +142,22 @@ int main(int argc, char** argv)
                                       DomainOfIntegration::face>(1., beta)));
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
-     auto innerProduct = make_InnerProduct(testSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta),
-              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                    DomainOfIntegration::face>(1., beta)));
-     auto innerProduct_aposteriori
+    auto innerProduct = make_InnerProduct(testSpaces,
+         make_tuple(
+             make_IntegralTerm<0,0,IntegrationType::gradGrad,
+                                   DomainOfIntegration::interior>(1., beta),
+             make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                   DomainOfIntegration::face>(1., beta)));
+    auto innerProduct_aposteriori
         = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
     //  System assembler without geometry buffer
-    //auto systemAssembler
-    //   = make_DPGSystemAssembler(bilinearForm, innerProduct);
+    // auto systemAssembler
+    //     = make_DPGSystemAssembler(bilinearForm, innerProduct);
 
     //  System assembler with geometry buffer
     auto systemAssembler
-     = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
+        = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
     /////////////////////////////////////////////////////////
     //   Stiffness matrix and right hand side vector
     /////////////////////////////////////////////////////////
@@ -169,8 +166,8 @@ int main(int argc, char** argv)
     typedef BlockVector<FieldVector<double,1> > VectorType;
     typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
 
-    VectorType rhs, rhs1;
-    MatrixType stiffnessMatrix, stiffnessMatrix1;
+    VectorType rhs;
+    MatrixType stiffnessMatrix;
 
     /////////////////////////////////////////////////////////
     //  Assemble the system
@@ -296,11 +293,4 @@ int main(int argc, char** argv)
 
 
   return 0;
-  }
-  catch (Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
 }

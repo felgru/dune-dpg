@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <dune/common/hybridutilities.hh>
+#include <dune/common/version.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -42,7 +43,7 @@ namespace Dune {
               std::tuple_size<LocalIndexSets>::value>{},
           [&](auto i) {
             auto const & localIndexSet = std::get<i>(localIndexSets);
-            iterateOverLocalIndexSet(
+            iterateOverLocalIndices(
               localIndexSet,
               [&](size_t j, auto gj) {
                 solutionElement[j + localOffsets[i]]
@@ -160,26 +161,35 @@ namespace Dune {
 
     template <class InnerProduct, class LinearForm,
               class RhsFunction, class SolutionLocalViews,
-              class SolutionLocalIndexSets, class VectorType>
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
+              class SolutionLocalIndexSets,
+#endif
+              class VectorType>
     static
     double aPosterioriL2ErrorSquareElement(InnerProduct& ,
                                            LinearForm& ,
                                            const RhsFunction& ,
                                            SolutionLocalViews& ,
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
                                            SolutionLocalIndexSets& ,
+#endif
                                            VectorType&);
 
     template <class BilinearForm,class InnerProduct,
               class TestLocalViews, class SolutionLocalViews,
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
               class TestLocalIndexSets, class SolutionLocalIndexSets,
+#endif
               class VectorType>
     static
     double aPosterioriErrorSquareElement(BilinearForm& ,
                                          InnerProduct& ,
                                          TestLocalViews& ,
                                          SolutionLocalViews& ,
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
                                          TestLocalIndexSets& ,
                                          SolutionLocalIndexSets& ,
+#endif
                                          VectorType& ,
                                          VectorType& );
   };
@@ -256,12 +266,16 @@ namespace Dune {
     double l2NormSquared = 0.;
 
     auto localView = feBasis.localView();
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     auto localIndexSet = feBasis.localIndexSet();
+#endif
 
     for(const auto& e : elements(gridView))
     {
       localView.bind(e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       localIndexSet.bind(localView);
+#endif
 
       const size_t dofFEelement = localView.size();
 
@@ -270,7 +284,11 @@ namespace Dune {
       BlockVector<FieldVector<double,1> > uElement(dofFEelement);
       for (size_t i=0; i<dofFEelement; i++)
       {
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+          uElement[i] = u[ localView.index(i)[0] ];
+#else
           uElement[i] = u[ localIndexSet.index(i)[0] ];
+#endif
       }
 
       l2NormSquared += l2normSquaredElement(localView, uElement);
@@ -393,14 +411,18 @@ namespace Dune {
 
     // A view on the FE basis on a single element
     auto localView = feBasis.localView();
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     auto localIndexSet = feBasis.localIndexSet();
+#endif
 
     // A loop over all elements of the grid
     for(const auto& e : elements(gridView))
     {
       // Bind the local FE basis view to the current element
       localView.bind(e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       localIndexSet.bind(localView);
+#endif
 
       // Now we take the coefficients of u that correspond to the
       // current element e. They are stored in uElement.
@@ -413,7 +435,11 @@ namespace Dune {
       BlockVector<FieldVector<double,1> > uElement(dofFEelement);
       for (size_t i=0; i<dofFEelement; i++)
       {
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+          uElement[i] = u[ localView.index(i)[0] ];
+#else
           uElement[i] = u[ localIndexSet.index(i)[0] ];
+#endif
       }
       // Now we compute the error inside the element
       errSquare += computeL2errorSquareElement<subsamples>
@@ -432,18 +458,22 @@ namespace Dune {
  * \param linearForm              the linear form
  * \param f                       the right-hand side function
  * \param solutionLocalViews      local views for the solution
- * \param solutionLocalIndexSets  local index sets for the solution
  * \param solution                the computed solution
  */
   template <class InnerProduct, class LinearForm,
             class RhsFunction, class SolutionLocalViews,
-            class SolutionLocalIndexSets, class VectorType>
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
+            class SolutionLocalIndexSets,
+#endif
+            class VectorType>
   double ErrorTools::aPosterioriL2ErrorSquareElement(
       InnerProduct& innerProduct,
       LinearForm& linearForm,
       const RhsFunction& f,
       SolutionLocalViews& solutionLocalViews,
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       SolutionLocalIndexSets& solutionLocalIndexSets,
+#endif
       VectorType& solution)
   {
     using namespace Dune::detail;
@@ -465,7 +495,11 @@ namespace Dune {
     BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
 
     detail::getLocalCoefficients(solution, solutionElement,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        solutionLocalViews,
+#else
         solutionLocalIndexSets,
+#endif
         localSolutionSpaceOffsets, globalSolutionSpaceOffsets);
 
     double errSquare = 0;
@@ -559,23 +593,28 @@ namespace Dune {
 
 
     // We get the local index sets of the solution spaces
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     auto solutionLocalIndexSets
             = getLocalIndexSets(*innerProduct.getTestSpaces());
+#endif
 
     // Variable where we compute the residual
     double res = 0.;
 
     for(const auto& e : elements(gridView))
     {
-      // Bind localViews and localIndexSets
       bindLocalViews(solutionLocalViews, e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+#endif
 
       res += aPosterioriL2ErrorSquareElement(innerProduct,
                                              linearForm,
                                              f,
                                              solutionLocalViews,
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
                                              solutionLocalIndexSets,
+#endif
                                              solution);
     }
 
@@ -598,15 +637,19 @@ namespace Dune {
  */
   template <class BilinearForm,class InnerProduct,
             class TestLocalViews, class SolutionLocalViews,
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
             class TestLocalIndexSets, class SolutionLocalIndexSets,
+#endif
             class VectorType>
   double ErrorTools::aPosterioriErrorSquareElement(
       BilinearForm& bilinearForm,
       InnerProduct& innerProduct,
       TestLocalViews& testLocalViews,
       SolutionLocalViews& solutionLocalViews,
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       TestLocalIndexSets& testLocalIndexSets,
       SolutionLocalIndexSets& solutionLocalIndexSets,
+#endif
       VectorType& solution,
       VectorType& rhs)
   {
@@ -639,10 +682,18 @@ namespace Dune {
     BlockVector<FieldVector<double,1> > rhsElement(localTestDofs);
 
     detail::getLocalCoefficients(solution, solutionElement,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        solutionLocalViews,
+#else
         solutionLocalIndexSets,
+#endif
         localSolutionSpaceOffsets, globalSolutionSpaceOffsets);
     detail::getLocalCoefficients(rhs, rhsElement,
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        testLocalViews,
+#else
         testLocalIndexSets,
+#endif
         localTestSpaceOffsets, globalTestSpaceOffsets);
 
     // We grab the inner product matrix in the innerProductMatrix variable (IP)
@@ -708,29 +759,34 @@ namespace Dune {
     TestLocalViews testLocalViews
         = getLocalViews(*bilinearForm.getTestSpaces());
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     // We get the local index sets of the test spaces
     auto testLocalIndexSets = getLocalIndexSets(*bilinearForm.getTestSpaces());
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
             = getLocalIndexSets(*bilinearForm.getSolutionSpaces());
+#endif
 
     // Variable where we compute the residual
     double res = 0.;
 
     for(const auto& e : elements(gridView))
     {
-      // Bind localViews and localIndexSets
       bindLocalViews(testLocalViews, e);
       bindLocalViews(solutionLocalViews, e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       bindLocalIndexSets(testLocalIndexSets, testLocalViews);
       bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+#endif
 
       res += aPosterioriErrorSquareElement(bilinearForm,
                                            innerProduct,
                                            testLocalViews,
                                            solutionLocalViews,
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
                                            testLocalIndexSets,
                                            solutionLocalIndexSets,
+#endif
                                            solution,
                                            rhs);
    }
@@ -844,21 +900,24 @@ namespace Dune {
     TestLocalViews testLocalViews
         = getLocalViews(*bilinearForm.getTestSpaces());
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     // We get the local index sets of the test spaces
     auto testLocalIndexSets = getLocalIndexSets(*bilinearForm.getTestSpaces());
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
             = getLocalIndexSets(*bilinearForm.getSolutionSpaces());
+#endif
 
     std::vector<std::tuple<EntitySeed, double>> errorEstimates;
     errorEstimates.reserve(gridView.size(0));
     for(const auto& e : elements(gridView))
     {
-      // Bind localViews and localIndexSets
       bindLocalViews(testLocalViews, e);
       bindLocalViews(solutionLocalViews, e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       bindLocalIndexSets(testLocalIndexSets, testLocalViews);
       bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+#endif
 
       // Now we compute the error inside the element
       double elementError = 0;
@@ -869,8 +928,10 @@ namespace Dune {
                                 innerProduct,
                                 testLocalViews,
                                 solutionLocalViews,
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
                                 testLocalIndexSets,
                                 solutionLocalIndexSets,
+#endif
                                 solution,
                                 rhs);
       }
@@ -881,7 +942,9 @@ namespace Dune {
                                 linearForm,
                                 f,
                                 solutionLocalViews,
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
                                 solutionLocalIndexSets,
+#endif
                                 solution);
       }
       errorEstimates.emplace_back(e.seed(), elementError);
@@ -932,21 +995,24 @@ namespace Dune {
     TestLocalViews testLocalViews
         = getLocalViews(*bilinearForm.getTestSpaces());
 
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     // We get the local index sets of the test spaces
     auto testLocalIndexSets = getLocalIndexSets(*bilinearForm.getTestSpaces());
     // We get the local index sets of the solution spaces
     auto solutionLocalIndexSets
             = getLocalIndexSets(*bilinearForm.getSolutionSpaces());
+#endif
 
     std::vector<std::tuple<EntitySeed, double>> errorEstimates;
     errorEstimates.reserve(gridView.size(0));
     for(const auto& e : elements(gridView))
     {
-      // Bind localViews and localIndexSets
       bindLocalViews(testLocalViews, e);
       bindLocalViews(solutionLocalViews, e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       bindLocalIndexSets(testLocalIndexSets, testLocalViews);
       bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
+#endif
 
       // Now we compute the error inside the element
       double elementError = aPosterioriErrorSquareElement(
@@ -954,8 +1020,10 @@ namespace Dune {
                                 innerProduct,
                                 testLocalViews,
                                 solutionLocalViews,
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
                                 testLocalIndexSets,
                                 solutionLocalIndexSets,
+#endif
                                 solution,
                                 rhs);
       errorEstimates.emplace_back(e.seed(), elementError);
