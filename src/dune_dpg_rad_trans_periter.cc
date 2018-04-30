@@ -162,11 +162,11 @@ int main(int argc, char** argv)
       {
         auto rhs = [](const Domain& x)
         {
-          const int n=7;
+          constexpr int n=7;
           const int i = static_cast<int>(n*x[0]);
           const int j = static_cast<int>(n*x[1]);
-          const double v1 = 0.;
-          const double v2 = 1.;
+          constexpr double v1 = 0.;
+          constexpr double v2 = 1.;
           if(i==3 and j==3) {
             return v2;
           } else {
@@ -183,26 +183,35 @@ int main(int argc, char** argv)
 #endif
 
 #if PERITER_CHECKERBOARD_SIGMA
-  const auto sigma = [](const Domain& x)
+  const auto sigma = [](const auto gridView)
       {
-        const int n=7;
-        const int i = static_cast<int>(n*x[0]);
-        const int j = static_cast<int>(n*x[1]);
-        const double v1 = 2.;
-        const double v2 = 10.;
-        if(i<=0 or i>=6 or j<=0 or j>=6 or
-            (i+j) % 2 != 0 or (i==3 and (j==3 or j==5))) {
-          return v1;
-        } else {
-          return v2;
-        }
+        auto sigma_ = [](const Domain& x)
+            {
+              constexpr int n=7;
+              const int i = static_cast<int>(n*x[0]);
+              const int j = static_cast<int>(n*x[1]);
+              constexpr double v1 = 2.;
+              constexpr double v2 = 10.;
+              if(i<=0 or i>=6 or j<=0 or j>=6 or
+                  (i+j) % 2 != 0 or (i==3 and (j==3 or j==5))) {
+                return v1;
+              } else {
+                return v2;
+              }
+            };
+        return Functions::makePiecewiseConstantGridViewFunction(
+              std::move(sigma_), gridView);
       };
   const double sigmaMin = 2.;
   const double sigmaMax = 10.;
 #else
-  const double sigma = 5.;
-  const double sigmaMin = sigma;
-  const double sigmaMax = sigma;
+  constexpr double sigma_ = 5.;
+  const auto sigma = [sigma_](const auto gridView)
+      {
+        return Functions::makeConstantGridViewFunction(sigma_, gridView);
+      };
+  const double sigmaMin = sigma_;
+  const double sigmaMax = sigma_;
 #endif
 
 #if PERITER_PEAKY_BV

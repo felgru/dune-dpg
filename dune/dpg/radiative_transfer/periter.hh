@@ -30,6 +30,7 @@
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/functionplotter.hh>
+#include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/functions/interpolate.hh>
 #include <dune/dpg/functions/subgridinterpolation.hh>
 #include <dune/dpg/functions/refinementinterpolation.hh>
@@ -1094,26 +1095,34 @@ compute_transport_solution(
     RHSVector& rhsFunctional,
     const Std::optional<VectorType>& bvExtension)
 {
+  auto sFunc = Functions::makeConstantGridViewFunction(s, spaces.gridView());
+  auto oneFunc = Functions::makeConstantGridViewFunction(1., spaces.gridView());
+  auto minusOneFunc
+      = Functions::makeConstantGridViewFunction(-1., spaces.gridView());
+
   auto bilinearForm =
     make_BilinearForm(spaces.testSpacePtr(), spaces.solutionSpacePtr(),
         make_tuple(
-            make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                  DomainOfIntegration::interior>(sigma),
-            make_IntegralTerm<0,0,
-                              IntegrationType::gradValue,
-                              DomainOfIntegration::interior>(-1., s),
-            make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                  DomainOfIntegration::face>(1., s)));
+            make_IntegralTerm<0,0, IntegrationType::valueValue,
+                                   DomainOfIntegration::interior>
+                              (sigma(spaces.gridView())),
+            make_IntegralTerm<0,0, IntegrationType::gradValue,
+                                   DomainOfIntegration::interior>
+                              (minusOneFunc, sFunc),
+            make_IntegralTerm<0,1, IntegrationType::normalVector,
+                                   DomainOfIntegration::face>
+                              (oneFunc, sFunc)));
   auto bilinearFormEnriched =
       replaceTestSpaces(bilinearForm, spaces.enrichedTestSpacePtr());
   auto innerProduct =
     make_InnerProduct(spaces.testSpacePtr(),
         make_tuple(
-            make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                  DomainOfIntegration::interior>(1., s),
-            make_IntegralTerm<0,0,
-                              IntegrationType::travelDistanceWeighted,
-                              DomainOfIntegration::face>(1., s)));
+            make_IntegralTerm<0,0, IntegrationType::gradGrad,
+                                   DomainOfIntegration::interior>
+                              (oneFunc, sFunc),
+            make_IntegralTerm<0,0, IntegrationType::travelDistanceWeighted,
+                                   DomainOfIntegration::face>
+                              (oneFunc, sFunc)));
   auto innerProductEnriched =
       replaceTestSpaces(innerProduct, spaces.enrichedTestSpacePtr());
 
@@ -1156,7 +1165,7 @@ compute_transport_solution(
               (rhsFunctional, spaces.testSpace()),
             make_SkeletalLinearFunctionalTerm
               <0, IntegrationType::normalVector>
-              (*bvExtension, spaces.testSpace(), -1, s)));
+              (*bvExtension, spaces.testSpace(), minusOneFunc, s)));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -1235,7 +1244,7 @@ compute_transport_solution(
               <0, IntegrationType::normalVector>
               (*bvExtension,
                std::get<0>(*systemAssembler.getTestSearchSpaces()),
-               -1, s)));
+               minusOneFunc, s)));
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   }
   // - Computation of the a posteriori error

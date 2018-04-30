@@ -12,6 +12,7 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/version.hh>
+#include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/dpg/functions/refinementinterpolation.hh>
 #include <dune/dpg/integralterm.hh>
@@ -456,8 +457,12 @@ namespace detail {
       Matrix<FieldMatrix<double,1,1>>
           projectionMatrix(subGridLocalView.size(), subGridLocalView.size());
       {
+        auto oneFunc = Functions::makeConstantGridViewFunction(1.,
+                                    subGridGlobalBasis.gridView());
         IntegralTerm<IntegrationType::valueValue,
-             DomainOfIntegration::interior, double> integralTerm(1.0);
+                     DomainOfIntegration::interior,
+                     detail::LocalCoefficients::OnlyFactor<decltype(oneFunc)>>
+                                                        integralTerm(oneFunc);
         integralTerm.getLocalMatrix(subGridLocalView, subGridLocalView,
             projectionMatrix, 0, 0);
       }
