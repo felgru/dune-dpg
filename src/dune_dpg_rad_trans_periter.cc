@@ -5,6 +5,10 @@
 #  define DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY 1
 #  define PERITER_SKELETAL_SCATTERING 1
 #endif
+#if PERITER_CHECKERBOARD
+#  define PERITER_CHECKERBOARD_RHS 1
+#  define PERITER_CHECKERBOARD_SIGMA 1
+#endif
 #include <algorithm>
 #include <chrono>
 #include <cstdlib> // for std::exit() and std::system()
@@ -152,7 +156,7 @@ int main(int argc, char** argv)
   grid->setClosureType(Grid::NONE);
 #endif
 
-#if PERITER_CHECKERBOARD
+#if PERITER_CHECKERBOARD_RHS
   const auto f
     = [](const GridView gridView)
       {
@@ -172,6 +176,13 @@ int main(int argc, char** argv)
         return Functions::makePiecewiseConstantGridViewFunction(
               std::move(rhs), gridView);
       };
+#else
+  const auto f
+    = [](const GridView)
+      { return [](const Domain& x){ return 1.; }; };
+#endif
+
+#if PERITER_CHECKERBOARD_SIGMA
   const auto sigma = [](const Domain& x)
       {
         const int n=7;
@@ -189,9 +200,6 @@ int main(int argc, char** argv)
   const double sigmaMin = 2.;
   const double sigmaMax = 10.;
 #else
-  const auto f
-    = [](const GridView)
-      { return [](const Domain& x){ return 1.; }; };
   const double sigma = 5.;
   const double sigmaMin = sigma;
   const double sigmaMax = sigma;
