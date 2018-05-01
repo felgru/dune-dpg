@@ -42,21 +42,21 @@ def readData(datafile):
         r' of which ([0-9]*\.?[0-9]*) are zero.\n'
         , re.MULTILINE)
     timeEvalKernelPattern = re.compile(r'Computing time: ([0-9]*\.?[0-9]*)us')
-    aPostPattern = re.compile(r'Error transport solves \(a posteriori estimation\): ([0-9]*\.?[0-9]*)\n')
-    accKernelPattern = re.compile(r'Accuracy kernel: ([0-9]*\.?[0-9]*)\n')
+    aPostPattern = re.compile(r'Error transport solves \(a posteriori estimation\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
+    accKernelPattern = re.compile(r'Accuracy kernel: ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
     globalAccIterationApostPattern = re.compile(
-        r'Error bound \|\|bar u_n -T\^{-1}K bar u_{n-1}\|\| \(a posteriori\): ([0-9]*\.?[0-9]*)\n')
-    globalAccApostPattern = re.compile(r'Error bound \|\|u_n - bar u_n\|\| \(a posteriori\): ([0-9]*\.?[0-9]*)\n')
+        r'Error bound \|\|bar u_n -T\^{-1}K bar u_{n-1}\|\| \(a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
+    globalAccApostPattern = re.compile(r'Error bound \|\|u_n - bar u_n\|\| \(a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
     globalAccAprioriPattern = re.compile(
-        r'Bound global accuracy \|\|u - bar u_n\|\| \(a priori \+ a posteriori\): ([0-9]*\.?[0-9]*)')
-    dofsPattern = re.compile(r'Total number of DoFs: ([0-9]*\.?[0-9]*)\n')
+        r'Bound global accuracy \|\|u - bar u_n\|\| \(a priori \+ a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)')
+    dofsPattern = re.compile(r'Total number of DoFs: ([0-9]+)\n')
     innerIterationsPattern = re.compile(
             r'Iteration ([0-9]+)\.([0-9]+) for direction [0-9]+: \n'
             r'  - A posteriori estimation of \|\| \(u,trace u\) - '
-                  r'\(u_fem,theta\) \|\| = [0-9]*\.?[0-9]*\n'
+                  r'\(u_fem,theta\) \|\| = [0-9]*\.?[0-9]*e?[+-]?[0-9]+?\n'
             r'  - Grid level: ([0-9]+)\n'
             r'  - Number of DOFs: ([0-9]+)\n\n'
-            r'a posteriori error for current direction: [0-9]*\.?[0-9]* '
+            r'a posteriori error for current direction: [0-9]*\.?[0-9]*e?[+-]?[0-9]+? '
                   r'\((enough|not enough)'
             , re.MULTILINE)
     with open(datafile,"r") as errors:
