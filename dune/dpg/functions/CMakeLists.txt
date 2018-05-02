@@ -3,6 +3,7 @@ add_subdirectory(io)
 install(FILES
         concepts.hh
         constraineddiscreteglobalbasisfunction.hh
+        gridviewfunctions.hh
         interpolate.hh
         localindexsetiteration.hh
         normedspaces.hh
