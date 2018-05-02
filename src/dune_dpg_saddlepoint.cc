@@ -25,6 +25,7 @@
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/saddlepoint_system_assembler.hh>
 #include <dune/dpg/functionplotter.hh>
+#include <dune/dpg/functions/gridviewfunctions.hh>
 
 
 
@@ -67,21 +68,29 @@ int main()
   //   Choose a bilinear form
   /////////////////////////////////////////////////////////
 
+  auto cFunc = Functions::makeConstantGridViewFunction(0., gridView);
+  auto betaFunc = Functions::makeConstantGridViewFunction(beta, gridView);
+  auto oneFunc = Functions::makeConstantGridViewFunction(1., gridView);
+  auto minusOneFunc = Functions::makeConstantGridViewFunction(-1., gridView);
+
 
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
               make_IntegralTerm<0,1,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(0.),
+                                    DomainOfIntegration::interior>(cFunc),
               make_IntegralTerm<0,1,IntegrationType::gradValue,
-                                    DomainOfIntegration::interior>(-1., beta),
+                                    DomainOfIntegration::interior>
+                                (minusOneFunc, betaFunc),
               make_IntegralTerm<0,0,IntegrationType::normalVector,
-                                    DomainOfIntegration::face>(1., beta)));
+                                    DomainOfIntegration::face>
+                                (oneFunc, betaFunc)));
   auto innerProduct = make_InnerProduct(testSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1.),
+                                    DomainOfIntegration::interior>(oneFunc),
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta)));
+                                    DomainOfIntegration::interior>
+                                (oneFunc, betaFunc)));
   auto systemAssembler
      = make_SaddlepointSystemAssembler(bilinearForm, innerProduct);
 
@@ -99,8 +108,6 @@ int main()
   //  Assemble the system
   /////////////////////////////////////////////////////////
 
-  using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
-
   auto rightHandSide
     = make_LinearForm(
         spaces,
@@ -108,7 +115,7 @@ int main()
             make_LinearIntegralTerm<0,
                                     LinearIntegrationType::valueFunction,
                                     DomainOfIntegration::interior>
-                                   ([] (const Domain& x) { return 1.;})
+                                   (oneFunc)
           ));
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 

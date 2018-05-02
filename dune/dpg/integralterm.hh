@@ -9,6 +9,7 @@
 #include <dune/istl/matrix.hh>
 
 #include "assemble_types.hh"
+#include "localcoefficients.hh"
 #include "localevaluation.hh"
 #include "quadrature.hh"
 #include "traveldistancenorm.hh"
@@ -24,16 +25,17 @@ namespace Dune {
    *
    * \tparam integrationType  the form of the integrand, see #IntegrationType
    * \tparam domainOfIntegration  see #DomainOfIntegration
-   * \tparam FactorType     the type of the factor with which
-   *                        we multiply the integrand
-   * \tparam DirectionType  the type of the transport directions
+   * \tparam LocalCoefficients  a class that contains the factor with which
+   *                    we multiply the integrand and the transport directions
    */
   template <IntegrationType type,
             DomainOfIntegration domain_of_integration,
-            class FactorType,
-            class DirectionType = FieldVector<double, 2> >
+            class LocalCoefficients>
   class IntegralTerm
   {
+    using Factor = typename LocalCoefficients::Factor;
+    using LocalFactor = typename Factor::LocalFunction;
+    using Element = typename Factor::Element;
   public:
 
     IntegralTerm () = delete;
@@ -43,12 +45,8 @@ namespace Dune {
      *
      * \note For your convenience, use make_IntegralTerm() instead.
      */
-    IntegralTerm (FactorType factor = 1,
-                  DirectionType lhsBeta = {1,1},
-                  DirectionType rhsBeta = {1,1})
-        : factor(factor),
-          lhsBeta(lhsBeta),
-          rhsBeta(rhsBeta)
+    IntegralTerm (LocalCoefficients&& localCoefficients)
+        : localCoefficients_(localCoefficients)
     {};
 
     /**
@@ -57,7 +55,8 @@ namespace Dune {
      * The local integrals will be added with the given offsets
      * to \p elementMatrix.
      *
-     * \pre The localViews have to be bound to the same element.
+     * \pre The localViews have to be bound to the same element as the
+     *      IntegralTerm.
      *
      * \param[in]     lhsLocalView    local view of the left space
      * \param[in]     rhsLocalView    local view of the right space
@@ -74,11 +73,13 @@ namespace Dune {
                         size_t lhsSpaceOffset,
                         size_t rhsSpaceOffset) const;
 
-  private:
-    FactorType factor;
-    DirectionType lhsBeta;
-    DirectionType rhsBeta;
+    void bind(const Element& element)
+    {
+      localCoefficients_.bind(element);
+    }
 
+  private:
+    LocalCoefficients localCoefficients_;
   };
 
 
@@ -95,8 +96,8 @@ namespace detail {
 
     template <class MatrixType,
               class Element,
-              class FactorType,
-              class DirectionType>
+              class Factor,
+              class Direction>
     inline static void interiorImpl(const LhsLocalView&,
                                     const RhsLocalView&,
                                     MatrixType&,
@@ -104,14 +105,14 @@ namespace detail {
                                     size_t,
                                     unsigned int,
                                     const Element&,
-                                    const FactorType&,
-                                    const DirectionType&,
-                                    const DirectionType&);
+                                    const Factor&,
+                                    const Direction&,
+                                    const Direction&);
 
     template <class MatrixType,
               class Intersection,
-              class FactorType,
-              class DirectionType>
+              class Factor,
+              class Direction>
     inline static void faceImpl(const LhsLocalView&,
                                 const RhsLocalView&,
                                 MatrixType&,
@@ -119,9 +120,9 @@ namespace detail {
                                 size_t,
                                 unsigned int,
                                 const Intersection&,
-                                const FactorType&,
-                                const DirectionType&,
-                                const DirectionType&);
+                                const Factor&,
+                                const Direction&,
+                                const Direction&);
   };
 }
 
@@ -136,30 +137,30 @@ namespace detail {
  * \tparam rhsSpaceIndex the index of the right space
  * \tparam integrationType  the form of the integrand, see #IntegrationType
  * \tparam domainOfIntegration  see #DomainOfIntegration
- * \tparam FactorType  the type of the factor \p c
+ * \tparam Factor  the type of the factor \p c
  */
 template<size_t lhsSpaceIndex,
          size_t rhsSpaceIndex,
          IntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
-         class FactorType,
+         class Factor,
          typename std::enable_if<
                      integrationType == IntegrationType::valueValue
                   || integrationType == IntegrationType::normalSign>::type*
                 = nullptr
         >
-auto make_IntegralTerm(FactorType c)
+auto make_IntegralTerm(Factor c)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                   std::integral_constant<size_t, rhsSpaceIndex>,
                   IntegralTerm<integrationType, domainOfIntegration,
-                               FactorType> >
+                               detail::LocalCoefficients::OnlyFactor<Factor>> >
 {
   return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                 std::integral_constant<size_t, rhsSpaceIndex>,
                 IntegralTerm<integrationType, domainOfIntegration,
-                             FactorType> >
+                             detail::LocalCoefficients::OnlyFactor<Factor>> >
          ({},{},
-          IntegralTerm<integrationType, domainOfIntegration, FactorType>(c));
+          {detail::LocalCoefficients::OnlyFactor<Factor>(c)});
 }
 
 /**
@@ -172,14 +173,14 @@ auto make_IntegralTerm(FactorType c)
  * \tparam rhsSpaceIndex the index of the right space
  * \tparam integrationType  the form of the integrand, see #IntegrationType
  * \tparam domainOfIntegration  see #DomainOfIntegration
- * \tparam FactorType     the type of the factor \p c
- * \tparam DirectionType  the type of the transport direction \p beta
+ * \tparam Factor     the type of the factor \p c
+ * \tparam Direction  the type of the transport direction \p beta
  */
 template<size_t lhsSpaceIndex,
          size_t rhsSpaceIndex,
          IntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
-         class FactorType, class DirectionType,
+         class Factor, class Direction,
          typename std::enable_if<
                      integrationType == IntegrationType::gradValue
                   || integrationType == IntegrationType::valueGrad
@@ -189,19 +190,21 @@ template<size_t lhsSpaceIndex,
                   >::type*
            = nullptr
         >
-auto make_IntegralTerm(FactorType c, DirectionType beta)
+auto make_IntegralTerm(Factor c, Direction beta)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                   std::integral_constant<size_t, rhsSpaceIndex>,
                   IntegralTerm<integrationType, domainOfIntegration,
-                               FactorType, DirectionType> >
+                               detail::LocalCoefficients::FactorAndDirection
+                                   <Factor, Direction>> >
 {
   return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                 std::integral_constant<size_t, rhsSpaceIndex>,
                 IntegralTerm<integrationType, domainOfIntegration,
-                             FactorType, DirectionType> >
+                             detail::LocalCoefficients::FactorAndDirection
+                                 <Factor, Direction>> >
          ({},{},
-          IntegralTerm<integrationType, domainOfIntegration,
-                       FactorType, DirectionType>(c, beta, beta));
+          {detail::LocalCoefficients::FactorAndDirection
+                                 <Factor, Direction>(c, beta)});
 }
 
 /**
@@ -215,42 +218,44 @@ auto make_IntegralTerm(FactorType c, DirectionType beta)
  * \tparam rhsSpaceIndex the index of the right space
  * \tparam integrationType  the form of the integrand, see #IntegrationType
  * \tparam domainOfIntegration  see #DomainOfIntegration
- * \tparam FactorType     the type of the factor \p c
- * \tparam DirectionType  the type of the transport directions
+ * \tparam Factor     the type of the factor \p c
+ * \tparam Direction  the type of the transport directions
  */
 template<size_t lhsSpaceIndex,
          size_t rhsSpaceIndex,
          IntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
-         class FactorType, class DirectionType,
+         class Factor, class Direction,
          typename std::enable_if<
                      integrationType == IntegrationType::gradGrad>::type*
                 = nullptr
         >
-auto make_IntegralTerm(FactorType c,
-                       DirectionType lhsBeta,
-                       DirectionType rhsBeta)
+auto make_IntegralTerm(Factor c,
+                       Direction lhsBeta,
+                       Direction rhsBeta)
     -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                   std::integral_constant<size_t, rhsSpaceIndex>,
                   IntegralTerm<integrationType, domainOfIntegration,
-                               FactorType, DirectionType> >
+                               detail::LocalCoefficients::FactorAndTwoDirections
+                                 <Factor, Direction, Direction>> >
 {
   return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
                 std::integral_constant<size_t, rhsSpaceIndex>,
                 IntegralTerm<integrationType, domainOfIntegration,
-                             FactorType, DirectionType> >
+                             detail::LocalCoefficients::FactorAndTwoDirections
+                                 <Factor, Direction, Direction>> >
          ({},{},
-          IntegralTerm<integrationType, domainOfIntegration,
-                       FactorType, DirectionType>(c, lhsBeta, rhsBeta));
+          {detail::LocalCoefficients::FactorAndTwoDirections
+                   <Factor, Direction, Direction>(c, lhsBeta, rhsBeta)});
 }
 
 
 template<IntegrationType type, DomainOfIntegration domain_of_integration,
-         class FactorType, class DirectionType>
+         class LocalCoefficients>
 template <class LhsLocalView,
           class RhsLocalView,
           class MatrixType>
-void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
+void IntegralTerm<type, domain_of_integration, LocalCoefficients>
      ::getLocalMatrix(
         const LhsLocalView& lhsLocalView,
         const RhsLocalView& rhsLocalView,
@@ -258,11 +263,6 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
         const size_t lhsSpaceOffset,
         const size_t rhsSpaceOffset) const
 {
-  static_assert(std::is_same<typename std::decay<DirectionType>::type,
-                             FieldVector<double, 2>
-                            >::value,
-             "getLocalMatrix only implemented for constant flow!");
-
   static_assert(type == IntegrationType::valueValue
              || type == IntegrationType::gradValue
              || type == IntegrationType::valueGrad
@@ -295,10 +295,15 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
 
   /* TODO: We might need a higher order when factor is a function. */
   /* TODO: Assuming β const. */
-  const unsigned int quadratureOrder = lhsOrder + rhsOrder;
+  const auto quadratureOrder = lhsOrder + rhsOrder;
 
 
-  if(domain_of_integration == DomainOfIntegration::interior) {
+  using namespace Dune::Hybrid;
+  ifElse(equals(std::integral_constant<DomainOfIntegration,
+                                       domain_of_integration>(),
+                std::integral_constant<DomainOfIntegration,
+                                       DomainOfIntegration::interior>()),
+  [&](auto id) {
     detail::GetLocalMatrix<type, LhsSpace, RhsSpace>
                          ::interiorImpl(lhsLocalView,
                                         rhsLocalView,
@@ -307,10 +312,8 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
                                         rhsSpaceOffset,
                                         quadratureOrder,
                                         element,
-                                        factor,
-                                        lhsBeta,
-                                        rhsBeta);
-  } else {
+                                        localCoefficients_);
+  }, [&](auto id) {
     detail::GetLocalMatrix<type, LhsSpace, RhsSpace>
                          ::faceImpl(lhsLocalView,
                                     rhsLocalView,
@@ -319,11 +322,9 @@ void IntegralTerm<type, domain_of_integration, FactorType, DirectionType>
                                     rhsSpaceOffset,
                                     quadratureOrder,
                                     element,
-                                    factor,
-                                    lhsBeta,
-                                    rhsBeta);
+                                    localCoefficients_);
 
-  }
+  });
 }
 
 } // end namespace Dune

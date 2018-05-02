@@ -131,6 +131,9 @@ namespace Dune {
 
       localTotalSolutionSize = computeOffsets(localSolutionSpaceOffsets,
                                               slv);
+
+      const auto& e = std::get<0>(tlv).element();
+      Hybrid::forEach(terms, [&](auto& t) { std::get<2>(t).bind(e); });
     }
 
     /**

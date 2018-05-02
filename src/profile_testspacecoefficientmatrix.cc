@@ -29,17 +29,18 @@
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
-#include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/dpg_system_assembler.hh>
+#include <dune/dpg/functions/gridviewfunctions.hh>
 
 
 using namespace Dune;
 
 // The right hand-side
-template <class Direction, class Domain = Direction>
-auto f(const Direction& s)
+template <class GridView>
+auto f(const GridView& gridView)
 {
-  return [] (const Domain& x) { return 1.;};
+  return Functions::makeConstantGridViewFunction(1., gridView);
 }
 
 
@@ -131,20 +132,28 @@ int main(int argc, char** argv)
 #endif
   auto testSearchSpaces = make_space_tuple<FEBasisTest>(gridView);
 
+  auto cFunc = Functions::makeConstantGridViewFunction(c, gridView);
+  auto betaFunc = Functions::makeConstantGridViewFunction(beta, gridView);
+  auto oneFunc = Functions::makeConstantGridViewFunction(1., gridView);
+  auto minusOneFunc = Functions::makeConstantGridViewFunction(-1., gridView);
+
   auto bilinearForm = make_BilinearForm(testSearchSpaces, solutionSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(c),
+                                    DomainOfIntegration::interior>(cFunc),
               make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                    DomainOfIntegration::interior>(-1., beta),
+                                    DomainOfIntegration::interior>
+                                (minusOneFunc, betaFunc),
               make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                    DomainOfIntegration::face>(1., beta)));
+                                    DomainOfIntegration::face>
+                                (oneFunc, betaFunc)));
   auto innerProduct = make_InnerProduct(testSearchSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1.),
+                                    DomainOfIntegration::interior>(oneFunc),
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta)));
+                                    DomainOfIntegration::interior>
+                                (oneFunc, betaFunc)));
 
   typedef GeometryBuffer<GridView::template Codim<0>::Geometry> GeometryBuffer;
   GeometryBuffer geometryBuffer;
@@ -166,7 +175,7 @@ int main(int argc, char** argv)
     = make_LinearForm(testSearchSpaces,
           std::make_tuple(make_LinearIntegralTerm<0,
                                 LinearIntegrationType::valueFunction,
-                                DomainOfIntegration::interior>(f(beta))));
+                                DomainOfIntegration::interior>(f(gridView))));
 
   {
     const auto startsystemassembler = std::chrono::steady_clock::now();

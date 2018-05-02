@@ -9,6 +9,7 @@
 #include "assemble_types.hh"
 #include "type_traits.hh"
 #include "quadrature.hh"
+#include "localcoefficients.hh"
 #include "localevaluation.hh"
 #include "locallinearterm_impl.hh"
 
@@ -21,16 +22,17 @@ namespace Dune {
    *
    * \tparam integrationType  the form of the integrand, see #IntegrationType
    * \tparam domainOfIntegration  see #DomainOfIntegration
-   * \tparam FactorType     the type of the factor with which
-   *                        we multiply the integrand
-   * \tparam DirectionType  the type of the transport directions
+   * \tparam LocalCoefficients  a class that contains the factor with which
+   *                    we multiply the integrand and the transport directions
    */
   template <LinearIntegrationType type,
             DomainOfIntegration domain_of_integration,
-            class FactorType,
-            class DirectionType = FieldVector<double, 2> >
+            class LocalCoefficients>
   class LinearIntegralTerm
   {
+    using Factor = typename LocalCoefficients::Factor;
+    using LocalFactor = typename Factor::LocalFunction;
+    using Element = typename Factor::Element;
   public:
 
     LinearIntegralTerm () = delete;
@@ -40,10 +42,8 @@ namespace Dune {
      *
      * \note For your convenience, use make_LinearIntegralTerm() instead.
      */
-    LinearIntegralTerm (FactorType factor = 1,
-                        DirectionType beta = {1,1})
-        : factor(factor),
-          beta(beta)
+    LinearIntegralTerm (LocalCoefficients&& localCoefficients)
+        : localCoefficients_(localCoefficients)
     {};
 
     /**
@@ -51,6 +51,9 @@ namespace Dune {
      *
      * The local integrals will be added with the given offsets
      * to \p elementVector.
+     *
+     * \pre The localView has to be bound to the same element as the
+     *      LinearIntegralTerm.
      *
      * \param[in]     localView       local view of the test space
      * \param[in,out] elementVector   the local rhs vector
@@ -62,10 +65,13 @@ namespace Dune {
                         VectorType& elementVector,
                         size_t spaceOffset) const;
 
-  private:
-    FactorType factor;
-    DirectionType beta;
+    void bind(const Element& element)
+    {
+      localCoefficients_.bind(element);
+    }
 
+  private:
+    LocalCoefficients localCoefficients_;
   };
 
 
@@ -78,23 +84,27 @@ namespace Dune {
  * \tparam integrationType  the form of the integrand,
  *         see #LinearIntegrationType
  * \tparam domainOfIntegration  see #DomainOfIntegration
- * \tparam FactorType  the type of the factor \p c
+ * \tparam Factor  the type of the factor \p c
  */
 template<size_t spaceIndex,
          LinearIntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
-         class FactorType>
-auto make_LinearIntegralTerm(FactorType c)
+         class Factor>
+auto make_LinearIntegralTerm(Factor c)
     -> std::tuple<std::integral_constant<size_t, spaceIndex>,
                   LinearIntegralTerm<integrationType,
                                      domainOfIntegration,
-                                     FactorType> >
+                                     detail::LocalCoefficients::
+                                       OnlyFactor<Factor>> >
 {
   return std::make_tuple(
               std::integral_constant<size_t, spaceIndex>(),
               LinearIntegralTerm<integrationType,
                                  domainOfIntegration,
-                                 FactorType>(c));
+                                 detail::LocalCoefficients::
+                                       OnlyFactor<Factor>>
+                                (detail::LocalCoefficients::
+                                       OnlyFactor<Factor>(c)));
 }
 
 /**
@@ -107,50 +117,46 @@ auto make_LinearIntegralTerm(FactorType c)
  * \tparam integrationType  the form of the integrand,
  *         see #LinearIntegrationType
  * \tparam domainOfIntegration  see #DomainOfIntegration
- * \tparam FactorType     the type of the factor \p c
- * \tparam DirectionType  the type of the transport direction \p beta
+ * \tparam Factor     the type of the factor \p c
+ * \tparam Direction  the type of the transport direction \p beta
  */
 template<size_t spaceIndex,
          LinearIntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
-         class FactorType,
-         class DirectionType>
-auto make_LinearIntegralTerm(FactorType c, DirectionType beta)
+         class Factor,
+         class Direction>
+auto make_LinearIntegralTerm(Factor c, Direction beta)
     -> std::tuple<std::integral_constant<size_t, spaceIndex>,
                   LinearIntegralTerm<integrationType,
                                      domainOfIntegration,
-                                     FactorType,
-                                     DirectionType> >
+                                     detail::LocalCoefficients::
+                                       FactorAndDirection<Factor, Direction>> >
 {
   return std::make_tuple(
               std::integral_constant<size_t, spaceIndex>(),
               LinearIntegralTerm<integrationType,
                                  domainOfIntegration,
-                                 FactorType,
-                                 DirectionType>(c, beta));
+                                 detail::LocalCoefficients::
+                                       FactorAndDirection<Factor, Direction>>
+                                (detail::LocalCoefficients::
+                                       FactorAndDirection<Factor,
+                                                  Direction>(c, beta)));
 }
 
 
 template<LinearIntegrationType integrationType,
          DomainOfIntegration domainOfIntegration,
-         class FactorType,
-         class DirectionType>
+         class LocalCoefficients>
 template <class LocalView,
           class VectorType>
 void LinearIntegralTerm<integrationType,
                         domainOfIntegration,
-                        FactorType,
-                        DirectionType>
+                        LocalCoefficients>
      ::getLocalVector(
         const LocalView& localView,
         VectorType& elementVector,
         const size_t spaceOffset) const
 {
-  static_assert(std::is_same<typename std::decay<DirectionType>::type,
-                             FieldVector<double, 2>
-                            >::value,
-                "getLocalVector only implemented for constant flow!");
-
   static_assert(domainOfIntegration == DomainOfIntegration::interior,
                 "DomainOfIntegration not implemented.");  //TODO
 
@@ -169,8 +175,7 @@ void LinearIntegralTerm<integrationType,
                                 elementVector,
                                 spaceOffset,
                                 quadratureOrder,
-                                factor,
-                                beta
+                                localCoefficients_
                                 );
   } else {
   //TODO

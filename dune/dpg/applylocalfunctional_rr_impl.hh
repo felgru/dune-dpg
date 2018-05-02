@@ -96,16 +96,11 @@ inline static void interiorImpl(
         * quad[pt].weight();
 
       // Evaluate all shape function values at this quadrature point
-      std::vector<FieldVector<double,1>> testShapeFunctionValues =
-          detail::LocalRefinedFunctionEvaluation
-                  <dim, EvaluationType::value,
-                   is_ContinuouslyRefinedFiniteElement<TestSpace>::value>()
-                        (testLocalFiniteElement,
-                         subElementIndex,
-                         quadPos,
-                         geometry,
-                         subGeometryInReferenceElement,
-                         {});
+      const std::vector<FieldVector<double,1>> testShapeFunctionValues =
+        detail::LocalRefinedFunctionEvaluationHelper
+          <is_ContinuouslyRefinedFiniteElement<TestSpace>::value>::
+            evaluateValue(testLocalFiniteElement, subElementIndex,
+                          quadPos);
       std::vector<FieldVector<double,1>> shapeFunctionValues;
       solutionLocalFiniteElement.localBasis().
           evaluateFunction(quadPos, shapeFunctionValues);
@@ -132,7 +127,7 @@ inline static void interiorImpl(
 template <class VectorType,
           class Element,
           class FunctionalVector,
-          class FactorType,
+          class LocalFactor,
           class DirectionType>
 inline static void
 faceImpl(const TestLocalView& testLocalView,
@@ -144,7 +139,7 @@ faceImpl(const TestLocalView& testLocalView,
 #endif
          const Element& element,
          const FunctionalVector& functionalVector,
-         const FactorType& factor,
+         const LocalFactor& localFactor,
          const DirectionType& beta)
 {
   constexpr int dim = Element::mydimension;
@@ -256,15 +251,14 @@ faceImpl(const TestLocalView& testLocalView,
         const FieldVector<double,dim> elementQuadPosSubCell =
                 faceComputations.faceToElementPosition(quadFacePos);
 
-        const FieldVector<double,dim> globalQuadPos =
-                geometry.global(subGeometryInReferenceElement.global(
-                      elementQuadPosSubCell));
+        const FieldVector<double,dim> elementQuadPos =
+                subGeometryInReferenceElement.global(elementQuadPosSubCell);
 
         // The multiplicative factor in the integral transformation formula
         double integrationWeight;
         if(type == IntegrationType::normalVector ||
            type == IntegrationType::travelDistanceWeighted) {
-          integrationWeight = detail::evaluateFactor(factor, globalQuadPos)
+          integrationWeight = localFactor(elementQuadPos)
                             * quadFace[pt].weight()
                             * integrationElement;
           // TODO: scale beta to length 1
@@ -292,7 +286,7 @@ faceImpl(const TestLocalView& testLocalView,
           }
 
           integrationWeight = sign
-                            * detail::evaluateFactor(factor, globalQuadPos)
+                            * localFactor(elementQuadPos)
                             * quadFace[pt].weight() * integrationElement;
         }
 
@@ -305,34 +299,24 @@ faceImpl(const TestLocalView& testLocalView,
         ////////////////////////////////////
         // Left Hand Side Shape Functions //
         ////////////////////////////////////
-        std::vector<FieldVector<double,1> > testValues =
-          detail::LocalRefinedFunctionEvaluation
-                  <dim, EvaluationType::value,
-                   is_ContinuouslyRefinedFiniteElement<TestSpace>::value>()
-                        (testLocalFiniteElement,
-                         subElementIndex,
-                         elementQuadPosSubCell,
-                         geometry,
-                         subGeometryInReferenceElement,
-                         beta);
+        const std::vector<FieldVector<double,1> > testValues =
+          detail::LocalRefinedFunctionEvaluationHelper
+            <is_ContinuouslyRefinedFiniteElement<TestSpace>::value>::
+              evaluateValue(testLocalFiniteElement, subElementIndex,
+                            elementQuadPosSubCell);
 
         /////////////////////////////////////
         // Right Hand Side Shape Functions //
         /////////////////////////////////////
-        std::vector<FieldVector<double,1> > solutionValues =
-          detail::LocalRefinedFunctionEvaluation
-                  <dim, EvaluationType::value,
-                   is_ContinuouslyRefinedFiniteElement<SolutionSpace>::value>()
-                        (solutionLocalFiniteElement,
-                         subElementIndex,
-                         elementQuadPosSubCell,
-                         geometry,
-                         subGeometryInReferenceElement,
-                         beta);
+        const std::vector<FieldVector<double,1> > solutionValues =
+          detail::LocalRefinedFunctionEvaluationHelper
+            <is_ContinuouslyRefinedFiniteElement<SolutionSpace>::value>::
+              evaluateValue(solutionLocalFiniteElement, subElementIndex,
+                            elementQuadPosSubCell);
 
         const double functionalValue =
             std::inner_product(
-              solutionValues.begin(), solutionValues.end(),
+              solutionValues.cbegin(), solutionValues.cend(),
               localFunctionalVector.begin() + solutionSubElementOffset, 0.)
             * integrationWeight;
         for (size_t i=0, i_max=testValues.size(); i<i_max; i++)

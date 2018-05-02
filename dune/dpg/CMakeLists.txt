@@ -24,6 +24,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               linearform.hh
               linearfunctionalterm.hh
               linearintegralterm.hh
+              localcoefficients.hh
               localevaluation.hh
               locallinearterm_impl.hh
               quadrature.hh
