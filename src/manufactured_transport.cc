@@ -137,7 +137,7 @@ template<typename FEBasisInterior, typename FEBasisTrace>
 auto make_solution_spaces(const typename FEBasisInterior::GridView& gridView)
 {
   auto interiorSpace = make_space_tuple<FEBasisInterior>(gridView);
-  auto oneFunc = Functions::make_GridViewFunction(1., gridView);
+  auto oneFunc = Functions::makeConstantGridViewFunction(1., gridView);
   auto l2InnerProduct = make_InnerProduct(interiorSpace,
        make_tuple(
            make_IntegralTerm<0,0,IntegrationType::valueValue,
@@ -233,13 +233,11 @@ int main(int argc, char** argv)
                   std::sin(boost::math::constants::pi<double>()/8)};
     const double c = sigma;
 
-    auto cFunc = Functions::make_GridViewFunction(c, gridView);
-    auto betaFunc
-      = Functions::ConstantGridViewFunction<FieldVector<double, dim>, GridView>
-            (beta);
+    auto cFunc = Functions::makeConstantGridViewFunction(c, gridView);
+    auto betaFunc = Functions::makeConstantGridViewFunction(beta, gridView);
 
-    auto oneFunc = Functions::make_GridViewFunction(1., gridView);
-    auto minusOneFunc = Functions::make_GridViewFunction(-1., gridView);
+    auto oneFunc = Functions::makeConstantGridViewFunction(1., gridView);
+    auto minusOneFunc = Functions::makeConstantGridViewFunction(-1., gridView);
 
     auto unnormalizedInnerProduct = make_InnerProduct(unnormalizedTestSpaces,
         make_tuple(

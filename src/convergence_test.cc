@@ -127,12 +127,10 @@ int main(int argc, char** argv)
                 std::sin(boost::math::constants::pi<double>()/8)};
   const double c = 0;
 
-  auto cFunc = Functions::make_GridViewFunction(c, gridView);
-  auto betaFunc
-    = Functions::ConstantGridViewFunction<FieldVector<double, dim>, GridView>
-          (beta);
-  auto oneFunc = Functions::make_GridViewFunction(1., gridView);
-  auto minusOneFunc = Functions::make_GridViewFunction(-1., gridView);
+  auto cFunc = Functions::makeConstantGridViewFunction(c, gridView);
+  auto betaFunc = Functions::makeConstantGridViewFunction(beta, gridView);
+  auto oneFunc = Functions::makeConstantGridViewFunction(1., gridView);
+  auto minusOneFunc = Functions::makeConstantGridViewFunction(-1., gridView);
 
   auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
           make_tuple(
