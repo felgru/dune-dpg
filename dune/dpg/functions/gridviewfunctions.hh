@@ -4,8 +4,9 @@
 #define DUNE_FUNCTIONS_DPG_GRIDVIEWFUNCTIONS_HH
 
 #include <type_traits>
+#include <utility>
 
-#include <dune/functions/common/functionconcepts.hh>
+#include <dune/common/typeutilities.hh>
 #include <dune/functions/gridfunctions/gridviewentityset.hh>
 
 namespace Dune {
@@ -76,6 +77,13 @@ public:
 private:
   const Range constant;
 };
+
+template<class Constant, class GridView>
+ConstantGridViewFunction<std::decay_t<Constant>, GridView>
+makeConstantGridViewFunction(Constant&& constant, const GridView&)
+{
+  return {std::forward<Constant>(constant)};
+}
 
 template<class Range, class LocalDomain, class LocalContext, class F>
 class LocalPiecewiseConstantGridViewFunction
@@ -181,27 +189,6 @@ PiecewiseConstantGridViewFunction<
 
   return PiecewiseConstantGridViewFunction<Range, GridView, FRaw>
                                           (std::forward<F>(f), gridView);
-}
-
-template<class Factor, class GridView,
-         typename std::enable_if<
-                  std::is_arithmetic<Factor>::value>
-                            ::type* = nullptr >
-ConstantGridViewFunction<Factor, GridView>
-make_GridViewFunction(Factor factor, const GridView&)
-{
-  return {factor};
-}
-
-template<class Factor, class GridView,
-         class std::enable_if<Concept::isGridViewFunction<Factor,
-                      double(typename GridView::template Codim<0>
-                                     ::Geometry::GlobalCoordinate),
-                      GridView>()>
-                  ::type* = nullptr>
-Factor make_GridViewFunction(Factor factor, const GridView&)
-{
-  return factor;
 }
 
 }} // end namespace Dune::Functions
