@@ -79,10 +79,10 @@ private:
 };
 
 template<class Constant, class GridView>
-ConstantGridViewFunction<Constant, GridView>
-makeConstantGridViewFunction(Constant constant, const GridView&)
+ConstantGridViewFunction<std::decay_t<Constant>, GridView>
+makeConstantGridViewFunction(Constant&& constant, const GridView&)
 {
-  return {constant};
+  return {std::forward<Constant>(constant)};
 }
 
 template<class Range, class LocalDomain, class LocalContext, class F>
