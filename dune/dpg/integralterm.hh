@@ -33,10 +33,8 @@ namespace Dune {
             class LocalCoefficients>
   class IntegralTerm
   {
-    using Factor = typename LocalCoefficients::Factor;
-    using LocalFactor = typename Factor::LocalFunction;
-    using Element = typename Factor::Element;
   public:
+    using Element = typename LocalCoefficients::Element;
 
     IntegralTerm () = delete;
 
@@ -96,8 +94,7 @@ namespace detail {
 
     template <class MatrixType,
               class Element,
-              class Factor,
-              class Direction>
+              class LocalCoefficients>
     inline static void interiorImpl(const LhsLocalView&,
                                     const RhsLocalView&,
                                     MatrixType&,
@@ -105,14 +102,11 @@ namespace detail {
                                     size_t,
                                     unsigned int,
                                     const Element&,
-                                    const Factor&,
-                                    const Direction&,
-                                    const Direction&);
+                                    const LocalCoefficients&);
 
     template <class MatrixType,
               class Intersection,
-              class Factor,
-              class Direction>
+              class LocalCoefficients>
     inline static void faceImpl(const LhsLocalView&,
                                 const RhsLocalView&,
                                 MatrixType&,
@@ -120,9 +114,7 @@ namespace detail {
                                 size_t,
                                 unsigned int,
                                 const Intersection&,
-                                const Factor&,
-                                const Direction&,
-                                const Direction&);
+                                const LocalCoefficients&);
   };
 }
 

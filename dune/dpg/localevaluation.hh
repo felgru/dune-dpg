@@ -212,10 +212,7 @@ struct LocalRefinedFunctionEvaluationHelper {
   static std::vector<FieldVector<double,1> >
   evaluateValue(const LocalFiniteElement& localFiniteElement,
                 unsigned int subElement,
-                const FieldVector<double, dim>& quadPos,
-                const Geometry& geometry,
-                const SubGeometry& subGeometryInReferenceElement,
-                const FieldVector<double, dim>& beta);
+                const FieldVector<double, dim>& quadPos);
 
   template <int dim, class LocalFiniteElement,
             class Geometry, class SubGeometry>

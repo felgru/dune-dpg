@@ -100,8 +100,7 @@ inline static void interiorImpl(
 template <class VectorType,
           class Element,
           class FunctionalVector,
-          class LocalFactor,
-          class DirectionType>
+          class LocalCoefficients>
 inline static void
 faceImpl(const TestLocalView& testLocalView,
          const SolutionLocalView& solutionLocalView,
@@ -112,8 +111,7 @@ faceImpl(const TestLocalView& testLocalView,
 #endif
          const Element& element,
          const FunctionalVector& functionalVector,
-         const LocalFactor& localFactor,
-         const DirectionType& beta)
+         const LocalCoefficients& localCoefficients)
 {
   constexpr int dim = Element::mydimension;
 
@@ -122,11 +120,13 @@ faceImpl(const TestLocalView& testLocalView,
   const auto& solutionLocalFiniteElement
       = solutionLocalView.tree().finiteElement();
 
+  const auto direction = localCoefficients.localDirection()({0.5,0.5});
+
   unsigned int nOutflowFaces = 0;
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
   {
     auto face = element.template subEntity<1>(f);
-    const double prod = beta
+    const double prod = direction
         * FaceComputations<Element>(face, element).unitOuterNormal();
     if(prod > 0)
       ++nOutflowFaces;
@@ -137,7 +137,7 @@ faceImpl(const TestLocalView& testLocalView,
   FieldVector<double,dim> referenceBeta;
   {
     const auto& jacobianInverse = geometry.jacobianInverseTransposed({0., 0.});
-    jacobianInverse.mtv(beta, referenceBeta);
+    jacobianInverse.mtv(direction, referenceBeta);
   }
 
   BlockVector<FieldVector<double,1>>
@@ -163,7 +163,7 @@ faceImpl(const TestLocalView& testLocalView,
     auto face = element.template subEntity<1>(f);
     auto faceComputations = FaceComputations<Element>(face, element);
     if(type == IntegrationType::travelDistanceWeighted &&
-       beta * faceComputations.unitOuterNormal() >= 0) {
+       direction * faceComputations.unitOuterNormal() >= 0) {
       /* Only integrate over inflow boundaries. */
       continue;
     }
@@ -204,15 +204,15 @@ faceImpl(const TestLocalView& testLocalView,
       double integrationWeight;
       if(type == IntegrationType::normalVector ||
          type == IntegrationType::travelDistanceWeighted) {
-        integrationWeight = localFactor(elementQuadPos)
+        integrationWeight = localCoefficients.localFactor()(elementQuadPos)
                           * quadFace[pt].weight();
         if(type == IntegrationType::travelDistanceWeighted)
         {
-          // |beta * n|*integrationweight
-          integrationWeight *= fabs(beta*integrationOuterNormal);
+          // |direction * n|*integrationweight
+          integrationWeight *= std::fabs(direction * integrationOuterNormal);
         }
         else
-          integrationWeight *= (beta*integrationOuterNormal);
+          integrationWeight *= direction * integrationOuterNormal;
       } else if(type == IntegrationType::normalSign) {
         const double integrationElement =
             face.geometry().integrationElement(quadFacePos);
@@ -239,12 +239,12 @@ faceImpl(const TestLocalView& testLocalView,
         }
 
         integrationWeight = sign
-                          * localFactor(elementQuadPos)
+                          * localCoefficients.localFactor()(elementQuadPos)
                           * quadFace[pt].weight() * integrationElement;
       }
 
       if(type == IntegrationType::travelDistanceWeighted) {
-        // factor r_K(s)/|beta|
+        // factor r_K(s)/|direction|
         integrationWeight *= detail::travelDistance(
             elementQuadPos,
             referenceBeta);
