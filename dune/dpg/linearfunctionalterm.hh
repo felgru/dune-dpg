@@ -11,6 +11,7 @@
 
 #include <dune/dpg/assemble_types.hh>
 #include <dune/dpg/assemble_helper.hh>
+#include <dune/dpg/localcoefficients.hh>
 #include <dune/dpg/localevaluation.hh>
 #include <dune/dpg/quadrature.hh>
 
@@ -226,7 +227,8 @@ getLocalVector(const LocalView& localView,
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     using SolutionLocalIndexSet = typename SolutionSpace::LocalIndexSet;
 #endif
-    using LocalFactor = typename Factor::LocalFunction;
+    using LocalCoefficients
+        = detail::LocalCoefficients::FactorAndDirection<Factor, Direction>;
   public:
     using Element = typename SolutionLocalView::Element;
 
@@ -241,10 +243,8 @@ getLocalVector(const LocalView& localView,
     SkeletalLinearFunctionalTerm (const FunctionalVector& functionalVector,
                                   const SolutionSpace& solutionSpace,
                                   Factor coefficient,
-                                  Direction beta)
-        : factor(coefficient)
-        , localFactor(localFunction(factor))
-        , beta(beta)
+                                  Direction direction)
+        : localCoefficients(coefficient, direction)
         , functionalVector(functionalVector)
         , solutionLocalView(solutionSpace.localView())
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
@@ -277,13 +277,11 @@ getLocalVector(const LocalView& localView,
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       solutionLocalIndexSet.bind(solutionLocalView);
 #endif
-      localFactor.bind(element);
+      localCoefficients.bind(element);
     }
 
   private:
-    Factor factor;
-    LocalFactor localFactor;
-    Direction beta;
+    LocalCoefficients localCoefficients;
     const FunctionalVector& functionalVector;
     SolutionLocalView solutionLocalView;
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
@@ -364,8 +362,7 @@ getLocalVector(const LocalView& localView,
 #endif
           localView.element(),
           functionalVector,
-          localFactor,
-          beta);
+          localCoefficients);
 }
 
 } // end namespace Dune
