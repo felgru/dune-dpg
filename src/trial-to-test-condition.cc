@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <dune/common/fmatrix.hh>
+#include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/functions/normedspaces.hh>
 #include <dune/dpg/innerproduct.hh>
 #include <dune/dpg/testspace_coefficient_matrix.hh>
@@ -112,14 +113,18 @@ int main(int argc, char *argv[]) {
         = Functions::BernsteinDGRefinedDGBasis<LeafGridView, 1, 3>;
     auto unnormalizedTestSpaces = make_space_tuple<FEBasisTest>(gridView);
 
+    auto sFunc = Functions::makeConstantGridViewFunction(s, gridView);
+    auto oneFunc = Functions::makeConstantGridViewFunction(1., gridView);
+
     auto unnormalizedInnerProduct =
       make_InnerProduct(unnormalizedTestSpaces,
           make_tuple(
               make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., s),
-              make_IntegralTerm<0,0,
-                                IntegrationType::travelDistanceWeighted,
-                                DomainOfIntegration::face>(1., s)));
+                                    DomainOfIntegration::interior>
+                                (oneFunc, sFunc),
+              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                    DomainOfIntegration::face>
+                                (oneFunc, sFunc)));
     double condition;
     if(normalized) {
       auto testSpaces = make_normalized_space_tuple(unnormalizedInnerProduct);
