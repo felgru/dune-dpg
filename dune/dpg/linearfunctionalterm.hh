@@ -219,7 +219,7 @@ getLocalVector(const LocalView& localView,
             class SolutionSpace,
             class FunctionalVector,
             class Factor,
-            class Direction = FieldVector<double, 2> >
+            class Direction>
   class SkeletalLinearFunctionalTerm
   {
     using SolutionLocalView = typename SolutionSpace::LocalView;
@@ -241,7 +241,7 @@ getLocalVector(const LocalView& localView,
     SkeletalLinearFunctionalTerm (const FunctionalVector& functionalVector,
                                   const SolutionSpace& solutionSpace,
                                   Factor coefficient,
-                                  Direction beta = {1., 1.})
+                                  Direction beta)
         : factor(coefficient)
         , localFactor(localFunction(factor))
         , beta(beta)
