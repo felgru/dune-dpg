@@ -30,9 +30,8 @@ namespace Dune {
             class LocalCoefficients>
   class LinearIntegralTerm
   {
-    using LocalFactor = typename LocalCoefficients::LocalFactor;
-    using Element = typename LocalCoefficients::Element;
   public:
+    using Element = typename LocalCoefficients::Element;
 
     LinearIntegralTerm () = delete;
 
