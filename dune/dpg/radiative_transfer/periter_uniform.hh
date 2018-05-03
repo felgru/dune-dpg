@@ -871,7 +871,7 @@ compute_transport_solution(
               (rhsFunctional, spaces.interiorSolutionSpace()),
             make_SkeletalLinearFunctionalTerm
               <0, IntegrationType::normalVector>
-              (bvExtension, spaces.traceSolutionSpace(), minusOneFunc, s)));
+              (bvExtension, spaces.traceSolutionSpace(), minusOneFunc, sFunc)));
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -942,7 +942,7 @@ compute_transport_solution(
               <0, IntegrationType::normalVector>
               (bvExtension,
                std::get<1>(*systemAssembler.getSolutionSpaces()),
-               minusOneFunc, s)));
+               minusOneFunc, sFunc)));
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   }
   // - Computation of the a posteriori error
