@@ -33,9 +33,8 @@ namespace Dune {
             class LocalCoefficients>
   class IntegralTerm
   {
-    using Factor = typename LocalCoefficients::Factor;
-    using LocalFactor = typename Factor::LocalFunction;
-    using Element = typename Factor::Element;
+    using LocalFactor = typename LocalCoefficients::LocalFactor;
+    using Element = typename LocalCoefficients::Element;
   public:
 
     IntegralTerm () = delete;
