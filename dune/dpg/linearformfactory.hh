@@ -7,6 +7,7 @@
 #include <type_traits>
 
 #include <dune/dpg/assemble_types.hh>
+#include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/linearform.hh>
 #include <dune/dpg/linearfunctionalterm.hh>
 #include <dune/dpg/linearintegralterm.hh>
@@ -27,6 +28,7 @@ namespace Dune {
     using TestSpacesPtr = TSpaces;
     using TestSpaces = typename TestSpacesPtr::element_type;
     using LinearFormTermsTuple = std::tuple<LinearFormTerms...>;
+    using GridView = typename std::tuple_element_t<0,TestSpaces>::GridView;
 
     LinearFormFactory(const TestSpacesPtr& testSpaces,
                         const LinearFormTermsTuple& terms)
@@ -51,9 +53,11 @@ namespace Dune {
              class Factor>
     auto addIntegralTerm(Factor c)
     {
+      auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
       auto newTerm = make_LinearIntegralTerm<spaceIndex,
                                              integrationType,
-                                             domainOfIntegration>(c);
+                                             domainOfIntegration>
+                                                    (std::move(cFunc));
       using NewTerm = decltype(newTerm);
       using NewLinearFormFactory
         = LinearFormFactory<TSpaces, LinearFormTerms..., NewTerm>;
@@ -70,9 +74,12 @@ namespace Dune {
              class Direction>
     auto addIntegralTerm(Factor c, Direction beta)
     {
+      auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
+      auto betaFunc = Functions::detail::toGridViewFunction<GridView>(beta);
       auto newTerm = make_LinearIntegralTerm<spaceIndex,
                                              integrationType,
-                                             domainOfIntegration>(c, beta);
+                                             domainOfIntegration>
+                              (std::move(cFunc), std::move(betaFunc));
       using NewTerm = decltype(newTerm);
       using NewLinearFormFactory
         = LinearFormFactory<TSpaces, LinearFormTerms..., NewTerm>;
@@ -117,9 +124,12 @@ namespace Dune {
         const SolutionSpace& solutionSpace,
         Factor c, Direction beta)
     {
+      auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
+      auto betaFunc = Functions::detail::toGridViewFunction<GridView>(beta);
       auto newTerm = make_SkeletalLinearFunctionalTerm
                       <spaceIndex, integrationType>
-                      (functionalVector, solutionSpace, c, beta);
+                      (functionalVector, solutionSpace,
+                       std::move(cFunc), std::move(betaFunc));
       using NewTerm = decltype(newTerm);
       using NewLinearFormFactory
         = LinearFormFactory<TSpaces, LinearFormTerms..., NewTerm>;

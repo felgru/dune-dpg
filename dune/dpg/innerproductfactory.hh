@@ -7,6 +7,7 @@
 #include <type_traits>
 
 #include <dune/dpg/assemble_types.hh>
+#include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/innerproduct.hh>
 #include <dune/dpg/integralterm.hh>
 #include <dune/dpg/spacetuple.hh>
@@ -26,6 +27,7 @@ namespace Dune {
     using TestSpacesPtr = TSpaces;
     using TestSpaces = typename TestSpacesPtr::element_type;
     using InnerProductTermsTuple = std::tuple<InnerProductTerms...>;
+    using GridView = typename std::tuple_element_t<0,TestSpaces>::GridView;
 
     InnerProductFactory(const TestSpacesPtr& testSpaces,
                         const InnerProductTermsTuple& terms)
@@ -56,10 +58,11 @@ namespace Dune {
             >
     auto addIntegralTerm(Factor c)
     {
+      auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
       auto newTerm = make_IntegralTerm<lhsSpaceIndex,
                                        rhsSpaceIndex,
                                        integrationType,
-                                       domainOfIntegration>(c);
+                                       domainOfIntegration>(std::move(cFunc));
       using NewTerm = decltype(newTerm);
       using NewInnerProductFactory
         = InnerProductFactory<TSpaces, InnerProductTerms..., NewTerm>;
@@ -86,10 +89,13 @@ namespace Dune {
             >
     auto addIntegralTerm(Factor c, Direction beta)
     {
+      auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
+      auto betaFunc = Functions::detail::toGridViewFunction<GridView>(beta);
       auto newTerm = make_IntegralTerm<lhsSpaceIndex,
                                        rhsSpaceIndex,
                                        integrationType,
-                                       domainOfIntegration>(c, beta);
+                                       domainOfIntegration>
+                                      (std::move(cFunc), std::move(betaFunc));
       using NewTerm = decltype(newTerm);
       using NewInnerProductFactory
         = InnerProductFactory<TSpaces, InnerProductTerms..., NewTerm>;
@@ -110,11 +116,18 @@ namespace Dune {
             >
     auto addIntegralTerm(Factor c, Direction lhsBeta, Direction rhsBeta)
     {
+      auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
+      auto lhsBetaFunc
+          = Functions::detail::toGridViewFunction<GridView>(lhsBeta);
+      auto rhsBetaFunc
+          = Functions::detail::toGridViewFunction<GridView>(rhsBeta);
       auto newTerm = make_IntegralTerm<lhsSpaceIndex,
                                        rhsSpaceIndex,
                                        integrationType,
                                        domainOfIntegration>
-                                      (c, lhsBeta, rhsBeta);
+                                      (std::move(cFunc),
+                                       std::move(lhsBetaFunc),
+                                       std::move(rhsBetaFunc));
       using NewTerm = decltype(newTerm);
       using NewInnerProductFactory
         = InnerProductFactory<TSpaces, InnerProductTerms..., NewTerm>;
