@@ -316,14 +316,14 @@ namespace detail {
               is_ContinuouslyRefinedFiniteElement<SubGridSpace>{},
               [&](auto _)
               {
-                subGridLocalFiniteElement.localBasis()
+                _(subGridLocalFiniteElement).localBasis()
                     .evaluateFunction(subElementIndex,
                                       subGridQuadPos,
                                       subGridValues);
               },
               [&](auto _)
               {
-                subGridLocalFiniteElement.localBasis()
+                _(subGridLocalFiniteElement).localBasis()
                     .evaluateFunction(subGridQuadPos, subGridValues);
               });
 
@@ -402,7 +402,7 @@ namespace detail {
                   interpolatedLocalData(subGridLocalView.size());
 
               const auto referenceGridView =
-                  subGridLocalView.tree().refinedReferenceElementGridView();
+                  _(subGridLocalView).tree().refinedReferenceElementGridView();
 
               const unsigned int subElementStride =
                   (is_DGRefinedFiniteElement<SubGridGlobalBasis>::value) ?
@@ -437,7 +437,7 @@ namespace detail {
             {
               auto hostGridFunction
                 = detail::InterpolateOnCellLocalFunction<HostGridGlobalBasis>(
-                    hostGridLocalFiniteElement,
+                    _(hostGridLocalFiniteElement),
                     localData);
               std::vector<FieldVector<double, 1>> interpolatedLocalData;
               subGridLocalFiniteElement.localInterpolation()
@@ -700,7 +700,7 @@ public:
                     childLocalData(localView.size());
 
                 const auto referenceGridView =
-                    localView.tree().refinedReferenceElementGridView();
+                    _(localView).tree().refinedReferenceElementGridView();
 
                 const unsigned int subElementStride =
                     (is_DGRefinedFiniteElement<SubGridGlobalBasis>::value) ?
@@ -804,7 +804,7 @@ public:
                   <SubGridGlobalBasis,
                    typename SubGridElement::LocalGeometry,
                    LocalData>(
-                      localFiniteElement,
+                      _(localFiniteElement),
                       child.geometryInFather(),
                       localData);
                 std::vector<FieldVector<double, 1>> childLocalData;
