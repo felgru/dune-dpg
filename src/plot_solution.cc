@@ -30,6 +30,9 @@
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
+#include <dune/dpg/bilinearformfactory.hh>
+#include <dune/dpg/innerproductfactory.hh>
+#include <dune/dpg/linearformfactory.hh>
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errorplotter.hh>
@@ -43,14 +46,6 @@
 #pragma GCC diagnostic pop
 
 using namespace Dune;
-
-// The right hand-side
-template <class Direction, class Domain = Direction>
-auto f(const Direction& s)
-{
-  return [] (const Domain& x) { return 1.;};
-}
-
 
 int main(int argc, char** argv)
 {
@@ -130,24 +125,26 @@ int main(int argc, char** argv)
     FieldVector<double, dim> beta
                = {std::cos(boost::math::constants::pi<double>()/8),
                   std::sin(boost::math::constants::pi<double>()/8)};
-    double c = 0;
+    const double c = 0;
 
-    auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
-            make_tuple(
-                make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                      DomainOfIntegration::interior>(c),
-                make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                      DomainOfIntegration::interior>(-1., beta),
-                make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                      DomainOfIntegration::face>(1., beta)));
+    auto bilinearForm
+      = bilinearFormWithSpaces(testSpaces, solutionSpaces)
+        .addIntegralTerm<0,0,IntegrationType::valueValue,
+                             DomainOfIntegration::interior>(c)
+        .addIntegralTerm<0,0,IntegrationType::gradValue,
+                             DomainOfIntegration::interior>(-1., beta)
+        .addIntegralTerm<0,1,IntegrationType::normalVector,
+                             DomainOfIntegration::face>(1., beta)
+        .create();
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
-    auto innerProduct = make_InnerProduct(testSpaces,
-         make_tuple(
-             make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                   DomainOfIntegration::interior>(1., beta),
-             make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                   DomainOfIntegration::face>(1., beta)));
+    auto innerProduct
+      = innerProductWithSpace(testSpaces)
+        .addIntegralTerm<0,0,IntegrationType::gradGrad,
+                             DomainOfIntegration::interior>(1., beta)
+        .addIntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                             DomainOfIntegration::face>(1., beta)
+        .create();
     auto innerProduct_aposteriori
         = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
@@ -173,11 +170,10 @@ int main(int argc, char** argv)
     //  Assemble the system
     /////////////////////////////////////////////////////////
     auto rightHandSide
-      = make_LinearForm(testSpaces,
-                        std::make_tuple(make_LinearIntegralTerm<0,
-                                            LinearIntegrationType::valueFunction,
-                                            DomainOfIntegration::interior>(
-                                   f(beta))));
+      = linearFormWithSpace(testSpaces)
+        .addIntegralTerm<0, LinearIntegrationType::valueFunction,
+                            DomainOfIntegration::interior>(1.)
+        .create();
 
     const auto startsystemassembler = std::chrono::steady_clock::now();
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);

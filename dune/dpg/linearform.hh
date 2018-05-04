@@ -94,6 +94,9 @@ namespace Dune {
 
       localViews = std::addressof(lv);
 
+      const auto& e = std::get<0>(lv).element();
+      Hybrid::forEach(terms, [&](auto& t) { std::get<1>(t).bind(e); });
+
       constexpr size_t size = std::tuple_size<LocalViews>::value;
 
       /* set up local offsets */

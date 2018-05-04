@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <utility>
 
+#include <dune/common/std/type_traits.hh>
 #include <dune/common/typeutilities.hh>
 #include <dune/functions/gridfunctions/gridviewentityset.hh>
 
@@ -83,6 +84,46 @@ ConstantGridViewFunction<std::decay_t<Constant>, GridView>
 makeConstantGridViewFunction(Constant&& constant, const GridView&)
 {
   return {std::forward<Constant>(constant)};
+}
+
+namespace detail {
+  template<class T>
+  using has_localFunction_t
+      = decltype(localFunction(std::declval<const T&>()));
+
+  template<class GridView, class T,
+           typename std::enable_if<Std::is_detected_v<has_localFunction_t, T>>
+                        ::type* = nullptr>
+  T toGridViewFunction(T&& t) {
+    return std::forward<T>(t);
+  }
+
+  template<class GridView, class T,
+           typename std::enable_if<
+                    std::is_arithmetic<std::decay_t<T>>::value>
+                              ::type* = nullptr >
+  ConstantGridViewFunction<std::decay_t<T>, GridView>
+  toGridViewFunction(T&& t) {
+    return {std::forward<T>(t)};
+  }
+
+  template<class GridView, class T, int dim,
+           typename std::enable_if<
+                    std::is_arithmetic<T>::value>
+                              ::type* = nullptr >
+  ConstantGridViewFunction<FieldVector<T,dim>, GridView>
+  toGridViewFunction(FieldVector<T,dim>&& t) {
+    return {std::move(t)};
+  }
+
+  template<class GridView, class T, int dim,
+           typename std::enable_if<
+                    std::is_arithmetic<T>::value>
+                              ::type* = nullptr >
+  ConstantGridViewFunction<FieldVector<T,dim>, GridView>
+  toGridViewFunction(const FieldVector<T,dim>& t) {
+    return {t};
+  }
 }
 
 template<class Range, class LocalDomain, class LocalContext, class F>
