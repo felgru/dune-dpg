@@ -29,10 +29,12 @@
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
+#include <dune/dpg/bilinearformfactory.hh>
+#include <dune/dpg/innerproductfactory.hh>
+#include <dune/dpg/linearformfactory.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/functionplotter.hh>
-#include <dune/dpg/functions/gridviewfunctions.hh>
 
 #include <chrono>
 
@@ -93,29 +95,23 @@ int main(int argc, char** argv)
              = {cos(boost::math::constants::pi<double>()/8),
                 sin(boost::math::constants::pi<double>()/8)};
   const double c = 2;
-  auto cFunc = Functions::makeConstantGridViewFunction(c, gridView);
-  auto betaFunc = Functions::makeConstantGridViewFunction(beta, gridView);
-  auto oneFunc = Functions::makeConstantGridViewFunction(1., gridView);
-  auto minusOneFunc = Functions::makeConstantGridViewFunction(-1., gridView);
 
-  auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(cFunc),
-              make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                    DomainOfIntegration::interior>
-                                (minusOneFunc, betaFunc),
-              make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                    DomainOfIntegration::face>
-                                (oneFunc, betaFunc)));
-  auto innerProduct = make_InnerProduct(testSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>
-                                (oneFunc, betaFunc),
-              make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                    DomainOfIntegration::face>
-                                (oneFunc, betaFunc)));
+  auto bilinearForm
+    = bilinearFormWithSpaces(testSpaces, solutionSpaces)
+      .addIntegralTerm<0,0,IntegrationType::valueValue,
+                           DomainOfIntegration::interior>(c)
+      .addIntegralTerm<0,0,IntegrationType::gradValue,
+                           DomainOfIntegration::interior>(-1., beta)
+      .addIntegralTerm<0,1,IntegrationType::normalVector,
+                           DomainOfIntegration::face>(1., beta)
+      .create();
+  auto innerProduct
+    = innerProductWithSpace(testSpaces)
+      .addIntegralTerm<0,0,IntegrationType::gradGrad,
+                           DomainOfIntegration::interior>(1., beta)
+      .addIntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                           DomainOfIntegration::face>(1., beta)
+      .create();
 
   /////////////////////////////////////////////////////////
   //   Stiffness matrix and right hand side vector
@@ -136,14 +132,12 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////////////
   //  Assemble the system
   /////////////////////////////////////////////////////////
-  using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
 
   auto rightHandSide
-    = make_LinearForm(testSpaces,
-                      std::make_tuple(make_LinearIntegralTerm<0,
-                                            LinearIntegrationType::valueFunction,
-                                            DomainOfIntegration::interior>(
-                                 oneFunc)));
+    = linearFormWithSpace(testSpaces)
+      .addIntegralTerm<0,LinearIntegrationType::valueFunction,
+                         DomainOfIntegration::interior>(1.)
+      .create();
 
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 

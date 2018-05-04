@@ -7,6 +7,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               assemble_helper.hh
               assemble_types.hh
               bilinearform.hh
+              bilinearformfactory.hh
               boundarytools.hh
               cholesky.hh
               dpg_system_assembler.hh
@@ -15,12 +16,14 @@ install(FILES applylocalfunctional_ru_impl.hh
               faces.hh
               functionplotter.hh
               innerproduct.hh
+              innerproductfactory.hh
               integralterm.hh
               integralterm_rr_impl.hh
               integralterm_ru_impl.hh
               integralterm_uu_impl.hh
               leastsquares.hh
               linearform.hh
+              linearformfactory.hh
               linearfunctionalterm.hh
               linearintegralterm.hh
               localcoefficients.hh

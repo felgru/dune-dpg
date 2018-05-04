@@ -28,10 +28,12 @@
 #include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
 
 #include <dune/dpg/boundarytools.hh>
+#include <dune/dpg/bilinearformfactory.hh>
+#include <dune/dpg/innerproductfactory.hh>
+#include <dune/dpg/linearformfactory.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/functionplotter.hh>
-#include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/rhs_assembler.hh>
 
 #pragma GCC diagnostic push
@@ -134,72 +136,57 @@ int main()
 
     const double c = 1.;
     const FieldVector<double, dim> beta = {-1., -1.};
-    auto cFunc = Functions::makeConstantGridViewFunction(c, gridView);
-    auto cSquaredFunc = Functions::makeConstantGridViewFunction(c*c, gridView);
-    auto cTwiceFunc = Functions::makeConstantGridViewFunction(2*c, gridView);
-    auto betaFunc = Functions::makeConstantGridViewFunction(beta, gridView);
-    auto oneFunc = Functions::makeConstantGridViewFunction(1., gridView);
-    auto minusOneFunc = Functions::makeConstantGridViewFunction(-1., gridView);
-    auto minusTwoFunc = Functions::makeConstantGridViewFunction(-2., gridView);
 
-    auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
-            make_tuple(
-                make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                      DomainOfIntegration::interior>(cFunc),
-                make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                      DomainOfIntegration::interior>
-                                  (minusOneFunc, betaFunc),
-                make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                      DomainOfIntegration::face>
-                                  (oneFunc, betaFunc)));
-    auto innerProduct = make_InnerProduct(testSpaces,
-            make_tuple(
-                make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                      DomainOfIntegration::interior>
-                                  (oneFunc, betaFunc),
-                make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                      DomainOfIntegration::face>
-                                  (oneFunc, betaFunc)));
+    auto bilinearForm
+      = bilinearFormWithSpaces(testSpaces, solutionSpaces)
+        .addIntegralTerm<0,0,IntegrationType::valueValue,
+                             DomainOfIntegration::interior>(c)
+        .addIntegralTerm<0,0,IntegrationType::gradValue,
+                             DomainOfIntegration::interior>(-1., beta)
+        .addIntegralTerm<0,1,IntegrationType::normalVector,
+                             DomainOfIntegration::face>(1., beta)
+        .create();
+    auto innerProduct
+      = innerProductWithSpace(testSpaces)
+        .addIntegralTerm<0,0,IntegrationType::gradGrad,
+                             DomainOfIntegration::interior>(1., beta)
+        .addIntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                             DomainOfIntegration::face>(1., beta)
+        .create();
 
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
     auto innerProduct_aposteriori
         = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
-    auto aPosterioriInnerProduct = make_InnerProduct(solutionSpaces,
-            make_tuple(
-                make_IntegralTerm<0,0,IntegrationType::valueValue,              // (u,u)
-                                      DomainOfIntegration::interior>(oneFunc),
-                make_IntegralTerm<1,1,IntegrationType::valueValue,              // (w,w)
-                                      DomainOfIntegration::interior>(oneFunc),
-                make_IntegralTerm<0,1,IntegrationType::valueValue,              // -2(u,w)
-                                      DomainOfIntegration::interior>
-                                  (minusTwoFunc),
-                make_IntegralTerm<1,1,IntegrationType::gradGrad,              // (beta grad w,beta grad w)
-                                      DomainOfIntegration::interior>
-                                  (oneFunc, betaFunc),
-                make_IntegralTerm<1,1,IntegrationType::valueValue,              // (cw,cw)
-                                      DomainOfIntegration::interior>
-                                  (cSquaredFunc),
-                make_IntegralTerm<1,1,IntegrationType::gradValue,              // 2(beta grad w, cw)
-                                      DomainOfIntegration::interior>
-                                  (cTwiceFunc, betaFunc)
-          ));
+    auto aPosterioriInnerProduct
+      = innerProductWithSpace(solutionSpaces)
+        .addIntegralTerm<0,0,IntegrationType::valueValue,            // (u,u)
+                             DomainOfIntegration::interior>(1.)
+        .addIntegralTerm<1,1,IntegrationType::valueValue,            // (w,w)
+                             DomainOfIntegration::interior>(1.)
+        .addIntegralTerm<0,1,IntegrationType::valueValue,            // -2(u,w)
+                             DomainOfIntegration::interior>(-2.)
+        .addIntegralTerm<1,1,IntegrationType::gradGrad,              // (beta grad w,beta grad w)
+                             DomainOfIntegration::interior>(1., beta)
+        .addIntegralTerm<1,1,IntegrationType::valueValue,            // (cw,cw)
+                             DomainOfIntegration::interior>(c*c)
+        .addIntegralTerm<1,1,IntegrationType::gradValue,             // 2(beta grad w, cw)
+                             DomainOfIntegration::interior>(2.*c, beta)
+        .create();
     auto m2rhsFunc = Functions::makeAnalyticGridViewFunction(
         [](const FieldVector<double, dim>& x){return (-2)*fieldRHS(x);},
         gridView);
     auto m2crhsFunc = Functions::makeAnalyticGridViewFunction(
         [c](const FieldVector<double, dim>& x){return (-2)*c*fieldRHS(x);},
         gridView);
-    auto aPosterioriLinearForm = make_LinearForm(solutionSpaces,
-            make_tuple(
-                make_LinearIntegralTerm<1,LinearIntegrationType::gradFunction,// -2(beta grad w,f)
-                                      DomainOfIntegration::interior>
-                                      (m2rhsFunc, betaFunc),
-                make_LinearIntegralTerm<1,LinearIntegrationType::valueFunction,    // -2(cw,f)
-                                      DomainOfIntegration::interior>
-                                      (m2crhsFunc)
-          ));
+    auto aPosterioriLinearForm
+      = linearFormWithSpace(solutionSpaces)
+        .addIntegralTerm<1,LinearIntegrationType::gradFunction,// -2(beta grad w,f)
+                           DomainOfIntegration::interior>(m2rhsFunc, beta)
+        .addIntegralTerm<1,LinearIntegrationType::valueFunction,    // -2(cw,f)
+                           DomainOfIntegration::interior>(m2crhsFunc)
+        .create();
 
     auto systemAssembler
        = make_DPGSystemAssembler(bilinearForm, innerProduct);
@@ -221,10 +208,10 @@ int main()
   auto rhsFunc
     = Functions::makeAnalyticGridViewFunction(fieldRHS, gridView);
     auto rightHandSide
-      = make_LinearForm(testSpaces,
-                    std::make_tuple(make_LinearIntegralTerm<0,
-                                        LinearIntegrationType::valueFunction,
-                                        DomainOfIntegration::interior>(rhsFunc)));
+      = linearFormWithSpace(testSpaces)
+        .addIntegralTerm<0,LinearIntegrationType::valueFunction,
+                           DomainOfIntegration::interior>(rhsFunc)
+        .create();
 
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 

@@ -29,20 +29,14 @@
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
+#include <dune/dpg/bilinearformfactory.hh>
+#include <dune/dpg/innerproductfactory.hh>
+#include <dune/dpg/linearformfactory.hh>
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
-#include <dune/dpg/functions/gridviewfunctions.hh>
 
 
 using namespace Dune;
-
-// The right hand-side
-template <class GridView>
-auto f(const GridView& gridView)
-{
-  return Functions::makeConstantGridViewFunction(1., gridView);
-}
-
 
 int main(int argc, char** argv)
 {
@@ -132,28 +126,22 @@ int main(int argc, char** argv)
 #endif
   auto testSearchSpaces = make_space_tuple<FEBasisTest>(gridView);
 
-  auto cFunc = Functions::makeConstantGridViewFunction(c, gridView);
-  auto betaFunc = Functions::makeConstantGridViewFunction(beta, gridView);
-  auto oneFunc = Functions::makeConstantGridViewFunction(1., gridView);
-  auto minusOneFunc = Functions::makeConstantGridViewFunction(-1., gridView);
-
-  auto bilinearForm = make_BilinearForm(testSearchSpaces, solutionSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(cFunc),
-              make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                    DomainOfIntegration::interior>
-                                (minusOneFunc, betaFunc),
-              make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                    DomainOfIntegration::face>
-                                (oneFunc, betaFunc)));
-  auto innerProduct = make_InnerProduct(testSearchSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(oneFunc),
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>
-                                (oneFunc, betaFunc)));
+  auto bilinearForm
+    = bilinearFormWithSpaces(testSearchSpaces, solutionSpaces)
+      .addIntegralTerm<0,0,IntegrationType::valueValue,
+                           DomainOfIntegration::interior>(c)
+      .addIntegralTerm<0,0,IntegrationType::gradValue,
+                           DomainOfIntegration::interior>(-1., beta)
+      .addIntegralTerm<0,1,IntegrationType::normalVector,
+                           DomainOfIntegration::face>(1., beta)
+      .create();
+  auto innerProduct
+    = innerProductWithSpace(testSearchSpaces)
+      .addIntegralTerm<0,0,IntegrationType::valueValue,
+                           DomainOfIntegration::interior>(1.)
+      .addIntegralTerm<0,0,IntegrationType::gradGrad,
+                           DomainOfIntegration::interior>(1., beta)
+      .create();
 
   typedef GeometryBuffer<GridView::template Codim<0>::Geometry> GeometryBuffer;
   GeometryBuffer geometryBuffer;
@@ -172,10 +160,10 @@ int main(int argc, char** argv)
   typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
 
   auto rhsFunctions
-    = make_LinearForm(testSearchSpaces,
-          std::make_tuple(make_LinearIntegralTerm<0,
-                                LinearIntegrationType::valueFunction,
-                                DomainOfIntegration::interior>(f(gridView))));
+    = linearFormWithSpace(testSearchSpaces)
+      .addIntegralTerm<0,LinearIntegrationType::valueFunction,
+                         DomainOfIntegration::interior>(1.)
+      .create();
 
   {
     const auto startsystemassembler = std::chrono::steady_clock::now();
