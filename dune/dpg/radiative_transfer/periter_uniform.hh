@@ -23,11 +23,14 @@
 #include <dune/functions/functionspacebases/bernsteinbasis.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-#include <dune/functions/gridfunctions/gridviewfunction.hh>
 
+#include <dune/dpg/bilinearformfactory.hh>
+#include <dune/dpg/innerproductfactory.hh>
+#include <dune/dpg/linearformfactory.hh>
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/functionplotter.hh>
+#include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/functions/interpolate.hh>
 #include <dune/dpg/linearfunctionalterm.hh>
 #include <dune/dpg/radiative_transfer/approximate_scattering.hh>
@@ -794,26 +797,25 @@ compute_transport_solution(
     bool boundary_is_homogeneous,
     const VectorType& bvExtension)
 {
-  auto bilinearForm =
-    make_BilinearForm(spaces.testSpacePtr(), spaces.solutionSpacePtr(),
-        make_tuple(
-            make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                  DomainOfIntegration::interior>(sigma),
-            make_IntegralTerm<0,0,
-                              IntegrationType::gradValue,
-                              DomainOfIntegration::interior>(-1., s),
-            make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                  DomainOfIntegration::face>(1., s)));
+  auto bilinearForm
+    = bilinearFormWithSpaces(spaces.testSpacePtr(), spaces.solutionSpacePtr())
+      .template addIntegralTerm<0,0, IntegrationType::valueValue,
+                                     DomainOfIntegration::interior>
+                               (sigma(spaces.gridView()))
+      .template addIntegralTerm<0,0, IntegrationType::gradValue,
+                                     DomainOfIntegration::interior>(-1., s)
+      .template addIntegralTerm<0,1, IntegrationType::normalVector,
+                                     DomainOfIntegration::face>(1., s)
+      .create();
   auto bilinearFormEnriched =
       replaceTestSpaces(bilinearForm, spaces.enrichedTestSpacePtr());
-  auto innerProduct =
-    make_InnerProduct(spaces.testSpacePtr(),
-        make_tuple(
-            make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                  DomainOfIntegration::interior>(1., s),
-            make_IntegralTerm<0,0,
-                              IntegrationType::travelDistanceWeighted,
-                              DomainOfIntegration::face>(1., s)));
+  auto innerProduct
+    = innerProductWithSpace(spaces.testSpacePtr())
+      .template addIntegralTerm<0,0, IntegrationType::gradGrad,
+                                     DomainOfIntegration::interior>(1., s)
+      .template addIntegralTerm<0,0, IntegrationType::travelDistanceWeighted,
+                                     DomainOfIntegration::face>(1., s)
+      .create();
   auto innerProductEnriched =
       replaceTestSpaces(innerProduct, spaces.enrichedTestSpacePtr());
 
@@ -845,24 +847,23 @@ compute_transport_solution(
   /////////////////////////////////////////////////////////
   // loop of the discrete ordinates
   if(boundary_is_homogeneous) {
-    auto rhsFunction = make_LinearForm(
-          systemAssembler.getTestSearchSpaces(),
-          std::make_tuple(
-            make_LinearFunctionalTerm<0>
-              (rhsFunctional, spaces.interiorSolutionSpace())));
+    auto rhsFunction
+      = linearFormWithSpace(systemAssembler.getTestSearchSpaces())
+        .template addFunctionalTerm<0>(rhsFunctional,
+                                       spaces.interiorSolutionSpace())
+        .create();
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
   } else {
     assert(bvExtension.size() > 0);
-    auto rhsFunction = make_LinearForm(
-          systemAssembler.getTestSearchSpaces(),
-          std::make_tuple(
-            make_LinearFunctionalTerm<0>
-              (rhsFunctional, spaces.interiorSolutionSpace()),
-            make_SkeletalLinearFunctionalTerm
-              <0, IntegrationType::normalVector>
-              (bvExtension, spaces.traceSolutionSpace(), -1, s)));
+    auto rhsFunction
+      = linearFormWithSpace(systemAssembler.getTestSearchSpaces())
+        .template addFunctionalTerm<0>
+              (rhsFunctional, spaces.interiorSolutionSpace())
+        .template addSkeletalFunctionalTerm<0, IntegrationType::normalVector>
+              (bvExtension, spaces.traceSolutionSpace(), -1., s)
+        .create();
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -913,27 +914,25 @@ compute_transport_solution(
   if(boundary_is_homogeneous) {
     auto rhsAssemblerEnriched
       = make_RhsAssembler(spaces.enrichedTestSpacePtr());
-    auto rhsFunction = make_LinearForm(
-          rhsAssemblerEnriched.getTestSpaces(),
-          std::make_tuple(
-            make_LinearFunctionalTerm<0>
+    auto rhsFunction
+      = linearFormWithSpace(rhsAssemblerEnriched.getTestSpaces())
+        .template addFunctionalTerm<0>
               (rhsFunctional,
-               std::get<0>(*systemAssembler.getSolutionSpaces()))));
+               std::get<0>(*systemAssembler.getSolutionSpaces()))
+        .create();
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   } else {
     auto rhsAssemblerEnriched
       = make_RhsAssembler(spaces.enrichedTestSpacePtr());
-    auto rhsFunction = make_LinearForm(
-          rhsAssemblerEnriched.getTestSpaces(),
-          std::make_tuple(
-            make_LinearFunctionalTerm<0>
+    auto rhsFunction
+      = linearFormWithSpace(rhsAssemblerEnriched.getTestSpaces())
+        .template addFunctionalTerm<0>
               (rhsFunctional,
-               std::get<0>(*systemAssembler.getSolutionSpaces())),
-            make_SkeletalLinearFunctionalTerm
-              <0, IntegrationType::normalVector>
+               std::get<0>(*systemAssembler.getSolutionSpaces()))
+        .template addSkeletalFunctionalTerm<0, IntegrationType::normalVector>
               (bvExtension,
-               std::get<1>(*systemAssembler.getSolutionSpaces()),
-               -1, s)));
+               std::get<1>(*systemAssembler.getSolutionSpaces()), -1., s)
+        .create();
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   }
   // - Computation of the a posteriori error

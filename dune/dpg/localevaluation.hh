@@ -18,43 +18,26 @@ namespace detail {
 
 /* We need to make this a class, as partial specializations of
  * function templates are not allowed. */
-template<int dim, EvaluationType type>
-struct LocalFunctionEvaluation {
-
-  template <class LocalFiniteElement, class Geometry>
-  std::vector<FieldVector<double,1> >
-  operator() (const LocalFiniteElement& localFiniteElement,
-              const FieldVector<double, dim>& quadPos,
-              const Geometry& geometry,
-              const FieldVector<double, dim>& beta) const;
-};
-
-template<int dim>
-struct LocalFunctionEvaluation<dim, EvaluationType::value> {
-
-  template <class LocalFiniteElement, class Geometry>
-  std::vector<FieldVector<double,1> > operator()
+template<int dim, class LocalFiniteElement>
+std::vector<FieldVector<double,1> >
+evaluateLocalFunctionValue
                       (const LocalFiniteElement& localFiniteElement,
-                       const FieldVector<double, dim>& quadPos,
-                       const Geometry&,
-                       const FieldVector<double, dim>&) const
-  {
-    // values of the shape functions
-    std::vector<FieldVector<double,1> > values;
-    localFiniteElement.localBasis().evaluateFunction(quadPos, values);
-    return values;
-  }
-};
+                       const FieldVector<double, dim>& quadPos)
+{
+  // values of the shape functions
+  std::vector<FieldVector<double,1> > values;
+  localFiniteElement.localBasis().evaluateFunction(quadPos, values);
+  return values;
+}
 
-template<int dim>
-struct LocalFunctionEvaluation<dim, EvaluationType::grad> {
-
-  template <class LocalFiniteElement, class Geometry>
-  std::vector<FieldVector<double,1> > operator()
+template<int dim, class LocalFiniteElement, class Geometry>
+std::vector<FieldVector<double,1> >
+evaluateLocalFunctionGrad
                       (const LocalFiniteElement& localFiniteElement,
                        const FieldVector<double, dim> & quadPos,
                        const Geometry& geometry,
-                       const FieldVector<double, dim>& beta) const
+                       const FieldVector<double, dim>& beta)
+{
   {
     const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
     // The gradients of the shape functions on the reference element
@@ -74,54 +57,198 @@ struct LocalFunctionEvaluation<dim, EvaluationType::grad> {
 
     return derivatives;
   }
+}
+
+template<int dim, IntegrationType integrationType>
+struct LocalFunctionEvaluation {
+  constexpr static auto lhsType
+    = (integrationType == IntegrationType::valueValue ||
+       integrationType == IntegrationType::valueGrad)
+      ? EvaluationType::value : EvaluationType::grad;
+
+  constexpr static auto rhsType
+    = (integrationType == IntegrationType::valueValue ||
+       integrationType == IntegrationType::gradValue)
+      ? EvaluationType::value : EvaluationType::grad;
+
+  template<class LocalFiniteElement, class Geometry, class LocalCoefficients>
+  static std::vector<FieldVector<double,1> >
+  evaluateLhs(const LocalFiniteElement& localFiniteElement,
+              const FieldVector<double, dim>& quadPos,
+              const Geometry& geometry,
+              const LocalCoefficients& localCoefficients)
+  {
+    return evaluateLhs_<lhsType>
+                       (localFiniteElement,
+                        quadPos,
+                        geometry,
+                        localCoefficients);
+  }
+
+  template<class LocalFiniteElement, class Geometry, class LocalCoefficients>
+  static std::vector<FieldVector<double,1> >
+  evaluateRhs(const LocalFiniteElement& localFiniteElement,
+              const FieldVector<double, dim>& quadPos,
+              const Geometry& geometry,
+              const LocalCoefficients& localCoefficients)
+  {
+    return evaluateRhs_<rhsType>
+                       (localFiniteElement,
+                        quadPos,
+                        geometry,
+                        localCoefficients);
+  }
+
+  private:
+
+  template<EvaluationType type,
+           class LocalFiniteElement, class Geometry, class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::value>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluateLhs_(const LocalFiniteElement& localFiniteElement,
+               const FieldVector<double, dim>& quadPos,
+               const Geometry& ,
+               const LocalCoefficients& ) {
+    return evaluateLocalFunctionValue(localFiniteElement, quadPos);
+  }
+
+  template<EvaluationType type,
+           class LocalFiniteElement, class Geometry, class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::grad>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluateLhs_(const LocalFiniteElement& localFiniteElement,
+               const FieldVector<double, dim>& quadPos,
+               const Geometry& geometry,
+               const LocalCoefficients& localCoefficients) {
+    return evaluateLocalFunctionGrad
+                    (localFiniteElement,
+                     quadPos,
+                     geometry,
+                     localCoefficients.localDirection()(quadPos));
+  }
+
+  template<EvaluationType type,
+           class LocalFiniteElement, class Geometry, class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::value>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluateRhs_(const LocalFiniteElement& localFiniteElement,
+               const FieldVector<double, dim>& quadPos,
+               const Geometry& ,
+               const LocalCoefficients& ) {
+    return evaluateLocalFunctionValue(localFiniteElement, quadPos);
+  }
+
+  template<EvaluationType type,
+           class LocalFiniteElement, class Geometry, class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::grad>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluateRhs_(const LocalFiniteElement& localFiniteElement,
+               const FieldVector<double, dim>& quadPos,
+               const Geometry& geometry,
+               const LocalCoefficients& localCoefficients) {
+    return evaluateLocalFunctionGrad
+                    (localFiniteElement,
+                     quadPos,
+                     geometry,
+                     localCoefficients.localSecondDirection()(quadPos));
+  }
+};
+
+template<int dim, LinearIntegrationType integrationType>
+struct LocalLinearTermFunctionEvaluation {
+  constexpr static auto evaluationType = (integrationType ==
+                      LinearIntegrationType::valueFunction)
+                      ? EvaluationType::value : EvaluationType::grad;
+
+  template<class LocalFiniteElement, class Geometry, class LocalCoefficients>
+  static std::vector<FieldVector<double,1> >
+  evaluate(const LocalFiniteElement& localFiniteElement,
+           const FieldVector<double, dim>& quadPos,
+           const Geometry& geometry,
+           const LocalCoefficients& localCoefficients) {
+    return evaluate_<evaluationType>
+                    (localFiniteElement,
+                     quadPos,
+                     geometry,
+                     localCoefficients);
+  }
+
+  private:
+
+  template<EvaluationType type,
+           class LocalFiniteElement, class Geometry, class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::value>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluate_(const LocalFiniteElement& localFiniteElement,
+            const FieldVector<double, dim>& quadPos,
+            const Geometry& ,
+            const LocalCoefficients& ) {
+    return evaluateLocalFunctionValue(localFiniteElement, quadPos);
+  }
+
+  template<EvaluationType type,
+           class LocalFiniteElement, class Geometry, class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::grad>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluate_(const LocalFiniteElement& localFiniteElement,
+            const FieldVector<double, dim>& quadPos,
+            const Geometry& geometry,
+            const LocalCoefficients& localCoefficients) {
+    return evaluateLocalFunctionGrad
+                    (localFiniteElement,
+                     quadPos,
+                     geometry,
+                     localCoefficients.localDirection()(quadPos));
+  }
 };
 
 /* We need to make this a class, as partial specializations of
  * function templates are not allowed. */
-template<int dim, EvaluationType type,
-         bool isContinuouslyRefined>
-struct LocalRefinedFunctionEvaluation {
+template<bool isContinuouslyRefined>
+struct LocalRefinedFunctionEvaluationHelper {
 
-  template <class LocalFiniteElement, class Geometry, class SubGeometry>
-  std::vector<FieldVector<double,1> >
-  operator() (const LocalFiniteElement& localFiniteElement,
-              unsigned int subElement,
-              const FieldVector<double, dim>& quadPos,
-              const Geometry& geometry,
-              const SubGeometry& subGeometryInReferenceElement,
-              const FieldVector<double, dim>& beta) const;
+  template <int dim, class LocalFiniteElement,
+            class Geometry, class SubGeometry>
+  static std::vector<FieldVector<double,1> >
+  evaluateValue(const LocalFiniteElement& localFiniteElement,
+                unsigned int subElement,
+                const FieldVector<double, dim>& quadPos);
+
+  template <int dim, class LocalFiniteElement,
+            class Geometry, class SubGeometry>
+  static std::vector<FieldVector<double,1> >
+  evaluateGrad(const LocalFiniteElement& localFiniteElement,
+               unsigned int subElement,
+               const FieldVector<double, dim>& quadPos,
+               const Geometry& geometry,
+               const SubGeometry& subGeometryInReferenceElement,
+               const FieldVector<double, dim>& beta);
 };
 
-template<int dim>
-struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value, false> {
+template<>
+struct LocalRefinedFunctionEvaluationHelper<false> {
 
-  template <class LocalFiniteElement, class Geometry, class SubGeometry>
-  std::vector<FieldVector<double,1> > operator()
-                      (const LocalFiniteElement& localFiniteElement,
-                       unsigned int,
-                       const FieldVector<double, dim>& quadPos,
-                       const Geometry&,
-                       const SubGeometry&,
-                       const FieldVector<double, dim>&) const
+  template<int dim, class LocalFiniteElement>
+  static std::vector<FieldVector<double,1> >
+  evaluateValue(const LocalFiniteElement& localFiniteElement,
+                unsigned int,
+                const FieldVector<double, dim>& quadPos)
   {
     // values of the shape functions
     std::vector<FieldVector<double,1> > values;
     localFiniteElement.localBasis().evaluateFunction(quadPos, values);
     return values;
   }
-};
 
-template<int dim>
-struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad, false> {
-
-  template <class LocalFiniteElement, class Geometry, class SubGeometry>
-  std::vector<FieldVector<double,1> > operator()
-                      (const LocalFiniteElement& localFiniteElement,
-                       unsigned int,
-                       const FieldVector<double, dim> & quadPos,
-                       const Geometry& geometry,
-                       const SubGeometry& subGeometryInReferenceElement,
-                       const FieldVector<double, dim>& beta) const
+  template<int dim, class LocalFiniteElement,
+           class Geometry, class SubGeometry>
+  static std::vector<FieldVector<double,1> >
+  evaluateGrad(const LocalFiniteElement& localFiniteElement,
+               unsigned int,
+               const FieldVector<double, dim> & quadPos,
+               const Geometry& geometry,
+               const SubGeometry& subGeometryInReferenceElement,
+               const FieldVector<double, dim>& beta)
   {
     const auto& jacobianSub
         = subGeometryInReferenceElement.jacobianInverseTransposed(quadPos);
@@ -147,36 +274,31 @@ struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad, false> {
   }
 };
 
-template<int dim>
-struct LocalRefinedFunctionEvaluation<dim, EvaluationType::value, true> {
+template<>
+struct LocalRefinedFunctionEvaluationHelper<true> {
 
-  template <class LocalFiniteElement, class Geometry, class SubGeometry>
-  std::vector<FieldVector<double,1> > operator()
-                      (const LocalFiniteElement& localFiniteElement,
-                       unsigned int subElement,
-                       const FieldVector<double, dim>& quadPos,
-                       const Geometry& geometry,
-                       const SubGeometry& subGeometryInReferenceElement,
-                       const FieldVector<double, dim>&) const
+  template<int dim, class LocalFiniteElement>
+  static std::vector<FieldVector<double,1> >
+  evaluateValue(const LocalFiniteElement& localFiniteElement,
+                unsigned int subElement,
+                const FieldVector<double, dim>& quadPos)
   {
     // values of the shape functions
     std::vector<FieldVector<double,1> > values;
-    localFiniteElement.localBasis().evaluateFunction(subElement, quadPos, values);
+    localFiniteElement.localBasis().evaluateFunction(subElement, quadPos,
+                                                     values);
     return values;
   }
-};
 
-template<int dim>
-struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad, true> {
-
-  template <class LocalFiniteElement, class Geometry, class SubGeometry>
-  std::vector<FieldVector<double,1> > operator()
-                      (const LocalFiniteElement& localFiniteElement,
-                       unsigned int subElement,
-                       const FieldVector<double, dim> & quadPos,
-                       const Geometry& geometry,
-                       const SubGeometry& subGeometryInReferenceElement,
-                       const FieldVector<double, dim>& beta) const
+  template<int dim, class LocalFiniteElement,
+           class Geometry, class SubGeometry>
+  static std::vector<FieldVector<double,1> >
+  evaluateGrad(const LocalFiniteElement& localFiniteElement,
+               unsigned int subElement,
+               const FieldVector<double, dim> & quadPos,
+               const Geometry& geometry,
+               const SubGeometry& subGeometryInReferenceElement,
+               const FieldVector<double, dim>& beta)
   {
     const auto& jacobianSub
         = subGeometryInReferenceElement.jacobianInverseTransposed(quadPos);
@@ -202,32 +324,212 @@ struct LocalRefinedFunctionEvaluation<dim, EvaluationType::grad, true> {
   }
 };
 
+template<int dim, IntegrationType integrationType>
+struct LocalRefinedFunctionEvaluation {
+  constexpr static auto lhsType
+    = (integrationType == IntegrationType::valueValue ||
+       integrationType == IntegrationType::valueGrad)
+      ? EvaluationType::value : EvaluationType::grad;
 
-template<class FactorType, class PositionType,
+  constexpr static auto rhsType
+    = (integrationType == IntegrationType::valueValue ||
+       integrationType == IntegrationType::gradValue)
+      ? EvaluationType::value : EvaluationType::grad;
+
+  template<bool isContinuouslyRefined,
+           class LocalFiniteElement, class Geometry, class SubGeometry,
+           class LocalCoefficients>
+  static std::vector<FieldVector<double,1> >
+  evaluateLhs(const LocalFiniteElement& localFiniteElement,
+              unsigned int subElement,
+              const FieldVector<double, dim>& quadPos,
+              const Geometry& geometry,
+              const SubGeometry& subGeometryInReferenceElement,
+              const LocalCoefficients& localCoefficients)
+  {
+    return evaluateLhs_<lhsType, isContinuouslyRefined>
+            (localFiniteElement,
+             subElement,
+             quadPos,
+             geometry,
+             subGeometryInReferenceElement,
+             localCoefficients);
+  }
+
+  template<bool isContinuouslyRefined,
+           class LocalFiniteElement, class Geometry, class SubGeometry,
+           class LocalCoefficients>
+  static std::vector<FieldVector<double,1> >
+  evaluateRhs(const LocalFiniteElement& localFiniteElement,
+              unsigned int subElement,
+              const FieldVector<double, dim>& quadPos,
+              const Geometry& geometry,
+              const SubGeometry& subGeometryInReferenceElement,
+              const LocalCoefficients& localCoefficients)
+  {
+    return evaluateRhs_<rhsType, isContinuouslyRefined>
+            (localFiniteElement,
+             subElement,
+             quadPos,
+             geometry,
+             subGeometryInReferenceElement,
+             localCoefficients);
+  }
+
+  private:
+
+  template<EvaluationType type, bool isContinuouslyRefined,
+           class LocalFiniteElement, class Geometry, class SubGeometry,
+           class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::value>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluateLhs_(const LocalFiniteElement& localFiniteElement,
+               unsigned int subElement,
+               const FieldVector<double, dim>& quadPos,
+               const Geometry& ,
+               const SubGeometry& ,
+               const LocalCoefficients& ) {
+    return LocalRefinedFunctionEvaluationHelper<isContinuouslyRefined>::
+              evaluateValue(localFiniteElement, subElement, quadPos);
+  }
+
+  template<EvaluationType type, bool isContinuouslyRefined,
+           class LocalFiniteElement, class Geometry, class SubGeometry,
+           class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::grad>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluateLhs_(const LocalFiniteElement& localFiniteElement,
+               unsigned int subElement,
+               const FieldVector<double, dim>& quadPos,
+               const Geometry& geometry,
+               const SubGeometry& subGeometryInReferenceElement,
+               const LocalCoefficients& localCoefficients) {
+    return LocalRefinedFunctionEvaluationHelper<isContinuouslyRefined>::
+              evaluateGrad(localFiniteElement,
+                           subElement,
+                           quadPos,
+                           geometry,
+                           subGeometryInReferenceElement,
+                           localCoefficients.localDirection()(quadPos));
+  }
+
+  template<EvaluationType type, bool isContinuouslyRefined,
+           class LocalFiniteElement, class Geometry, class SubGeometry,
+           class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::value>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluateRhs_(const LocalFiniteElement& localFiniteElement,
+               unsigned int subElement,
+               const FieldVector<double, dim>& quadPos,
+               const Geometry& ,
+               const SubGeometry& ,
+               const LocalCoefficients& ) {
+    return LocalRefinedFunctionEvaluationHelper<isContinuouslyRefined>::
+              evaluateValue(localFiniteElement, subElement, quadPos);
+  }
+
+  template<EvaluationType type, bool isContinuouslyRefined,
+           class LocalFiniteElement, class Geometry, class SubGeometry,
+           class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::grad>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluateRhs_(const LocalFiniteElement& localFiniteElement,
+               unsigned int subElement,
+               const FieldVector<double, dim>& quadPos,
+               const Geometry& geometry,
+               const SubGeometry& subGeometryInReferenceElement,
+               const LocalCoefficients& localCoefficients) {
+    return LocalRefinedFunctionEvaluationHelper<isContinuouslyRefined>::
+              evaluateGrad(localFiniteElement,
+                           subElement,
+                           quadPos,
+                           geometry,
+                           subGeometryInReferenceElement,
+                           localCoefficients.localSecondDirection()(quadPos));
+  }
+};
+
+template<int dim, LinearIntegrationType integrationType>
+struct LocalRefinedLinearTermFunctionEvaluation {
+  constexpr static auto evaluationType = (integrationType ==
+                      LinearIntegrationType::valueFunction)
+                      ? EvaluationType::value : EvaluationType::grad;
+
+  template<bool isContinuouslyRefined,
+           class LocalFiniteElement, class Geometry, class SubGeometry,
+           class LocalCoefficients>
+  static std::vector<FieldVector<double,1> >
+  evaluate(const LocalFiniteElement& localFiniteElement,
+           unsigned int subElement,
+           const FieldVector<double, dim>& quadPos,
+           const Geometry& geometry,
+           const SubGeometry& subGeometryInReferenceElement,
+           const LocalCoefficients& localCoefficients)
+  {
+    return evaluate_<evaluationType, isContinuouslyRefined>
+            (localFiniteElement,
+             subElement,
+             quadPos,
+             geometry,
+             subGeometryInReferenceElement,
+             localCoefficients);
+  }
+
+  private:
+
+  template<EvaluationType type, bool isContinuouslyRefined,
+           class LocalFiniteElement, class Geometry, class SubGeometry,
+           class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::value>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluate_(const LocalFiniteElement& localFiniteElement,
+            unsigned int subElement,
+            const FieldVector<double, dim>& quadPos,
+            const Geometry& ,
+            const SubGeometry& ,
+            const LocalCoefficients& ) {
+    return LocalRefinedFunctionEvaluationHelper<isContinuouslyRefined>::
+              evaluateValue(localFiniteElement, subElement, quadPos);
+  }
+
+  template<EvaluationType type, bool isContinuouslyRefined,
+           class LocalFiniteElement, class Geometry, class SubGeometry,
+           class LocalCoefficients,
+           std::enable_if_t<type == EvaluationType::grad>* = nullptr>
+  static std::vector<FieldVector<double,1> >
+  evaluate_(const LocalFiniteElement& localFiniteElement,
+            unsigned int subElement,
+            const FieldVector<double, dim>& quadPos,
+            const Geometry& geometry,
+            const SubGeometry& subGeometryInReferenceElement,
+            const LocalCoefficients& localCoefficients) {
+    return LocalRefinedFunctionEvaluationHelper<isContinuouslyRefined>::
+              evaluateGrad(localFiniteElement,
+                           subElement,
+                           quadPos,
+                           geometry,
+                           subGeometryInReferenceElement,
+                           localCoefficients.localDirection()(quadPos));
+  }
+};
+
+
+template<class BoundaryValue, class Index,
          typename std::enable_if<
-                    std::is_arithmetic<std::decay_t<FactorType>>::value>
+                    std::is_arithmetic<std::decay_t<BoundaryValue>>::value>
                               ::type* = nullptr >
-inline double evaluateFactor(FactorType factor, PositionType)
+inline double evaluateBoundary(BoundaryValue boundary, Index)
 {
-  return factor;
+  return boundary;
 }
 
-template<class FactorType, class PositionType,
+template<class BoundaryValue, class Index,
          typename std::enable_if<
-                    Std::is_invocable_r<double,FactorType,const PositionType&>
-                    ::value>::type* = nullptr >
-inline double evaluateFactor(FactorType factor, PositionType x)
-{
-  return factor(x);
-}
-
-template<class FactorType, class PositionType,
-         typename std::enable_if<
-                    is_vector<std::decay_t<FactorType>>::value>
+                    is_vector<std::decay_t<BoundaryValue>>::value>
                               ::type* = nullptr >
-inline double evaluateFactor(const FactorType& factor, PositionType x)
+inline double evaluateBoundary(const BoundaryValue& boundary, Index i)
 {
-  return factor[x];
+  return boundary[i];
 }
 
 }}

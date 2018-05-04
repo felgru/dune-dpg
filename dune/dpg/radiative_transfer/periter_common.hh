@@ -98,6 +98,10 @@ class TransportSpaces {
     return enrichedTestSpace_;
   }
 
+  GridView gridView() const {
+    return interiorSolutionSpace().gridView();
+  }
+
   private:
 
   SolutionSpacePtr solutionSpace_;

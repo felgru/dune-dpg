@@ -13,8 +13,7 @@ using RhsLocalView = typename RhsSpace::LocalView;
 
 template <class MatrixType,
           class Element,
-          class FactorType,
-          class DirectionType>
+          class LocalCoefficients>
 inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                                 const RhsLocalView& rhsLocalView,
                                 MatrixType& elementMatrix,
@@ -22,9 +21,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
                                 size_t rhsSpaceOffset,
                                 unsigned int quadratureOrder,
                                 const Element& element,
-                                const FactorType& factor,
-                                const DirectionType& lhsBeta,
-                                const DirectionType& rhsBeta)
+                                const LocalCoefficients& localCoefficients)
 {
   constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
@@ -45,42 +42,31 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
     // Position of the current quadrature point in the reference element
     const FieldVector<double,dim>& quadPos = quad[pt].position();
     // Global position of the current quadrature point
-    const FieldVector<double,dim> globalQuadPos
-          = geometry.global(quadPos);
 
     // The multiplicative factor in the integral transformation formula
     const double integrationWeight = geometry.integrationElement(quadPos)
                                    * quad[pt].weight()
-                                   * detail::evaluateFactor(factor, globalQuadPos);
+                                   * localCoefficients.localFactor()(quadPos);
 
+    ///////////////////////////////////////
+    // evaluate finite element functions //
+    ///////////////////////////////////////
 
-    //////////////////////////////
-    // Left hand side Functions //
-    //////////////////////////////
-    constexpr auto lhsType = (type == IntegrationType::valueValue ||
-                              type == IntegrationType::valueGrad)
-                             ? EvaluationType::value : EvaluationType::grad;
+    using FunctionEvaluator = detail::LocalFunctionEvaluation<dim, type>;
 
     const std::vector<FieldVector<double,1> > lhsValues =
-        detail::LocalFunctionEvaluation<dim, lhsType>()
+        FunctionEvaluator::evaluateLhs
                       (lhsLocalFiniteElement,
                        quadPos,
                        geometry,
-                       lhsBeta);
-
-    ///////////////////////////////
-    // Right hand side Functions //
-    ///////////////////////////////
-    constexpr auto rhsType = (type == IntegrationType::valueValue ||
-                              type == IntegrationType::gradValue)
-                             ? EvaluationType::value : EvaluationType::grad;
+                       localCoefficients);
 
     const std::vector<FieldVector<double,1> > rhsValues =
-        detail::LocalFunctionEvaluation<dim, rhsType>()
+        FunctionEvaluator::evaluateRhs
                       (rhsLocalFiniteElement,
                        quadPos,
                        geometry,
-                       rhsBeta);
+                       localCoefficients);
 
     // Compute the actual matrix entries
     for (unsigned int i=0; i<nLhs; i++)
@@ -97,8 +83,7 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
 
 template <class MatrixType,
           class Element,
-          class FactorType,
-          class DirectionType>
+          class LocalCoefficients>
 inline static void
 faceImpl(const LhsLocalView& lhsLocalView,
          const RhsLocalView& rhsLocalView,
@@ -107,9 +92,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
          size_t rhsSpaceOffset,
          unsigned int quadratureOrder,
          const Element& element,
-         const FactorType& factor,
-         const DirectionType& lhsBeta,
-         const DirectionType& /* rhsBeta */)
+         const LocalCoefficients& localCoefficients)
 {
   constexpr int dim = Element::mydimension;
 
@@ -120,11 +103,13 @@ faceImpl(const LhsLocalView& lhsLocalView,
   const unsigned int nLhs(lhsLocalFiniteElement.size());
   const unsigned int nRhs(rhsLocalFiniteElement.size());
 
+  const auto direction = localCoefficients.localDirection()({0.5,0.5});
+
   unsigned int nOutflowFaces = 0;
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
   {
     auto face = element.template subEntity<1>(f);
-    const double prod = lhsBeta
+    const double prod = direction
       * FaceComputations<Element>(face, element).unitOuterNormal();
     if(prod > 0)
       ++nOutflowFaces;
@@ -135,7 +120,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
   FieldVector<double,dim> referenceBeta;
   {
     const auto& jacobianInverse = geometry.jacobianInverseTransposed({0., 0.});
-    jacobianInverse.mtv(lhsBeta, referenceBeta);
+    jacobianInverse.mtv(direction, referenceBeta);
   }
 
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
@@ -143,7 +128,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
     auto face = element.template subEntity<1>(f);
     auto faceComputations = FaceComputations<Element>(face, element);
     if(type == IntegrationType::travelDistanceWeighted &&
-       lhsBeta * faceComputations.unitOuterNormal() >= 0) {
+       direction * faceComputations.unitOuterNormal() >= 0) {
       /* Only integrate over inflow boundaries. */
       continue;
     }
@@ -170,9 +155,6 @@ faceImpl(const LhsLocalView& lhsLocalView,
       const FieldVector<double,dim> elementQuadPos =
               faceComputations.faceToElementPosition(quadFacePos);
 
-      const FieldVector<double,dim> globalQuadPos =
-              geometry.global(elementQuadPos);
-
       // The multiplicative factor in the integral transformation
       // formula multiplied with outer normal
       const FieldVector<double,dim> integrationOuterNormal =
@@ -182,15 +164,15 @@ faceImpl(const LhsLocalView& lhsLocalView,
       double integrationWeight;
       if(type == IntegrationType::normalVector ||
          type == IntegrationType::travelDistanceWeighted) {
-        integrationWeight = detail::evaluateFactor(factor, globalQuadPos)
+        integrationWeight = localCoefficients.localFactor()(elementQuadPos)
                           * quadFace[pt].weight();
         if(type == IntegrationType::travelDistanceWeighted)
         {
           // |beta * n|*integrationweight
-          integrationWeight *= fabs(lhsBeta*integrationOuterNormal);
+          integrationWeight *= fabs(direction*integrationOuterNormal);
         }
         else
-          integrationWeight *= (lhsBeta*integrationOuterNormal);
+          integrationWeight *= (direction*integrationOuterNormal);
       } else if(type == IntegrationType::normalSign) {
         const double integrationElement =
             face.geometry().integrationElement(quadFacePos);
@@ -217,7 +199,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
         }
 
         integrationWeight = sign
-                          * detail::evaluateFactor(factor, globalQuadPos)
+                          * localCoefficients.localFactor()(elementQuadPos)
                           * quadFace[pt].weight() * integrationElement;
       }
 

@@ -22,6 +22,9 @@
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
+#include <dune/dpg/bilinearformfactory.hh>
+#include <dune/dpg/innerproductfactory.hh>
+#include <dune/dpg/linearformfactory.hh>
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/saddlepoint_system_assembler.hh>
 #include <dune/dpg/functionplotter.hh>
@@ -67,21 +70,22 @@ int main()
   //   Choose a bilinear form
   /////////////////////////////////////////////////////////
 
-
-  auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
-          make_tuple(
-              make_IntegralTerm<0,1,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(0.),
-              make_IntegralTerm<0,1,IntegrationType::gradValue,
-                                    DomainOfIntegration::interior>(-1., beta),
-              make_IntegralTerm<0,0,IntegrationType::normalVector,
-                                    DomainOfIntegration::face>(1., beta)));
-  auto innerProduct = make_InnerProduct(testSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1.),
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta)));
+  auto bilinearForm
+    = bilinearFormWithSpaces(testSpaces, solutionSpaces)
+      .addIntegralTerm<0,1,IntegrationType::valueValue,
+                           DomainOfIntegration::interior>(0.)
+      .addIntegralTerm<0,1,IntegrationType::gradValue,
+                           DomainOfIntegration::interior>(-1., beta)
+      .addIntegralTerm<0,0,IntegrationType::normalVector,
+                           DomainOfIntegration::face>(1., beta)
+      .create();
+  auto innerProduct
+    = innerProductWithSpace(testSpaces)
+      .addIntegralTerm<0,0,IntegrationType::valueValue,
+                           DomainOfIntegration::interior>(1.)
+      .addIntegralTerm<0,0,IntegrationType::gradGrad,
+                           DomainOfIntegration::interior>(1., beta)
+      .create();
   auto systemAssembler
      = make_SaddlepointSystemAssembler(bilinearForm, innerProduct);
 
@@ -99,17 +103,11 @@ int main()
   //  Assemble the system
   /////////////////////////////////////////////////////////
 
-  using Domain = GridType::template Codim<0>::Geometry::GlobalCoordinate;
-
   auto rightHandSide
-    = make_LinearForm(
-        spaces,
-        std::make_tuple(
-            make_LinearIntegralTerm<0,
-                                    LinearIntegrationType::valueFunction,
-                                    DomainOfIntegration::interior>
-                                   ([] (const Domain& x) { return 1.;})
-          ));
+    = linearFormWithSpace(spaces)
+      .addIntegralTerm<0,LinearIntegrationType::valueFunction,
+                         DomainOfIntegration::interior>(1.)
+      .create();
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
   /////////////////////////////////////////////////

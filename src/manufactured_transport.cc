@@ -29,6 +29,11 @@
 #include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
 #include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 
+#include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
+
+#include <dune/dpg/bilinearformfactory.hh>
+#include <dune/dpg/innerproductfactory.hh>
+#include <dune/dpg/linearformfactory.hh>
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errorplotter.hh>
@@ -134,10 +139,11 @@ template<typename FEBasisInterior, typename FEBasisTrace>
 auto make_solution_spaces(const typename FEBasisInterior::GridView& gridView)
 {
   auto interiorSpace = make_space_tuple<FEBasisInterior>(gridView);
-  auto l2InnerProduct = make_InnerProduct(interiorSpace,
-       make_tuple(
-           make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                 DomainOfIntegration::interior>(1.)));
+  auto l2InnerProduct
+    = innerProductWithSpace(interiorSpace)
+      .template addIntegralTerm<0,0,IntegrationType::valueValue,
+                                    DomainOfIntegration::interior>(1.)
+      .create();
   using InnerProduct = decltype(l2InnerProduct);
   using WrappedSpaces = typename InnerProduct::TestSpaces;
   using NormedSpace = std::conditional_t<
@@ -228,12 +234,14 @@ int main(int argc, char** argv)
                = {std::cos(boost::math::constants::pi<double>()/8),
                   std::sin(boost::math::constants::pi<double>()/8)};
     const double c = sigma;
-    auto unnormalizedInnerProduct = make_InnerProduct(unnormalizedTestSpaces,
-        make_tuple(
-             make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                   DomainOfIntegration::interior>(1., beta),
-             make_IntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                                   DomainOfIntegration::face>(1., beta)));
+
+    auto unnormalizedInnerProduct
+      = innerProductWithSpace(unnormalizedTestSpaces)
+        .addIntegralTerm<0,0,IntegrationType::gradGrad,
+                             DomainOfIntegration::interior>(1., beta)
+        .addIntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                             DomainOfIntegration::face>(1., beta)
+        .create();
     auto testSpaces = make_normalized_space_tuple(unnormalizedInnerProduct);
     auto unnormalizedInnerProduct_aposteriori
         = replaceTestSpaces(unnormalizedInnerProduct,
@@ -245,14 +253,15 @@ int main(int argc, char** argv)
     auto innerProduct_aposteriori
        = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
 
-    auto bilinearForm = make_BilinearForm(testSpaces, solutionSpaces,
-            make_tuple(
-                make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                      DomainOfIntegration::interior>(c),
-                make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                      DomainOfIntegration::interior>(-1., beta),
-                make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                      DomainOfIntegration::face>(1., beta)));
+    auto bilinearForm
+      = bilinearFormWithSpaces(testSpaces, solutionSpaces)
+        .addIntegralTerm<0,0,IntegrationType::valueValue,
+                             DomainOfIntegration::interior>(c)
+        .addIntegralTerm<0,0,IntegrationType::gradValue,
+                             DomainOfIntegration::interior>(-1., beta)
+        .addIntegralTerm<0,1,IntegrationType::normalVector,
+                             DomainOfIntegration::face>(1., beta)
+        .create();
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
 
@@ -277,13 +286,15 @@ int main(int argc, char** argv)
     /////////////////////////////////////////////////////////
     //  Assemble the system
     /////////////////////////////////////////////////////////
+    auto rhsLambda
+      = [beta](const FieldVector<double, 2>& x){ return f(x, beta); };
+    auto rhsFunc
+      = Functions::makeAnalyticGridViewFunction(rhsLambda, gridView);
     auto rightHandSide
-      = make_LinearForm(testSpaces,
-                        std::make_tuple(make_LinearIntegralTerm<0,
-                                            LinearIntegrationType::valueFunction,
-                                            DomainOfIntegration::interior>(
-                                   [beta](const FieldVector<double, 2>& x)
-                                   { return f(x, beta); })));
+      = linearFormWithSpace(testSpaces)
+        .addIntegralTerm<0,LinearIntegrationType::valueFunction,
+                           DomainOfIntegration::interior>(rhsFunc)
+        .create();
 
     const auto startsystemassembler = std::chrono::steady_clock::now();
     systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);

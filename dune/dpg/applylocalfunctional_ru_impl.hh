@@ -89,16 +89,11 @@ inline static void interiorImpl(
         * quad[pt].weight();
 
       // Evaluate all shape function values at this quadrature point
-      std::vector<FieldVector<double,1>> testShapeFunctionValues =
-          detail::LocalRefinedFunctionEvaluation
-                  <dim, EvaluationType::value,
-                   is_ContinuouslyRefinedFiniteElement<TestSpace>::value>()
-                        (testLocalFiniteElement,
-                         subElementIndex,
-                         quadPos,
-                         geometry,
-                         subGeometryInReferenceElement,
-                         {});
+      const std::vector<FieldVector<double,1>> testShapeFunctionValues =
+        detail::LocalRefinedFunctionEvaluationHelper
+          <is_ContinuouslyRefinedFiniteElement<TestSpace>::value>::
+            evaluateValue(testLocalFiniteElement, subElementIndex,
+                          quadPos);
       std::vector<FieldVector<double,1>> shapeFunctionValues;
       solutionLocalFiniteElement.localBasis().
           evaluateFunction(quadPosInReferenceElement, shapeFunctionValues);
@@ -123,8 +118,7 @@ inline static void interiorImpl(
 template <class VectorType,
           class Element,
           class FunctionalVector,
-          class FactorType,
-          class DirectionType>
+          class LocalCoefficients>
 inline static void
 faceImpl(const TestLocalView& testLocalView,
          const SolutionLocalView& solutionLocalView,
@@ -135,8 +129,7 @@ faceImpl(const TestLocalView& testLocalView,
 #endif
          const Element& element,
          const FunctionalVector& functionalVector,
-         const FactorType& factor,
-         const DirectionType& beta)
+         const LocalCoefficients& localCoefficients)
 {
   constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
@@ -171,6 +164,8 @@ faceImpl(const TestLocalView& testLocalView,
       (is_DGRefinedFiniteElement<TestSpace>::value) ?
         testLocalFiniteElement.size() : 0;
 
+  const auto direction = localCoefficients.localDirection()({0.5,0.5});
+
   unsigned int subElementOffset = 0;
   unsigned int subElementIndex = 0;
   for(const auto& subElement : elements(referenceGridView))
@@ -186,14 +181,14 @@ faceImpl(const TestLocalView& testLocalView,
           = RefinedFaceComputations<SubElement>(face, subElement, element)
               .unitOuterNormal();
 
-      const double prod = beta * unitOuterNormal;
+      const double prod = direction * unitOuterNormal;
       if(prod > 0)
         ++nOutflowFaces;
     }
 
     FieldVector<double,dim> referenceBeta
         = detail::referenceBeta(geometry,
-            subGeometryInReferenceElement, beta);
+            subGeometryInReferenceElement, direction);
 
     for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
     {
@@ -209,7 +204,7 @@ faceImpl(const TestLocalView& testLocalView,
           = faceComputations.unitOuterNormal();
 
       if(type == IntegrationType::travelDistanceWeighted &&
-         beta * unitOuterNormal >= 0) {
+         direction * unitOuterNormal >= 0) {
         /* Only integrate over inflow boundaries. */
         continue;
       }
@@ -243,21 +238,18 @@ faceImpl(const TestLocalView& testLocalView,
         const FieldVector<double,dim> elementQuadPos =
                 subGeometryInReferenceElement.global(elementQuadPosSubCell);
 
-        const FieldVector<double,dim> globalQuadPos =
-                geometry.global(elementQuadPos);
-
         // The multiplicative factor in the integral transformation formula
         double integrationWeight;
         if(type == IntegrationType::normalVector ||
            type == IntegrationType::travelDistanceWeighted) {
-          integrationWeight = detail::evaluateFactor(factor, globalQuadPos)
+          integrationWeight = localCoefficients.localFactor()(elementQuadPos)
                             * quadFace[pt].weight()
                             * integrationElement;
-          // TODO: scale beta to length 1
+          // TODO: scale direction to length 1
           if(type == IntegrationType::travelDistanceWeighted)
-            integrationWeight *= fabs(beta*unitOuterNormal);
+            integrationWeight *= std::fabs(direction * unitOuterNormal);
           else
-            integrationWeight *= (beta*unitOuterNormal);
+            integrationWeight *= direction * unitOuterNormal;
         } else if(type == IntegrationType::normalSign) {
           int sign = 1;
           bool signfound = false;
@@ -278,7 +270,7 @@ faceImpl(const TestLocalView& testLocalView,
           }
 
           integrationWeight = sign
-                            * detail::evaluateFactor(factor, globalQuadPos)
+                            * localCoefficients.localFactor()(elementQuadPos)
                             * quadFace[pt].weight() * integrationElement;
         }
 
@@ -292,15 +284,10 @@ faceImpl(const TestLocalView& testLocalView,
         // Left Hand Side Shape Functions //
         ////////////////////////////////////
         const std::vector<FieldVector<double,1> > testValues =
-          detail::LocalRefinedFunctionEvaluation
-                  <dim, EvaluationType::value,
-                   is_ContinuouslyRefinedFiniteElement<TestSpace>::value>()
-                        (testLocalFiniteElement,
-                         subElementIndex,
-                         elementQuadPosSubCell,
-                         geometry,
-                         subGeometryInReferenceElement,
-                         beta);
+          detail::LocalRefinedFunctionEvaluationHelper
+            <is_ContinuouslyRefinedFiniteElement<TestSpace>::value>::
+              evaluateValue(testLocalFiniteElement, subElementIndex,
+                            elementQuadPosSubCell);
 
         /////////////////////////////////////
         // Right Hand Side Shape Functions //

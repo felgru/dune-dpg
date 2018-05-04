@@ -21,15 +21,13 @@ struct GetLocalLinearTermVector
 {
   using LocalViewTest = typename Space::LocalView;
 
-  template<class VectorType,
-           class FactorType,
-           class DirectionType>
+  template<class Vector,
+           class LocalCoefficients>
   static void getLocalVector(const LocalViewTest& localViewTest,
-                             VectorType& elementVector,
+                             Vector& elementVector,
                              size_t spaceOffset,
                              const unsigned int quadratureOrder,
-                             const FactorType& factor,
-                             const DirectionType& beta);
+                             const LocalCoefficients& localCoefficients);
 };
 
 
@@ -39,21 +37,14 @@ struct GetLocalLinearTermVector<integrationType, Space, false>
 {
   using LocalViewTest = typename Space::LocalView;
 
-  template<class VectorType,
-           class FactorType,
-           class DirectionType>
+  template<class Vector,
+           class LocalCoefficients>
   static void getLocalVector(const LocalViewTest& localViewTest,
-                             VectorType& elementVector,
+                             Vector& elementVector,
                              size_t spaceOffset,
                              const unsigned int quadratureOrder,
-                             const FactorType& factor,
-                             const DirectionType& beta)
+                             const LocalCoefficients& localCoefficients)
   {
-    static_assert(models<Functions::Concept::
-         Function<double(const Dune::FieldVector<double, 2>&)>, FactorType>(),
-         "The factor passed to getLocalVector does not model the "
-         "Function concept.");
-
     using TestSpace = typename LocalViewTest::GlobalBasis;
 
     // Get the grid element from the local FE basis view
@@ -77,25 +68,21 @@ struct GetLocalLinearTermVector<integrationType, Space, false>
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quad[pt].position();
-      // Global position of the current quadrature point
-      const FieldVector<double,dim> globalQuadPos
-          = geometry.global(quadPos);
 
       // The multiplicative factor in the integral transformation formula
       const double integrationWeight = geometry.integrationElement(quadPos)
                                        * quad[pt].weight()
-                                       * factor(globalQuadPos);
+                                       * localCoefficients.localFactor()(quadPos);
 
-     constexpr auto evaluationType = (integrationType ==
-                                      LinearIntegrationType::valueFunction)
-                                      ? EvaluationType::value : EvaluationType::grad;
+      using FunctionEvaluator
+        = detail::LocalLinearTermFunctionEvaluation<dim, integrationType>;
 
-     std::vector<FieldVector<double,1> > shapeFunctionValues =
-     detail::LocalFunctionEvaluation<dim, evaluationType>()
+      const std::vector<FieldVector<double,1> > shapeFunctionValues =
+        FunctionEvaluator::evaluate
                       (localFiniteElementTest,
                        quadPos,
                        geometry,
-                       beta);
+                       localCoefficients);
 
       for (size_t i=0; i<nDofs; i++)
       {
@@ -112,21 +99,14 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
 {
   using LocalViewTest = typename Space::LocalView;
 
-  template<class VectorType,
-           class FactorType,
-           class DirectionType>
+  template<class Vector,
+           class LocalCoefficients>
   static void getLocalVector(const LocalViewTest& localViewTest,
-                             VectorType& elementVector,
+                             Vector& elementVector,
                              size_t spaceOffset,
                              const unsigned int quadratureOrder,
-                             const FactorType& factor,
-                             const DirectionType& beta)
+                             const LocalCoefficients& localCoefficients)
   {
-    static_assert(models<Functions::Concept::
-         Function<double(const Dune::FieldVector<double, 2>&)>, FactorType>(),
-         "The factor passed to getLocalVector does not model the "
-         "Function concept.");
-
     using TestSpace = typename LocalViewTest::GlobalBasis;
 
     // Get the grid element from the local FE basis view
@@ -159,34 +139,32 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
 
         // Position of the current quadrature point in the reference element
         const FieldVector<double,dim>& quadPos = quad[pt].position();
-        const FieldVector<double,dim> globalQuadPos
-            = geometry.global(subGeometryInReferenceElement.global(quadPos));
+        const FieldVector<double,dim> elementQuadPos
+            = subGeometryInReferenceElement.global(quadPos);
 
         // The multiplicative factor in the integral transformation formula
         const double weightedfunctionValue
-          = factor(globalQuadPos)
-          * geometry.integrationElement(subGeometryInReferenceElement
-                                                        .global(quadPos))
+          = localCoefficients.localFactor()(elementQuadPos)
+          * geometry.integrationElement(elementQuadPos)
           * subGeometryInReferenceElement.integrationElement(quadPos)
           * quad[pt].weight();
 
         ////////////////////
         // Test Functions //
         ////////////////////
-        constexpr auto evaluationType = (integrationType ==
-                            LinearIntegrationType::valueFunction)
-                            ? EvaluationType::value : EvaluationType::grad;
+        using FunctionEvaluator
+          = detail::LocalRefinedLinearTermFunctionEvaluation
+                <dim, integrationType>;
 
-        std::vector<FieldVector<double,1> > shapeFunctionValues =
-            detail::LocalRefinedFunctionEvaluation
-                    <dim, evaluationType,
-                     is_ContinuouslyRefinedFiniteElement<TestSpace>::value>()
+        const std::vector<FieldVector<double,1> > shapeFunctionValues =
+            FunctionEvaluator::template evaluate
+                    <is_ContinuouslyRefinedFiniteElement<TestSpace>::value>
                           (localFiniteElementTest,
                            subElementIndex,
                            quadPos,
                            geometry,
                            subGeometryInReferenceElement,
-                           beta);
+                           localCoefficients);
 
         for (size_t i=0, rhsSize=shapeFunctionValues.size(); i<rhsSize; i++)
           elementVector[i+spaceOffset+subElementOffset] += shapeFunctionValues[i] * weightedfunctionValue;

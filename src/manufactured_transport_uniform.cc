@@ -26,7 +26,11 @@
 #include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
 #include <dune/functions/functionspacebases/bernsteinbasis.hh>
 #include <dune/functions/functionspacebases/bernsteindgbasis.hh>
+#include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
 
+#include <dune/dpg/bilinearformfactory.hh>
+#include <dune/dpg/innerproductfactory.hh>
+#include <dune/dpg/linearformfactory.hh>
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errortools.hh>
@@ -127,10 +131,11 @@ template<typename FEBasisInterior, typename FEBasisTrace>
 auto make_solution_spaces(const typename FEBasisInterior::GridView& gridView)
 {
   auto interiorSpace = make_space_tuple<FEBasisInterior>(gridView);
-  auto l2InnerProduct = make_InnerProduct(interiorSpace,
-       make_tuple(
-           make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                 DomainOfIntegration::interior>(1.)));
+  auto l2InnerProduct
+    = innerProductWithSpace(interiorSpace)
+      .template addIntegralTerm<0,0,IntegrationType::valueValue,
+                                    DomainOfIntegration::interior>(1.)
+      .create();
   using InnerProduct = decltype(l2InnerProduct);
   using WrappedSpaces = typename InnerProduct::TestSpaces;
   using NormedSpace = std::conditional_t<
@@ -232,13 +237,13 @@ int main(int argc, char** argv)
     auto unnormalizedTestSpaces_aposteriori
         = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
-    auto unnormalizedInnerProduct = make_InnerProduct(
-          unnormalizedTestSearchSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>(1.),
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>(1., beta)));
+    auto unnormalizedInnerProduct
+      = innerProductWithSpace(unnormalizedTestSearchSpaces)
+        .addIntegralTerm<0,0,IntegrationType::valueValue,
+                             DomainOfIntegration::interior>(1.)
+        .addIntegralTerm<0,0,IntegrationType::gradGrad,
+                             DomainOfIntegration::interior>(1., beta)
+        .create();
     auto unnormalizedInnerProduct_aposteriori
         = replaceTestSpaces(unnormalizedInnerProduct,
                             unnormalizedTestSpaces_aposteriori);
@@ -251,14 +256,15 @@ int main(int argc, char** argv)
     auto innerProduct
         = replaceTestSpaces(unnormalizedInnerProduct, testSearchSpaces);
 
-    auto bilinearForm = make_BilinearForm(testSearchSpaces, solutionSpaces,
-            make_tuple(
-                make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                      DomainOfIntegration::interior>(c),
-                make_IntegralTerm<0,0,IntegrationType::gradValue,
-                                      DomainOfIntegration::interior>(-1., beta),
-                make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                      DomainOfIntegration::face>(1., beta)));
+    auto bilinearForm
+      = bilinearFormWithSpaces(testSearchSpaces, solutionSpaces)
+        .addIntegralTerm<0,0,IntegrationType::valueValue,
+                             DomainOfIntegration::interior>(c)
+        .addIntegralTerm<0,0,IntegrationType::gradValue,
+                             DomainOfIntegration::interior>(-1., beta)
+        .addIntegralTerm<0,1,IntegrationType::normalVector,
+                             DomainOfIntegration::face>(1., beta)
+        .create();
 
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
@@ -281,13 +287,15 @@ int main(int argc, char** argv)
     VectorType rhsVector;
     MatrixType stiffnessMatrix;
 
+    auto rhsLambda
+      = [beta](const FieldVector<double, 2>& x){ return f(x, beta); };
+    auto rhsFunc
+      = Functions::makeAnalyticGridViewFunction(rhsLambda, gridView);
     auto rhsFunctions
-      = make_LinearForm(testSearchSpaces,
-            std::make_tuple(make_LinearIntegralTerm<0,
-                                  LinearIntegrationType::valueFunction,
-                                  DomainOfIntegration::interior>(
-                                    [beta](const FieldVector<double, dim>& x)
-                                    { return f(x,beta); })));
+      = linearFormWithSpace(testSearchSpaces)
+        .addIntegralTerm<0,LinearIntegrationType::valueFunction,
+                           DomainOfIntegration::interior>(rhsFunc)
+        .create();
     systemAssembler.assembleSystem(stiffnessMatrix, rhsVector, rhsFunctions);
 
     // Determine Dirichlet dofs for w (inflow boundary)

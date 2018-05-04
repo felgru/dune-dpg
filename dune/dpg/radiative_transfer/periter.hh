@@ -25,11 +25,14 @@
 #include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-#include <dune/functions/gridfunctions/gridviewfunction.hh>
 
+#include <dune/dpg/bilinearformfactory.hh>
+#include <dune/dpg/innerproductfactory.hh>
+#include <dune/dpg/linearformfactory.hh>
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/functionplotter.hh>
+#include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/functions/interpolate.hh>
 #include <dune/dpg/functions/subgridinterpolation.hh>
 #include <dune/dpg/functions/refinementinterpolation.hh>
@@ -1095,25 +1098,24 @@ compute_transport_solution(
     const Std::optional<VectorType>& bvExtension)
 {
   auto bilinearForm =
-    make_BilinearForm(spaces.testSpacePtr(), spaces.solutionSpacePtr(),
-        make_tuple(
-            make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                  DomainOfIntegration::interior>(sigma),
-            make_IntegralTerm<0,0,
-                              IntegrationType::gradValue,
-                              DomainOfIntegration::interior>(-1., s),
-            make_IntegralTerm<0,1,IntegrationType::normalVector,
-                                  DomainOfIntegration::face>(1., s)));
+    bilinearFormWithSpaces(spaces.testSpacePtr(), spaces.solutionSpacePtr())
+    .template addIntegralTerm<0,0, IntegrationType::valueValue,
+                                   DomainOfIntegration::interior>
+                             (sigma(spaces.gridView()))
+    .template addIntegralTerm<0,0, IntegrationType::gradValue,
+                                   DomainOfIntegration::interior>(-1., s)
+    .template addIntegralTerm<0,1, IntegrationType::normalVector,
+                                   DomainOfIntegration::face>(1., s)
+    .create();
   auto bilinearFormEnriched =
       replaceTestSpaces(bilinearForm, spaces.enrichedTestSpacePtr());
   auto innerProduct =
-    make_InnerProduct(spaces.testSpacePtr(),
-        make_tuple(
-            make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                  DomainOfIntegration::interior>(1., s),
-            make_IntegralTerm<0,0,
-                              IntegrationType::travelDistanceWeighted,
-                              DomainOfIntegration::face>(1., s)));
+    innerProductWithSpace(spaces.testSpacePtr())
+    .template addIntegralTerm<0,0, IntegrationType::gradGrad,
+                                   DomainOfIntegration::interior>(1., s)
+    .template addIntegralTerm<0,0, IntegrationType::travelDistanceWeighted,
+                                   DomainOfIntegration::face>(1., s)
+    .create();
   auto innerProductEnriched =
       replaceTestSpaces(innerProduct, spaces.enrichedTestSpacePtr());
 
@@ -1139,24 +1141,21 @@ compute_transport_solution(
   //  Assemble the systems
   /////////////////////////////////////////////////////////
   if(!bvExtension) {
-    auto rhsFunction = make_LinearForm(
-          systemAssembler.getTestSearchSpaces(),
-          std::make_tuple(
-            make_LinearFunctionalTerm<0>
-              (rhsFunctional, spaces.testSpace())));
+    auto rhsFunction
+      = linearFormWithSpace(systemAssembler.getTestSearchSpaces())
+        .template addFunctionalTerm<0>(rhsFunctional, spaces.testSpace())
+        .create();
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
   } else {
     assert(bvExtension->size() == spaces.testSpace().size());
-    auto rhsFunction = make_LinearForm(
-          systemAssembler.getTestSearchSpaces(),
-          std::make_tuple(
-            make_LinearFunctionalTerm<0>
-              (rhsFunctional, spaces.testSpace()),
-            make_SkeletalLinearFunctionalTerm
-              <0, IntegrationType::normalVector>
-              (*bvExtension, spaces.testSpace(), -1, s)));
+    auto rhsFunction
+      = linearFormWithSpace(systemAssembler.getTestSearchSpaces())
+        .template addFunctionalTerm<0>(rhsFunctional, spaces.testSpace())
+        .template addSkeletalFunctionalTerm<0, IntegrationType::normalVector>
+              (*bvExtension, spaces.testSpace(), -1., s)
+        .create();
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
         rhsFunction);
@@ -1215,27 +1214,25 @@ compute_transport_solution(
   if(!bvExtension) {
     auto rhsAssemblerEnriched
       = make_RhsAssembler(spaces.enrichedTestSpacePtr());
-    auto rhsFunction = make_LinearForm(
-          rhsAssemblerEnriched.getTestSpaces(),
-          std::make_tuple(
-            make_LinearFunctionalTerm<0>
+    auto rhsFunction
+      = linearFormWithSpace(rhsAssemblerEnriched.getTestSpaces())
+        .template addFunctionalTerm<0>
               (rhsFunctional,
-               std::get<0>(*systemAssembler.getTestSearchSpaces()))));
+               std::get<0>(*systemAssembler.getTestSearchSpaces()))
+        .create();
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   } else {
     auto rhsAssemblerEnriched
       = make_RhsAssembler(spaces.enrichedTestSpacePtr());
-    auto rhsFunction = make_LinearForm(
-          rhsAssemblerEnriched.getTestSpaces(),
-          std::make_tuple(
-            make_LinearFunctionalTerm<0>
+    auto rhsFunction
+      = linearFormWithSpace(rhsAssemblerEnriched.getTestSpaces())
+        .template addFunctionalTerm<0>
               (rhsFunctional,
-               std::get<0>(*systemAssembler.getTestSearchSpaces())),
-            make_SkeletalLinearFunctionalTerm
-              <0, IntegrationType::normalVector>
+               std::get<0>(*systemAssembler.getTestSearchSpaces()))
+        .template addSkeletalFunctionalTerm<0, IntegrationType::normalVector>
               (*bvExtension,
-               std::get<0>(*systemAssembler.getTestSearchSpaces()),
-               -1, s)));
+               std::get<0>(*systemAssembler.getTestSearchSpaces()), -1., s)
+        .create();
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   }
   // - Computation of the a posteriori error
