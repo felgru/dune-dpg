@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <dune/common/typetraits.hh>
+#include <dune/common/std/type_traits.hh>
 #include <dune/common/typeutilities.hh>
 #include <dune/functions/gridfunctions/gridviewentityset.hh>
 

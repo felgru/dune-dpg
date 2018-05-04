@@ -30,10 +30,10 @@ void testNormedAdaptorOn(const typename Basis::GridView gridView)
 
   auto innerProduct
     = innerProductWithSpace(testSpaces)
-      .addIntegralTerm<0,0,IntegrationType::gradGrad,
-                           DomainOfIntegration::interior>(1., beta)
-      .addIntegralTerm<0,0,IntegrationType::valueValue,
-                           DomainOfIntegration::interior>(1.)
+      .template addIntegralTerm<0,0,IntegrationType::gradGrad,
+                                    DomainOfIntegration::interior>(1., beta)
+      .template addIntegralTerm<0,0,IntegrationType::valueValue,
+                                    DomainOfIntegration::interior>(1.)
       .create();
   using InnerProduct = decltype(innerProduct);
 
