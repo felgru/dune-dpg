@@ -6,6 +6,12 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
 ## 0.4 (Unreleased)
 ### Added
+* A simpler interface to create (bi)linear forms and inner products
+  has been added. This tries to be less verbose than the old interface
+  and allows to easily use both constant coefficients and ones that
+  are `GridViewFunction`s. You can find examples of using the new
+  interfaces in our example programs and in the commit notes of
+  commit [a7104b565f35c735336fda764e95d68a97258b8d](https://gitlab.dune-project.org/felix.gruber/dune-dpg/commit/a7104b565f35c735336fda764e95d68a97258b8d).
 * A new `ConstrainedLocalView` was added that provides the indexing
   methods of `ConstrainedLocalIndexSet` like `DefaultLocalView` now
   provides indexing methods in dune-functions 2.7.
@@ -17,6 +23,11 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * dune-dpg now requires Version 2.6 of the Dune core modules.
   This allowed us to remove a lot of fallback code, making our code
   more readable and easier to maintain.
+* You can now use `GridViewFunction`s as coefficients in integral terms.
+  Currently there is however no way to specify the quadrature order
+  required by the coefficients. This means that any coefficients that are
+  not piecewise constant on the gridView’s cells will probably not be
+  integrated exactly.
 * The `interpolate` method of all localfunctions can now be called with
   a function object f that implements `f(x)` instead of the
   `f.evaluate(x,y)` interface. This is in accordance with changes in

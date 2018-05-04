@@ -6,12 +6,10 @@
 #include <iostream>
 
 #include <dune/common/exceptions.hh>
+#include <dune/common/fvector.hh>
 
-#include <dune/dpg/assemble_helper.hh>
-#include <dune/dpg/assemble_types.hh>
-#include <dune/dpg/functions/gridviewfunctions.hh>
-#include <dune/dpg/innerproduct.hh>
-#include <dune/dpg/integralterm.hh>
+#include <dune/dpg/innerproductfactory.hh>
+#include <dune/dpg/spacetuple.hh>
 
 #include <dune/grid/yaspgrid.hh>
 
@@ -29,17 +27,14 @@ void testNormedAdaptorOn(const typename Basis::GridView gridView)
   auto testSpaces = make_space_tuple<Basis>(gridView);
 
   const FieldVector<double, 2> beta{1./std::sqrt(2.), 1./std::sqrt(2.)};
-  auto betaFunc = Functions::makeConstantGridViewFunction(beta, gridView);
-  auto oneFunc = Functions::makeConstantGridViewFunction(1., gridView);
 
-  auto innerProduct = make_InnerProduct(testSpaces,
-          make_tuple(
-              make_IntegralTerm<0,0,IntegrationType::gradGrad,
-                                    DomainOfIntegration::interior>
-                                (oneFunc, betaFunc),
-              make_IntegralTerm<0,0,IntegrationType::valueValue,
-                                    DomainOfIntegration::interior>
-                                (oneFunc)));
+  auto innerProduct
+    = innerProductWithSpace(testSpaces)
+      .template addIntegralTerm<0,0,IntegrationType::gradGrad,
+                                    DomainOfIntegration::interior>(1., beta)
+      .template addIntegralTerm<0,0,IntegrationType::valueValue,
+                                    DomainOfIntegration::interior>(1.)
+      .create();
   using InnerProduct = decltype(innerProduct);
 
   NormalizedRefinedBasis<InnerProduct> normedBasis(innerProduct);
