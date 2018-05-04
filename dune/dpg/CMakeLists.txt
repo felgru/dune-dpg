@@ -23,6 +23,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               integralterm_uu_impl.hh
               leastsquares.hh
               linearform.hh
+              linearformfactory.hh
               linearfunctionalterm.hh
               linearintegralterm.hh
               localcoefficients.hh
