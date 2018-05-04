@@ -16,6 +16,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               faces.hh
               functionplotter.hh
               innerproduct.hh
+              innerproductfactory.hh
               integralterm.hh
               integralterm_rr_impl.hh
               integralterm_ru_impl.hh
