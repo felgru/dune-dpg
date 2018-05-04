@@ -7,6 +7,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               assemble_helper.hh
               assemble_types.hh
               bilinearform.hh
+              bilinearformfactory.hh
               boundarytools.hh
               cholesky.hh
               dpg_system_assembler.hh
