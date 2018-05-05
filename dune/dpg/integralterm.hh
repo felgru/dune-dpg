@@ -80,6 +80,14 @@ namespace Dune {
     LocalCoefficients localCoefficients_;
   };
 
+  template <IntegrationType type,
+            DomainOfIntegration domain_of_integration,
+            class LocalCoefficients>
+  struct uses_only_constant_coefficients
+  <IntegralTerm<type, domain_of_integration, LocalCoefficients>>
+    : detail::LocalCoefficients::
+        uses_only_constant_coefficients<LocalCoefficients> {};
+
 
 namespace detail {
   template <IntegrationType type,

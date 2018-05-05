@@ -29,10 +29,11 @@ namespace Dune {
     using InnerProductTermsTuple = std::tuple<InnerProductTerms...>;
     using GridView = typename std::tuple_element_t<0,TestSpaces>::GridView;
 
-    InnerProductFactory(const TestSpacesPtr& testSpaces,
-                        const InnerProductTermsTuple& terms)
-      : testSpaces(testSpaces)
-      , terms(terms)
+    template<class TSpacesPtr>
+    InnerProductFactory(TSpacesPtr&& testSpaces,
+                        InnerProductTermsTuple&& terms)
+      : testSpaces(std::forward<TSpacesPtr>(testSpaces))
+      , terms(std::move(terms))
       {}
 
     friend
@@ -56,7 +57,7 @@ namespace Dune {
                       || integrationType == IntegrationType::normalSign>::type*
                     = nullptr
             >
-    auto addIntegralTerm(Factor c)
+    auto addIntegralTerm(Factor c) &&
     {
       auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
       auto newTerm = make_IntegralTerm<lhsSpaceIndex,
@@ -66,10 +67,11 @@ namespace Dune {
       using NewTerm = decltype(newTerm);
       using NewInnerProductFactory
         = InnerProductFactory<TSpaces, InnerProductTerms..., NewTerm>;
-      return NewInnerProductFactory{
-               testSpaces,
-               std::tuple_cat(terms, std::make_tuple(std::move(newTerm)))
-             };
+      return NewInnerProductFactory(
+               std::move(testSpaces),
+               std::tuple_cat(std::move(terms),
+                              std::make_tuple(std::move(newTerm)))
+             );
     }
 
     template<size_t lhsSpaceIndex,
@@ -87,7 +89,7 @@ namespace Dune {
                       >::type*
                = nullptr
             >
-    auto addIntegralTerm(Factor c, Direction beta)
+    auto addIntegralTerm(Factor c, Direction beta) &&
     {
       auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
       auto betaFunc = Functions::detail::toGridViewFunction<GridView>(beta);
@@ -100,8 +102,9 @@ namespace Dune {
       using NewInnerProductFactory
         = InnerProductFactory<TSpaces, InnerProductTerms..., NewTerm>;
       return NewInnerProductFactory{
-               testSpaces,
-               std::tuple_cat(terms, std::make_tuple(std::move(newTerm)))
+               std::move(testSpaces),
+               std::tuple_cat(std::move(terms),
+                              std::make_tuple(std::move(newTerm)))
              };
     }
 
@@ -114,7 +117,7 @@ namespace Dune {
                          integrationType == IntegrationType::gradGrad>::type*
                     = nullptr
             >
-    auto addIntegralTerm(Factor c, Direction lhsBeta, Direction rhsBeta)
+    auto addIntegralTerm(Factor c, Direction lhsBeta, Direction rhsBeta) &&
     {
       auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
       auto lhsBetaFunc
@@ -131,16 +134,17 @@ namespace Dune {
       using NewTerm = decltype(newTerm);
       using NewInnerProductFactory
         = InnerProductFactory<TSpaces, InnerProductTerms..., NewTerm>;
-      return NewInnerProductFactory{
-               testSpaces,
-               std::tuple_cat(terms, std::make_tuple(std::move(newTerm)))
-             };
+      return NewInnerProductFactory(
+               std::move(testSpaces),
+               std::tuple_cat(std::move(terms),
+                              std::make_tuple(std::move(newTerm)))
+             );
     }
 
     InnerProduct<TSpaces, std::tuple<InnerProductTerms...>>
-    create()
+    create() &&
     {
-      return {testSpaces, terms};
+      return {std::move(testSpaces), std::move(terms)};
     }
   };
 

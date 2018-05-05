@@ -4,6 +4,7 @@
 #define DUNE_DPG_TYPE_TRAITS_HH
 
 #include <type_traits>
+#include <dune/common/std/type_traits.hh>
 #include <dune/common/tupleutility.hh>
 
 #ifndef DOXYGEN
@@ -424,11 +425,23 @@ struct changeGridView<InnerProduct<TSpaces, InnerProductTerms>, GridView>
 #endif
 
 
-
 template<class T, class NewTestSpaces>
 using replaceTestSpaces_t =
     std::decay_t<decltype(replaceTestSpaces(std::declval<T>(),
                           std::declval<NewTestSpaces>()))>;
+
+
+template<class Term>
+struct uses_only_constant_coefficients : std::false_type {};
+
+template<class... Terms>
+struct uses_only_constant_coefficients<std::tuple<Terms...>>
+  : Std::conjunction<
+      uses_only_constant_coefficients<std::tuple_element_t<2,Terms>>...> {};
+
+template<class Term>
+inline constexpr bool uses_only_constant_coefficients_v
+    = uses_only_constant_coefficients<Term>::value;
 
 } // end namespace Dune
 

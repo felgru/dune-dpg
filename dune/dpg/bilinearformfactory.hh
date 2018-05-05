@@ -34,12 +34,13 @@ namespace Dune {
     using BilinearTermsTuple = std::tuple<BilinearTerms...>;
     using GridView = typename std::tuple_element_t<0,TestSpaces>::GridView;
 
-    BilinearFormFactory(const TestSpacesPtr& testSpaces,
-                        const SolutionSpacesPtr& solutionSpaces,
-                        const BilinearTermsTuple& terms)
-      : testSpaces(testSpaces)
-      , solutionSpaces(solutionSpaces)
-      , terms(terms)
+    template<class TSpacesPtr, class SolSpacesPtr>
+    BilinearFormFactory(TSpacesPtr&& testSpaces,
+                        SolSpacesPtr&& solutionSpaces,
+                        BilinearTermsTuple&& terms)
+      : testSpaces(std::forward<TSpacesPtr>(testSpaces))
+      , solutionSpaces(std::forward<SolSpacesPtr>(solutionSpaces))
+      , terms(std::move(terms))
       {}
 
     friend
@@ -65,7 +66,7 @@ namespace Dune {
                       || integrationType == IntegrationType::normalSign>::type*
                     = nullptr
             >
-    auto addIntegralTerm(Factor c)
+    auto addIntegralTerm(Factor c) &&
     {
       auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
       auto newTerm = make_IntegralTerm<lhsSpaceIndex,
@@ -75,10 +76,11 @@ namespace Dune {
       using NewTerm = decltype(newTerm);
       using NewBilinearFormFactory
         = BilinearFormFactory<TSpaces, SolSpaces, BilinearTerms..., NewTerm>;
-      return NewBilinearFormFactory{
-               testSpaces, solutionSpaces,
-               std::tuple_cat(terms, std::make_tuple(std::move(newTerm)))
-             };
+      return NewBilinearFormFactory(
+               std::move(testSpaces), std::move(solutionSpaces),
+               std::tuple_cat(std::move(terms),
+                              std::make_tuple(std::move(newTerm)))
+             );
     }
 
     template<size_t lhsSpaceIndex,
@@ -96,7 +98,7 @@ namespace Dune {
                       >::type*
                = nullptr
             >
-    auto addIntegralTerm(Factor c, Direction beta)
+    auto addIntegralTerm(Factor c, Direction beta) &&
     {
       auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
       auto betaFunc = Functions::detail::toGridViewFunction<GridView>(beta);
@@ -108,10 +110,11 @@ namespace Dune {
       using NewTerm = decltype(newTerm);
       using NewBilinearFormFactory
         = BilinearFormFactory<TSpaces, SolSpaces, BilinearTerms..., NewTerm>;
-      return NewBilinearFormFactory{
-               testSpaces, solutionSpaces,
-               std::tuple_cat(terms, std::make_tuple(std::move(newTerm)))
-             };
+      return NewBilinearFormFactory(
+               std::move(testSpaces), std::move(solutionSpaces),
+               std::tuple_cat(std::move(terms),
+                              std::make_tuple(std::move(newTerm)))
+             );
     }
 
     template<size_t lhsSpaceIndex,
@@ -123,7 +126,7 @@ namespace Dune {
                          integrationType == IntegrationType::gradGrad>::type*
                     = nullptr
             >
-    auto addIntegralTerm(Factor c, Direction lhsBeta, Direction rhsBeta)
+    auto addIntegralTerm(Factor c, Direction lhsBeta, Direction rhsBeta) &&
     {
       auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
       auto lhsBetaFunc
@@ -140,16 +143,19 @@ namespace Dune {
       using NewTerm = decltype(newTerm);
       using NewBilinearFormFactory
         = BilinearFormFactory<TSpaces, SolSpaces, BilinearTerms..., NewTerm>;
-      return NewBilinearFormFactory{
-               testSpaces, solutionSpaces,
-               std::tuple_cat(terms, std::make_tuple(std::move(newTerm)))
-             };
+      return NewBilinearFormFactory(
+               std::move(testSpaces), std::move(solutionSpaces),
+               std::tuple_cat(std::move(terms),
+                              std::make_tuple(std::move(newTerm)))
+             );
     }
 
     BilinearForm<TSpaces, SolSpaces, std::tuple<BilinearTerms...>>
-    create()
+    create() &&
     {
-      return {testSpaces, solutionSpaces, terms};
+      return {std::move(testSpaces),
+              std::move(solutionSpaces),
+              std::move(terms)};
     }
   };
 
