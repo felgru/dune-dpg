@@ -60,6 +60,12 @@ struct Buffered {
 template<class BilinForm, class InnProduct, class BufferPolicy>
 class DPGSystemAssembler
 {
+  static_assert(std::is_same<BufferPolicy, detail::Unbuffered>::value
+      or (uses_only_constant_coefficients_v<typename BilinForm::Terms>
+          and uses_only_constant_coefficients_v<typename InnProduct::Terms>),
+      "The GeometryBuffer in DPGSystemAssembler only works when all"
+      " coefficients in the bilinear form and inner product are"
+      " constant.");
 public:
   using BilinearForm = BilinForm;
   using InnerProduct = InnProduct;

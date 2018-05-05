@@ -3,7 +3,14 @@
 #ifndef DUNE_DPG_LOCALCOEFFICIENTS_HH
 #define DUNE_DPG_LOCALCOEFFICIENTS_HH
 
+#include <type_traits>
+
 namespace Dune {
+namespace Functions {
+  template<class Range, class GridView>
+  class ConstantGridViewFunction;
+}
+
 namespace detail {
   namespace LocalCoefficients {
 
@@ -109,6 +116,35 @@ namespace detail {
       }
     };
 
+    template<class Coeffs>
+    struct uses_only_constant_coefficients : std::false_type {};
+
+    template<class Function>
+    struct is_ConstantGridViewFunction : std::false_type {};
+
+    template<class Range, class GridView>
+    struct is_ConstantGridViewFunction
+      <Dune::Functions::ConstantGridViewFunction<Range, GridView>>
+      : std::true_type {};
+
+    template<class F>
+    struct uses_only_constant_coefficients<OnlyFactor<F>>
+      : is_ConstantGridViewFunction<F> {};
+
+    template<class F, class D>
+    struct uses_only_constant_coefficients<FactorAndDirection<F, D>>
+      : std::conditional<
+                 is_ConstantGridViewFunction<F>::value
+              && is_ConstantGridViewFunction<D>::value,
+             std::true_type, std::false_type>::type {};
+
+    template<class F, class D1, class D2>
+    struct uses_only_constant_coefficients<FactorAndTwoDirections<F, D1, D2>>
+      : std::conditional<
+                 is_ConstantGridViewFunction<F>::value
+              && is_ConstantGridViewFunction<D1>::value
+              && is_ConstantGridViewFunction<D2>::value,
+             std::true_type, std::false_type>::type {};
   } // namespace LocalCoefficients
 } // namespace detail
 } // namespace Dune
