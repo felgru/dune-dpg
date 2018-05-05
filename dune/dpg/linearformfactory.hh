@@ -30,10 +30,11 @@ namespace Dune {
     using LinearFormTermsTuple = std::tuple<LinearFormTerms...>;
     using GridView = typename std::tuple_element_t<0,TestSpaces>::GridView;
 
-    LinearFormFactory(const TestSpacesPtr& testSpaces,
-                        const LinearFormTermsTuple& terms)
-      : testSpaces(testSpaces)
-      , terms(terms)
+    template<class TSpacesPtr>
+    LinearFormFactory(TSpacesPtr&& testSpaces,
+                      LinearFormTermsTuple&& terms)
+      : testSpaces(std::forward<TSpacesPtr>(testSpaces))
+      , terms(std::move(terms))
       {}
 
     friend
@@ -51,7 +52,7 @@ namespace Dune {
              LinearIntegrationType integrationType,
              DomainOfIntegration domainOfIntegration,
              class Factor>
-    auto addIntegralTerm(Factor c)
+    auto addIntegralTerm(Factor c) &&
     {
       auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
       auto newTerm = make_LinearIntegralTerm<spaceIndex,
@@ -61,10 +62,11 @@ namespace Dune {
       using NewTerm = decltype(newTerm);
       using NewLinearFormFactory
         = LinearFormFactory<TSpaces, LinearFormTerms..., NewTerm>;
-      return NewLinearFormFactory{
-               testSpaces,
-               std::tuple_cat(terms, std::make_tuple(std::move(newTerm)))
-             };
+      return NewLinearFormFactory(
+               std::move(testSpaces),
+               std::tuple_cat(std::move(terms),
+                              std::make_tuple(std::move(newTerm)))
+             );
     }
 
     template<size_t spaceIndex,
@@ -72,7 +74,7 @@ namespace Dune {
              DomainOfIntegration domainOfIntegration,
              class Factor,
              class Direction>
-    auto addIntegralTerm(Factor c, Direction beta)
+    auto addIntegralTerm(Factor c, Direction beta) &&
     {
       auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
       auto betaFunc = Functions::detail::toGridViewFunction<GridView>(beta);
@@ -83,17 +85,18 @@ namespace Dune {
       using NewTerm = decltype(newTerm);
       using NewLinearFormFactory
         = LinearFormFactory<TSpaces, LinearFormTerms..., NewTerm>;
-      return NewLinearFormFactory{
-               testSpaces,
-               std::tuple_cat(terms, std::make_tuple(std::move(newTerm)))
-             };
+      return NewLinearFormFactory(
+               std::move(testSpaces),
+               std::tuple_cat(std::move(terms),
+                              std::make_tuple(std::move(newTerm)))
+             );
     }
 
     template<size_t spaceIndex,
              class SolutionSpace,
              class FunctionalVector>
     auto addFunctionalTerm(const FunctionalVector& functionalVector,
-                           const SolutionSpace& solutionSpace)
+                           const SolutionSpace& solutionSpace) &&
     {
       auto newTerm = make_LinearFunctionalTerm<spaceIndex, SolutionSpace,
                                                FunctionalVector>
@@ -101,10 +104,11 @@ namespace Dune {
       using NewTerm = decltype(newTerm);
       using NewLinearFormFactory
         = LinearFormFactory<TSpaces, LinearFormTerms..., NewTerm>;
-      return NewLinearFormFactory{
-               testSpaces,
-               std::tuple_cat(terms, std::make_tuple(std::move(newTerm)))
-             };
+      return NewLinearFormFactory(
+               std::move(testSpaces),
+               std::tuple_cat(std::move(terms),
+                              std::make_tuple(std::move(newTerm)))
+             );
     }
 
     template<size_t spaceIndex,
@@ -122,7 +126,7 @@ namespace Dune {
     auto addSkeletalFunctionalTerm(
         const FunctionalVector& functionalVector,
         const SolutionSpace& solutionSpace,
-        Factor c, Direction beta)
+        Factor c, Direction beta) &&
     {
       auto cFunc = Functions::detail::toGridViewFunction<GridView>(c);
       auto betaFunc = Functions::detail::toGridViewFunction<GridView>(beta);
@@ -133,16 +137,17 @@ namespace Dune {
       using NewTerm = decltype(newTerm);
       using NewLinearFormFactory
         = LinearFormFactory<TSpaces, LinearFormTerms..., NewTerm>;
-      return NewLinearFormFactory{
-               testSpaces,
-               std::tuple_cat(terms, std::make_tuple(std::move(newTerm)))
-             };
+      return NewLinearFormFactory(
+               std::move(testSpaces),
+               std::tuple_cat(std::move(terms),
+                              std::make_tuple(std::move(newTerm)))
+             );
     }
 
     LinearForm<TSpaces, std::tuple<LinearFormTerms...>>
-    create()
+    create() &&
     {
-      return {testSpaces, terms};
+      return {std::move(testSpaces), std::move(terms)};
     }
   };
 
