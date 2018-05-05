@@ -1123,14 +1123,9 @@ compute_transport_solution(
   using LeafGridView = typename Grid::LeafGridView;
   static_assert(std::is_same<typename Spaces::GridView, LeafGridView>::value,
                 "GridViews don't match!");
-  using Geometry = typename LeafGridView::template Codim<0>::Geometry;
-  using GeometryBuffer_t = GeometryBuffer<Geometry>;
-
-  GeometryBuffer_t geometryBuffer;
   auto systemAssembler =
       make_DPGSystemAssembler(bilinearForm,
-                              innerProduct,
-                              geometryBuffer);
+                              innerProduct);
 
   typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
 

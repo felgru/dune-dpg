@@ -821,14 +821,9 @@ compute_transport_solution(
 
 
   using LeafGridView = typename  Spaces::GridView;
-  using Geometry = typename LeafGridView::template Codim<0>::Geometry;
-  using GeometryBuffer_t = GeometryBuffer<Geometry>;
-
-  GeometryBuffer_t geometryBuffer;
   auto systemAssembler =
       make_DPGSystemAssembler(bilinearForm,
-                              innerProduct,
-                              geometryBuffer);
+                              innerProduct);
 
   // Determine Dirichlet dofs for theta (inflow boundary)
   std::vector<bool> dirichletNodesInflow;
