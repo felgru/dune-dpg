@@ -107,7 +107,7 @@ namespace Dune {
       localTotalTestSize = detail::computeOffsets(localTestSpaceOffsets, tlv);
 
       const auto& e = std::get<0>(tlv).element();
-      Hybrid::forEach(terms, [&](auto& t) { std::get<2>(t).bind(e); });
+      Hybrid::forEach(terms, [&](auto& t) { t.term.bind(e); });
     }
 
     /**
@@ -181,8 +181,8 @@ getOccupationPattern(MatrixIndexSet& nb) const
             hana::int_c<std::tuple_size<InnerProductTerms>::value>)),
         [](auto i) {
           using Term = std::tuple_element_t<i.value, InnerProductTerms>;
-          return hana::tuple<std::tuple_element_t<0, Term>,
-                             std::tuple_element_t<1, Term>>{};
+          return hana::tuple<typename Term::LhsIndex,
+                             typename Term::RhsIndex>{};
         }));
   using IndexPairs = decltype(hana::to<hana::tuple_tag>(indexPairs));
 

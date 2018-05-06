@@ -9,6 +9,7 @@
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/std/memory.hh>
 #include <dune/common/tupleutility.hh>
+#include <dune/dpg/assemble_types.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/dpg/spacetuple.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -95,8 +96,8 @@ inline void updateSpaces(Spaces& spaces,
 }
 
 template <class MatrixType,
-          class TestSpaces,
-          class SolutionSpaces>
+          class LhsSpaces,
+          class RhsSpaces>
 struct getLocalMatrixHelper
 {
   template<class T, class Tuple>
@@ -104,62 +105,61 @@ struct getLocalMatrixHelper
       T[std::tuple_size<Tuple>::value];
 
   //! tuple type for the local views of the test spaces
-  using TestLocalViews = getLocalViews_t<TestSpaces>;
+  using LhsLocalViews = getLocalViews_t<LhsSpaces>;
   //! tuple type for the local views of the solution spaces
-  using SolutionLocalViews = getLocalViews_t<SolutionSpaces>;
+  using RhsLocalViews = getLocalViews_t<RhsSpaces>;
 
-  getLocalMatrixHelper(const TestLocalViews& testLocalViews,
-                       const SolutionLocalViews& solutionLocalViews,
+  getLocalMatrixHelper(const LhsLocalViews& lhsLocalViews,
+                       const RhsLocalViews& rhsLocalViews,
                        MatrixType& elementMatrix,
-                       const array_of_same_size<size_t, TestLocalViews>&
-                           localTestSpaceOffsets,
-                       const array_of_same_size<size_t, SolutionLocalViews>&
-                           localSolutionSpaceOffsets)
-      : testLocalViews(testLocalViews),
-        solutionLocalViews(solutionLocalViews),
+                       const array_of_same_size<size_t, LhsLocalViews>&
+                           lhsLocalSpaceOffsets,
+                       const array_of_same_size<size_t, RhsLocalViews>&
+                           rhsLocalSpaceOffsets)
+      : lhsLocalViews(lhsLocalViews),
+        rhsLocalViews(rhsLocalViews),
         elementMatrix(elementMatrix),
-        localTestSpaceOffsets(localTestSpaceOffsets),
-        localSolutionSpaceOffsets(localSolutionSpaceOffsets)
+        lhsLocalSpaceOffsets(lhsLocalSpaceOffsets),
+        rhsLocalSpaceOffsets(rhsLocalSpaceOffsets)
   {}
 
   /**
    * \tparam Term an IntegralTerm
    */
-  template <class solutionSpaceIndex,
-            class testSpaceIndex,
-            class Term>
+  template <class lhsSpaceIndex,
+            class rhsSpaceIndex,
+            class BilinearTerm>
   void operator()
-         (const std::tuple<
-          testSpaceIndex,
-          solutionSpaceIndex,
-          Term>& termTuple) const
+         (const BilinearTermWithIndices<
+          lhsSpaceIndex,
+          rhsSpaceIndex,
+          BilinearTerm>& termWithIndices) const
   {
-    const auto& term = std::get<2>(termTuple);
+    const auto& lhsLV =
+        std::get<lhsSpaceIndex::value>(lhsLocalViews);
+    const auto& rhsLV =
+        std::get<rhsSpaceIndex::value>(rhsLocalViews);
+    const size_t lhsLocalSpaceOffset =
+        lhsLocalSpaceOffsets[lhsSpaceIndex::value];
+    const size_t rhsLocalSpaceOffset =
+        rhsLocalSpaceOffsets[rhsSpaceIndex::value];
 
-    const auto& testLV =
-        std::get<testSpaceIndex::value>(testLocalViews);
-    const auto& solutionLV =
-        std::get<solutionSpaceIndex::value>(solutionLocalViews);
-    const size_t localTestSpaceOffset =
-        localTestSpaceOffsets[testSpaceIndex::value];
-    const size_t localSolutionSpaceOffset =
-        localSolutionSpaceOffsets[solutionSpaceIndex::value];
-
-    term.getLocalMatrix(testLV,
-                        solutionLV,
-                        elementMatrix,
-                        localTestSpaceOffset,
-                        localSolutionSpaceOffset);
+    termWithIndices.term
+                   .getLocalMatrix(lhsLV,
+                                   rhsLV,
+                                   elementMatrix,
+                                   lhsLocalSpaceOffset,
+                                   rhsLocalSpaceOffset);
   }
 
 private:
-  const TestLocalViews& testLocalViews;
-  const SolutionLocalViews& solutionLocalViews;
+  const LhsLocalViews& lhsLocalViews;
+  const RhsLocalViews& rhsLocalViews;
   MatrixType& elementMatrix;
-  const array_of_same_size<size_t, TestLocalViews>&
-      localTestSpaceOffsets;
-  const array_of_same_size<size_t, SolutionLocalViews>&
-      localSolutionSpaceOffsets;
+  const array_of_same_size<size_t, LhsLocalViews>&
+      lhsLocalSpaceOffsets;
+  const array_of_same_size<size_t, RhsLocalViews>&
+      rhsLocalSpaceOffsets;
 };
 
 template <class VectorType,

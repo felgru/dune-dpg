@@ -437,7 +437,7 @@ struct uses_only_constant_coefficients : std::false_type {};
 template<class... Terms>
 struct uses_only_constant_coefficients<std::tuple<Terms...>>
   : Std::conjunction<
-      uses_only_constant_coefficients<std::tuple_element_t<2,Terms>>...> {};
+      uses_only_constant_coefficients<typename Terms::Term>...> {};
 
 template<class Term>
 inline constexpr bool uses_only_constant_coefficients_v

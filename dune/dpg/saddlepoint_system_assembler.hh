@@ -213,8 +213,8 @@ private:
                 hana::int_c<std::tuple_size<BilinearTerms>::value>)),
           [](auto i) -> auto {
             using Term = std::tuple_element_t<i.value, BilinearTerms>;
-            return hana::tuple<std::tuple_element_t<0, Term>,
-                               std::tuple_element_t<1, Term>>{};
+            return hana::tuple<typename Term::LhsIndex,
+                               typename Term::RhsIndex>{};
           }));
     return hana::to<hana::tuple_tag>(bfIndices);
   }
@@ -230,8 +230,8 @@ private:
                 hana::int_c<std::tuple_size<InnerProductTerms>::value>)),
           [](auto i) -> auto {
             using Term = std::tuple_element_t<i.value, InnerProductTerms>;
-            return hana::tuple<std::tuple_element_t<0, Term>,
-                               std::tuple_element_t<1, Term>>{};
+            return hana::tuple<typename Term::LhsIndex,
+                               typename Term::RhsIndex>{};
           }));
     return hana::to<hana::tuple_tag>(ipIndices);
   }

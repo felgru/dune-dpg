@@ -33,6 +33,20 @@ enum class EvaluationType {
     grad,    //!< ∇v
 };
 
+template <class lhsSpaceIndex,
+          class rhsSpaceIndex,
+          class BilinearTerm>
+struct BilinearTermWithIndices
+{
+  using LhsIndex = lhsSpaceIndex;
+  using RhsIndex = rhsSpaceIndex;
+  using Term = BilinearTerm;
+  Term term;
+
+  BilinearTermWithIndices(Term&& term)
+    : term(term) {};
+};
+
 } // end namespace Dune
 
 #endif // DUNE_DPG_ASSEMBLE_TYPES_HH
