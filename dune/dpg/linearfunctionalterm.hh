@@ -111,15 +111,10 @@ template<size_t spaceIndex,
          class FunctionalVector>
 auto make_LinearFunctionalTerm(const FunctionalVector& functionalVector,
                                const SolutionSpace& solutionSpace)
-    -> std::tuple<std::integral_constant<size_t, spaceIndex>,
-                  LinearFunctionalTerm<SolutionSpace,
-                                       FunctionalVector> >
 {
-  return std::make_tuple(
-              std::integral_constant<size_t, spaceIndex>(),
-              LinearFunctionalTerm<SolutionSpace,
-                                   FunctionalVector>(functionalVector,
-                                                     solutionSpace));
+  using Term = LinearFunctionalTerm<SolutionSpace, FunctionalVector>;
+  return LinearTermWithIndex<std::integral_constant<size_t, spaceIndex>, Term>
+         (Term{functionalVector, solutionSpace});
 }
 
 
@@ -283,21 +278,14 @@ auto make_SkeletalLinearFunctionalTerm(
     const FunctionalVector& functionalVector,
     const SolutionSpace& solutionSpace,
     Factor c, Direction beta)
-    -> std::tuple<std::integral_constant<size_t, spaceIndex>,
-                  SkeletalLinearFunctionalTerm<integrationType,
-                                               SolutionSpace,
-                                               FunctionalVector,
-                                               Factor,
-                                               Direction> >
 {
-  return std::make_tuple(
-              std::integral_constant<size_t, spaceIndex>(),
-              SkeletalLinearFunctionalTerm<integrationType,
-                                           SolutionSpace,
-                                           FunctionalVector,
-                                           Factor,
-                                           Direction>
-                (functionalVector, solutionSpace, c, beta));
+  using Term = SkeletalLinearFunctionalTerm<integrationType,
+                                            SolutionSpace,
+                                            FunctionalVector,
+                                            Factor,
+                                            Direction>;
+  return LinearTermWithIndex<std::integral_constant<size_t, spaceIndex>, Term>
+         (Term{functionalVector, solutionSpace, c, beta});
 }
 
 

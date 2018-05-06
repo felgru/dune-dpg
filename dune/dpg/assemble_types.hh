@@ -47,6 +47,18 @@ struct BilinearTermWithIndices
     : term(term) {};
 };
 
+template <class spaceIndex,
+          class LinearTerm>
+struct LinearTermWithIndex
+{
+  using Index = spaceIndex;
+  using Term = LinearTerm;
+  Term term;
+
+  LinearTermWithIndex(Term&& term)
+    : term(term) {};
+};
+
 } // end namespace Dune
 
 #endif // DUNE_DPG_ASSEMBLE_TYPES_HH

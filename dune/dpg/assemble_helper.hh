@@ -188,17 +188,16 @@ struct getLocalVectorHelper
   template <class testSpaceIndex,
             class Term>
   void operator()
-         (const std::tuple<testSpaceIndex, Term>& termTuple) const
+         (const LinearTermWithIndex<testSpaceIndex, Term>& termWithIndex) const
   {
-    const auto& term = std::get<1>(termTuple);
-
     const auto& testLV = std::get<testSpaceIndex::value>(testLocalViews);
     const size_t localTestSpaceOffset =
         localTestSpaceOffsets[testSpaceIndex::value];
 
-    term.getLocalVector(testLV,
-                        elementVector,
-                        localTestSpaceOffset);
+    termWithIndex.term
+                 .getLocalVector(testLV,
+                                 elementVector,
+                                 localTestSpaceOffset);
   }
 
 private:

@@ -89,20 +89,13 @@ template<size_t spaceIndex,
          DomainOfIntegration domainOfIntegration,
          class Factor>
 auto make_LinearIntegralTerm(Factor c)
-    -> std::tuple<std::integral_constant<size_t, spaceIndex>,
-                  LinearIntegralTerm<integrationType,
-                                     domainOfIntegration,
-                                     detail::LocalCoefficients::
-                                       OnlyFactor<Factor>> >
 {
-  return std::make_tuple(
-              std::integral_constant<size_t, spaceIndex>(),
-              LinearIntegralTerm<integrationType,
-                                 domainOfIntegration,
-                                 detail::LocalCoefficients::
-                                       OnlyFactor<Factor>>
-                                (detail::LocalCoefficients::
-                                       OnlyFactor<Factor>(c)));
+  using Term = LinearIntegralTerm<integrationType,
+                                  domainOfIntegration,
+                                  detail::LocalCoefficients::
+                                    OnlyFactor<Factor>>;
+  return LinearTermWithIndex<std::integral_constant<size_t, spaceIndex>, Term>
+         (Term{detail::LocalCoefficients::OnlyFactor<Factor>(c)});
 }
 
 /**
@@ -124,21 +117,14 @@ template<size_t spaceIndex,
          class Factor,
          class Direction>
 auto make_LinearIntegralTerm(Factor c, Direction beta)
-    -> std::tuple<std::integral_constant<size_t, spaceIndex>,
-                  LinearIntegralTerm<integrationType,
-                                     domainOfIntegration,
-                                     detail::LocalCoefficients::
-                                       FactorAndDirection<Factor, Direction>> >
 {
-  return std::make_tuple(
-              std::integral_constant<size_t, spaceIndex>(),
-              LinearIntegralTerm<integrationType,
-                                 domainOfIntegration,
-                                 detail::LocalCoefficients::
-                                       FactorAndDirection<Factor, Direction>>
-                                (detail::LocalCoefficients::
-                                       FactorAndDirection<Factor,
-                                                  Direction>(c, beta)));
+  using Term = LinearIntegralTerm<integrationType,
+                                  domainOfIntegration,
+                                  detail::LocalCoefficients::
+                                    FactorAndDirection<Factor, Direction>>;
+  return LinearTermWithIndex<std::integral_constant<size_t, spaceIndex>, Term>
+         (Term{detail::LocalCoefficients::FactorAndDirection<Factor, Direction>
+                                                                  (c, beta)});
 }
 
 

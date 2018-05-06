@@ -444,7 +444,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
                 hana::int_c<std::tuple_size<LinearTerms>::value>)),
           [](auto i) -> auto {
             using Term = std::tuple_element_t<i.value, LinearTerms>;
-            return hana::type_c<std::tuple_element_t<0, Term>>;
+            return hana::type_c<typename Term::Index>;
           }));
     using LFIndices = decltype(hana::to<hana::tuple_tag>(lfIndices));
 
