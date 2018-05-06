@@ -10,6 +10,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
 
+#include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
 
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
@@ -56,7 +57,7 @@ namespace Dune {
   public:
     BoundaryTools() = delete;
 
-    template <class FEBasis,class Direction>
+    template <class FEBasis, class Direction>
     static void getInflowBoundaryMask(
                   const FEBasis& ,
                   std::vector<bool>& ,
@@ -77,6 +78,13 @@ namespace Dune {
                   );
 
   private:
+    template <class FEBasis, class Direction>
+    static void getInflowBoundaryMask_(
+                  const FEBasis& ,
+                  std::vector<bool>& ,
+                  const Direction&
+                  );
+
     static std::array<unsigned int, 2> getVerticesOfIntersection(
                         unsigned int ,
                         GeometryType
@@ -98,10 +106,24 @@ namespace Dune {
    *        In the transport problem, the result depends on the direction of propagation beta.
    * \param feBasis        a finite element basis
    * \param dirichletNodes the vector where we store the output
-   * \param beta           the direction of propagation
+   * \param beta           the direction of propagation, either a
+   *                       FieldVector or a GridViewFunction with
+   *                       FieldVector as range
    */
-  template <class FEBasis,class Direction>
+  template <class FEBasis, class Direction>
   void BoundaryTools::getInflowBoundaryMask(
+                        const FEBasis& feBasis,
+                        std::vector<bool>& dirichletNodes,
+                        const Direction& beta
+                        )
+  {
+    using GridView = typename FEBasis::GridView;
+    auto betaFunc = Functions::detail::toGridViewFunction<GridView>(beta);
+    getInflowBoundaryMask_(feBasis, dirichletNodes, betaFunc);
+  }
+
+  template <class FEBasis, class Direction>
+  void BoundaryTools::getInflowBoundaryMask_(
                         const FEBasis& feBasis,
                         std::vector<bool>& dirichletNodes,
                         const Direction& beta
@@ -125,9 +147,13 @@ namespace Dune {
     using LocalIndexSet = decltype(localIndexSet);
 #endif
 
+    auto localBeta = localFunction(beta);
 
     for(const auto& e : elements(gridView))
     {
+      localBeta.bind(e);
+      const auto betaAtElementCenter
+          = localBeta(referenceElement(e.geometry()).position(0, 0));
       localView.bind(e);
       const auto& localFE = localView.tree().finiteElement();
 
@@ -161,10 +187,10 @@ namespace Dune {
                intersection.centerUnitOuterNormal();
 
         // n.beta
-        const double scalarProd = centerOuterNormal * beta;
+        const double scalarProd = centerOuterNormal * betaAtElementCenter;
 
         // We see whether we are on the inflow boundary
-        const double tolerance = -1e-8*beta.two_norm();
+        const double tolerance = -1e-8 * betaAtElementCenter.two_norm();
         const bool isOnInflowBoundary = (scalarProd < tolerance)
                                         && intersection.boundary();
 
