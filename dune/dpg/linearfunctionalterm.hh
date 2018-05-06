@@ -105,39 +105,6 @@ namespace Dune {
  *                          the given solutionSpace basis
  * \param solutionSpace  the space in which the functional is defined
  * \tparam spaceIndex the index of the test space
- * \tparam domainOfIntegration  see #DomainOfIntegration,
- *                              only interior is allowed here
- */
-template<size_t spaceIndex,
-         DomainOfIntegration domainOfIntegration,
-         class SolutionSpace,
-         class FunctionalVector>
-[[deprecated("make_LinearFunctionalTerm with DomainOfIntegration parameter "
-             "has been deprecated.")]]
-auto make_LinearFunctionalTerm(const FunctionalVector& functionalVector,
-                               const SolutionSpace& solutionSpace)
-    -> std::tuple<std::integral_constant<size_t, spaceIndex>,
-                  LinearFunctionalTerm<SolutionSpace,
-                                       FunctionalVector> >
-{
-  static_assert(domainOfIntegration == DomainOfIntegration::interior,
-                "make_LinearFunctionalTerm only implemented for interior "
-                "domain of integration.");
-  return std::make_tuple(
-              std::integral_constant<size_t, spaceIndex>(),
-              LinearFunctionalTerm<SolutionSpace,
-                                   FunctionalVector>(functionalVector,
-                                                     solutionSpace));
-}
-
-/**
- * \brief Creates a tuple of a LinearFunctionalTerm and the index
- *        of the space involved.
- *
- * \param functionalVector  the coefficients describing the functional in
- *                          the given solutionSpace basis
- * \param solutionSpace  the space in which the functional is defined
- * \tparam spaceIndex the index of the test space
  */
 template<size_t spaceIndex,
          class SolutionSpace,
