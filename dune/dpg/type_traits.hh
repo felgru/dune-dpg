@@ -440,7 +440,7 @@ struct uses_only_constant_coefficients<std::tuple<Terms...>>
       uses_only_constant_coefficients<typename Terms::Term>...> {};
 
 template<class Term>
-inline constexpr bool uses_only_constant_coefficients_v
+constexpr bool uses_only_constant_coefficients_v
     = uses_only_constant_coefficients<Term>::value;
 
 } // end namespace Dune
