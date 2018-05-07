@@ -120,8 +120,8 @@ namespace ScatteringKernelApproximation {
       return P/l2NormP;
     }
 
-    bool sort_criterion(const std::pair<Eigen::VectorXd,double>& left,
-                   const std::pair<Eigen::VectorXd,double>& right)
+    static bool second_greater(const std::pair<Eigen::VectorXd,double>& left,
+                               const std::pair<Eigen::VectorXd,double>& right)
     {
       return left.second > right.second;
     }
@@ -136,7 +136,7 @@ namespace ScatteringKernelApproximation {
         double cF = abs(ip(F[l],P,quadWeight,xmin,xmax));
         Fpair.push_back(std::pair<Eigen::VectorXd,double>(F[l],cF));
       }
-      std::sort(Fpair.begin(),Fpair.end(),sort_criterion);
+      std::sort(Fpair.begin(), Fpair.end(), second_greater);
       for(size_t l=0; l<F.size(); l++){
         F[l]=Fpair[l].first;
       }
