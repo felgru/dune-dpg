@@ -820,7 +820,6 @@ compute_transport_solution(
       replaceTestSpaces(innerProduct, spaces.enrichedTestSpacePtr());
 
 
-  using LeafGridView = typename  Spaces::GridView;
   auto systemAssembler =
       make_DPGSystemAssembler(bilinearForm,
                               innerProduct);
