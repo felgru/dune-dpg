@@ -34,19 +34,20 @@ int main()
 
   //****** Alpert wavelets ***********************
   // Number of vanishing moments (polynomials of degree <=L-1 cancel out)
-  size_t L=1;
+  const size_t L = 1;
   // Starting level of the space V_J
-  size_t J=1;
+  const size_t J = 1;
   // Gauss-Legendre quadrature order to use in internal routines
-  size_t quadOrder=20; // Remark: quadOrder = 2*nQuad -1 in Gauss-Legendre
+  // Remark: quadOrder = 2*nQuad -1 in Gauss-Legendre
+  const size_t quadOrder = 20;
   // Interval [-r,r]
-  double r=boost::math::constants::pi<double>();
+  const double r = boost::math::constants::pi<double>();
   // Input data
   // Given a function f in [-r,r], we project it to the space V_J of
   // piecewise polynomials of degree L-1 in each interval I_{j,k}.
   // This will be our input data for DWT.
   auto flambda = [](auto a,auto xmin,auto xmax) { return a; };
-  Eigen::VectorXd data=AlpertWavelet::ProjectOntoVJ(flambda,r,J,L,quadOrder);
+  Eigen::VectorXd data = AlpertWavelet::ProjectOntoVJ(flambda,r,J,L,quadOrder);
   // // Other trivial input data
   // // First option
   // Eigen::VectorXd data(static_cast<int>(L*pow(2,J)));
@@ -56,8 +57,7 @@ int main()
   // for(size_t i=0, imax=data.size(); i < imax; i++) data(i) = 1.;
 
   // Compute DWT
-  std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
-  y=AlpertWavelet::DWT(data,L,J,quadOrder);
+  auto y = AlpertWavelet::DWT(data,L,J,quadOrder);
   // Compute IDWT
   Eigen::VectorXd dataIDWT = AlpertWavelet::IDWT(y,L,J,quadOrder);
   success = sameVector(dataIDWT,data);
