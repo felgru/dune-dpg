@@ -150,17 +150,14 @@ template<size_t lhsSpaceIndex,
                 = nullptr
         >
 auto make_IntegralTerm(Factor c)
-    -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
-                  std::integral_constant<size_t, rhsSpaceIndex>,
-                  IntegralTerm<integrationType, domainOfIntegration,
-                               detail::LocalCoefficients::OnlyFactor<Factor>> >
 {
-  return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
-                std::integral_constant<size_t, rhsSpaceIndex>,
-                IntegralTerm<integrationType, domainOfIntegration,
-                             detail::LocalCoefficients::OnlyFactor<Factor>> >
-         ({},{},
-          {detail::LocalCoefficients::OnlyFactor<Factor>(c)});
+  using Term = IntegralTerm<integrationType, domainOfIntegration,
+                            detail::LocalCoefficients::OnlyFactor<Factor>>;
+  return BilinearTermWithIndices<
+                  std::integral_constant<size_t, lhsSpaceIndex>,
+                  std::integral_constant<size_t, rhsSpaceIndex>,
+                  Term>
+         (Term{detail::LocalCoefficients::OnlyFactor<Factor>(c)});
 }
 
 /**
@@ -191,19 +188,15 @@ template<size_t lhsSpaceIndex,
            = nullptr
         >
 auto make_IntegralTerm(Factor c, Direction beta)
-    -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
-                  std::integral_constant<size_t, rhsSpaceIndex>,
-                  IntegralTerm<integrationType, domainOfIntegration,
-                               detail::LocalCoefficients::FactorAndDirection
-                                   <Factor, Direction>> >
 {
-  return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
-                std::integral_constant<size_t, rhsSpaceIndex>,
-                IntegralTerm<integrationType, domainOfIntegration,
-                             detail::LocalCoefficients::FactorAndDirection
-                                 <Factor, Direction>> >
-         ({},{},
-          {detail::LocalCoefficients::FactorAndDirection
+  using Term = IntegralTerm<integrationType, domainOfIntegration,
+                            detail::LocalCoefficients::FactorAndDirection
+                                <Factor, Direction>>;
+  return BilinearTermWithIndices<
+                  std::integral_constant<size_t, lhsSpaceIndex>,
+                  std::integral_constant<size_t, rhsSpaceIndex>,
+                  Term>
+         (Term{detail::LocalCoefficients::FactorAndDirection
                                  <Factor, Direction>(c, beta)});
 }
 
@@ -233,19 +226,15 @@ template<size_t lhsSpaceIndex,
 auto make_IntegralTerm(Factor c,
                        Direction lhsBeta,
                        Direction rhsBeta)
-    -> std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
-                  std::integral_constant<size_t, rhsSpaceIndex>,
-                  IntegralTerm<integrationType, domainOfIntegration,
-                               detail::LocalCoefficients::FactorAndTwoDirections
-                                 <Factor, Direction, Direction>> >
 {
-  return std::tuple<std::integral_constant<size_t, lhsSpaceIndex>,
-                std::integral_constant<size_t, rhsSpaceIndex>,
-                IntegralTerm<integrationType, domainOfIntegration,
-                             detail::LocalCoefficients::FactorAndTwoDirections
-                                 <Factor, Direction, Direction>> >
-         ({},{},
-          {detail::LocalCoefficients::FactorAndTwoDirections
+  using Term = IntegralTerm<integrationType, domainOfIntegration,
+                            detail::LocalCoefficients::FactorAndTwoDirections
+                              <Factor, Direction, Direction>>;
+  return BilinearTermWithIndices<
+                  std::integral_constant<size_t, lhsSpaceIndex>,
+                  std::integral_constant<size_t, rhsSpaceIndex>,
+                  Term>
+         (Term{detail::LocalCoefficients::FactorAndTwoDirections
                    <Factor, Direction, Direction>(c, lhsBeta, rhsBeta)});
 }
 

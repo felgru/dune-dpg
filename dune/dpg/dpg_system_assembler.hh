@@ -470,7 +470,7 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
                 hana::int_c<std::tuple_size<BilinearTerms>::value>)),
           [](auto i) -> auto {
             using Term = std::tuple_element_t<i.value, BilinearTerms>;
-            return hana::type_c<std::tuple_element_t<1, Term>>;
+            return hana::type_c<typename Term::RhsIndex>;
           }));
     using LFIndices = decltype(hana::to<hana::tuple_tag>(lfIndices));
 
@@ -654,13 +654,14 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     /* copy every local subvector indexed by an index from
      * lfIndices exactly once. */
     namespace hana = boost::hana;
+    // TODO: shouldn't LFIndices be taken from rhsLinearForm.getTerms()?
     using BilinearTerms = std::decay_t<decltype(bilinearForm_.getTerms())>;
     auto lfIndices = hana::to<hana::set_tag>(
         hana::transform(hana::make_range(hana::int_c<0>,
               hana::int_c<std::tuple_size<BilinearTerms>::value>),
           [](auto i) {
             using Term = std::tuple_element_t<i.value, BilinearTerms>;
-            return hana::type_c<std::tuple_element_t<1, Term>>;
+            return hana::type_c<typename Term::RhsIndex>;
           }));
     using LFIndices = decltype(lfIndices);
 

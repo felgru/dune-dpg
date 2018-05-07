@@ -133,7 +133,7 @@ namespace Dune {
                                               slv);
 
       const auto& e = std::get<0>(tlv).element();
-      Hybrid::forEach(terms, [&](auto& t) { std::get<2>(t).bind(e); });
+      Hybrid::forEach(terms, [&](auto& t) { t.term.bind(e); });
     }
 
     /**
@@ -254,8 +254,8 @@ getOccupationPattern(MatrixIndexSet& nb,
             hana::int_c<std::tuple_size<BilinearTerms>::value>)),
         [](auto i) {
           using Term = std::tuple_element_t<i.value, BilinearTerms>;
-          return hana::tuple<std::tuple_element_t<0, Term>,
-                             std::tuple_element_t<1, Term>>{};
+          return hana::tuple<typename Term::LhsIndex,
+                             typename Term::RhsIndex>{};
         }));
   using IndexPairs = decltype(hana::to<hana::tuple_tag>(indexPairs));
 
