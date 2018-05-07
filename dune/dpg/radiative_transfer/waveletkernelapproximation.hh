@@ -668,10 +668,10 @@ namespace ScatteringKernelApproximation {
           VectorXd singularValues = kernelSVD.singularValues();
           Index i = 0;
           double rank_err = singularValues(i) * singularValues(i);
-          while (rank_err > (accuracy * accuracy / 4.)
-                 && i < singularValues.size()) {
+          while (i < singularValues.size()
+                 && (rank_err = singularValues(i) * singularValues(i))
+                    > (accuracy * accuracy / 4.)) {
             i += 1;
-            rank_err = singularValues(i) * singularValues(i);
           }
           rank = (i>0)?i:1;
 
@@ -1502,10 +1502,10 @@ namespace ScatteringKernelApproximation {
           VectorXd singularValues = kernelSVD.singularValues();
           Index i = 0;
           double rank_err = singularValues(i) * singularValues(i);
-          while (rank_err > (accuracy * accuracy / 4.)
-                 && i < singularValues.size()) {
+          while (i < singularValues.size()
+                 && (rank_err = singularValues(i) * singularValues(i))
+                    > (accuracy * accuracy / 4.)) {
             i += 1;
-            rank_err = singularValues(i) * singularValues(i);
           }
           rank = (i>0)?i:1;
 
@@ -1541,7 +1541,7 @@ namespace ScatteringKernelApproximation {
         static inline size_t requiredLevel(double accuracy, size_t maxLevel) {
           size_t level = 1;
           for(; level < maxLevel; ++level){
-            if(1./((1 << level)*(1+level*level)) < accuracy/4.)
+            if(1./((1 << level)*(1+level*level)) <= accuracy)
               break;
           }
           return level;
