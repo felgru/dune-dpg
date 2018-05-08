@@ -192,7 +192,5 @@ int main(int argc, char *argv[]) {
       kernelSVD(numS, numS, Eigen::ComputeThinU | Eigen::ComputeThinV);
   kernelSVD.compute(m);
 
-  Eigen::VectorXd singularValues = kernelSVD.singularValues();
-  for(size_t i=0, size=singularValues.size(); i<size; ++i)
-    std::cout << singularValues[i] << '\n';
+  std::cout << kernelSVD.singularValues() << '\n';
 }
