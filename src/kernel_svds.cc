@@ -139,6 +139,7 @@ int main(int argc, char *argv[]) {
       {
         auto exponentialKernel
           = KanschatScattering(exponentialDecay(kernelTerms));
+        std::cout << "Singular values of " << exponentialKernel.info() << '\n';
         if(wavelet) {
           m = waveletKernelMatrix(exponentialKernel, wltOrder, maxLevel, 16);
 #if 0
@@ -152,6 +153,7 @@ int main(int argc, char *argv[]) {
       {
         auto polynomialKernel
           = KanschatScattering(polynomialDecay(kernelTerms));
+        std::cout << "Singular values of " << polynomialKernel.info() << '\n';
         if(wavelet) {
           m = waveletKernelMatrix(polynomialKernel, wltOrder, maxLevel, 16);
 #if 0
@@ -164,6 +166,8 @@ int main(int argc, char *argv[]) {
     case kernelType::henyey_greenstein:
       {
         auto henyeyGreensteinKernel = HenyeyGreensteinScattering(gamma);
+        std::cout << "Singular values of "
+                  << henyeyGreensteinKernel.info() << '\n';
         if(wavelet) {
           m = waveletKernelMatrix(henyeyGreensteinKernel, wltOrder,
                                   maxLevel, 16);
@@ -177,6 +181,7 @@ int main(int argc, char *argv[]) {
     case kernelType::ACP2011:
       {
         auto acpKernel = ACP2011Scattering();
+        std::cout << "Singular values of " << acpKernel.info() << '\n';
         if(wavelet) {
           m = waveletKernelMatrix(acpKernel, wltOrder, maxLevel, 16);
 #if 0
