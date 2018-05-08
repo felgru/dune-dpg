@@ -44,10 +44,13 @@ def quadpoints(jx, kx, r):
 # Main program
 # ============
 aparser = argparse.ArgumentParser(
-        description='plot Henyey–Greenstein kernel in Haar wavelet basis')
+        description='plot Henyey–Greenstein kernel')
 aparser.add_argument('--no-title', dest='plot_title',
                      action='store_false', default=True,
                      help='plot without title text')
+aparser.add_argument('--plot-matrices', dest='plot_matrices',
+                     action='store_true', default=False,
+                     help='plot matrix representations of the kernel')
 aparser.add_argument('--level', action='store', type=int, default=7,
                      help='maximal wavelet level')
 aparser.add_argument('--ngrid', dest='ngrid',
@@ -63,142 +66,143 @@ g = args.gamma # forward peak coef
 
 mpl.rc('text', usetex=True)
 
-nwlt=0
-result = []
-(y, yquadweight) = quadpoints(0, 0, r)
-# get sf(y)
-sfy=sf(y,r)
-# print(np.sqrt((ymax-ymin)*np.mean(wlty*wlty))) # L2 norm wlt
-# initialize resultx list
-resultx = []
-(x, xquadweight) = quadpoints(0, 0, r)
-# get sf(x)
-sfx=sf(x,r)
-# Values of the kernel
-X, Y = np.meshgrid(x, y)
-PHI=phi(X,Y,g)
-# Product quadweight*kernel*wlt(x)*wlt(y)
-# TODO: in the summed trapezoidal rule, the outer
-#       quadrature points have to be weighted with
-#       factor 1/2.
-quadweight = yquadweight * xquadweight
-prod=quadweight*PHI*np.outer(sfx,sfy)
-# Integral over [-pi,pi]x[-pi,pi]
-resultx.append(prod.sum())
-for jx in range(J):
-    for kx in range(2**jx):
-        (x, xquadweight) = quadpoints(jx, kx, r)
-        # get wlt_{jx,kx}(x)
-        wltx=wlt(jx,kx,x,r)
-        # Values of the kernel
-        X, Y = np.meshgrid(x, y)
-        PHI=phi(X,Y,g)
-        # Product quadweight*kernel*wlt(x)*wlt(y)
-        # TODO: in the summed trapezoidal rule, the outer
-        #       quadrature points have to be weighted with
-        #       factor 1/2.
-        quadweight = yquadweight * xquadweight
-        prod=quadweight*PHI*np.outer(wltx,sfy)
-        # Integral over [-pi,pi]x[-pi,pi]
-        resultx.append(prod.sum())
-result.append(resultx)
-for jy in range(J):
-    nwlt+=2**jy # This is just to count the number of wlts
-    for ky in range(2**jy):
-        (y, yquadweight) = quadpoints(jy, ky, r)
-        # get wlt_{jy,ky}(y)
-        wlty=wlt(jy,ky,y,r)
-        # print(np.sqrt((ymax-ymin)*np.mean(wlty*wlty))) # L2 norm wlt
-        # initialize resultx list
-        resultx = []
-        (x, xquadweight) = quadpoints(0, 0, r)
-        # get sf(x)
-        sfx=sf(x,r)
-        # Values of the kernel
-        X, Y = np.meshgrid(x, y)
-        PHI=phi(X,Y,g)
-        # Product quadweight*kernel*wlt(x)*wlt(y)
-        # TODO: in the summed trapezoidal rule, the outer
-        #       quadrature points have to be weighted with
-        #       factor 1/2.
-        quadweight = yquadweight * xquadweight
-        prod=quadweight*PHI*np.outer(sfx,wlty)
-        # Integral over [-pi,pi]x[-pi,pi]
-        resultx.append(prod.sum())
-        for jx in range(J):
-            for kx in range(2**jx):
-                (x, xquadweight) = quadpoints(jx, kx, r)
-                # get wlt_{jx,kx}(x)
-                wltx=wlt(jx,kx,x,r)
-                # Values of the kernel
-                X, Y = np.meshgrid(x, y)
-                PHI=phi(X,Y,g)
-                # Product quadweight*kernel*wlt(x)*wlt(y)
-                # TODO: in the summed trapezoidal rule, the outer
-                #       quadrature points have to be weighted with
-                #       factor 1/2.
-                quadweight = yquadweight * xquadweight
-                prod=quadweight*PHI*np.outer(wltx,wlty)
-                # Integral over [-pi,pi]x[-pi,pi]
-                resultx.append(prod.sum())
-        result.append(resultx)
+if args.plot_matrices:
+    nwlt=0
+    result = []
+    (y, yquadweight) = quadpoints(0, 0, r)
+    # get sf(y)
+    sfy=sf(y,r)
+    # print(np.sqrt((ymax-ymin)*np.mean(wlty*wlty))) # L2 norm wlt
+    # initialize resultx list
+    resultx = []
+    (x, xquadweight) = quadpoints(0, 0, r)
+    # get sf(x)
+    sfx=sf(x,r)
+    # Values of the kernel
+    X, Y = np.meshgrid(x, y)
+    PHI=phi(X,Y,g)
+    # Product quadweight*kernel*wlt(x)*wlt(y)
+    # TODO: in the summed trapezoidal rule, the outer
+    #       quadrature points have to be weighted with
+    #       factor 1/2.
+    quadweight = yquadweight * xquadweight
+    prod=quadweight*PHI*np.outer(sfx,sfy)
+    # Integral over [-pi,pi]x[-pi,pi]
+    resultx.append(prod.sum())
+    for jx in range(J):
+        for kx in range(2**jx):
+            (x, xquadweight) = quadpoints(jx, kx, r)
+            # get wlt_{jx,kx}(x)
+            wltx=wlt(jx,kx,x,r)
+            # Values of the kernel
+            X, Y = np.meshgrid(x, y)
+            PHI=phi(X,Y,g)
+            # Product quadweight*kernel*wlt(x)*wlt(y)
+            # TODO: in the summed trapezoidal rule, the outer
+            #       quadrature points have to be weighted with
+            #       factor 1/2.
+            quadweight = yquadweight * xquadweight
+            prod=quadweight*PHI*np.outer(wltx,sfy)
+            # Integral over [-pi,pi]x[-pi,pi]
+            resultx.append(prod.sum())
+    result.append(resultx)
+    for jy in range(J):
+        nwlt+=2**jy # This is just to count the number of wlts
+        for ky in range(2**jy):
+            (y, yquadweight) = quadpoints(jy, ky, r)
+            # get wlt_{jy,ky}(y)
+            wlty=wlt(jy,ky,y,r)
+            # print(np.sqrt((ymax-ymin)*np.mean(wlty*wlty))) # L2 norm wlt
+            # initialize resultx list
+            resultx = []
+            (x, xquadweight) = quadpoints(0, 0, r)
+            # get sf(x)
+            sfx=sf(x,r)
+            # Values of the kernel
+            X, Y = np.meshgrid(x, y)
+            PHI=phi(X,Y,g)
+            # Product quadweight*kernel*wlt(x)*wlt(y)
+            # TODO: in the summed trapezoidal rule, the outer
+            #       quadrature points have to be weighted with
+            #       factor 1/2.
+            quadweight = yquadweight * xquadweight
+            prod=quadweight*PHI*np.outer(sfx,wlty)
+            # Integral over [-pi,pi]x[-pi,pi]
+            resultx.append(prod.sum())
+            for jx in range(J):
+                for kx in range(2**jx):
+                    (x, xquadweight) = quadpoints(jx, kx, r)
+                    # get wlt_{jx,kx}(x)
+                    wltx=wlt(jx,kx,x,r)
+                    # Values of the kernel
+                    X, Y = np.meshgrid(x, y)
+                    PHI=phi(X,Y,g)
+                    # Product quadweight*kernel*wlt(x)*wlt(y)
+                    # TODO: in the summed trapezoidal rule, the outer
+                    #       quadrature points have to be weighted with
+                    #       factor 1/2.
+                    quadweight = yquadweight * xquadweight
+                    prod=quadweight*PHI*np.outer(wltx,wlty)
+                    # Integral over [-pi,pi]x[-pi,pi]
+                    resultx.append(prod.sum())
+            result.append(resultx)
 
-# ============
-# Plot result
-# ============
-# # Plot with contourf
-# xwlt=np.linspace(1,nwlt,nwlt)
-# ywlt=xwlt
-# Xwlt, Ywlt = np.meshgrid(xwlt, ywlt)
-# origin = 'upper'
-# CS = plt.contourf(Xwlt, Ywlt, result, 20,
-#                   alpha=0.8,
-#                   cmap=plt.cm.bone,
-#                   origin=origin,
-#                   interpolation='none')
-# # Make a colorbar for the ContourSet returned by the contourf call.
-# cbar = plt.colorbar(CS)
-# # cbar.ax.set_ylabel('title of colorbar')
+    # ============
+    # Plot result
+    # ============
+    # # Plot with contourf
+    # xwlt=np.linspace(1,nwlt,nwlt)
+    # ywlt=xwlt
+    # Xwlt, Ywlt = np.meshgrid(xwlt, ywlt)
+    # origin = 'upper'
+    # CS = plt.contourf(Xwlt, Ywlt, result, 20,
+    #                   alpha=0.8,
+    #                   cmap=plt.cm.bone,
+    #                   origin=origin,
+    #                   interpolation='none')
+    # # Make a colorbar for the ContourSet returned by the contourf call.
+    # cbar = plt.colorbar(CS)
+    # # cbar.ax.set_ylabel('title of colorbar')
 
 
-# Plot with mathshow
-# mpl.rc('text',usetex=True)
-MS = plt.matshow(result, cmap=plt.cm.autumn)
-cbar = plt.colorbar(MS)
-if(args.plot_title):
-    titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
-        + r"$\phi(\theta,\theta')=(1-\gamma^2)/" \
-        + r"(1+\gamma^2-2\gamma\cos(\theta-\theta'))$" \
-        + r'$,\ \gamma=' + str(g) + '$'
-    plt.title(titleStr)
-plt.xlabel('$(j,k)$')
-plt.ylabel('$(j\',k\')$')
-# plt.show()
+    # Plot with mathshow
+    # mpl.rc('text',usetex=True)
+    MS = plt.matshow(result, cmap=plt.cm.autumn)
+    cbar = plt.colorbar(MS)
+    if(args.plot_title):
+        titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
+            + r"$\phi(\theta,\theta')=(1-\gamma^2)/" \
+            + r"(1+\gamma^2-2\gamma\cos(\theta-\theta'))$" \
+            + r'$,\ \gamma=' + str(g) + '$'
+        plt.title(titleStr)
+    plt.xlabel('$(j,k)$')
+    plt.ylabel('$(j\',k\')$')
+    # plt.show()
 
-titleSave="wlt_analysis-J_"+str(J)+"-gamma_"+str(g)+".pdf"
-plt.savefig(titleSave, bbox_inches="tight")
-plt.clf()
+    titleSave="wlt_analysis-J_"+str(J)+"-gamma_"+str(g)+".pdf"
+    plt.savefig(titleSave, bbox_inches="tight")
+    plt.clf()
 
-# plot logarithmic wavelet representation
-log_result = []
-for row in result:
-    log_row = map(abs, row)
-    log_result.append(log_row)
-MS = plt.matshow(log_result, norm=mpl.colors.LogNorm(), cmap=plt.cm.autumn)
-cbar = plt.colorbar(MS)
-if(args.plot_title):
-    titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
-        + r"$\phi(\theta,\theta')=(1-\gamma^2)/" \
-        + r"(1+\gamma^2-2\gamma\cos(\theta-\theta'))$" \
-        + r'$,\ \gamma='+str(g) + '$'
-    plt.title(titleStr)
-plt.xlabel('$(j,k)$')
-plt.ylabel('$(j\',k\')$')
-# plt.show()
+    # plot logarithmic wavelet representation
+    log_result = []
+    for row in result:
+        log_row = map(abs, row)
+        log_result.append(log_row)
+    MS = plt.matshow(log_result, norm=mpl.colors.LogNorm(), cmap=plt.cm.autumn)
+    cbar = plt.colorbar(MS)
+    if(args.plot_title):
+        titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
+            + r"$\phi(\theta,\theta')=(1-\gamma^2)/" \
+            + r"(1+\gamma^2-2\gamma\cos(\theta-\theta'))$" \
+            + r'$,\ \gamma='+str(g) + '$'
+        plt.title(titleStr)
+    plt.xlabel('$(j,k)$')
+    plt.ylabel('$(j\',k\')$')
+    # plt.show()
 
-titleSave="wlt_analysis-J_"+str(J)+"-gamma_"+str(g)+"-log.pdf"
-plt.savefig(titleSave, bbox_inches="tight")
-plt.clf()
+    titleSave="wlt_analysis-J_"+str(J)+"-gamma_"+str(g)+"-log.pdf"
+    plt.savefig(titleSave, bbox_inches="tight")
+    plt.clf()
 
 # ============
 # Plot kernel
