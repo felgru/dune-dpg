@@ -447,6 +447,39 @@ class PeriterPlotter {
     }
   }
 
+  template<class ScatteringBasis, class VectorType, class KernelApproximation>
+  void plotIntegratedSolution(
+      const ScatteringBasis& globalBasis,
+      const std::vector<VectorType>& solution,
+      const KernelApproximation& kernelApproximation,
+      const unsigned int n) const
+  {
+    if(plotIntegratedSolutionEnabled()) {
+      std::cout << "Plot integrated solution of outer iteration "
+                << n << ":\n";
+
+      VectorType integratedSolution(globalBasis.size());
+      integratedSolution = 0.;
+
+      const auto quadWeightsSubintervall =
+          kernelApproximation.getQuadWeightSubinterval();
+      const auto numSperInterval = kernelApproximation.numSperInterval;
+      const size_t numS = solution.size();
+      for(unsigned int i = 0; i < numS; ++i)
+      {
+        const auto quadWeight = quadWeightsSubintervall[i % numSperInterval];
+        integratedSolution.axpy(quadWeight, solution[i]);
+      }
+
+      std::string name = outputfolder
+                      + std::string("/integrated_solution_n")
+                      + std::to_string(n);
+      FunctionPlotter scatteringPlotter(name);
+      scatteringPlotter.plot("integrated solution", integratedSolution,
+                             globalBasis, 0);
+    }
+  }
+
   private:
   bool plotOuterIterationsEnabled() const {
     return (plotFlags & PeriterPlotFlags::plotOuterIterations)
@@ -456,6 +489,11 @@ class PeriterPlotter {
   bool plotScatteringEnabled() const {
     return (plotFlags & PeriterPlotFlags::plotScattering)
            == PeriterPlotFlags::plotScattering;
+  }
+
+  bool plotIntegratedSolutionEnabled() const {
+    return (plotFlags & PeriterPlotFlags::plotIntegratedSolution)
+           == PeriterPlotFlags::plotIntegratedSolution;
   }
 
   const PeriterPlotFlags plotFlags;
@@ -781,6 +819,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         approximationParameters, aposterioriIter, accuracy, n);
 
     approximationParameters.decreaseEta();
+
+    plotter.plotIntegratedSolution(spaces.interiorSolutionSpace(),
+                                   x, kernelApproximation, n);
   }
 }
 

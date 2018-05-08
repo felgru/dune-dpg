@@ -683,6 +683,44 @@ class PeriterPlotter {
     }
   }
 
+  template<class ScatteringBasis, class VectorType, class KernelApproximation>
+  void plotIntegratedSolution(
+      const ScatteringBasis& hostGridGlobalBasis,
+      const std::vector<VectorType>& solutionHost,
+      const KernelApproximation& kernelApproximation,
+      const unsigned int n) const
+  {
+    if(plotIntegratedSolutionEnabled()) {
+      std::cout << "\nPlotting integrated solution of outer iteration "
+                << n << ".\n";
+
+      VectorType integratedSolution(hostGridGlobalBasis.size());
+      integratedSolution = 0.;
+
+      const auto quadWeightsSubintervall =
+          kernelApproximation.getQuadWeightSubinterval();
+      const auto numSperInterval = kernelApproximation.numSperInterval;
+      const size_t numS = solutionHost.size();
+      for(unsigned int i = 0; i < numS; ++i)
+      {
+        const auto quadWeight = quadWeightsSubintervall[i % numSperInterval];
+        integratedSolution.axpy(quadWeight, solutionHost[i]);
+      }
+
+      std::string name = outputfolder
+                      + std::string("/integrated_solution_n")
+                      + std::to_string(n);
+      FunctionPlotter scatteringPlotter(name);
+      scatteringPlotter.plot("integrated solution", integratedSolution,
+                             hostGridGlobalBasis, 0);
+    }
+  }
+
+  bool plotIntegratedSolutionEnabled() const {
+    return (plotFlags & PeriterPlotFlags::plotIntegratedSolution)
+           == PeriterPlotFlags::plotIntegratedSolution;
+  }
+
   private:
   bool plotOuterIterationsEnabled() const {
     return (plotFlags & PeriterPlotFlags::plotOuterIterations)
@@ -897,6 +935,29 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
         approximationParameters, aposterioriIter, accuracy, n);
 
     approximationParameters.decreaseEta();
+
+    if(plotter.plotIntegratedSolutionEnabled()) {
+      using HostGridView = typename HostGrid::LeafGridView;
+#ifdef PERITER_SKELETAL_SCATTERING
+      // Discontinuous version of the trace space
+      using FEBasisHost
+          = Functions::BernsteinDGBasis<HostGridView, 2>;
+#else
+      using FEBasisHost
+          = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
+#endif
+
+      FEBasisHost hostGridGlobalBasis(hostGrid.leafGridView());
+
+      const auto xHost =
+          interpolate_solutions_to_hostgrid(x, spaces, hostGridGlobalBasis);
+
+      // plotting integrated solution for the last iteration.
+      plotter.plotIntegratedSolution(hostGridGlobalBasis,
+                                     xHost,
+                                     kernelApproximation,
+                                     n);
+    }
   }
 }
 

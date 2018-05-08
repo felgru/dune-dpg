@@ -19,7 +19,8 @@ enum class PeriterPlotFlags : unsigned char {
   plotOuterIterations = 1 << 0,
   plotLastIteration = 1 << 1,
   plotScattering = 1 << 2,
-  plotRhs = 1 << 3
+  plotRhs = 1 << 3,
+  plotIntegratedSolution = 1 << 4
 };
 
 constexpr inline
