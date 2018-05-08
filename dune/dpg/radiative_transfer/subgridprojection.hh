@@ -383,7 +383,7 @@ namespace detail {
           // → Interpolate from hostGridGlobalBasis to subGridGlobalBasis.
           //   (we assume the subGridGlobalBasis to be a superset of
           //   the hostGridGlobalBasis on the same level.)
-          auto subGridLocalView = subGridGlobalBasis.localView();
+          auto subGridLocalView = _(subGridGlobalBasis).localView();
           subGridLocalView.bind(e);
           auto hostGridLocalView = hostGridGlobalBasis.localView();
           hostGridLocalView.bind(eHost);
