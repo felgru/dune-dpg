@@ -170,11 +170,11 @@ class Periter {
    * \param gridView
    * \param accuracy
    */
-  template<class SolutionSpaces, class GridView>
+  template<class Spaces, class GridView>
   static std::vector<VectorType> apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
-      const SolutionSpaces& solutionSpaces,
+      const Spaces& spaces,
       std::vector<Direction>& sVector,
       const GridView& gridView,
       double accuracy);
@@ -756,7 +756,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                             / (kappaNorm * uNorm);
     std::vector<VectorType> rhsFunctional =
         apply_scattering (
-          kernelApproximation, x, *spaces.solutionSpacePtr(),
+          kernelApproximation, x, spaces,
           sVector, gridView, accuKernel);
     numS = sVector.size();
     x.resize(numS);
@@ -951,9 +951,8 @@ compute_transport_solution(
       = make_RhsAssembler(spaces.enrichedTestSpacePtr());
     auto rhsFunction
       = linearFormWithSpace(rhsAssemblerEnriched.getTestSpaces())
-        .template addFunctionalTerm<0>
-              (rhsFunctional,
-               std::get<0>(*systemAssembler.getSolutionSpaces()))
+        .template addFunctionalTerm<0>(rhsFunctional,
+                                       spaces.interiorSolutionSpace())
         .create();
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   } else {
@@ -961,12 +960,10 @@ compute_transport_solution(
       = make_RhsAssembler(spaces.enrichedTestSpacePtr());
     auto rhsFunction
       = linearFormWithSpace(rhsAssemblerEnriched.getTestSpaces())
-        .template addFunctionalTerm<0>
-              (rhsFunctional,
-               std::get<0>(*systemAssembler.getSolutionSpaces()))
+        .template addFunctionalTerm<0>(rhsFunctional,
+                                       spaces.interiorSolutionSpace())
         .template addSkeletalFunctionalTerm<0, IntegrationType::normalVector>
-              (bvExtension,
-               std::get<1>(*systemAssembler.getSolutionSpaces()), -1., s)
+              (bvExtension, spaces.traceSolutionSpace(), -1., s)
         .create();
     rhsAssemblerEnriched.assembleRhs(rhs, rhsFunction);
   }
@@ -1080,22 +1077,20 @@ compute_adaptive_transport_solution(
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class SolutionSpaces, class GridView>
+template<class Spaces, class GridView>
 std::vector<Dune::BlockVector<Dune::FieldVector<double, 1> >>
 Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
-      const SolutionSpaces& solutionSpaces,
+      const Spaces& spaces,
       std::vector<Direction>& sVector,
       const GridView& gridView,
       double accuracy) {
   sVector = kernelApproximation.setAccuracyAndInputSize(accuracy, x.size());
 
-  using FEBasisInterior = std::tuple_element_t<0, SolutionSpaces>;
-
   const size_t numS = sVector.size();
   std::vector<VectorType> rhsFunctional(numS);
-  const FEBasisInterior& feBasisInterior = std::get<0>(solutionSpaces);
+  const auto& feBasisInterior = spaces.interiorSolutionSpace();
 
   auto scatteringAssembler =
       make_ApproximateScatteringAssembler(feBasisInterior,
