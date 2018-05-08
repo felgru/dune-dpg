@@ -218,6 +218,13 @@ class Periter {
       double transportAccuracy,
       unsigned int maxNumberOfInnerIterations);
 
+  template<class SubGridView, class HostGridBasis>
+  static std::vector<VectorType>
+  interpolate_solutions_to_hostgrid(
+        const std::vector<VectorType>& solution,
+        SubGridSpaces<SubGridView>& subGridSpaces,
+        const HostGridBasis& hostGridBasis);
+
   /**
    * Apply the scattering integral to a solution x
    *
@@ -1337,6 +1344,35 @@ compute_adaptive_transport_solution(
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
+template<class SubGridView, class HostGridBasis>
+std::vector<typename Periter<ScatteringKernelApproximation,
+                             RHSApproximation>::VectorType>
+Periter<ScatteringKernelApproximation, RHSApproximation>::
+interpolate_solutions_to_hostgrid(
+      const std::vector<VectorType>& solution,
+      SubGridSpaces<SubGridView>& subGridSpaces,
+      const HostGridBasis& hostGridBasis)
+{
+  std::vector<VectorType> solutionHost(solution.size());
+  for(size_t i = 0, imax = solution.size(); i < imax; i++) {
+#ifdef PERITER_SKELETAL_SCATTERING
+    const auto& feBasisTrace = subGridSpaces.traceSolutionSpace(i);
+    const size_t  feBasisTraceOffset = subGridSpaces.interiorSolutionSpace(i)
+                                                    .size();
+    interpolateFromSubGrid(
+        feBasisTrace, solution[i].begin() + feBasisTraceOffset,
+        hostGridBasis, solutionHost[i]);
+#else
+    const auto& feBasisInterior = subGridSpaces.interiorSolutionSpace(i);
+    interpolateFromSubGrid(
+        feBasisInterior, solution[i],
+        hostGridBasis, solutionHost[i]);
+#endif
+  }
+  return solutionHost;
+}
+
+template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class SubGridView, class HostGridBasis, class Grid, class GridIdSet>
 std::vector<typename Periter<ScatteringKernelApproximation,
                              RHSApproximation>::VectorType>
@@ -1348,34 +1384,12 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       std::vector<Direction>& sVector,
       std::vector<std::unique_ptr<Grid>>& grids,
       std::vector<GridIdSet>& gridIdSets,
-      double accuracy) {
+      double accuracy)
+{
   sVector = kernelApproximation.setAccuracyAndInputSize(accuracy, x.size());
 
-  using Spaces = SubGridSpaces<SubGridView>;
-#ifdef PERITER_SKELETAL_SCATTERING
-  using FEBasisTrace = typename Spaces::FEBasisTrace;
-#else
-  using FEBasisInterior = typename Spaces::FEBasisInterior;
-#endif
-
-  // Interpolate x[i] to hostGridBasis.
-  std::vector<VectorType> xHost(x.size());
-  for(size_t i = 0, imax = x.size(); i < imax; i++) {
-#ifdef PERITER_SKELETAL_SCATTERING
-    const FEBasisTrace& feBasisTrace = subGridSpaces.traceSolutionSpace(i);
-    const size_t  feBasisTraceOffset = subGridSpaces.interiorSolutionSpace(i)
-                                                    .size();
-    interpolateFromSubGrid(
-        feBasisTrace, x[i].begin() + feBasisTraceOffset,
-        hostGridBasis, xHost[i]);
-#else
-    const FEBasisInterior& feBasisInterior
-        = subGridSpaces.interiorSolutionSpace(i);
-    interpolateFromSubGrid(
-        feBasisInterior, x[i],
-        hostGridBasis, xHost[i]);
-#endif
-  }
+  const auto xHost =
+      interpolate_solutions_to_hostgrid(x, subGridSpaces, hostGridBasis);
 
   const auto scatteringAssembler =
       make_ApproximateScatteringAssembler(hostGridBasis,
