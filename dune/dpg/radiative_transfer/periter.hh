@@ -817,11 +817,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   save_grids_to_gridIdSets(gridIdSets, grids);
 
   //////////////////////////////////
-  //   right hand side vector type
-  //////////////////////////////////
-  typedef BlockVector<FieldVector<double,1> > VectorType;
-
-  //////////////////////////////////
   //   Solution vectors
   //////////////////////////////////
   std::vector<VectorType> x(numS);

@@ -706,11 +706,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   size_t numS = sVector.size();
 
   //////////////////////////////////
-  //   right hand side vector type
-  //////////////////////////////////
-  typedef BlockVector<FieldVector<double,1> > VectorType;
-
-  //////////////////////////////////
   //   Solution vectors
   //////////////////////////////////
   std::vector<VectorType> x(numS);
