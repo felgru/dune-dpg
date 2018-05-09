@@ -937,6 +937,13 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     approximationParameters.decreaseEta();
 
     if(plotter.plotIntegratedSolutionEnabled()) {
+      for(unsigned int i = 0; i < grids.size(); ++i)
+      {
+        grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
+                                                 hostGrid);
+        spaces.update(i, grids[i]->leafGridView());
+      }
+
       using HostGridView = typename HostGrid::LeafGridView;
 #ifdef PERITER_SKELETAL_SCATTERING
       // Discontinuous version of the trace space
