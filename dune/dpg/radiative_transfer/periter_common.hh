@@ -54,7 +54,8 @@ class TransportSpaces {
                 "GridViews of transport spaces don't match!");
 
   using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
-  using FEBasisEnrichedTest = FEBasisTest;
+  using FEBasisEnrichedTest
+      = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 4>;
 
   using SolutionSpacePtr = decltype(make_space_tuple<FEBasisInterior,
                                     FEBasisTrace>(std::declval<GridView>()));
