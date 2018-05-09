@@ -1503,13 +1503,11 @@ save_grids_to_gridIdSets(
       std::vector<GridIdSet>& gridIdSets,
       const std::vector<std::unique_ptr<Grid>>& grids)
 {
-  if(gridIdSets.size() != grids.size()) {
-    gridIdSets.clear();
-    gridIdSets.reserve(grids.size());
-    for(const auto& gridPtr : grids) {
-      const auto& grid = *gridPtr;
-      gridIdSets.push_back(saveSubGridToIdSet(grid));
-    }
+  gridIdSets.clear();
+  gridIdSets.reserve(grids.size());
+  for(const auto& gridPtr : grids) {
+    const auto& grid = *gridPtr;
+    gridIdSets.push_back(saveSubGridToIdSet(grid));
   }
 }
 
