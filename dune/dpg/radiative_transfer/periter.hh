@@ -697,13 +697,13 @@ class PeriterPlotter {
       VectorType integratedSolution(hostGridGlobalBasis.size());
       integratedSolution = 0.;
 
-      const auto quadWeightsSubintervall =
-          kernelApproximation.getQuadWeightSubinterval();
+      const auto quadWeightsSubinterval =
+          kernelApproximation.quadWeightsOfSubintervalOnCurrentLevel();
       const auto numSperInterval = kernelApproximation.numSperInterval;
       const size_t numS = solutionHost.size();
       for(unsigned int i = 0; i < numS; ++i)
       {
-        const auto quadWeight = quadWeightsSubintervall[i % numSperInterval];
+        const auto quadWeight = quadWeightsSubinterval[i % numSperInterval];
         integratedSolution.axpy(quadWeight, solutionHost[i]);
       }
 
@@ -851,21 +851,21 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
     auto startScatteringApproximation = std::chrono::steady_clock::now();
 
-    const std::vector<double> quadWeight
-      = kernelApproximation.getQuadWeightSubinterval();
-
     double kappaNorm = 1.;
     double uNorm = 0.;
-    for(size_t i=0; i<grids.size(); ++i) {
-      const double uiNorm =
-        ErrorTools::l2norm(spaces.interiorSolutionSpace(i), x[i]);
-      uNorm += uiNorm * uiNorm
-                / (1 << kernelApproximation.getLevel())
-                * quadWeight[i % kernelApproximation.numSperInterval];
+    {
+      const std::vector<double> quadWeight
+        = kernelApproximation.quadWeightsOfSubintervalOnCurrentLevel();
+      for(size_t i=0; i<grids.size(); ++i) {
+        const double uiNorm =
+          ErrorTools::l2norm(spaces.interiorSolutionSpace(i), x[i]);
+        uNorm += uiNorm * uiNorm
+                  * quadWeight[i % kernelApproximation.numSperInterval];
+      }
+      uNorm = std::sqrt(uNorm);
+      // To prevent division by zero.
+      if(uNorm == 0.) uNorm = 1e-5;
     }
-    uNorm = std::sqrt(uNorm);
-    // To prevent division by zero.
-    if(uNorm == 0.) uNorm = 1e-5;
 
     const double accuKernel = approximationParameters.scatteringAccuracy()
                             / (kappaNorm * uNorm);

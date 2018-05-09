@@ -739,17 +739,18 @@ namespace ScatteringKernelApproximation {
           }
         }
 
-        std::vector<double> getQuadWeightSubinterval() const {
+        std::vector<double> quadWeightsOfSubintervalOnCurrentLevel() const {
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
           constexpr int dim = 1;
+          const double subintervalLength = 1. / (1 << getLevel());
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
               quadOrder, QuadratureType::GaussLegendre);
           assert(quad.size() == numSperInterval);
           std::vector<double> weight(quad.size());
           for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
-            weight[pt] = quad[pt].weight();
+            weight[pt] = subintervalLength * quad[pt].weight();
           }
 
           return weight;
@@ -972,17 +973,18 @@ namespace ScatteringKernelApproximation {
           }
         }
 
-        std::vector<double> getQuadWeightSubinterval() const {
+        std::vector<double> quadWeightsOfSubintervalOnCurrentLevel() const {
           // Get Gauss-Legendre quadrature in [0,1]
           const int quadOrder = 2*wltOrder+1;
           constexpr int dim = 1;
+          const double subintervalLength = 1. / (1 << getLevel());
           const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
               quadOrder, QuadratureType::GaussLegendre);
           assert(quad.size() == numSperInterval);
           std::vector<double> weight(quad.size());
           for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
-            weight[pt] = quad[pt].weight();
+            weight[pt] = subintervalLength * quad[pt].weight();
           }
 
           return weight;
