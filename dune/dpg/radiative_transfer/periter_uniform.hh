@@ -679,7 +679,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // TODO: estimate norm of rhs f
   const double fnorm = 1;
   const double err0 = fnorm / cB;
-  detail::ApproximationParameters approximationParameters(rho, CT, err0,
+  detail::ApproximationParameters approximationParameters(0.5, rho, CT, err0,
                                                           RHSApproximation{});
 
   ////////////////////////////////////////////

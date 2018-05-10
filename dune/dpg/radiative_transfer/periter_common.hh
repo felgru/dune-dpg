@@ -4,6 +4,7 @@
 #define DUNE_DPG_RADIATIVE_TRANSFER_PERITER_COMMON_HH
 
 #include <ostream>
+#include <stdexcept>
 #include <type_traits>
 
 #include <dune/dpg/assemble_helper.hh>
@@ -131,22 +132,32 @@ namespace detail {
 
     public:
 
-    ApproximationParameters(double rho, double CT, double err0, FeRHS)
+    /**
+     * \param accuracyRatio a value in (0,1) where larger values mean
+     *        more accuracy for the transport solver and smaller values
+     *        mean more accuracy for the kernel approximation
+     */
+    ApproximationParameters(double accuracyRatio,
+                            double rho, double CT, double err0, FeRHS)
       : rho(rho)
       , rhobar(2./rho)
       , err0(err0)
-      , kappa1(1./(2.*CT))
+      , kappa1(accuracyRatio/CT)
       , kappa2(0.)
-      , kappa3(1./4.)
-    {}
+      , kappa3((1.-accuracyRatio)/2.)
+    {
+      if(accuracyRatio < 0. || accuracyRatio > 1.)
+        throw std::domain_error("accuracyRatio needs to be in (0,1).");
+    }
 
-    ApproximationParameters(double rho, double CT, double err0, ApproximateRHS)
+    ApproximationParameters(double accuracyRatio,
+                            double rho, double CT, double err0, ApproximateRHS)
       : rho(rho)
       , rhobar(2./rho)
       , err0(err0)
-      , kappa1(1./(3.*CT))
-      , kappa2(1./(3.*CT))
-      , kappa3(1./6.)
+      , kappa1(accuracyRatio/CT)
+      , kappa2((1.-accuracyRatio)/(2.*CT))
+      , kappa3((1.-accuracyRatio)/4.)
     {}
 
     // TODO: The accuracy also depends on the kappa from K = κG and on \|u\|.
