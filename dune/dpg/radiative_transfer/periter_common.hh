@@ -45,13 +45,14 @@ struct ApproximateRHS {};
 
 template<class GV, class TraceBasis>
 class TransportSpaces {
+  static_assert(std::is_same<typename TraceBasis::GridView, GV>::value,
+                "GridViews of transport spaces don't match!");
+
   public:
   using GridView = GV;
 
   using FEBasisInterior = Functions::BernsteinDGBasis<GridView, 1>;
   using FEBasisTrace = TraceBasis;
-  static_assert(std::is_same<typename TraceBasis::GridView, GridView>::value,
-                "GridViews of transport spaces don't match!");
 
   using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
   using FEBasisEnrichedTest

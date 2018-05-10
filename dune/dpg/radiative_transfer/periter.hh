@@ -1191,10 +1191,6 @@ compute_transport_solution(
   auto innerProductEnriched =
       replaceTestSpaces(innerProduct, spaces.enrichedTestSpacePtr());
 
-
-  using LeafGridView = typename Grid::LeafGridView;
-  static_assert(std::is_same<typename Spaces::GridView, LeafGridView>::value,
-                "GridViews don't match!");
   auto systemAssembler =
       make_DPGSystemAssembler(bilinearForm,
                               innerProduct);
