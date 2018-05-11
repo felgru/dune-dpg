@@ -51,7 +51,7 @@ def readData(datafile):
         r'Bound global accuracy \|\|u - bar u_n\|\| \(a priori \+ a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)')
     dofsPattern = re.compile(r'Total number of DoFs: ([0-9]+)\n')
     innerIterationsPattern = re.compile(
-            r'Iteration ([0-9]+)\.([0-9]+) for direction [0-9]+: \n'
+            r'Iteration ([0-9]+)\.([0-9]+) for direction [0-9]+:\n'
             r'  - A posteriori estimation of \|\| \(u,trace u\) - '
                   r'\(u_fem,theta\) \|\| = [0-9]*\.?[0-9]*e?[+-]?[0-9]+?\n'
             r'  - Grid level: ([0-9]+)\n'

@@ -354,7 +354,7 @@ class TransportLogger {
       const int maxGridLevel,
       const size_t numDofs) {
     ofs << "Iteration " << n << '.' << nRefinement
-        << " for direction " << i << ": \n"
+        << " for direction " << i << ":\n"
         << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
         << aposteriori_s
         << "\n  - Grid level: "     << maxGridLevel
@@ -362,7 +362,7 @@ class TransportLogger {
         << std::endl;
 
     std::cout << "\nIteration " << n << '.' << nRefinement
-        << " for direction " << i << ": \n"
+        << " for direction " << i << ":\n"
         << "  - A posteriori estimation of || (u,trace u) - (u_fem,theta) || = "
         << aposteriori_s
         << "\n  - Grid level: " << maxGridLevel
@@ -520,9 +520,9 @@ class PeriterLogger {
     const double errorAPosteriori
         = approximationParameters.aPosterioriError(aposterioriIter);
 
-    ofs << "---------------------\n"
-           "End inner iterations \n"
-           "---------------------\n"
+    ofs << "--------------------\n"
+           "End inner iterations\n"
+           "--------------------\n"
            "Error transport solves (a posteriori estimation): "
           << aposterioriTransportGlobal                  << '\n'
         << "Accuracy kernel: "
