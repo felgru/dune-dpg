@@ -630,25 +630,17 @@ namespace ScatteringKernelApproximation {
         SVD(const Function& kernelFunction,
             double accuracyKernel)
           : maxLevel(requiredLevel(accuracyKernel,100)),
-            num_s((wltOrder+1) << maxLevel),
-            kernelSVD(num_s, num_s, Eigen::ComputeThinU | Eigen::ComputeThinV),
+            nQuadAngle(30),
+            truthMatrix(waveletKernelMatrix(kernelFunction,
+                        wltOrder, maxLevel, nQuadAngle)),
             level(maxLevel),
-            rank(num_s),
-            nQuadAngle(30) {
-          // if((1u << maxLevel) != num_s)
-          //   DUNE_THROW(MathError, "You are using " << num_s
-          //       << " directions, but only powers of 2 are supported.");
+            rows((wltOrder+1) << maxLevel),
+            rank(rows) {
           std::cout << "Accuracy kernel " << accuracyKernel
             << " with wlt order " << wltOrder
             << " requires level J = " << maxLevel
-            << " and " << num_s << " directions." << std::endl;
-
-          Eigen::MatrixXd
-            kernelMatrix(waveletKernelMatrix(kernelFunction,
-              wltOrder, maxLevel, nQuadAngle));
-          /* initialize SVD of kernel (using Eigen) */
-          kernelSVD.compute(kernelMatrix);
-
+            << " and " << rows << " directions." << std::endl;
+          assert(truthMatrix.rows()>0 && truthMatrix.cols()>0);
         }
 
         // Given a vector of u(s_i), compute (Ku)(s_i) with SVD
@@ -656,16 +648,36 @@ namespace ScatteringKernelApproximation {
           // Compute Ku with SVD up to level given by rank.
           // The result is expressed in scaling functions
           u = (Uscaling
-              * kernelSVD.singularValues().head(rank).asDiagonal()
+              * singularValues.head(rank).asDiagonal()
               * Vscaling.adjoint()
               * u).eval();
+        }
+
+        std::vector<Direction> setInitialAccuracy(double accuracy)
+        {
+          setDimensions(accuracy, 0);
+          std::vector<Direction> sVector(rows);
+          compute_sVector(sVector);
+          return sVector;
         }
 
         std::vector<Direction> setAccuracyAndInputSize(double accuracy,
                                                        size_t inputSize)
         {
           using namespace Eigen;
-          VectorXd singularValues = kernelSVD.singularValues();
+
+          size_t inLevel = level;
+          setDimensions(accuracy, inputSize);
+
+          std::vector<Direction> sVector(rows);
+          compute_sVector(sVector);
+
+          /* initialize SVD of kernel (using Eigen) */
+          const MatrixXd kernelMatrix = truthMatrix.topLeftCorner(rows, rows);
+          JacobiSVD<MatrixXd, NoQRPreconditioner> kernelSVD(kernelMatrix,
+              Eigen::ComputeThinU | Eigen::ComputeThinV);
+
+          singularValues = kernelSVD.singularValues();
           Index i = 0;
           double rank_err = singularValues(i) * singularValues(i);
           while (i < singularValues.size()
@@ -674,14 +686,6 @@ namespace ScatteringKernelApproximation {
             i += 1;
           }
           rank = (i>0)?i:1;
-
-          size_t inLevel = level;
-          level = requiredLevel(accuracy/2.,maxLevel);
-
-          std::vector<Direction> sVector((wltOrder+1) << level);
-          compute_sVector(sVector);
-          rows = sVector.size();
-          cols = inputSize;
 
           // set up restriction of SVD transformed to scaling functions
 
@@ -784,11 +788,8 @@ namespace ScatteringKernelApproximation {
           return "SVD rank: "+std::to_string(rank);
         }
 
-        std::vector<double> getSingularValues() const {
-          std::vector<double> vec(kernelSVD.singularValues().data(),
-            kernelSVD.singularValues().data()
-            +kernelSVD.singularValues().size());
-          return vec;
+        const Eigen::VectorXd& getSingularValues() const {
+          return singularValues;
         }
 
       private:
@@ -802,6 +803,12 @@ namespace ScatteringKernelApproximation {
           }
 
           return level;
+        }
+
+        void setDimensions(double accuracy, size_t inputSize) {
+          level = requiredLevel(accuracy/2., maxLevel);
+          rows = (wltOrder+1) << level;
+          cols = inputSize;
         }
 
         static Eigen::VectorXd
@@ -850,16 +857,15 @@ namespace ScatteringKernelApproximation {
         }
 
         size_t maxLevel;
-        size_t num_s;
-        Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner>
-            kernelSVD;
+        size_t nQuadAngle;
+        const Eigen::MatrixXd truthMatrix;
+        Eigen::VectorXd singularValues;
         Eigen::MatrixXd Uscaling;
         Eigen::MatrixXd Vscaling;
         size_t level; //!< level of scaling functions in output vector
         size_t rows;
         size_t cols;
         size_t rank;
-        size_t nQuadAngle;
       };
 
     template<unsigned int wltOrder>
