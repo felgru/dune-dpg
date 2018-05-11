@@ -673,7 +673,7 @@ namespace ScatteringKernelApproximation {
           compute_sVector(sVector);
 
           /* initialize SVD of kernel (using Eigen) */
-          const MatrixXd kernelMatrix = truthMatrix.topLeftCorner(rows, cols);
+          const MatrixXd kernelMatrix = truthMatrix.topLeftCorner(rows, rows);
           JacobiSVD<MatrixXd, NoQRPreconditioner> kernelSVD(kernelMatrix,
               Eigen::ComputeThinU | Eigen::ComputeThinV);
 
