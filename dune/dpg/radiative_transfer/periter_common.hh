@@ -163,7 +163,8 @@ namespace detail {
     // TODO: The accuracy also depends on the kappa from K = κG and on \|u\|.
     //       Adding a factor 1/4. to compensate for that.
     double finalScatteringAccuracy(double targetAccuracy) const {
-      return kappa1*targetAccuracy/4.;
+      const int n = maxOuterIterationsForTargetAccuracy(targetAccuracy);
+      return kappa1*std::pow(rhobar, -n)/4.;
     }
 
     double scatteringAccuracy() const {
@@ -180,6 +181,13 @@ namespace detail {
 
     double combinedAccuracy() const {
       return (rho*err0 + 2) * std::pow(rho,n);
+    }
+
+    unsigned int maxOuterIterationsForTargetAccuracy(double target) const
+    {
+      const double eps2 = target/(rho*err0+2);
+      const int n = static_cast<int>(std::ceil(std::log(eps2) / std::log(rho)));
+      return static_cast<unsigned int>(std::max(n, 0));
     }
 
     double aPosterioriError(const std::vector<double>& aposterioriIter) const {
