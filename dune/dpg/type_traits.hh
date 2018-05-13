@@ -4,6 +4,7 @@
 #define DUNE_DPG_TYPE_TRAITS_HH
 
 #include <type_traits>
+#include <dune/common/keywords.hh>
 #include <dune/common/std/type_traits.hh>
 #include <dune/common/tupleutility.hh>
 
@@ -440,7 +441,7 @@ struct uses_only_constant_coefficients<std::tuple<Terms...>>
       uses_only_constant_coefficients<typename Terms::Term>...> {};
 
 template<class Term>
-constexpr bool uses_only_constant_coefficients_v
+DUNE_INLINE_VARIABLE constexpr bool uses_only_constant_coefficients_v
     = uses_only_constant_coefficients<Term>::value;
 
 } // end namespace Dune
