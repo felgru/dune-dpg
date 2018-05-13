@@ -314,16 +314,16 @@ namespace detail {
           std::vector<FieldVector<double, 1> > subGridValues;
           boost::hana::eval_if(
               is_ContinuouslyRefinedFiniteElement<SubGridSpace>{},
-              [&](auto _)
+              [&](auto id)
               {
-                _(subGridLocalFiniteElement).localBasis()
+                id(subGridLocalFiniteElement).localBasis()
                     .evaluateFunction(subElementIndex,
                                       subGridQuadPos,
                                       subGridValues);
               },
-              [&](auto _)
+              [&](auto id)
               {
-                _(subGridLocalFiniteElement).localBasis()
+                id(subGridLocalFiniteElement).localBasis()
                     .evaluateFunction(subGridQuadPos, subGridValues);
               });
 
@@ -352,6 +352,132 @@ namespace detail {
     }
   }
 
+  template<class SubGridGlobalBasis, class HostGridGlobalBasis,
+           typename std::enable_if<
+             is_RefinedFiniteElement<SubGridGlobalBasis>::value
+           >::type* = nullptr>
+  std::vector<FieldVector<double, 1>>
+  interpolateDataOnSameCell(
+      const typename SubGridGlobalBasis::GridView::template Codim<0>::Entity& e,
+      const typename HostGridGlobalBasis::GridView::template Codim<0>::Entity& eHost,
+      const SubGridGlobalBasis& subGridGlobalBasis,
+      const HostGridGlobalBasis& hostGridGlobalBasis,
+      const std::vector<FieldVector<double, 1>>& localData)
+  {
+    auto subGridLocalView = subGridGlobalBasis.localView();
+    subGridLocalView.bind(e);
+    auto hostGridLocalView = hostGridGlobalBasis.localView();
+    hostGridLocalView.bind(eHost);
+    auto&& subGridLocalFiniteElement
+        = subGridLocalView.tree().finiteElement();
+    auto&& hostGridLocalFiniteElement
+        = hostGridLocalView.tree().finiteElement();
+    static_assert(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value,
+      "Interpolation not implemented for continuously refined"
+      " finite elements!");
+    std::vector<FieldVector<double, 1>>
+        interpolatedLocalData(subGridLocalView.size());
+
+    const auto referenceGridView =
+        subGridLocalView.tree().refinedReferenceElementGridView();
+
+    const unsigned int subElementStride =
+        (is_DGRefinedFiniteElement<SubGridGlobalBasis>::value) ?
+          subGridLocalFiniteElement.size() : 0;
+
+    std::vector<FieldVector<double, 1>> interpolatedSubGridLocalData;
+    unsigned int subElementOffset = 0;
+    unsigned int subElementIndex = 0;
+    for(const auto& subElement : elements(referenceGridView)) {
+      const auto subGeometryInReferenceElement
+          = subElement.geometry();
+      auto hostGridFunction
+        = detail::InterpolateOnSubCellLocalFunction
+            <HostGridGlobalBasis, SubGridGlobalBasis>(
+                hostGridLocalFiniteElement,
+                subGeometryInReferenceElement,
+                localData);
+      subGridLocalFiniteElement.localInterpolation()
+        .interpolate(hostGridFunction, interpolatedSubGridLocalData);
+
+      std::copy(interpolatedSubGridLocalData.cbegin(),
+                interpolatedSubGridLocalData.cend(),
+                interpolatedLocalData.begin() + subElementOffset);
+
+      if(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
+        subElementOffset += subElementStride;
+      subElementIndex++;
+    }
+    return interpolatedLocalData;
+  }
+
+  template<class SubGridGlobalBasis, class HostGridGlobalBasis,
+           typename std::enable_if<
+             !is_RefinedFiniteElement<SubGridGlobalBasis>::value
+           >::type* = nullptr>
+  std::vector<FieldVector<double, 1>>
+  interpolateDataOnSameCell(
+      const typename SubGridGlobalBasis::GridView::template Codim<0>::Entity& e,
+      const typename HostGridGlobalBasis::GridView::template Codim<0>::Entity& eHost,
+      const SubGridGlobalBasis& subGridGlobalBasis,
+      const HostGridGlobalBasis& hostGridGlobalBasis,
+      const std::vector<FieldVector<double, 1>>& localData)
+  {
+    auto subGridLocalView = subGridGlobalBasis.localView();
+    subGridLocalView.bind(e);
+    auto hostGridLocalView = hostGridGlobalBasis.localView();
+    hostGridLocalView.bind(eHost);
+    auto&& subGridLocalFiniteElement
+        = subGridLocalView.tree().finiteElement();
+    auto&& hostGridLocalFiniteElement
+        = hostGridLocalView.tree().finiteElement();
+    auto hostGridFunction
+      = detail::InterpolateOnCellLocalFunction<HostGridGlobalBasis>(
+          hostGridLocalFiniteElement,
+          localData);
+    std::vector<FieldVector<double, 1>> interpolatedLocalData;
+    subGridLocalFiniteElement.localInterpolation()
+      .interpolate(hostGridFunction, interpolatedLocalData);
+    return interpolatedLocalData;
+  }
+
+  template<class SubGridGlobalBasis, class HostGridGlobalBasis,
+           typename std::enable_if<
+             !std::is_same<changeGridView_t<HostGridGlobalBasis,
+                                      typename SubGridGlobalBasis::GridView>,
+                           SubGridGlobalBasis>::value>::type* = nullptr>
+  std::vector<FieldVector<double, 1>>
+  maybeInterpolateDataOnSameCell(
+      const typename SubGridGlobalBasis::GridView::template Codim<0>::Entity& e,
+      const typename HostGridGlobalBasis::GridView::template Codim<0>::Entity& eHost,
+      const SubGridGlobalBasis& subGridGlobalBasis,
+      const HostGridGlobalBasis& hostGridGlobalBasis,
+      const std::vector<FieldVector<double, 1>>& localData)
+  {
+    // Different global bases on host and sub grid.
+    // → Interpolate from hostGridGlobalBasis to subGridGlobalBasis.
+    //   (we assume the subGridGlobalBasis to be a superset of
+    //   the hostGridGlobalBasis on the same level.)
+    return interpolateDataOnSameCell(e, eHost,
+        subGridGlobalBasis, hostGridGlobalBasis, localData);
+  }
+
+  template<class SubGridGlobalBasis, class HostGridGlobalBasis,
+           typename std::enable_if<
+             std::is_same<changeGridView_t<HostGridGlobalBasis,
+                                      typename SubGridGlobalBasis::GridView>,
+                           SubGridGlobalBasis>::value>::type* = nullptr>
+  std::vector<FieldVector<double, 1>>
+  maybeInterpolateDataOnSameCell(
+      const typename SubGridGlobalBasis::GridView::template Codim<0>::Entity& e,
+      const typename HostGridGlobalBasis::GridView::template Codim<0>::Entity& eHost,
+      const SubGridGlobalBasis& subGridGlobalBasis,
+      const HostGridGlobalBasis& hostGridGlobalBasis,
+      const std::vector<FieldVector<double, 1>>& localData)
+  {
+    return localData;
+  }
+
   template<class SubGridGlobalBasis, class HostGridGlobalBasis>
   std::vector<FieldVector<double, 1>>
   projectCellDataToSubGrid(
@@ -369,84 +495,8 @@ namespace detail {
       std::vector<FieldVector<double, 1>> localData
           = std::exchange(cellData[0].second, {});
       cellData.clear();
-      return boost::hana::eval_if(
-        std::is_same<changeGridView_t<HostGridGlobalBasis,
-                                      typename SubGridGlobalBasis::GridView>,
-                     SubGridGlobalBasis>{},
-        [&](auto _)
-        {
-          return localData;
-        },
-        [&](auto _)
-        {
-          // Different global bases on host and sub grid.
-          // → Interpolate from hostGridGlobalBasis to subGridGlobalBasis.
-          //   (we assume the subGridGlobalBasis to be a superset of
-          //   the hostGridGlobalBasis on the same level.)
-          auto subGridLocalView = _(subGridGlobalBasis).localView();
-          subGridLocalView.bind(e);
-          auto hostGridLocalView = hostGridGlobalBasis.localView();
-          hostGridLocalView.bind(eHost);
-          auto&& subGridLocalFiniteElement
-              = subGridLocalView.tree().finiteElement();
-          auto&& hostGridLocalFiniteElement
-              = hostGridLocalView.tree().finiteElement();
-          return boost::hana::eval_if(
-            is_RefinedFiniteElement<SubGridGlobalBasis>{},
-            [&](auto _)
-            {
-              static_assert(is_DGRefinedFiniteElement<SubGridGlobalBasis>{},
-                "Interpolation not implemented for continuously refined"
-                " finite elements!");
-              std::vector<FieldVector<double, 1>>
-                  interpolatedLocalData(subGridLocalView.size());
-
-              const auto referenceGridView =
-                  _(subGridLocalView).tree().refinedReferenceElementGridView();
-
-              const unsigned int subElementStride =
-                  (is_DGRefinedFiniteElement<SubGridGlobalBasis>::value) ?
-                    subGridLocalFiniteElement.size() : 0;
-
-              std::vector<FieldVector<double, 1>> interpolatedSubGridLocalData;
-              unsigned int subElementOffset = 0;
-              unsigned int subElementIndex = 0;
-              for(const auto& subElement : elements(referenceGridView)) {
-                const auto subGeometryInReferenceElement
-                    = subElement.geometry();
-                auto hostGridFunction
-                  = detail::InterpolateOnSubCellLocalFunction
-                      <HostGridGlobalBasis, SubGridGlobalBasis>(
-                          hostGridLocalFiniteElement,
-                          subGeometryInReferenceElement,
-                          localData);
-                subGridLocalFiniteElement.localInterpolation()
-                  .interpolate(hostGridFunction, interpolatedSubGridLocalData);
-
-                std::copy(interpolatedSubGridLocalData.cbegin(),
-                          interpolatedSubGridLocalData.cend(),
-                          interpolatedLocalData.begin() + subElementOffset);
-
-                if(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
-                  subElementOffset += subElementStride;
-                subElementIndex++;
-              }
-              return interpolatedLocalData;
-            },
-            [&](auto _)
-            {
-              auto hostGridFunction
-                = detail::InterpolateOnCellLocalFunction<HostGridGlobalBasis>(
-                    _(hostGridLocalFiniteElement),
-                    localData);
-              std::vector<FieldVector<double, 1>> interpolatedLocalData;
-              subGridLocalFiniteElement.localInterpolation()
-                .interpolate(hostGridFunction, interpolatedLocalData);
-              return interpolatedLocalData;
-            }
-          );
-        }
-      );
+      return maybeInterpolateDataOnSameCell(e, eHost,
+              subGridGlobalBasis, hostGridGlobalBasis, localData);
     } else if(cellData.size() > 1) {
       // project cellData to e
       auto subGridLocalView = subGridGlobalBasis.localView();
@@ -686,11 +736,13 @@ public:
 
             boost::hana::eval_if(
               is_RefinedFiniteElement<SubGridGlobalBasis>{},
-              [&](auto _)
+              [&](auto id)
               {
+#if 0
                 static_assert(is_DGRefinedFiniteElement<SubGridGlobalBasis>{},
                   "Interpolation not implemented for continuously refined"
                   " finite elements!");
+#endif
                 // With refinement level > 1 the embeddings get a lot more
                 // complicated.
                 static_assert(levelOfFE<SubGridGlobalBasis>::value <= 1,
@@ -700,15 +752,15 @@ public:
                     childLocalData(localView.size());
 
                 const auto referenceGridView =
-                    _(localView).tree().refinedReferenceElementGridView();
+                    id(localView).tree().refinedReferenceElementGridView();
 
                 const unsigned int subElementStride =
                     (is_DGRefinedFiniteElement<SubGridGlobalBasis>::value) ?
                       localFiniteElement.size() : 0;
 
                 using SubElement
-                    = typename SubGridGlobalBasis::LocalView::Tree
-                          ::RefinementGrid::template Codim<0>::Entity;
+                    = typename decltype(referenceGridView)
+                          ::template Codim<0>::Entity;
                 using SubGeometryInReferenceElement
                     = typename SubElement::Geometry;
 
@@ -798,13 +850,13 @@ public:
                     std::make_tuple(child.seed(), std::move(childLocalData),
                                     CellData{}));
               },
-              [&](auto _)
+              [&](auto id)
               {
                 auto oldGridFunction = detail::RestoreDataToRefinedGridFunction
                   <SubGridGlobalBasis,
                    typename SubGridElement::LocalGeometry,
                    LocalData>(
-                      _(localFiniteElement),
+                      id(localFiniteElement),
                       child.geometryInFather(),
                       localData);
                 std::vector<FieldVector<double, 1>> childLocalData;
