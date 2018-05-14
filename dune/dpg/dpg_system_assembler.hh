@@ -1113,12 +1113,16 @@ defineCharacteristicFaces_impl(
         detail::computeOffset<spaceIndex>(*solutionSpaces_);
 
   auto solutionLocalView = std::get<spaceIndex>(*solutionSpaces_).localView();
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto localIndexSet = std::get<spaceIndex>(*solutionSpaces_).localIndexSet();
+#endif
 
   for(const auto& e : elements(gridView))
   {
     solutionLocalView.bind(e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     localIndexSet.bind(solutionLocalView);
+#endif
 
     const auto& localFiniteElement = solutionLocalView.tree().finiteElement();
 
@@ -1190,8 +1194,13 @@ defineCharacteristicFaces_impl(
         std::tie(left, right) = endpoints[face];
         for(auto&& dof: dofs)
         {
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+          const auto row = detail::getUnconstrainedIndex(solutionLocalView,
+                                                         dof.first)[0];
+#else
           const auto row = detail::getUnconstrainedIndex(localIndexSet,
                                                          dof.first)[0];
+#endif
           auto col = row;
           const size_t k = dofs.size()+1;
 
@@ -1199,10 +1208,18 @@ defineCharacteristicFaces_impl(
            * by an interpolation of the two endpoints of the
            * characteristic face. */
           matrix[row+globalOffset][col+globalOffset] = -1;
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+          col = detail::getUnconstrainedIndex(solutionLocalView, left)[0];
+#else
           col = detail::getUnconstrainedIndex(localIndexSet, left)[0];
+#endif
           matrix[row+globalOffset][col+globalOffset]
               = static_cast<double>(k-dof.second-1)/k;
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+          col = detail::getUnconstrainedIndex(solutionLocalView, right)[0];
+#else
           col = detail::getUnconstrainedIndex(localIndexSet, right)[0];
+#endif
           matrix[row+globalOffset][col+globalOffset]
               = static_cast<double>(dof.second+1)/k;
 
