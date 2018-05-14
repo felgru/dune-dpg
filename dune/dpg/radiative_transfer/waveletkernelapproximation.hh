@@ -1367,21 +1367,18 @@ namespace ScatteringKernelApproximation {
 
         // jy, ky = 0
         {
-          VectorXd y; double qwy;
-          std::tie(y, qwy) = computeQuadPoints(0, 0, r, maxLevel);
+          const auto [y, qwy] = computeQuadPoints(0, 0, r, maxLevel);
           VectorXd sfy = sf(y, r);
           // jx, kx = 0
           {
-            VectorXd x; double qwx;
-            std::tie(x, qwx) = computeQuadPoints(0, 0, r, maxLevel);
+            const auto [x, qwx] = computeQuadPoints(0, 0, r, maxLevel);
             VectorXd sfx = sf(x, r);
             kernelMatrix(0, 0)
                 = evalKernel(kernelFunction, x, sfx, qwx, y, sfy, qwy);
           }
           for(size_t jx = 0; jx < maxLevel; jx++) {
             for(size_t kx = 0, kx_max = 1 << jx; kx < kx_max; kx++) {
-              VectorXd x; double qwx;
-              std::tie(x, qwx) = computeQuadPoints(jx, kx, r, maxLevel);
+              const auto [x, qwx] = computeQuadPoints(jx, kx, r, maxLevel);
               VectorXd wltx = wlt(jx, kx, x, r);
               const size_t i = (1 << jx) + kx;
               kernelMatrix(i, 0)
@@ -1391,13 +1388,11 @@ namespace ScatteringKernelApproximation {
         }
         for(size_t jy = 0; jy < maxLevel; jy++) {
           for(size_t ky = 0, ky_max = 1 << jy; ky < ky_max; ky++) {
-            VectorXd y; double qwy;
-            std::tie(y, qwy) = computeQuadPoints(jy, ky, r, maxLevel);
+            const auto [y, qwy] = computeQuadPoints(jy, ky, r, maxLevel);
             VectorXd wlty = wlt(jy, ky, y, r);
             // jx, kx = 0
             {
-              VectorXd x; double qwx;
-              std::tie(x, qwx) = computeQuadPoints(0, 0, r, maxLevel);
+              const auto [x, qwx] = computeQuadPoints(0, 0, r, maxLevel);
               VectorXd sfx = sf(x, r);
               const size_t j = (1 << jy) + ky;
               kernelMatrix(0, j)
@@ -1405,8 +1400,7 @@ namespace ScatteringKernelApproximation {
             }
             for(size_t jx = 0; jx < maxLevel; jx++) {
               for(size_t kx = 0, kx_max = 1 << jx; kx < kx_max; kx++) {
-                VectorXd x; double qwx;
-                std::tie(x, qwx) = computeQuadPoints(jx, kx, r, maxLevel);
+                const auto [x, qwx] = computeQuadPoints(jx, kx, r, maxLevel);
                 VectorXd wltx = wlt(jx, kx, x, r);
                 const size_t i = (1 << jx) + kx;
                 const size_t j = (1 << jy) + ky;
