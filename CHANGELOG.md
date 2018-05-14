@@ -12,6 +12,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   are `GridViewFunction`s. You can find examples of using the new
   interfaces in our example programs and in the commit notes of
   commit [a7104b565f35c735336fda764e95d68a97258b8d](https://gitlab.dune-project.org/felix.gruber/dune-dpg/commit/a7104b565f35c735336fda764e95d68a97258b8d).
+* The radiative transfer code described in Felix’ thesis has been
+  merged. You can use the example programs periter_checkerboard and
+  periter_peaky to recreate the results in his thesis.
 * A new `ConstrainedLocalView` was added that provides the indexing
   methods of `ConstrainedLocalIndexSet` like `DefaultLocalView` now
   provides indexing methods in dune-functions 2.7.
