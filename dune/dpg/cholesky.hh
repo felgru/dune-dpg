@@ -6,6 +6,7 @@
 #include <dune/common/exceptions.hh>
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
+#include <dune/istl/io.hh>
 
 namespace Dune {
 
@@ -31,6 +32,9 @@ public:
       }
       if (sum < 1e-20)
       {
+        std::cout << "sum = " << sum << std::endl;
+        std::ofstream ofs("matrix");
+        printmatrix(ofs, matrix, "Problematic Matrix in Cholesky", "--");
         DUNE_THROW(Dune::Exception,
             "Matrix for Cholesky decomposition not positive semidefinite.");
       }

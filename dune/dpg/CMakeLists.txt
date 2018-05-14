@@ -1,4 +1,5 @@
 add_subdirectory(functions)
+add_subdirectory(radiative_transfer)
 
 add_subdirectory(test)
 

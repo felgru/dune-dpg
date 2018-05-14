@@ -30,6 +30,8 @@ libraries installed on your system:
     - Boost >= 1.63
       (Boost versions as low as 1.61, which introduced Boost::Hana, might
        work but have not been tested.)
+    - Eigen >= 3.2
+      (http://eigen.tuxfamily.org)
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
     - DUNE core libraries 2.6
       including the staging modules dune-typetree and dune-functions

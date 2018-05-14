@@ -40,6 +40,9 @@
 /* Define to the revision of dune-dpg */
 #define DUNE_DPG_VERSION_REVISION @DUNE_DPG_VERSION_REVISION@
 
+/* Define if the Eigen3 headers were found */
+#cmakedefine HAVE_EIGEN3 1
+
 /* end dune-dpg
    Everything below here will be overwritten
 */

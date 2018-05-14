@@ -6,12 +6,11 @@
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk.hh>
 
-#include <dune/dpg/functions/concepts.hh>
 #include <dune/dpg/functions/constraineddiscreteglobalbasisfunction.hh>
+#include <dune/dpg/functions/discreteglobalbasisfunction.hh>
 #include <dune/dpg/functions/io/vtkrefinedfunctionwriter.hh>
 #include <dune/dpg/type_traits.hh>
 
-#include <dune/functions/functionspacebases/concepts.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
 #include <type_traits>
@@ -20,29 +19,6 @@ namespace Dune {
 
 class FunctionPlotter
 {
-  template<class FEBasis, class Vector,
-      typename std::enable_if<models<Functions::Concept
-                              ::GlobalBasis<typename FEBasis::GridView>,
-                            FEBasis>()>::type* = nullptr>
-  static auto
-  discreteGlobalBasisFunction(const FEBasis& feBasis, const Vector& u) {
-    auto uFunction
-        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-              (feBasis, Dune::TypeTree::hybridTreePath(), u);
-    return uFunction;
-  }
-
-  template<class FEBasis, class Vector,
-      typename std::enable_if<models<Functions::Concept::
-            ConstrainedGlobalBasis<typename FEBasis::GridView>,
-          FEBasis>()>::type* = nullptr>
-  static auto
-  discreteGlobalBasisFunction(const FEBasis& feBasis, const Vector& u) {
-    auto uFunction = Dune::Functions
-        ::makeConstrainedDiscreteGlobalBasisFunction<double>(feBasis, u);
-    return uFunction;
-  }
-
 public:
   FunctionPlotter() = delete;
 
