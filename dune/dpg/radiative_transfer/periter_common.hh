@@ -113,8 +113,7 @@ class TransportSpaces {
   EnrichedTestSpacePtr enrichedTestSpace_;
 };
 
-namespace detail {
-  class ApproximationParameters
+  class PeriterApproximationParameters
   {
     unsigned int n = 0;
     // η_n:
@@ -128,8 +127,8 @@ namespace detail {
     const double kappa2;
     const double kappa3;
 
-    friend std::ostream& operator<<(std::ostream& os,
-                                    const ApproximationParameters& params);
+    friend std::ostream& operator<<
+        (std::ostream& os, const PeriterApproximationParameters& params);
 
     public:
 
@@ -138,8 +137,8 @@ namespace detail {
      *        more accuracy for the transport solver and smaller values
      *        mean more accuracy for the kernel approximation
      */
-    ApproximationParameters(double accuracyRatio,
-                            double rho, double CT, double err0, FeRHS)
+    PeriterApproximationParameters(double accuracyRatio,
+                                   double rho, double CT, double err0, FeRHS)
       : rho(rho)
       , rhobar(2./rho)
       , CT(CT)
@@ -152,8 +151,9 @@ namespace detail {
         throw std::domain_error("accuracyRatio needs to be in (0,1).");
     }
 
-    ApproximationParameters(double accuracyRatio,
-                            double rho, double CT, double err0, ApproximateRHS)
+    PeriterApproximationParameters(double accuracyRatio,
+                                   double rho, double CT, double err0,
+                                   ApproximateRHS)
       : rho(rho)
       , rhobar(2./rho)
       , CT(CT)
@@ -168,6 +168,10 @@ namespace detail {
     double finalScatteringAccuracy(double targetAccuracy) const {
       const int n = maxOuterIterationsForTargetAccuracy(targetAccuracy);
       return kappa1*std::pow(rhobar, -n)/4.;
+    }
+
+    double aPrioriAccuracy() const {
+      return err0;
     }
 
     double scatteringAccuracy() const {
@@ -218,7 +222,7 @@ namespace detail {
   };
 
   std::ostream& operator<<(std::ostream& os,
-                           const ApproximationParameters& params)
+                           const PeriterApproximationParameters& params)
   {
     os << "rho = "    << params.rho    << '\n'
        << "rhobar = " << params.rhobar << '\n'
@@ -228,7 +232,6 @@ namespace detail {
        << "CT = "     << params.CT     << '\n';
     return os;
   }
-} // end namespace detail
 } // end namespace Dune
 
 #endif // DUNE_DPG_RADIATIVE_TRANSFER_PERITER_COMMON_HH

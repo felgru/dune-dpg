@@ -183,6 +183,8 @@ int main(int argc, char** argv)
       { return [](const Domain& x){ return 1.; }; };
 #endif
 
+  using RHSApproximation = FeRHS;
+
 #if PERITER_CHECKERBOARD_SIGMA
   const auto sigma = [](const auto gridView)
       {
@@ -252,12 +254,24 @@ int main(int argc, char** argv)
   // using Proposition 2.11 from our paper [DGM]
   const double cB = sigmaMin - 1.;
 
+  ///////////////////////////////////
+  // Parameters for adaptivity
+  ///////////////////////////////////
+
+  // TODO: estimate norm of rhs f in V'
+  // Remark: Here, V=H_{0,+}(D\times S)
+  const double fnorm = 1;
+  const double err0 = fnorm / cB;
+
+  PeriterApproximationParameters approximationParameters(0.5, rho, CT, err0,
+                                                         RHSApproximation{});
+
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
-          FeRHS>()
+          RHSApproximation>()
       .solve(*grid, f, g, homogeneous_inflow_boundary, sigma,
              HenyeyGreensteinScattering(gamma),
-             rho, CT, cB, targetAccuracy, N, maxNumberOfInnerIterations,
-             foldername, plotFlags);
+             approximationParameters, targetAccuracy, N,
+             maxNumberOfInnerIterations, foldername, plotFlags);
 
   return 0;
 }
