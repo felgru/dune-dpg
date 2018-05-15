@@ -121,6 +121,7 @@ namespace detail {
     double eta_ = 1;
     const double rho;
     const double rhobar;
+    const double CT;
     const double err0;
     // CT*kappa1 + CT*kappa2 + 2*kappa3 = 1.
     const double kappa1;
@@ -141,6 +142,7 @@ namespace detail {
                             double rho, double CT, double err0, FeRHS)
       : rho(rho)
       , rhobar(2./rho)
+      , CT(CT)
       , err0(err0)
       , kappa1(accuracyRatio/CT)
       , kappa2(0.)
@@ -154,6 +156,7 @@ namespace detail {
                             double rho, double CT, double err0, ApproximateRHS)
       : rho(rho)
       , rhobar(2./rho)
+      , CT(CT)
       , err0(err0)
       , kappa1(accuracyRatio/CT)
       , kappa2((1.-accuracyRatio)/(2.*CT))
@@ -190,6 +193,12 @@ namespace detail {
       return static_cast<unsigned int>(std::max(n, 0));
     }
 
+    double aPosterioriErrorInLastOuterIteration(
+        double aposterioriTransportGlobal) const
+    {
+      return aposterioriTransportGlobal + CT * scatteringAccuracy();
+    }
+
     double aPosterioriError(const std::vector<double>& aposterioriIter) const {
       double errorAPosteriori = 0.;
       for(size_t j=0; j < n+1; j++) {
@@ -215,7 +224,8 @@ namespace detail {
        << "rhobar = " << params.rhobar << '\n'
        << "kappa1 = " << params.kappa1 << '\n'
        << "kappa2 = " << params.kappa2 << '\n'
-       << "kappa3 = " << params.kappa3 << '\n';
+       << "kappa3 = " << params.kappa3 << '\n'
+       << "CT = "     << params.CT     << '\n';
     return os;
   }
 } // end namespace detail

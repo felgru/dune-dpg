@@ -242,8 +242,7 @@ class PeriterLogger {
       const double targetAccuracy,
       const Kernel& kernel,
       const KernelApproximation& kernelApproximation,
-      const detail::ApproximationParameters& approximationParameters,
-      const double CT)
+      const detail::ApproximationParameters& approximationParameters)
   {
     ofs << "uniform PERITER algorithm\n"
         << "=================\n"
@@ -258,8 +257,7 @@ class PeriterLogger {
         << "Maximum number of directions: "
         << kernelApproximation.maxNumS()     << '\n'
         << "Periter parameters:" << '\n'
-        << approximationParameters
-        << "CT = "     << CT     << '\n';
+        << approximationParameters;
   }
 
   void logOuterIterationHeader(const unsigned int n)
@@ -691,7 +689,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       approximationParameters.finalScatteringAccuracy(targetAccuracy));
 
   logger.logPeriterOverview(targetAccuracy, kernel,
-      kernelApproximation, approximationParameters, CT);
+      kernelApproximation, approximationParameters);
 
   // As the solution u we use for the initial scattering is 0, and the
   // formula for the accuracy contains a 1/\|u\|, we set the initial
@@ -800,8 +798,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     plotter.plotSolutions(spaces, x, n, numS);
 
     // A posteriori estimation of error ||bar u_n -T^{-1}K bar u_{n-1}||
-    aposterioriIter[n] = aposterioriTransportGlobal
-                       + CT * approximationParameters.scatteringAccuracy();
+    aposterioriIter[n] = approximationParameters
+        .aPosterioriErrorInLastOuterIteration(aposterioriTransportGlobal);
 
     // Error bound for || u - \bar u_n || based on a priori errors
     accuracy = approximationParameters.combinedAccuracy();
