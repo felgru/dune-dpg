@@ -41,13 +41,15 @@ using namespace Dune;
 
 void printHelp(const char* name) {
   std::cerr << "Usage: " << name
-            << " [-p] [-s] [-n <n>] [-o <dir>] [-k <k>]"
+            << " [-psri] [-n <n>] [-o <dir>] [-k <k>]"
             << " <target accuracy>"
             << " <gamma>"
             << " <# of iterations>"
             << " <size of grid>\n"
             << " -p: plot solutions\n"
             << " -s: plot scattering integral\n"
+            << " -r: plot right hand side\n"
+            << " -i: plot integrated solution\n"
             << " -n <n>: set maximal number of inner iterations to <n>\n"
             << " -o <dir>: set output directory to <dir>, default is "
             << " -k <k>: set ratio between kernel and transport accuracy"
@@ -110,10 +112,10 @@ int main(int argc, char** argv)
   }
 
   const unsigned int wltOrder = 2;
-  const double targetAccuracy = atof(argv[optind]);
-  const double gamma = atof(argv[optind+1]);
-  const unsigned int N = atoi(argv[optind+2]);
-  const unsigned int sizeGrid = atoi(argv[optind+3]);
+  const double targetAccuracy = std::atof(argv[optind]);
+  const double gamma = std::atof(argv[optind+1]);
+  const unsigned int N = std::atoi(argv[optind+2]);
+  const unsigned int sizeGrid = std::atoi(argv[optind+3]);
 #if PERITER_PEAKY_BV
   checkSizeGrid(sizeGrid, 8);
 #endif
