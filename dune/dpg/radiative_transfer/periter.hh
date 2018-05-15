@@ -98,9 +98,7 @@ class Periter {
    *            checks if g is 0 on the inflow boundary
    * \param sigma   absorption coefficient
    * \param kernel  the scattering kernel, e.g. a Henyey–Greenstein kernel
-   * \param rho  the contraction parameter ρ
-   * \param CT  an upper bound for the norm of the transport solver
-   * \param cB  the inf-sup constant of the operator B = T - K
+   * \param approximationParameters
    * \param targetAccuracy  periter solves up to this accuracy
    * \param maxNumberOfIterations  ... or up to the given number of iterations
    *                               (whatever comes first)
@@ -119,9 +117,7 @@ class Periter {
              const HB& is_inflow_boundary_homogeneous,
              const Sigma sigma,
              const Kernel& kernel,
-             double rho,
-             double CT,
-             double cB,
+             PeriterApproximationParameters& approximationParameters,
              double targetAccuracy,
              unsigned int maxNumberOfIterations,
              unsigned int maxNumberOfInnerIterations,
@@ -419,8 +415,7 @@ class PeriterLogger {
       const double targetAccuracy,
       const Kernel& kernel,
       const KernelApproximation& kernelApproximation,
-      const detail::ApproximationParameters& approximationParameters,
-      const double CT)
+      const PeriterApproximationParameters& approximationParameters)
   {
     ofs << "PERITER algorithm\n"
         << "=================\n"
@@ -435,8 +430,7 @@ class PeriterLogger {
         << "Maximum number of directions: "
         << kernelApproximation.maxNumS()     << '\n'
         << "Periter parameters:" << '\n'
-        << approximationParameters
-        << "CT = "     << CT     << '\n';
+        << approximationParameters;
   }
 
   void logOuterIterationHeader(const unsigned int n)
@@ -448,7 +442,7 @@ class PeriterLogger {
 
   template<class KernelApproximation>
   void logKernelApproximationInfo(
-      const detail::ApproximationParameters& approximationParameters,
+      const PeriterApproximationParameters& approximationParameters,
       const KernelApproximation& kernelApproximation,
       const double accuKernel,
       const std::vector<FieldVector<double, 2>>& sVector,
@@ -503,7 +497,7 @@ class PeriterLogger {
   void logInnerIterationStats(
       const std::vector<VectorType>& x,
       const double aposterioriTransportGlobal,
-      const detail::ApproximationParameters& approximationParameters,
+      const PeriterApproximationParameters& approximationParameters,
       const std::vector<double>& aposterioriIter,
       const double accuracy,
       const unsigned int n)
@@ -742,9 +736,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
            const HB& is_inflow_boundary_homogeneous,
            const Sigma sigma,
            const Kernel& kernel,
-           double rho,
-           double CT,
-           double cB,
+           PeriterApproximationParameters& approximationParameters,
            double targetAccuracy,
            unsigned int maxNumberOfIterations,
            unsigned int maxNumberOfInnerIterations,
@@ -769,18 +761,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       PassKey<Periter<ScatteringKernelApproximation, RHSApproximation>>{});
   PeriterPlotter plotter(plotFlags, outputfolder);
 
-  ///////////////////////////////////
-  // Parameters for adaptivity
-  ///////////////////////////////////
-
-  // TODO: estimate norm of rhs f in V'
-  // Remark: Here, V=H_{0,+}(D\times S)
-  const double fnorm = 1;
-  const double err0 = fnorm / cB;
-
-  detail::ApproximationParameters approximationParameters(0.5, rho, CT, err0,
-                                                          RHSApproximation{});
-
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
   ////////////////////////////////////////////
@@ -789,7 +769,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       approximationParameters.finalScatteringAccuracy(targetAccuracy));
 
   logger.logPeriterOverview(targetAccuracy, kernel,
-      kernelApproximation, approximationParameters, CT);
+      kernelApproximation, approximationParameters);
 
   // As the solution u we use for the initial scattering is 0, and the
   // formula for the accuracy contains a 1/\|u\|, we set the initial
@@ -830,7 +810,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
 
-  double accuracy = err0;
+  double accuracy = approximationParameters.aPrioriAccuracy();
 
   std::vector<double> aposterioriIter(maxNumberOfIterations,0.);
 
@@ -918,8 +898,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     }
 
     // A posteriori estimation of error ||bar u_n -T^{-1}K bar u_{n-1}||
-    aposterioriIter[n] = aposterioriTransportGlobal
-                       + CT * approximationParameters.scatteringAccuracy();
+    aposterioriIter[n] = approximationParameters
+        .aPosterioriErrorInLastOuterIteration(aposterioriTransportGlobal);
 
     // Error bound for || u - \bar u_n || based on a priori errors
     accuracy = approximationParameters.combinedAccuracy();

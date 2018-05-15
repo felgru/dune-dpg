@@ -11,7 +11,7 @@
 #endif
 #include <algorithm>
 #include <chrono>
-#include <cstdlib> // for std::exit() and std::system()
+#include <cstdlib>
 #include <ctime>
 #include <fstream>
 #include <iostream>
@@ -41,7 +41,7 @@ using namespace Dune;
 
 void printHelp(const char* name) {
   std::cerr << "Usage: " << name
-            << " [-p] [-s] [-n <n>] [-o <dir>]"
+            << " [-p] [-s] [-n <n>] [-o <dir>] [-k <k>]"
             << " <target accuracy>"
             << " <gamma>"
             << " <# of iterations>"
@@ -50,6 +50,8 @@ void printHelp(const char* name) {
             << " -s: plot scattering integral\n"
             << " -n <n>: set maximal number of inner iterations to <n>\n"
             << " -o <dir>: set output directory to <dir>, default is "
+            << " -k <k>: set ratio between kernel and transport accuracy"
+               " to <k>\n"
                "\"../results/\"\n";
   std::exit(0);
 }
@@ -83,18 +85,20 @@ int main(int argc, char** argv)
   PeriterPlotFlags plotFlags = PeriterPlotFlags::doNotPlot;
   std::string basedir = "../results/";
   unsigned int maxNumberOfInnerIterations = 64;
+  double accuracyRatio = 0.5;
 
   {
     int opt;
-    while ((opt = getopt(argc,argv,"n:o:psrih")) != EOF)
+    while ((opt = getopt(argc,argv,"n:o:k:psrih")) != EOF)
       switch(opt)
       {
         case 'p': plotFlags |= PeriterPlotFlags::plotOuterIterations; break;
         case 's': plotFlags |= PeriterPlotFlags::plotScattering; break;
         case 'r': plotFlags |= PeriterPlotFlags::plotRhs; break;
         case 'i': plotFlags |= PeriterPlotFlags::plotIntegratedSolution; break;
-        case 'n': maxNumberOfInnerIterations = atoi(optarg); break;
+        case 'n': maxNumberOfInnerIterations = std::atoi(optarg); break;
         case 'o': basedir = optarg; break;
+        case 'k': accuracyRatio = std::atof(optarg); break;
         default:
         case '?':
         case 'h':
@@ -183,6 +187,8 @@ int main(int argc, char** argv)
       { return [](const Domain& x){ return 1.; }; };
 #endif
 
+  using RHSApproximation = FeRHS;
+
 #if PERITER_CHECKERBOARD_SIGMA
   const auto sigma = [](const auto gridView)
       {
@@ -252,12 +258,25 @@ int main(int argc, char** argv)
   // using Proposition 2.11 from our paper [DGM]
   const double cB = sigmaMin - 1.;
 
+  ///////////////////////////////////
+  // Parameters for adaptivity
+  ///////////////////////////////////
+
+  // TODO: estimate norm of rhs f in V'
+  // Remark: Here, V=H_{0,+}(D\times S)
+  const double fnorm = 1;
+  const double err0 = fnorm / cB;
+
+  PeriterApproximationParameters approximationParameters(accuracyRatio,
+                                                         rho, CT, err0,
+                                                         RHSApproximation{});
+
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
-          FeRHS>()
+          RHSApproximation>()
       .solve(*grid, f, g, homogeneous_inflow_boundary, sigma,
              HenyeyGreensteinScattering(gamma),
-             rho, CT, cB, targetAccuracy, N, maxNumberOfInnerIterations,
-             foldername, plotFlags);
+             approximationParameters, targetAccuracy, N,
+             maxNumberOfInnerIterations, foldername, plotFlags);
 
   return 0;
 }

@@ -113,22 +113,22 @@ class TransportSpaces {
   EnrichedTestSpacePtr enrichedTestSpace_;
 };
 
-namespace detail {
-  class ApproximationParameters
+  class PeriterApproximationParameters
   {
     unsigned int n = 0;
     // η_n:
     double eta_ = 1;
     const double rho;
     const double rhobar;
+    const double CT;
     const double err0;
     // CT*kappa1 + CT*kappa2 + 2*kappa3 = 1.
     const double kappa1;
     const double kappa2;
     const double kappa3;
 
-    friend std::ostream& operator<<(std::ostream& os,
-                                    const ApproximationParameters& params);
+    friend std::ostream& operator<<
+        (std::ostream& os, const PeriterApproximationParameters& params);
 
     public:
 
@@ -137,10 +137,11 @@ namespace detail {
      *        more accuracy for the transport solver and smaller values
      *        mean more accuracy for the kernel approximation
      */
-    ApproximationParameters(double accuracyRatio,
-                            double rho, double CT, double err0, FeRHS)
+    PeriterApproximationParameters(double accuracyRatio,
+                                   double rho, double CT, double err0, FeRHS)
       : rho(rho)
       , rhobar(2./rho)
+      , CT(CT)
       , err0(err0)
       , kappa1(accuracyRatio/CT)
       , kappa2(0.)
@@ -150,10 +151,12 @@ namespace detail {
         throw std::domain_error("accuracyRatio needs to be in (0,1).");
     }
 
-    ApproximationParameters(double accuracyRatio,
-                            double rho, double CT, double err0, ApproximateRHS)
+    PeriterApproximationParameters(double accuracyRatio,
+                                   double rho, double CT, double err0,
+                                   ApproximateRHS)
       : rho(rho)
       , rhobar(2./rho)
+      , CT(CT)
       , err0(err0)
       , kappa1(accuracyRatio/CT)
       , kappa2((1.-accuracyRatio)/(2.*CT))
@@ -165,6 +168,10 @@ namespace detail {
     double finalScatteringAccuracy(double targetAccuracy) const {
       const int n = maxOuterIterationsForTargetAccuracy(targetAccuracy);
       return kappa1*std::pow(rhobar, -n)/4.;
+    }
+
+    double aPrioriAccuracy() const {
+      return err0;
     }
 
     double scatteringAccuracy() const {
@@ -190,6 +197,12 @@ namespace detail {
       return static_cast<unsigned int>(std::max(n, 0));
     }
 
+    double aPosterioriErrorInLastOuterIteration(
+        double aposterioriTransportGlobal) const
+    {
+      return aposterioriTransportGlobal + CT * scatteringAccuracy();
+    }
+
     double aPosterioriError(const std::vector<double>& aposterioriIter) const {
       double errorAPosteriori = 0.;
       for(size_t j=0; j < n+1; j++) {
@@ -209,16 +222,16 @@ namespace detail {
   };
 
   std::ostream& operator<<(std::ostream& os,
-                           const ApproximationParameters& params)
+                           const PeriterApproximationParameters& params)
   {
     os << "rho = "    << params.rho    << '\n'
        << "rhobar = " << params.rhobar << '\n'
        << "kappa1 = " << params.kappa1 << '\n'
        << "kappa2 = " << params.kappa2 << '\n'
-       << "kappa3 = " << params.kappa3 << '\n';
+       << "kappa3 = " << params.kappa3 << '\n'
+       << "CT = "     << params.CT     << '\n';
     return os;
   }
-} // end namespace detail
 } // end namespace Dune
 
 #endif // DUNE_DPG_RADIATIVE_TRANSFER_PERITER_COMMON_HH
