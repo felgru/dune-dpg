@@ -52,9 +52,9 @@ void printHelp(const char* name) {
             << " -i: plot integrated solution\n"
             << " -n <n>: set maximal number of inner iterations to <n>\n"
             << " -o <dir>: set output directory to <dir>, default is "
+               "\"../results/\"\n";
             << " -k <k>: set ratio between kernel and transport accuracy"
                " to <k>\n"
-               "\"../results/\"\n";
   std::exit(0);
 }
 
