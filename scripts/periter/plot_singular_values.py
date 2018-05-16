@@ -1,20 +1,25 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
+import argparse
 import fileinput
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import re
 import sys
 
-if len(sys.argv) < 2:
-    outname = 'singular_values.pdf'
-else:
-    outname = sys.argv[1]
+aparser = argparse.ArgumentParser(description='Plot singular values')
+aparser.add_argument('-o', dest='outfile', default='singular_values.pdf')
+aparser.add_argument('--presentation', dest='presentation',
+                     action='store_true', default=False,
+                     help='generate plot for presentations')
+args, unk = aparser.parse_known_args()
+
 henyeyGreenstein = re.compile(
             r'Henyey Greenstein kernel with gamma = ([0-9\.e\-\+]+)')
 singularValues = list()
 labels = list()
-for line in fileinput.input(sys.argv[2:]):
+for line in fileinput.input(unk):
     if fileinput.isfirstline():
         singularValues.append(list())
         m = henyeyGreenstein.search(line)
@@ -32,12 +37,18 @@ colors = ['#0054AF', # RWTH Blau
           '#E30066', # RWTH Magenta
           '#BDCD00', # RWTH Maigrün
          ]
+if args.presentation:
+    mpl.rc('font',**{'family':'serif','size':20})
+    linewidth = 2.0
+else:
+    linewidth = 1.0
 if len(singularValues) == 1:
-    plt.plot(singularValues[0], linewidth=2.0, color=colors[0])
+    plt.plot(singularValues[0], linewidth=linewidth, color=colors[0])
 else:
     for c, (sv, l) in enumerate(zip(singularValues, labels)):
-        plt.plot(sv, label=l, color=colors[c % len(colors)])
+        plt.plot(sv, label=l, linewidth=linewidth,
+                 color=colors[c % len(colors)])
     plt.legend(loc='right')
 plt.xlim(0, numSingularValues-1)
 plt.yscale('log')
-plt.savefig(outname)
+plt.savefig(args.outfile)
