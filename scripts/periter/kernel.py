@@ -62,6 +62,8 @@ aparser.add_argument('--ngrid', dest='ngrid',
 aparser.add_argument('gamma', action='store', type=float,
                      help='parameter of the Henyey–Greenstein kernel')
 args = aparser.parse_args()
+if args.presentation:
+    args.plot_title = False
 ngrid = args.ngrid # Size mesh
 J = args.level
 r = np.pi
