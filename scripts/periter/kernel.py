@@ -51,6 +51,9 @@ aparser.add_argument('--no-title', dest='plot_title',
 aparser.add_argument('--plot-matrices', dest='plot_matrices',
                      action='store_true', default=False,
                      help='plot matrix representations of the kernel')
+aparser.add_argument('--presentation', dest='presentation',
+                     action='store_true', default=False,
+                     help='generate plot for presentations')
 aparser.add_argument('--level', action='store', type=int, default=7,
                      help='maximal wavelet level')
 aparser.add_argument('--ngrid', dest='ngrid',
@@ -64,6 +67,8 @@ J = args.level
 r = np.pi
 g = args.gamma # forward peak coef
 
+if args.presentation:
+    mpl.rc('font',**{'family':'serif','size':20})
 mpl.rc('text', usetex=True)
 
 if args.plot_matrices:
@@ -207,15 +212,18 @@ if args.plot_matrices:
 # ============
 # Plot kernel
 # ============
-# We are using automatic selection of contour levels;
-# this is usually not such a good idea, because they don't
-# occur on nice boundaries, but we do it here for purposes
-# of illustration.
 x=np.linspace(-r,r,num=ngrid,endpoint=True)
 # plot phi as a function of θ-θ'
 PHI=phi(x, 0, g)
-plt.plot(x, PHI)
-plt.xlim(-r, r)
+if args.presentation:
+    # plot in RWTH blue
+    plt.plot(x, PHI, linewidth=2.0, color='#0054AF')
+    plt.xlim(-r, r)
+    plt.ylim(1e-3, 1e1)
+    plt.yscale('log')
+else:
+    plt.plot(x, PHI)
+    plt.xlim(-r, r)
 
 if(args.plot_title):
     titleStr=r"$\phi(\theta,0)=(1-\gamma^2)/" \
