@@ -853,12 +853,16 @@ applyWeakBoundaryCondition
         detail::computeOffset<spaceIndex>(*solutionSpaces_);
 
   auto localView     = std::get<spaceIndex>(*solutionSpaces_).localView();
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
   auto localIndexSet = std::get<spaceIndex>(*solutionSpaces_).localIndexSet();
+#endif
 
   for(const auto& e : elements(gridView))
   {
     localView.bind(e);
+#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     localIndexSet.bind(localView);
+#endif
 
     const auto& localFiniteElement = localView.tree().finiteElement();
 
@@ -919,8 +923,13 @@ applyWeakBoundaryCondition
       }
     }
     addToGlobalMatrix(
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+        localView,
+        localView,
+#else
         localIndexSet,
         localIndexSet,
+#endif
         [&elementMatrix](size_t i, size_t j) -> auto {
           return elementMatrix[i][j];
         },
