@@ -54,6 +54,8 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   of dune-subgrid which implements all required methods in the SubGrid class.
 * The version of `make_LinearFunctionalTerm` with domainOfIntegration
   template argument, that has been deprecated in 0.3, has been removed.
+* The old `ErrorTools::DoerflerMarking` function which could choose between
+  two residuals and which was deprecated in 0.3 has been removed.
 
 ## 0.3 - 2018-04-04
 ### Added

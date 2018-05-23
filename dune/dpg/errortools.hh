@@ -101,21 +101,6 @@ namespace Dune {
                            double ,
                            std::vector<std::tuple<EntitySeed, double>>&& );
 
-    template <class Grid, class BilinearForm, class InnerProduct,
-              class APosterioriInnerProduct, class LinearForm,
-              class RhsFunction, class VectorType>
-    static
-    double DoerflerMarking(Grid& ,
-                           double ,
-                           BilinearForm& ,
-                           InnerProduct& ,
-                           APosterioriInnerProduct& ,
-                           LinearForm& ,
-                           const RhsFunction& ,
-                           const VectorType& ,
-                           const VectorType& ,
-                           double );
-
     template <class BilinearForm, class InnerProduct, class VectorType>
     static
     std::vector<std::tuple<typename
@@ -1029,65 +1014,6 @@ namespace Dune {
       errorEstimates.emplace_back(e.seed(), elementError);
     }
     return errorEstimates;
-  }
-
-/**
- * \brief Mark elements for refinement according to Dörfler's strategy
- *
- * This means, given a ratio \f$\theta \in (0,1]\f$, the set
- * \f$\mathcal M \subset \Omega_h\f$ of marked elements satisfies
- * \f[\mathrm{err}(u_h, \mathcal M)
-     \geq \mathrm{err}(u_h, \Omega_h).\f]
- *
- * \todo document \p aPosterioriInnerProduct, \p linearForm and \p splitRatio
- *
- * \param grid
- * \param ratio  the marking ratio \f$\theta \in (0,1]\f$
- * \param bilinearForm
- * \param innerProduct
- * \param aPosterioriInnerProduct
- * \param linearForm
- * \param f
- * \param solution  FE solution
- * \param rhs  Rhs of the problem in enriched test space
- * \param splitRatio
- *
- * \return estimate for the squared global a posteriori error
- */
-  template <class Grid, class BilinearForm, class InnerProduct,
-            class APosterioriInnerProduct, class LinearForm,
-            class RhsFunction, class VectorType>
-  [[deprecated("use ErrorTools::DoerflerMarking(grid, ratio, "
-               "ErrorTools::squaredCellwiseResidual(...)) instead")]]
-  double ErrorTools::DoerflerMarking(
-      Grid& grid,
-      double ratio,
-      BilinearForm& bilinearForm,
-      InnerProduct& innerProduct,
-      APosterioriInnerProduct& aPosterioriInnerProduct,
-      LinearForm& linearForm,
-      const RhsFunction& f,
-      const VectorType& solution,
-      const VectorType& rhs,
-      double splitRatio)
-  {
-    using GridView
-        = typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>
-                        ::type::GridView;
-    static_assert(std::is_same<typename GridView::Grid, Grid>::value,
-        "Type mismatch between Grid and Grid of BilinearForm!");
-
-    return DoerflerMarking(grid, ratio,
-        squaredCellwiseResidual(
-            bilinearForm,
-            innerProduct,
-            aPosterioriInnerProduct,
-            linearForm,
-            f,
-            solution,
-            rhs,
-            splitRatio)
-        );
   }
 
 } // end namespace Dune
