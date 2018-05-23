@@ -9,6 +9,7 @@
 #include "assemble_types.hh"
 #include "type_traits.hh"
 #include "quadrature.hh"
+#include "quadratureorder.hh"
 #include "localcoefficients.hh"
 #include "localevaluation.hh"
 #include "locallinearterm_impl.hh"
@@ -150,9 +151,14 @@ void LinearIntegralTerm<integrationType,
 
   using Space = typename LocalView::GlobalBasis;
 
-  /* TODO: We might need a higher order when factor is a function. */
   /* TODO: Assuming β const. */
-  const auto quadratureOrder = localView.tree().finiteElement().localBasis().order();
+  static_assert(hasRequiredQuadratureOrder
+                <typename LocalCoefficients::LocalFactor>::value,
+                "There is no requiredQuadratureOrder specialization"
+                " for the LocalFactor.");
+  const auto quadratureOrder
+    = localView.tree().finiteElement().localBasis().order()
+    + requiredQuadratureOrder<typename LocalCoefficients::LocalFactor>::value;
   if(domainOfIntegration == DomainOfIntegration::interior) {
     detail::GetLocalLinearTermVector<integrationType, Space>
                ::getLocalVector(localView,

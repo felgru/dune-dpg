@@ -12,6 +12,7 @@
 #include "localcoefficients.hh"
 #include "localevaluation.hh"
 #include "quadrature.hh"
+#include "quadratureorder.hh"
 #include "traveldistancenorm.hh"
 #include "type_traits.hh"
 
@@ -282,9 +283,13 @@ void IntegralTerm<type, domain_of_integration, LocalCoefficients>
   const auto lhsOrder = lhsLocalView.tree().finiteElement().localBasis().order();
   const auto rhsOrder = rhsLocalView.tree().finiteElement().localBasis().order();
 
-  /* TODO: We might need a higher order when factor is a function. */
   /* TODO: Assuming β const. */
-  const auto quadratureOrder = lhsOrder + rhsOrder;
+  static_assert(hasRequiredQuadratureOrder
+                <typename LocalCoefficients::LocalFactor>::value,
+                "There is no requiredQuadratureOrder specialization"
+                " for the LocalFactor.");
+  const auto quadratureOrder = lhsOrder + rhsOrder
+    + requiredQuadratureOrder<typename LocalCoefficients::LocalFactor>::value;
 
 
   using namespace Dune::Hybrid;
