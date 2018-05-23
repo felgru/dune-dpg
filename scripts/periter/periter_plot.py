@@ -127,7 +127,7 @@ def plot_convergence(data,
          ylim=None,
          xscale='linear',
          yscale='log',
-         legendlocation='upper center',
+         legendlocation='lower left',
          colorPalette=[
             '#0063cc', '#80bdff',  # blue
             '#33cc33', '#99e699',  # green
