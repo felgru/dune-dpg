@@ -122,7 +122,7 @@ def plot_convergence(data,
          outputfile='periter_error.pdf',
          title=None,
          xlabel='Outer Iteration',
-         ylabel=('Error','# DoFs'),
+         ylabel='Error',
          xlim=None,
          ylim=None,
          xscale='linear',
@@ -137,14 +137,11 @@ def plot_convergence(data,
             ],
          simple_plot=False):
     fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
     if title != None:
         plt.title(title)
     ax1.set_xlabel(xlabel)
-    ax1.set_ylabel(ylabel[0])
-    ax2.set_ylabel(ylabel[1])
+    ax1.set_ylabel(ylabel)
     ax1.ticklabel_format(style='sci', scilimits=(0,0))
-    ax2.ticklabel_format(style='sci', scilimits=(0,0))
 
     rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(data['globalAccIterationApost']))]
     errIdealIteration = []
@@ -210,32 +207,21 @@ def plot_convergence(data,
                  marker='o', markersize=4.0,
                  color=colorPalette[6])
 
-    line2 = ax2.plot(iterationIndices, data['dofs'], label='# of DoFs')
-    # plot in RWTH purple
-    plt.setp(line2, linewidth=2.0,
-             marker='o', markersize=4.0,
-             color=colorPalette[8])
-
     ax1.set_xscale(xscale)
-    ax2.set_xscale(xscale)
     ax1.set_yscale(yscale)
-    ax2.set_yscale(yscale)
     # Shrink current axis by 20%
     if not simple_plot:
         box1 = ax1.get_position()
         ax1.set_position([box1.x0, box1.y0,
             box1.width, box1.height * 0.6])
-        ax2.set_position([box1.x0, box1.y0,
-            box1.width, box1.height * 0.6])
     if legendlocation != None:
         lines1, labels1 = ax1.get_legend_handles_labels()
-        lines2, labels2 = ax2.get_legend_handles_labels()
         if simple_plot:
-            plt.legend(lines1 + lines2, labels1 + labels2,
+            plt.legend(lines1, labels1,
                        loc=legendlocation, shadow=True,
                        ncol=1, fancybox=True,fontsize=12)
         else:
-            plt.legend(lines1 + lines2, labels1 + labels2,
+            plt.legend(lines1, labels1,
                        loc=legendlocation, shadow=True,
                        bbox_to_anchor=(0.5, 1.9),
                        ncol=1, fancybox=True, fontsize=12)
@@ -252,7 +238,7 @@ def plot_directions(data,
          outputfile='periter_error.pdf',
          title=None,
          xlabel='Outer Iteration',
-         ylabel=(''),
+         ylabel='',
          xlim=None,
          ylim=None,
          xscale='linear',
