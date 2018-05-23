@@ -122,12 +122,12 @@ def plot_convergence(data,
          outputfile='periter_error.pdf',
          title=None,
          xlabel='Outer Iteration',
-         ylabel=('Error','# DoFs'),
+         ylabel='Error',
          xlim=None,
          ylim=None,
          xscale='linear',
          yscale='log',
-         legendlocation='upper center',
+         legendlocation='lower left',
          colorPalette=[
             '#0063cc', '#80bdff',  # blue
             '#33cc33', '#99e699',  # green
@@ -137,14 +137,11 @@ def plot_convergence(data,
             ],
          simple_plot=False):
     fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
     if title != None:
         plt.title(title)
     ax1.set_xlabel(xlabel)
-    ax1.set_ylabel(ylabel[0])
-    ax2.set_ylabel(ylabel[1])
+    ax1.set_ylabel(ylabel)
     ax1.ticklabel_format(style='sci', scilimits=(0,0))
-    ax2.ticklabel_format(style='sci', scilimits=(0,0))
 
     rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(data['globalAccIterationApost']))]
     errIdealIteration = []
@@ -210,32 +207,21 @@ def plot_convergence(data,
                  marker='o', markersize=4.0,
                  color=colorPalette[6])
 
-    line2 = ax2.plot(iterationIndices, data['dofs'], label='# of DoFs')
-    # plot in RWTH purple
-    plt.setp(line2, linewidth=2.0,
-             marker='o', markersize=4.0,
-             color=colorPalette[8])
-
     ax1.set_xscale(xscale)
-    ax2.set_xscale(xscale)
     ax1.set_yscale(yscale)
-    ax2.set_yscale(yscale)
     # Shrink current axis by 20%
     if not simple_plot:
         box1 = ax1.get_position()
         ax1.set_position([box1.x0, box1.y0,
             box1.width, box1.height * 0.6])
-        ax2.set_position([box1.x0, box1.y0,
-            box1.width, box1.height * 0.6])
     if legendlocation != None:
         lines1, labels1 = ax1.get_legend_handles_labels()
-        lines2, labels2 = ax2.get_legend_handles_labels()
         if simple_plot:
-            plt.legend(lines1 + lines2, labels1 + labels2,
+            plt.legend(lines1, labels1,
                        loc=legendlocation, shadow=True,
                        ncol=1, fancybox=True,fontsize=12)
         else:
-            plt.legend(lines1 + lines2, labels1 + labels2,
+            plt.legend(lines1, labels1,
                        loc=legendlocation, shadow=True,
                        bbox_to_anchor=(0.5, 1.9),
                        ncol=1, fancybox=True, fontsize=12)
@@ -252,7 +238,7 @@ def plot_directions(data,
          outputfile='periter_error.pdf',
          title=None,
          xlabel='Outer Iteration',
-         ylabel=(''),
+         ylabel='',
          xlim=None,
          ylim=None,
          xscale='linear',
@@ -625,6 +611,94 @@ def plot_inner_iterations(data,
 
     plt.clf()
 
+def num_Dofs_per_direction(innerIterationStats):
+    num_Dofs = [ it['numDOFs'] for it in innerIterationStats ]
+    return num_Dofs
+
+def plot_Dofs_per_direction(data,
+         outputfile='periter_dofs.pdf',
+         title=None,
+         xlabel='Outer Iteration',
+         ylabel=('#DoFs / direction', '#directions'),
+         xlim=None,
+         ylim=None,
+         xscale='linear',
+         yscale=('log', 'linear'),
+         colorPalette=[
+            '#0063cc', '#80bdff',  # blue
+            '#33cc33', '#99e699',  # green
+            '#cc0000', '#ff5c33',  # red
+            '#b800e6', '#e580ff',  # purple
+            '#cc9900', '#ffd24d'  # yellow
+            ],
+         simple_plot=False):
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    if title != None:
+        plt.title(title)
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(ylabel[0], color=colorPalette[0])
+    ax2.set_ylabel(ylabel[1], color=colorPalette[4])
+    ax1.ticklabel_format(style='sci', scilimits=(0,0))
+    ax2.ticklabel_format(style='sci', scilimits=(0,0))
+
+    iterationIndices = data['iterationIndices']
+    innerIterationsStats = data['innerIterationsStats']
+    num_Dofs_per_iteration = [ num_Dofs_per_direction(innerIterationsStats[oi])
+                                for oi in iterationIndices ]
+
+    pointPos = []
+    pointVal = []
+    violinPos = []
+    violinVal = []
+    for i, num_Dofs in enumerate(num_Dofs_per_iteration):
+        minNum = sys.maxint
+        maxNum = 0
+        for num in num_Dofs:
+            minNum = min(minNum, num)
+            maxNum = max(maxNum, num)
+        if minNum == maxNum:
+            pointPos.append(i)
+            pointVal.append(maxNum)
+        else:
+            violinPos.append(i)
+            violinVal.append(num_Dofs)
+    # plot in RWTH blue
+    if pointPos:
+        pointPlot = ax1.plot(pointPos, pointVal, 'o',
+                             color=colorPalette[0])
+    if violinPos:
+        violinPlot = ax1.violinplot(violinVal,
+                                    positions=violinPos,
+                                    showmeans=True,
+                                    showmedians=False)
+        plt.setp(violinPlot['bodies'], color=colorPalette[0])
+        plt.setp(violinPlot['cmeans'], color=colorPalette[0])
+        plt.setp(violinPlot['cmins'], color=colorPalette[0])
+        plt.setp(violinPlot['cmaxes'], color=colorPalette[0])
+        plt.setp(violinPlot['cbars'], color=colorPalette[0])
+        #plt.setp(violinPlot['cmedians'], color=colorPalette[0])
+
+    directions = ax2.plot(iterationIndices, map(len, num_Dofs_per_iteration))
+    # plot in RWTH red
+    plt.setp(directions, linewidth=2.0,
+             marker='x', markersize=4.0,
+             color=colorPalette[4])
+
+    ax1.set_xscale(xscale)
+    ax1.set_yscale(yscale[0])
+    ax2.set_xscale(xscale)
+    ax2.set_yscale(yscale[1])
+    ax1.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
+    if xlim != None:
+        plt.xlim(xlim)
+    if ylim != None:
+        plt.ylim(ylim)
+    plt.savefig(outputfile)
+
+    plt.clf()
+
+
 # TODO: Adapt to new version
 def print_table(data):
     if data['parameters']['adaptiveInS']:
@@ -722,5 +796,10 @@ if(data['params']['kernelApproxType'] == 'SVD'):
 
 plot_inner_iterations(data,
      outputfile=args.prefixOutputFile+"-inner-iterations.pdf",
+     simple_plot=args.simple_plot
+    )
+
+plot_Dofs_per_direction(data,
+     outputfile=args.prefixOutputFile+"-num-dofs.pdf",
      simple_plot=args.simple_plot
     )
