@@ -625,6 +625,83 @@ def plot_inner_iterations(data,
 
     plt.clf()
 
+def num_Dofs_per_direction(innerIterationStats):
+    num_Dofs = [ it['numDOFs'] for it in innerIterationStats ]
+    return num_Dofs
+
+def plot_Dofs_per_direction(data,
+         outputfile='periter_dofs.pdf',
+         title=None,
+         xlabel='Outer Iteration',
+         ylabel='#DoFs / direction',
+         xlim=None,
+         ylim=None,
+         xscale='linear',
+         yscale='log',
+         colorPalette=[
+            '#0063cc', '#80bdff',  # blue
+            '#33cc33', '#99e699',  # green
+            '#cc0000', '#ff5c33',  # red
+            '#b800e6', '#e580ff',  # purple
+            '#cc9900', '#ffd24d'  # yellow
+            ],
+         simple_plot=False):
+    fig, ax = plt.subplots()
+    if title != None:
+        plt.title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.ticklabel_format(style='sci', scilimits=(0,0))
+
+    iterationIndices = data['iterationIndices']
+    innerIterationsStats = data['innerIterationsStats']
+    num_Dofs_per_iteration = [ num_Dofs_per_direction(innerIterationsStats[oi])
+                                for oi in iterationIndices ]
+
+    pointPos = []
+    pointVal = []
+    violinPos = []
+    violinVal = []
+    for i, num_Dofs in enumerate(num_Dofs_per_iteration):
+        minNum = sys.maxint
+        maxNum = 0
+        for num in num_Dofs:
+            minNum = min(minNum, num)
+            maxNum = max(maxNum, num)
+        if minNum == maxNum:
+            pointPos.append(i)
+            pointVal.append(maxNum)
+        else:
+            violinPos.append(i)
+            violinVal.append(num_Dofs)
+    # plot in RWTH blue
+    if pointPos:
+        pointPlot = ax.plot(pointPos, pointVal, 'o',
+                            color=colorPalette[0])
+    if violinPos:
+        violinPlot = ax.violinplot(violinVal,
+                                   positions=violinPos,
+                                   showmeans=True,
+                                   showmedians=False)
+        plt.setp(violinPlot['bodies'], color=colorPalette[0])
+        plt.setp(violinPlot['cmeans'], color=colorPalette[0])
+        plt.setp(violinPlot['cmins'], color=colorPalette[0])
+        plt.setp(violinPlot['cmaxes'], color=colorPalette[0])
+        plt.setp(violinPlot['cbars'], color=colorPalette[0])
+        #plt.setp(violinPlot['cmedians'], color=colorPalette[0])
+
+    ax.set_xscale(xscale)
+    ax.set_yscale(yscale)
+    ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
+    if xlim != None:
+        plt.xlim(xlim)
+    if ylim != None:
+        plt.ylim(ylim)
+    plt.savefig(outputfile)
+
+    plt.clf()
+
+
 # TODO: Adapt to new version
 def print_table(data):
     if data['parameters']['adaptiveInS']:
@@ -722,5 +799,10 @@ if(data['params']['kernelApproxType'] == 'SVD'):
 
 plot_inner_iterations(data,
      outputfile=args.prefixOutputFile+"-inner-iterations.pdf",
+     simple_plot=args.simple_plot
+    )
+
+plot_Dofs_per_direction(data,
+     outputfile=args.prefixOutputFile+"-num-dofs.pdf",
      simple_plot=args.simple_plot
     )
