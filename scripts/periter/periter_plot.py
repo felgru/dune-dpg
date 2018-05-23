@@ -633,11 +633,11 @@ def plot_Dofs_per_direction(data,
          outputfile='periter_dofs.pdf',
          title=None,
          xlabel='Outer Iteration',
-         ylabel='#DoFs / direction',
+         ylabel=('#DoFs / direction', '#directions'),
          xlim=None,
          ylim=None,
          xscale='linear',
-         yscale='log',
+         yscale=('log', 'linear'),
          colorPalette=[
             '#0063cc', '#80bdff',  # blue
             '#33cc33', '#99e699',  # green
@@ -646,12 +646,15 @@ def plot_Dofs_per_direction(data,
             '#cc9900', '#ffd24d'  # yellow
             ],
          simple_plot=False):
-    fig, ax = plt.subplots()
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
     if title != None:
         plt.title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.ticklabel_format(style='sci', scilimits=(0,0))
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(ylabel[0], color=colorPalette[0])
+    ax2.set_ylabel(ylabel[1], color=colorPalette[4])
+    ax1.ticklabel_format(style='sci', scilimits=(0,0))
+    ax2.ticklabel_format(style='sci', scilimits=(0,0))
 
     iterationIndices = data['iterationIndices']
     innerIterationsStats = data['innerIterationsStats']
@@ -676,13 +679,13 @@ def plot_Dofs_per_direction(data,
             violinVal.append(num_Dofs)
     # plot in RWTH blue
     if pointPos:
-        pointPlot = ax.plot(pointPos, pointVal, 'o',
-                            color=colorPalette[0])
+        pointPlot = ax1.plot(pointPos, pointVal, 'o',
+                             color=colorPalette[0])
     if violinPos:
-        violinPlot = ax.violinplot(violinVal,
-                                   positions=violinPos,
-                                   showmeans=True,
-                                   showmedians=False)
+        violinPlot = ax1.violinplot(violinVal,
+                                    positions=violinPos,
+                                    showmeans=True,
+                                    showmedians=False)
         plt.setp(violinPlot['bodies'], color=colorPalette[0])
         plt.setp(violinPlot['cmeans'], color=colorPalette[0])
         plt.setp(violinPlot['cmins'], color=colorPalette[0])
@@ -690,9 +693,17 @@ def plot_Dofs_per_direction(data,
         plt.setp(violinPlot['cbars'], color=colorPalette[0])
         #plt.setp(violinPlot['cmedians'], color=colorPalette[0])
 
-    ax.set_xscale(xscale)
-    ax.set_yscale(yscale)
-    ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
+    directions = ax2.plot(iterationIndices, map(len, num_Dofs_per_iteration))
+    # plot in RWTH red
+    plt.setp(directions, linewidth=2.0,
+             marker='x', markersize=4.0,
+             color=colorPalette[4])
+
+    ax1.set_xscale(xscale)
+    ax1.set_yscale(yscale[0])
+    ax2.set_xscale(xscale)
+    ax2.set_yscale(yscale[1])
+    ax1.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
     if xlim != None:
         plt.xlim(xlim)
     if ylim != None:
