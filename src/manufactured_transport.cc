@@ -29,7 +29,7 @@
 #include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
 #include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 
-#include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
+#include <dune/dpg/functions/analyticgridviewfunction.hh>
 
 #include <dune/dpg/bilinearformfactory.hh>
 #include <dune/dpg/innerproductfactory.hh>
@@ -289,7 +289,8 @@ int main(int argc, char** argv)
     auto rhsLambda
       = [beta](const FieldVector<double, 2>& x){ return f(x, beta); };
     auto rhsFunc
-      = Functions::makeAnalyticGridViewFunction(rhsLambda, gridView);
+      = Functions::makeAnalyticGridViewFunctionWithQuadratureOrder<4>
+                                                  (rhsLambda, gridView);
     auto rightHandSide
       = linearFormWithSpace(testSpaces)
         .addIntegralTerm<0,LinearIntegrationType::valueFunction,

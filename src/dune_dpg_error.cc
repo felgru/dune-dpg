@@ -25,7 +25,7 @@
 #include <dune/functions/functionspacebases/hangingnodelagrangep2basis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
-#include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
+#include <dune/dpg/functions/analyticgridviewfunction.hh>
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/bilinearformfactory.hh>
@@ -174,10 +174,12 @@ int main()
         .addIntegralTerm<1,1,IntegrationType::gradValue,             // 2(beta grad w, cw)
                              DomainOfIntegration::interior>(2.*c, beta)
         .create();
-    auto m2rhsFunc = Functions::makeAnalyticGridViewFunction(
+    auto m2rhsFunc
+      = Functions::makeAnalyticGridViewFunctionWithQuadratureOrder<4>(
         [](const FieldVector<double, dim>& x){return (-2)*fieldRHS(x);},
         gridView);
-    auto m2crhsFunc = Functions::makeAnalyticGridViewFunction(
+    auto m2crhsFunc
+      = Functions::makeAnalyticGridViewFunctionWithQuadratureOrder<4>(
         [c](const FieldVector<double, dim>& x){return (-2)*c*fieldRHS(x);},
         gridView);
     auto aPosterioriLinearForm
@@ -206,7 +208,8 @@ int main()
     /////////////////////////////////////////////////////////
 
   auto rhsFunc
-    = Functions::makeAnalyticGridViewFunction(fieldRHS, gridView);
+    = Functions::makeAnalyticGridViewFunctionWithQuadratureOrder<4>
+                                                (fieldRHS, gridView);
     auto rightHandSide
       = linearFormWithSpace(testSpaces)
         .addIntegralTerm<0,LinearIntegrationType::valueFunction,

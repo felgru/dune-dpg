@@ -30,7 +30,6 @@
 #include <dune/functions/functionspacebases/pqkfacenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
-#include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
 
 #include <dune/dpg/bilinearformfactory.hh>
 #include <dune/dpg/innerproductfactory.hh>
@@ -55,13 +54,6 @@ auto uAnalytic(const Direction& s)
       else
         return std::sqrt(s[0]*s[0]/(s[1]*s[1])+1)*x[1];
     };
-}
-
-// The right hand-side
-template <class Direction, class Domain = Direction>
-auto f(const Direction& s)
-{
-  return [] (const Domain& x) { return 1.;};
 }
 
 
@@ -167,12 +159,10 @@ int main(int argc, char** argv)
   //  Assemble the system
   /////////////////////////////////////////////////////////
 
-  auto rhsFunc
-    = Functions::makeAnalyticGridViewFunction(f(beta), gridView);
   auto rightHandSide
     = linearFormWithSpace(testSpaces)
       .addIntegralTerm<0,LinearIntegrationType::valueFunction,
-                         DomainOfIntegration::interior>(rhsFunc)
+                         DomainOfIntegration::interior>(1.)
       .create();
   systemAssembler.assembleSystem(stiffnessMatrix, rhs, rightHandSide);
 
