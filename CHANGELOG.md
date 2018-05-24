@@ -27,10 +27,11 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   This allowed us to remove a lot of fallback code, making our code
   more readable and easier to maintain.
 * You can now use `GridViewFunction`s as coefficients in integral terms.
-  Currently there is however no way to specify the quadrature order
-  required by the coefficients. This means that any coefficients that are
-  not piecewise constant on the gridView’s cells will probably not be
-  integrated exactly.
+  The quadrature order needed by a grid view function is queried by our
+  matrix and vector assembly routines via the type trait
+  `requiredQuadratureOrder<LocalFunction>::value`.
+  If you write your own GridViewFunction, make sure to specialize
+  `requiredQuadratureOrder` for its `LocalFunction`.
 * The `interpolate` method of all localfunctions can now be called with
   a function object f that implements `f(x)` instead of the
   `f.evaluate(x,y)` interface. This is in accordance with changes in
