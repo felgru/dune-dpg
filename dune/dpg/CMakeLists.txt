@@ -31,6 +31,7 @@ install(FILES applylocalfunctional_ru_impl.hh
               localevaluation.hh
               locallinearterm_impl.hh
               quadrature.hh
+              quadratureorder.hh
               refinedfaces.hh
               rhs_assembler.hh
               saddlepoint_system_assembler.hh

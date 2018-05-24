@@ -1,6 +1,7 @@
 #include <numeric>
 #include <dune/common/version.hh>
 #include <dune/geometry/quadraturerules/splitquadraturerule.hh>
+#include "quadratureorder.hh"
 #include "refinedfaces.hh"
 #include "traveldistancenorm.hh"
 
@@ -164,6 +165,9 @@ faceImpl(const TestLocalView& testLocalView,
       (is_DGRefinedFiniteElement<TestSpace>::value) ?
         testLocalFiniteElement.size() : 0;
 
+  static_assert(requiredQuadratureOrder
+                <typename LocalCoefficients::LocalDirection>::value == 0,
+                "LocalDirection has to be constant.");
   const auto direction = localCoefficients.localDirection()({0.5,0.5});
 
   unsigned int subElementOffset = 0;
@@ -209,9 +213,15 @@ faceImpl(const TestLocalView& testLocalView,
         continue;
       }
 
+      static_assert(hasRequiredQuadratureOrder
+                    <typename LocalCoefficients::LocalFactor>::value,
+                    "There is no requiredQuadratureOrder specialization"
+                    " for the LocalFactor.");
       const unsigned int quadratureOrder
           = solutionLocalFiniteElement.localBasis().order()
-            + testLocalFiniteElement.localBasis().order();
+            + testLocalFiniteElement.localBasis().order()
+            + requiredQuadratureOrder
+                <typename LocalCoefficients::LocalFactor>::value;
 
       QuadratureRule<double, 1> quadFace
         = detail::ChooseQuadrature<TestSpace, SolutionSpace, Face>

@@ -1,6 +1,7 @@
 add_subdirectory(io)
 
 install(FILES
+        analyticgridviewfunction.hh
         concepts.hh
         constraineddiscreteglobalbasisfunction.hh
         discreteglobalbasisfunction.hh

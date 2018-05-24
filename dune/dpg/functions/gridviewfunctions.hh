@@ -9,6 +9,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/std/type_traits.hh>
 #include <dune/common/typeutilities.hh>
+#include <dune/dpg/quadratureorder.hh>
 #include <dune/functions/gridfunctions/gridviewentityset.hh>
 
 namespace Dune {
@@ -233,6 +234,18 @@ PiecewiseConstantGridViewFunction<
                                           (std::forward<F>(f), gridView);
 }
 
-}} // end namespace Dune::Functions
+} // end namespace Dune::Functions
+
+template<class Range, class LocalDomain, class LocalContext>
+struct requiredQuadratureOrder<Functions::LocalConstantGridViewFunction
+                               <Range, LocalDomain, LocalContext>>
+  : std::integral_constant<unsigned int, 0> {};
+
+template<class Range, class LocalDomain, class LocalContext, class F>
+struct requiredQuadratureOrder<Functions::LocalPiecewiseConstantGridViewFunction
+                               <Range, LocalDomain, LocalContext, F>>
+  : std::integral_constant<unsigned int, 0> {};
+
+} // end namespace Dune
 
 #endif

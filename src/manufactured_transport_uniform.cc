@@ -26,7 +26,7 @@
 #include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>
 #include <dune/functions/functionspacebases/bernsteinbasis.hh>
 #include <dune/functions/functionspacebases/bernsteindgbasis.hh>
-#include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
+#include <dune/dpg/functions/analyticgridviewfunction.hh>
 
 #include <dune/dpg/bilinearformfactory.hh>
 #include <dune/dpg/innerproductfactory.hh>
@@ -290,7 +290,8 @@ int main(int argc, char** argv)
     auto rhsLambda
       = [beta](const FieldVector<double, 2>& x){ return f(x, beta); };
     auto rhsFunc
-      = Functions::makeAnalyticGridViewFunction(rhsLambda, gridView);
+      = Functions::makeAnalyticGridViewFunctionWithQuadratureOrder<4>
+                                                  (rhsLambda, gridView);
     auto rhsFunctions
       = linearFormWithSpace(testSearchSpaces)
         .addIntegralTerm<0,LinearIntegrationType::valueFunction,

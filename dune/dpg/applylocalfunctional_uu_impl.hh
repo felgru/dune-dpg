@@ -2,6 +2,7 @@
 #include <dune/common/version.hh>
 #include <dune/geometry/quadraturerules/splitquadraturerule.hh>
 #include "faces.hh"
+#include "quadratureorder.hh"
 #include "traveldistancenorm.hh"
 
 namespace Dune {
@@ -120,6 +121,9 @@ faceImpl(const TestLocalView& testLocalView,
   const auto& solutionLocalFiniteElement
       = solutionLocalView.tree().finiteElement();
 
+  static_assert(requiredQuadratureOrder
+                <typename LocalCoefficients::LocalDirection>::value == 0,
+                "LocalDirection has to be constant.");
   const auto direction = localCoefficients.localDirection()({0.5,0.5});
 
   unsigned int nOutflowFaces = 0;
@@ -168,9 +172,15 @@ faceImpl(const TestLocalView& testLocalView,
       continue;
     }
 
-    const unsigned int quadratureOrder
-        = solutionLocalFiniteElement.localBasis().order()
-          + testLocalFiniteElement.localBasis().order();
+      static_assert(hasRequiredQuadratureOrder
+                    <typename LocalCoefficients::LocalFactor>::value,
+                    "There is no requiredQuadratureOrder specialization"
+                    " for the LocalFactor.");
+      const unsigned int quadratureOrder
+          = solutionLocalFiniteElement.localBasis().order()
+            + testLocalFiniteElement.localBasis().order()
+            + requiredQuadratureOrder
+                <typename LocalCoefficients::LocalFactor>::value;
 
     using Face = std::decay_t<decltype(face)>;
     QuadratureRule<double, 1> quadFace
