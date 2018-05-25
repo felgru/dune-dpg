@@ -360,8 +360,10 @@ public:
 #endif
 
   OptimalTestBasisNodeIndexSet(const PreBasis& preBasis) :
+#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
+    preBasis_(&preBasis)
+#else
     preBasis_(&preBasis),
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     solutionLocalIndexSets_(Dune::detail::getLocalIndexSets(
                       *preBasis.testspaceCoefficientMatrix_
                           .bilinearForm().getSolutionSpaces()))
@@ -427,7 +429,7 @@ public:
               [&](It it, auto i) {
                 return computeIndices(it,
 #if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
-                  std::get<i>(node.localViewsSolution())
+                  std::get<i>(node_.localViewsSolution()),
 #else
                   std::get<i>(solutionLocalIndexSets_),
 #endif
