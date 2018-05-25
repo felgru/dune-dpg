@@ -693,7 +693,8 @@ def plot_Dofs_per_direction(data,
     if xlim != None:
         plt.xlim(xlim)
     if ylim != None:
-        plt.ylim(ylim)
+        ax1.set_ylim(ylim[0])
+        ax2.set_ylim(ylim[1])
     plt.savefig(outputfile)
 
     plt.clf()
@@ -743,6 +744,17 @@ def print_preamble():
           '\n'
           r'\begin{document}')
 
+def parse_ylim(ylim_string):
+    if not ylim_string:
+        return None
+    return map(float,ylim_string.split(','))
+
+def parse_ylims(ylim_string):
+    if not ylim_string:
+        return None
+    ylims = parse_ylim(ylim_string)
+    return (ylims[0:2], ylims[2:])
+
 
 aparser = argparse.ArgumentParser(
         description='Generate convergence plot and table for Periter')
@@ -752,10 +764,16 @@ aparser = argparse.ArgumentParser(
 aparser.add_argument('--paper', dest='simple_plot',
                      action='store_true', default=False,
                      help='generate simpler plot for our paper')
+aparser.add_argument('--conv-ylim', dest='conv_ylim', action='store',
+                     help='limits of the y-axis of the convergence plot')
+aparser.add_argument('--dofs-ylim', dest='dofs_ylim', action='store',
+                     help='limits of the y-axes of the dofs plot')
 aparser.add_argument('infile', action='store')
 aparser.add_argument('prefixOutputFile', action='store',
                      help='prefix of the name of the plot files')
 args = aparser.parse_args()
+args.conv_ylim = parse_ylim(args.conv_ylim)
+args.dofs_ylim = parse_ylims(args.dofs_ylim)
 
 data = readData(args.infile)
 
@@ -772,7 +790,8 @@ data = readData(args.infile)
 plot_convergence(data,
      outputfile=args.prefixOutputFile+"-conv.pdf",
      # title='a posteriori errors of Periter',
-     simple_plot=args.simple_plot
+     simple_plot=args.simple_plot,
+     ylim=args.conv_ylim
     )
 plot_directions(data,
      outputfile=args.prefixOutputFile+"-directions.pdf",
@@ -801,5 +820,6 @@ plot_inner_iterations(data,
 
 plot_Dofs_per_direction(data,
      outputfile=args.prefixOutputFile+"-num-dofs.pdf",
-     simple_plot=args.simple_plot
+     simple_plot=args.simple_plot,
+     ylim=args.dofs_ylim
     )
