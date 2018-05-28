@@ -266,7 +266,11 @@ int main(int argc, char** argv)
 
   // TODO: estimate norm of rhs f in V'
   // Remark: Here, V=H_{0,+}(D\times S)
+#if PERITER_CHECKERBOARD_RHS
+  const double fnorm = 1./7.;
+#else
   const double fnorm = 1;
+#endif
   const double err0 = fnorm / cB;
 
   PeriterApproximationParameters approximationParameters(accuracyRatio,
