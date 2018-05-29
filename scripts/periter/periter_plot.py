@@ -171,11 +171,10 @@ def plot_convergence(data,
                             label=r'$\eta_n (e_n\leq\eta_n)$')
 
     line1____ = ax1.plot(iterationIndices, data['globalAccIteratesDiff'],
-        label=r'$\sum_{j=0}^{n} \rho^j e_{n-j}$'
-              r' (a posteriori bound for $||u_n - \bar u_n||$)')
+        label=r'a posteriori bound for $||u_n - \bar u_n||$')
 
     lineAposteriori = ax1.plot(iterationIndices, data['globalAccAposteriori'],
-        label='a posteriori error estimate')
+        label=r'a posteriori bound for $||u - \bar u_n||$')
 
     if not simple_plot:
         line1_____ = ax1.plot(iterationIndices, errIdealIteration,
