@@ -31,7 +31,7 @@ def readData(datafile):
         r'Singular values of kernel matrix:\n'
         r'(([0-9]+\.?[0-9]*e?-?[0-9]*)\n)*'
         , re.MULTILINE)
-    iterationIndicesPattern = re.compile(r'Iteration n=([0-9]*\.?[0-9]*)\n')
+    iterationIndicesPattern = re.compile(r'Iteration n=([0-9]+)\n')
     etaPattern = re.compile(r'eta_n = rhobar\^{-n}: ([0-9]*\.?[0-9]*)\n')
     wltLevelPattern = re.compile(r'Current wavelet level: ([0-9]*\.?[0-9]*)\n')
     numSPattern = re.compile(r'Number of directions: ([0-9]*\.?[0-9]*)\n')
@@ -46,9 +46,11 @@ def readData(datafile):
     accKernelPattern = re.compile(r'Accuracy kernel: ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
     globalAccIterationApostPattern = re.compile(
         r'Error bound \|\|bar u_n -T\^{-1}K bar u_{n-1}\|\| \(a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
-    globalAccApostPattern = re.compile(r'Error bound \|\|u_n - bar u_n\|\| \(a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
+    globalAccIteratesDiffPattern = re.compile(r'Error bound \|\|u_n - bar u_n\|\| \(a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
     globalAccAprioriPattern = re.compile(
-        r'Bound global accuracy \|\|u - bar u_n\|\| \(a priori \+ a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)')
+        r'A priori bound global accuracy \|\|u - bar u_n\|\|: ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)')
+    globalAccAposterioriPattern = re.compile(
+        r'A posteriori bound global accuracy \|\|u - bar u_n\|\|: ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)')
     dofsPattern = re.compile(r'Total number of DoFs: ([0-9]+)\n')
     innerIterationsPattern = re.compile(
             r'Iteration ([0-9]+)\.([0-9]+) for direction [0-9]+:\n'
@@ -89,8 +91,9 @@ def readData(datafile):
         aPost = aPostPattern.findall(errors)
         accKernel = accKernelPattern.findall(errors)
         globalAccIterationApost = globalAccIterationApostPattern.findall(errors)
-        globalAccApost = globalAccApostPattern.findall(errors)
+        globalAccIteratesDiff = globalAccIteratesDiffPattern.findall(errors)
         globalAccApriori = globalAccAprioriPattern.findall(errors)
+        globalAccAposteriori = globalAccAposterioriPattern.findall(errors)
         dofs = dofsPattern.findall(errors)
         innerIterationsStats = defaultdict(list)
         for m in innerIterationsPattern.finditer(errors):
@@ -112,8 +115,9 @@ def readData(datafile):
            , 'aPost': aPost
            , 'accKernel': accKernel
            , 'globalAccIterationApost': globalAccIterationApost
-           , 'globalAccApost' : globalAccApost
+           , 'globalAccIteratesDiff' : globalAccIteratesDiff
            , 'globalAccApriori': globalAccApriori
+           , 'globalAccAposteriori': globalAccAposteriori
            , 'dofs': dofs
            , 'innerIterationsStats': innerIterationsStats
            }
@@ -160,27 +164,29 @@ def plot_convergence(data,
     if not simple_plot:
         line1__ = ax1.plot(iterationIndices
                         , data['globalAccIterationApost']
-                        , label='$e_n = t_n+C_T k_n$ ($||\\bar u_n -T^{-1}K'
-                                '\\bar u_{n-1}||\leq e_n)$')
+                        , label=r'$e_n = t_n+C_T k_n$ ($||\bar u_n -T^{-1}K'
+                                r'\bar u_{n-1}||\leq e_n)$')
 
         line1___ = ax1.plot(iterationIndices, data['eta'],
-                            label='$\eta_n (e_n\leq\eta_n)$')
+                            label=r'$\eta_n (e_n\leq\eta_n)$')
 
-    line1____ = ax1.plot(iterationIndices, data['globalAccApost'],
-        label='$\sum_{j=0}^{n} \\rho^j e_{n-j}$'
-              ' (a posteriori bound for $||u_n - \\bar u_n||$)')
+    line1____ = ax1.plot(iterationIndices, data['globalAccIteratesDiff'],
+        label=r'a posteriori bound for $||u_n - \bar u_n||$')
+
+    lineAposteriori = ax1.plot(iterationIndices, data['globalAccAposteriori'],
+        label=r'a posteriori bound for $||u - \bar u_n||$')
 
     if not simple_plot:
         line1_____ = ax1.plot(iterationIndices, errIdealIteration,
-            label='$\sum_{j=0}^{n} \\rho^j \eta_{n-j}$ '
-                  '($\sum_{j=0}^{n} \\rho^j e_{n-j} '
-                  '\leq \sum_{j=0}^{n} \\rho^j \eta_{n-j}$)')
+            label=r'$\sum_{j=0}^{n} \rho^j \eta_{n-j}$ '
+                  r'($\sum_{j=0}^{n} \rho^j e_{n-j} '
+                  r'\leq \sum_{j=0}^{n} \rho^j \eta_{n-j}$)')
 
         line1______ = ax1.plot(iterationIndices,
                 (1.+np.pi*np.pi/6.)*np.asarray(rhoN),
-                label='$(1+\pi^2/6)\\rho^n$ '
-                      '($\sum_{j=0}^{n} \\rho^j \eta_{n-j} '
-                      '\leq (1+\pi^2/6)\\rho^n$)')
+                label=r'$(1+\pi^2/6)\rho^n$ '
+                      r'($\sum_{j=0}^{n} \rho^j \eta_{n-j} '
+                      r'\leq (1+\pi^2/6)\rho^n$)')
 
     # plot in RWTH blue
     plt.setp(line1, linewidth=2.0,
@@ -206,6 +212,9 @@ def plot_convergence(data,
         plt.setp(line1______, linewidth=2.0,
                  marker='o', markersize=4.0,
                  color=colorPalette[6])
+    plt.setp(lineAposteriori, linewidth=2.0,
+             marker='x', markersize=4.0,
+             color=colorPalette[7])
 
     ax1.set_xscale(xscale)
     ax1.set_yscale(yscale)

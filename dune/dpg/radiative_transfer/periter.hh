@@ -507,8 +507,13 @@ class PeriterLogger {
         [](size_t acc, auto vec) { return acc + vec.size(); });
 
     // Error bound for || u_n - \bar u_n || based on a posteriori errors
-    const double errorAPosteriori
-        = approximationParameters.aPosterioriError(aposterioriIter);
+    const double deviationOfInexactIterate
+        = approximationParameters.
+              errorBetweenExactAndInexactIterate(aposterioriIter);
+
+    // Error bound for || u - \bar u_n || based on a posteriori errors
+    const double aPosterioriError
+        = approximationParameters.combinedAPosterioriError(aposterioriIter);
 
     ofs << "--------------------\n"
            "End inner iterations\n"
@@ -518,12 +523,14 @@ class PeriterLogger {
         << "Accuracy kernel: "
           << approximationParameters.scatteringAccuracy() << '\n'
         << "Error bound ||bar u_n -T^{-1}K bar u_{n-1}|| (a posteriori): "
-          << aposterioriIter[n]   << '\n'
+          << aposterioriIter.back()   << '\n'
         << "Error bound ||u_n - bar u_n|| (a posteriori): "
-          << errorAPosteriori << '\n'
-        << "Bound global accuracy ||u - bar u_n|| (a priori + a posteriori): "
+          << deviationOfInexactIterate << '\n'
+        << "A priori bound global accuracy ||u - bar u_n||: "
           << accuracy
           << " (rho * err0 + 2) * rho^n\n"
+        << "A posteriori bound global accuracy ||u - bar u_n||: "
+          << aPosterioriError << '\n'
         << "Total number of DoFs: "
           << accumulatedDoFs
         << "\n\n" << std::flush;
@@ -812,7 +819,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
   double accuracy = approximationParameters.aPrioriAccuracy();
 
-  std::vector<double> aposterioriIter(maxNumberOfIterations,0.);
+  std::vector<double> aposterioriIter;
+  aposterioriIter.reserve(maxNumberOfIterations);
 
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
@@ -897,9 +905,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       plotter.plotSolutions(spaces[i], x[i], n, i);
     }
 
-    // A posteriori estimation of error ||bar u_n -T^{-1}K bar u_{n-1}||
-    aposterioriIter[n] = approximationParameters
-        .aPosterioriErrorInLastOuterIteration(aposterioriTransportGlobal);
+    // A posteriori estimation of error ||bar u_{n+1} -T^{-1}K bar u_n||
+    aposterioriIter.push_back(approximationParameters
+        .aPosterioriErrorInLastOuterIteration(aposterioriTransportGlobal));
 
     // Error bound for || u - \bar u_n || based on a priori errors
     accuracy = approximationParameters.combinedAccuracy();

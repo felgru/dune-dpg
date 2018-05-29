@@ -166,8 +166,8 @@ class TransportSpaces {
     // TODO: The accuracy also depends on the kappa from K = κG and on \|u\|.
     //       Adding a factor 1/4. to compensate for that.
     double finalScatteringAccuracy(double targetAccuracy) const {
-      const int n = maxOuterIterationsForTargetAccuracy(targetAccuracy);
-      return kappa1*std::pow(rhobar, -n)/4.;
+      const int m = maxOuterIterationsForTargetAccuracy(targetAccuracy);
+      return kappa1*std::pow(rhobar, -m)/4.;
     }
 
     double aPrioriAccuracy() const {
@@ -186,6 +186,7 @@ class TransportSpaces {
       return kappa3 * eta_;
     }
 
+    //! a priori estimate for $\|u - \bar u_{n+1}\|$
     double combinedAccuracy() const {
       return (rho*err0 + 2) * std::pow(rho,n);
     }
@@ -193,8 +194,8 @@ class TransportSpaces {
     unsigned int maxOuterIterationsForTargetAccuracy(double target) const
     {
       const double eps2 = target/(rho*err0+2);
-      const int n = static_cast<int>(std::ceil(std::log(eps2) / std::log(rho)));
-      return static_cast<unsigned int>(std::max(n, 0));
+      const int m = static_cast<int>(std::ceil(std::log(eps2) / std::log(rho)));
+      return static_cast<unsigned int>(std::max(m, 0));
     }
 
     double aPosterioriErrorInLastOuterIteration(
@@ -203,12 +204,23 @@ class TransportSpaces {
       return aposterioriTransportGlobal + CT * scatteringAccuracy();
     }
 
-    double aPosterioriError(const std::vector<double>& aposterioriIter) const {
+    //! a posteriori estimate for $\|u_{n+1} - \bar u_{n+1}\|$
+    double errorBetweenExactAndInexactIterate(
+        const std::vector<double>& aposterioriIter) const
+    {
       double errorAPosteriori = 0.;
-      for(size_t j=0; j < n+1; j++) {
+      for(size_t j=0; j <= n; j++) {
         errorAPosteriori += std::pow(rho,j)*aposterioriIter[n-j];
       }
       return errorAPosteriori;
+    }
+
+    //! a posteriori estimate for $\|u - \bar u_{n+1}\|$
+    double combinedAPosterioriError(
+        const std::vector<double>& aposterioriIter) const
+    {
+      return std::pow(rho,n+1)*err0
+              + errorBetweenExactAndInexactIterate(aposterioriIter);
     }
 
     double eta() const {
