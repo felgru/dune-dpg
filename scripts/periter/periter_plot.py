@@ -31,7 +31,7 @@ def readData(datafile):
         r'Singular values of kernel matrix:\n'
         r'(([0-9]+\.?[0-9]*e?-?[0-9]*)\n)*'
         , re.MULTILINE)
-    iterationIndicesPattern = re.compile(r'Iteration n=([0-9]*\.?[0-9]*)\n')
+    iterationIndicesPattern = re.compile(r'Iteration n=([0-9]+)\n')
     etaPattern = re.compile(r'eta_n = rhobar\^{-n}: ([0-9]*\.?[0-9]*)\n')
     wltLevelPattern = re.compile(r'Current wavelet level: ([0-9]*\.?[0-9]*)\n')
     numSPattern = re.compile(r'Number of directions: ([0-9]*\.?[0-9]*)\n')
