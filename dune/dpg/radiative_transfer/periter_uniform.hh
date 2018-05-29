@@ -340,7 +340,7 @@ class PeriterLogger {
         << "Accuracy kernel: "
           << approximationParameters.scatteringAccuracy() << '\n'
         << "Error bound ||bar u_n -T^{-1}K bar u_{n-1}|| (a posteriori): "
-          << aposterioriIter[n]   << '\n'
+          << aposterioriIter.back()   << '\n'
         << "Error bound ||u_n - bar u_n|| (a posteriori): "
           << deviationOfInexactIterate << '\n'
         << "A priori bound global accuracy ||u - bar u_n||: "
@@ -710,7 +710,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   /////////////////////////////////////////////////////////
   double accuracy = approximationParameters.aPrioriAccuracy();
 
-  std::vector<double> aposterioriIter(maxNumberOfIterations, 0.);
+  std::vector<double> aposterioriIter;
+  aposterioriIter.reserve(maxNumberOfIterations);
 
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
@@ -793,8 +794,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     plotter.plotSolutions(spaces, x, n, numS);
 
     // A posteriori estimation of error ||bar u_n -T^{-1}K bar u_{n-1}||
-    aposterioriIter[n] = approximationParameters
-        .aPosterioriErrorInLastOuterIteration(aposterioriTransportGlobal);
+    aposterioriIter.push_back(approximationParameters
+        .aPosterioriErrorInLastOuterIteration(aposterioriTransportGlobal));
 
     // Error bound for || u - \bar u_n || based on a priori errors
     accuracy = approximationParameters.combinedAccuracy();

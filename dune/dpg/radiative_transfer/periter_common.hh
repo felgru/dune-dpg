@@ -209,7 +209,7 @@ class TransportSpaces {
         const std::vector<double>& aposterioriIter) const
     {
       double errorAPosteriori = 0.;
-      for(size_t j=0; j < n+1; j++) {
+      for(size_t j=0; j <= n; j++) {
         errorAPosteriori += std::pow(rho,j)*aposterioriIter[n-j];
       }
       return errorAPosteriori;
