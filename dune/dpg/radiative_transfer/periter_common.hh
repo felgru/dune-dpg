@@ -186,6 +186,7 @@ class TransportSpaces {
       return kappa3 * eta_;
     }
 
+    //! a priori estimate for $\|u - \bar u_{n+1}\|$
     double combinedAccuracy() const {
       return (rho*err0 + 2) * std::pow(rho,n);
     }
@@ -212,6 +213,14 @@ class TransportSpaces {
         errorAPosteriori += std::pow(rho,j)*aposterioriIter[n-j];
       }
       return errorAPosteriori;
+    }
+
+    //! a posteriori estimate for $\|u - \bar u_{n+1}\|$
+    double combinedAPosterioriError(
+        const std::vector<double>& aposterioriIter) const
+    {
+      return std::pow(rho,n+1)*err0
+              + errorBetweenExactAndInexactIterate(aposterioriIter);
     }
 
     double eta() const {

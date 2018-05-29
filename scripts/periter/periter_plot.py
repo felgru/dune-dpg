@@ -46,9 +46,11 @@ def readData(datafile):
     accKernelPattern = re.compile(r'Accuracy kernel: ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
     globalAccIterationApostPattern = re.compile(
         r'Error bound \|\|bar u_n -T\^{-1}K bar u_{n-1}\|\| \(a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
-    globalAccApostPattern = re.compile(r'Error bound \|\|u_n - bar u_n\|\| \(a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
+    globalAccIteratesDiffPattern = re.compile(r'Error bound \|\|u_n - bar u_n\|\| \(a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
     globalAccAprioriPattern = re.compile(
-        r'Bound global accuracy \|\|u - bar u_n\|\| \(a priori \+ a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)')
+        r'A priori bound global accuracy \|\|u - bar u_n\|\|: ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)')
+    globalAccAposterioriPattern = re.compile(
+        r'A posteriori bound global accuracy \|\|u - bar u_n\|\|: ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)')
     dofsPattern = re.compile(r'Total number of DoFs: ([0-9]+)\n')
     innerIterationsPattern = re.compile(
             r'Iteration ([0-9]+)\.([0-9]+) for direction [0-9]+:\n'
@@ -89,8 +91,9 @@ def readData(datafile):
         aPost = aPostPattern.findall(errors)
         accKernel = accKernelPattern.findall(errors)
         globalAccIterationApost = globalAccIterationApostPattern.findall(errors)
-        globalAccApost = globalAccApostPattern.findall(errors)
+        globalAccIteratesDiff = globalAccIteratesDiffPattern.findall(errors)
         globalAccApriori = globalAccAprioriPattern.findall(errors)
+        globalAccAposteriori = globalAccAposterioriPattern.findall(errors)
         dofs = dofsPattern.findall(errors)
         innerIterationsStats = defaultdict(list)
         for m in innerIterationsPattern.finditer(errors):
@@ -112,8 +115,9 @@ def readData(datafile):
            , 'aPost': aPost
            , 'accKernel': accKernel
            , 'globalAccIterationApost': globalAccIterationApost
-           , 'globalAccApost' : globalAccApost
+           , 'globalAccIteratesDiff' : globalAccIteratesDiff
            , 'globalAccApriori': globalAccApriori
+           , 'globalAccAposteriori': globalAccAposteriori
            , 'dofs': dofs
            , 'innerIterationsStats': innerIterationsStats
            }
@@ -166,7 +170,7 @@ def plot_convergence(data,
         line1___ = ax1.plot(iterationIndices, data['eta'],
                             label='$\eta_n (e_n\leq\eta_n)$')
 
-    line1____ = ax1.plot(iterationIndices, data['globalAccApost'],
+    line1____ = ax1.plot(iterationIndices, data['globalAccIteratesDiff'],
         label='$\sum_{j=0}^{n} \\rho^j e_{n-j}$'
               ' (a posteriori bound for $||u_n - \\bar u_n||$)')
 

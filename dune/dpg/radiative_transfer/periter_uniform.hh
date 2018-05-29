@@ -328,6 +328,10 @@ class PeriterLogger {
         = approximationParameters.
               errorBetweenExactAndInexactIterate(aposterioriIter);
 
+    // Error bound for || u - \bar u_n || based on a posteriori errors
+    const double aPosterioriError
+        = approximationParameters.combinedAPosterioriError(aposterioriIter);
+
     ofs << "--------------------\n"
            "End inner iterations\n"
            "--------------------\n"
@@ -339,9 +343,11 @@ class PeriterLogger {
           << aposterioriIter[n]   << '\n'
         << "Error bound ||u_n - bar u_n|| (a posteriori): "
           << deviationOfInexactIterate << '\n'
-        << "Bound global accuracy ||u - bar u_n|| (a priori + a posteriori): "
+        << "A priori bound global accuracy ||u - bar u_n||: "
           << accuracy
           << " (rho * err0 + 2) * rho^n\n"
+        << "A posteriori bound global accuracy ||u - bar u_n||: "
+          << aPosterioriError << '\n'
         << "Total number of DoFs: "
           << accumulatedDoFs
         << "\n\n" << std::flush;
