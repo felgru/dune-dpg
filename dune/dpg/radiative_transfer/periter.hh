@@ -507,8 +507,9 @@ class PeriterLogger {
         [](size_t acc, auto vec) { return acc + vec.size(); });
 
     // Error bound for || u_n - \bar u_n || based on a posteriori errors
-    const double errorAPosteriori
-        = approximationParameters.aPosterioriError(aposterioriIter);
+    const double deviationOfInexactIterate
+        = approximationParameters.
+              errorBetweenExactAndInexactIterate(aposterioriIter);
 
     ofs << "--------------------\n"
            "End inner iterations\n"
@@ -520,7 +521,7 @@ class PeriterLogger {
         << "Error bound ||bar u_n -T^{-1}K bar u_{n-1}|| (a posteriori): "
           << aposterioriIter[n]   << '\n'
         << "Error bound ||u_n - bar u_n|| (a posteriori): "
-          << errorAPosteriori << '\n'
+          << deviationOfInexactIterate << '\n'
         << "Bound global accuracy ||u - bar u_n|| (a priori + a posteriori): "
           << accuracy
           << " (rho * err0 + 2) * rho^n\n"

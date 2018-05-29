@@ -203,7 +203,10 @@ class TransportSpaces {
       return aposterioriTransportGlobal + CT * scatteringAccuracy();
     }
 
-    double aPosterioriError(const std::vector<double>& aposterioriIter) const {
+    //! a posteriori estimate for $\|u_{n+1} - \bar u_{n+1}\|$
+    double errorBetweenExactAndInexactIterate(
+        const std::vector<double>& aposterioriIter) const
+    {
       double errorAPosteriori = 0.;
       for(size_t j=0; j < n+1; j++) {
         errorAPosteriori += std::pow(rho,j)*aposterioriIter[n-j];
