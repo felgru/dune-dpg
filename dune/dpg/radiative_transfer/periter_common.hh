@@ -166,8 +166,8 @@ class TransportSpaces {
     // TODO: The accuracy also depends on the kappa from K = κG and on \|u\|.
     //       Adding a factor 1/4. to compensate for that.
     double finalScatteringAccuracy(double targetAccuracy) const {
-      const int n = maxOuterIterationsForTargetAccuracy(targetAccuracy);
-      return kappa1*std::pow(rhobar, -n)/4.;
+      const int m = maxOuterIterationsForTargetAccuracy(targetAccuracy);
+      return kappa1*std::pow(rhobar, -m)/4.;
     }
 
     double aPrioriAccuracy() const {
@@ -194,8 +194,8 @@ class TransportSpaces {
     unsigned int maxOuterIterationsForTargetAccuracy(double target) const
     {
       const double eps2 = target/(rho*err0+2);
-      const int n = static_cast<int>(std::ceil(std::log(eps2) / std::log(rho)));
-      return static_cast<unsigned int>(std::max(n, 0));
+      const int m = static_cast<int>(std::ceil(std::log(eps2) / std::log(rho)));
+      return static_cast<unsigned int>(std::max(m, 0));
     }
 
     double aPosterioriErrorInLastOuterIteration(
