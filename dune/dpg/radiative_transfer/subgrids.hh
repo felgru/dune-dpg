@@ -16,6 +16,20 @@
 
 namespace Dune {
 
+template<class SubGrid, class HostGrid>
+std::unique_ptr<SubGrid> fullSubGrid(HostGrid& hostGrid) {
+  std::unique_ptr<SubGrid> gr
+      = std::make_unique<SubGrid>(hostGrid);
+  gr->createBegin();
+  const auto gridView = hostGrid.leafGridView();
+  for(const auto& e : elements(gridView)) {
+    gr->insert(e);
+  }
+  gr->createEnd();
+  gr->setMaxLevelDifference(1);
+  return gr;
+}
+
 template<class SubGrid>
 std::set<typename SubGrid::HostGridType::GlobalIdSet::IdType>
 saveSubGridToIdSet(const SubGrid& subGrid)
