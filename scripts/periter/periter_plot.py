@@ -164,27 +164,27 @@ def plot_convergence(data,
     if not simple_plot:
         line1__ = ax1.plot(iterationIndices
                         , data['globalAccIterationApost']
-                        , label='$e_n = t_n+C_T k_n$ ($||\\bar u_n -T^{-1}K'
-                                '\\bar u_{n-1}||\leq e_n)$')
+                        , label=r'$e_n = t_n+C_T k_n$ ($||\bar u_n -T^{-1}K'
+                                r'\bar u_{n-1}||\leq e_n)$')
 
         line1___ = ax1.plot(iterationIndices, data['eta'],
-                            label='$\eta_n (e_n\leq\eta_n)$')
+                            label=r'$\eta_n (e_n\leq\eta_n)$')
 
     line1____ = ax1.plot(iterationIndices, data['globalAccIteratesDiff'],
-        label='$\sum_{j=0}^{n} \\rho^j e_{n-j}$'
-              ' (a posteriori bound for $||u_n - \\bar u_n||$)')
+        label=r'$\sum_{j=0}^{n} \rho^j e_{n-j}$'
+              r' (a posteriori bound for $||u_n - \bar u_n||$)')
 
     if not simple_plot:
         line1_____ = ax1.plot(iterationIndices, errIdealIteration,
-            label='$\sum_{j=0}^{n} \\rho^j \eta_{n-j}$ '
-                  '($\sum_{j=0}^{n} \\rho^j e_{n-j} '
-                  '\leq \sum_{j=0}^{n} \\rho^j \eta_{n-j}$)')
+            label=r'$\sum_{j=0}^{n} \rho^j \eta_{n-j}$ '
+                  r'($\sum_{j=0}^{n} \rho^j e_{n-j} '
+                  r'\leq \sum_{j=0}^{n} \rho^j \eta_{n-j}$)')
 
         line1______ = ax1.plot(iterationIndices,
                 (1.+np.pi*np.pi/6.)*np.asarray(rhoN),
-                label='$(1+\pi^2/6)\\rho^n$ '
-                      '($\sum_{j=0}^{n} \\rho^j \eta_{n-j} '
-                      '\leq (1+\pi^2/6)\\rho^n$)')
+                label=r'$(1+\pi^2/6)\rho^n$ '
+                      r'($\sum_{j=0}^{n} \rho^j \eta_{n-j} '
+                      r'\leq (1+\pi^2/6)\rho^n$)')
 
     # plot in RWTH blue
     plt.setp(line1, linewidth=2.0,
