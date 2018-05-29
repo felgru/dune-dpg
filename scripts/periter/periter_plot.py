@@ -174,6 +174,9 @@ def plot_convergence(data,
         label=r'$\sum_{j=0}^{n} \rho^j e_{n-j}$'
               r' (a posteriori bound for $||u_n - \bar u_n||$)')
 
+    lineAposteriori = ax1.plot(iterationIndices, data['globalAccAposteriori'],
+        label='a posteriori error estimate')
+
     if not simple_plot:
         line1_____ = ax1.plot(iterationIndices, errIdealIteration,
             label=r'$\sum_{j=0}^{n} \rho^j \eta_{n-j}$ '
@@ -210,6 +213,9 @@ def plot_convergence(data,
         plt.setp(line1______, linewidth=2.0,
                  marker='o', markersize=4.0,
                  color=colorPalette[6])
+    plt.setp(lineAposteriori, linewidth=2.0,
+             marker='x', markersize=4.0,
+             color=colorPalette[7])
 
     ax1.set_xscale(xscale)
     ax1.set_yscale(yscale)
