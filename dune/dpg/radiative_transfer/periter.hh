@@ -1330,8 +1330,7 @@ compute_adaptive_transport_solution(
         transportPlotter.plotRhsAndScattering(feBasisTest,
                                 rhsValues, scatteringValues, nRefinement);
 
-        rhsFunctional.resize(rhsValues.size(),
-                             false /* don't copy old values */);
+        rhsFunctional.resize(rhsValues.size());
         for(size_t k = 0, kmax = rhsValues.size(); k < kmax; k++) {
           rhsFunctional[k] = rhsValues[k] + scatteringValues[k];
         }

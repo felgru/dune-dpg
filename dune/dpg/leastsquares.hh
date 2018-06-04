@@ -65,7 +65,7 @@ void solveLeastSquares(const Matrix& A, Vector& b)
       for(size_t i = 0; i < b.N(); i++)
         eigenB(i) = b[i][0];
       auto solution = decomposition.solve(eigenB);
-      b.resize(eigenA.rows(), false);
+      b.resize(eigenA.rows());
       for(size_t i = 0; i < b.N(); i++)
         b[i][0] = solution(i);
 }
