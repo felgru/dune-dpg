@@ -30,6 +30,34 @@ std::unique_ptr<SubGrid> fullSubGrid(HostGrid& hostGrid) {
   return gr;
 }
 
+/**
+ * compute intersection of two SubGrids
+ */
+template<class SubGrid>
+std::unique_ptr<SubGrid> intersectSubGrids(const SubGrid& subGrid1,
+                                           const SubGrid& subGrid2)
+{
+  // assert(subGrid1.getHostGrid() == subGrid2.getHostGrid());
+  std::unique_ptr<SubGrid> gr
+      = std::make_unique<SubGrid>(subGrid1.getHostGrid());
+  gr->createBegin();
+  for(int level=0; level <= subGrid1.maxLevel(); ++level)
+  {
+    const auto levelGridView = subGrid1.levelGridView(level);
+    for (auto&& e : elements(levelGridView))
+    {
+      const auto eHost = subGrid1.template getHostEntity<0>(e);
+      if(subGrid2.template contains<0>(eHost))
+      {
+        gr->insertRaw(eHost);
+      }
+    }
+  }
+  gr->createEnd();
+  gr->setMaxLevelDifference(1);
+  return gr;
+}
+
 template<class SubGrid>
 std::set<typename SubGrid::HostGridType::GlobalIdSet::IdType>
 saveSubGridToIdSet(const SubGrid& subGrid)
