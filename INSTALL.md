@@ -4,8 +4,8 @@ Installation of 3rd party libraries and programs
 On Debian GNU/Linux
 -------------------
 
-All necessary libraries are included in Debian Stretch and most are included
-in jessie-backports. They can be installed via
+All necessary libraries are included in Debian Buster and Stretch.
+They can be installed via
 
     apt install git cmake libboost-dev libsuitesparse-dev
 
