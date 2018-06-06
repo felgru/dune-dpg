@@ -194,6 +194,8 @@ in your favorite browser.
 Troubleshooting
 ---------------
 
+### MacOS
+
 On MacOS it might be possible that the following linker error appears:
 ```
 Undefined symbols for architecture x86_64:
@@ -216,8 +218,8 @@ target_link_libraries(${convergence_test} "gfortran")
 to `$DUNEDIR/dune-dpg/src/CMakeLists.txt` should help to correctly
 link the example programs.
 
+### disabling MPI
 
-On Linux:
 If MPI is installed, this might lead to the following error when running
 your dpg-program (i.e. `plot_solution`):
 ```
@@ -229,3 +231,11 @@ before using the MPI CollectiveCommunication!"
 This can be fixed by disabeling MPI by adding
 `-DCMAKE_DISABLE_FIND_PACKAGE_MPI=TRUE` in the `CMAKE_FLAGS` of your
 dune.opts file.
+
+### Definition of UMFPack class not found
+
+If the class `UMFPack` is not found, make sure that you have SuiteSparse
+installed and that it has been found by CMake.
+SuiteSparse cannot be found by CMake if BLAS is missing. You also have to
+make sure to have a Fortran compiler available, e.g. gfortran. Otherwise,
+CMake is not able to find BLAS.
