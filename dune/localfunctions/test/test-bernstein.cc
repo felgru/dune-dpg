@@ -134,7 +134,7 @@ int main() try
 
   return success ? 0 : 1;
 }
-catch (Dune::Exception e)
+catch (Dune::Exception& e)
 {
   std::cout << e << std::endl;
   return 1;
