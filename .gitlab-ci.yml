@@ -11,14 +11,14 @@ before_script:
   - duneci-install-module https://gitlab.dune-project.org/felix.gruber/dune-subgrid.git
 
 debian:10  gcc:
-  image: duneci/base:10
+  image: registry.dune-project.org/docker/ci/debian:10
   script: duneci-standard-test
   variables:
     DUNECI_OPTS:   $CI_PROJECT_DIR/.ci-gcc.opts
   tags: [duneci]
 
 debian:10  clang:
-  image: duneci/base:10
+  image: registry.dune-project.org/docker/ci/debian:10
   script: duneci-standard-test
   variables:
     DUNECI_OPTS:   $CI_PROJECT_DIR/.ci-clang.opts
