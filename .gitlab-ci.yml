@@ -12,14 +12,10 @@ before_script:
 
 debian:10  gcc:
   image: registry.dune-project.org/docker/ci/debian:10
-  script: duneci-standard-test
-  variables:
-    DUNECI_OPTS:   $CI_PROJECT_DIR/.ci-gcc.opts
+  script: duneci-standard-test --opts=$CI_PROJECT_DIR/.ci-gcc.opts
   tags: [duneci]
 
 debian:10  clang:
   image: registry.dune-project.org/docker/ci/debian:10
-  script: duneci-standard-test
-  variables:
-    DUNECI_OPTS:   $CI_PROJECT_DIR/.ci-clang.opts
+  script: duneci-standard-test --opts=$CI_PROJECT_DIR/.ci-clang.opts
   tags: [duneci]
