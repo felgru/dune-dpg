@@ -8,7 +8,7 @@
 #include <cmath>
 #include <iostream>
 #include <dune/grid/yaspgrid.hh>
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangebasis.hh>
 #include "../errortools.hh"
 
 int main() {
@@ -19,7 +19,7 @@ int main() {
                          std::array<int, 2>{2, 2});
   auto gridView = grid.leafGridView();
   using GridView = decltype(gridView);
-  Dune::Functions::PQkNodalBasis<GridView, 2> feBasis(gridView);
+  Dune::Functions::LagrangeBasis<GridView, 2> feBasis(gridView);
 
   Dune::BlockVector<Dune::FieldVector<double,1> >
       feCoefficients(feBasis.size());

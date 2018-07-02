@@ -25,7 +25,7 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangebasis.hh>
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/pqkfacenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
@@ -93,7 +93,7 @@ int main(int argc, char** argv)
   FEBasisInterior feBasisInterior(gridView);
 
   // bulk term corresponding to theta
-  using FEBasisTrace = Functions::PQkNodalBasis<GridView, 2>;
+  using FEBasisTrace = Functions::LagrangeBasis<GridView, 2>;
   FEBasisTrace feBasisTrace(gridView);
 
   auto solutionSpaces

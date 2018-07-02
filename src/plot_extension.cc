@@ -23,7 +23,7 @@
 #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangebasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
@@ -69,7 +69,7 @@ int main(int argc, char** argv)
   /////////////////////////////////////////////////////////
 
   using GridView = GridType::LeafGridView;
-  using FEBasis = Functions::PQkNodalBasis<GridView, 2>;
+  using FEBasis = Functions::LagrangeBasis<GridView, 2>;
   FEBasis feBasis(gridView);
 
   using Direction = FieldVector<double, 2>;

@@ -7,6 +7,7 @@
 #include <dune/common/keywords.hh>
 #include <dune/common/std/type_traits.hh>
 #include <dune/common/tupleutility.hh>
+#include <dune/common/version.hh>
 
 #ifndef DOXYGEN
 namespace std {
@@ -28,8 +29,13 @@ namespace Functions {
   template<class PB>
   class ConstrainedGlobalBasis;
 
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+  template<typename GV, int k, class MI>
+  class LagrangePreBasis;
+#else
   template<typename GV, int k, class MI>
   class PQkPreBasis;
+#endif
 
   template<typename GV, int k, class MI>
   class LagrangeDGPreBasis;
@@ -282,11 +288,19 @@ struct changeGridView<Functions::ConstrainedGlobalBasis<PB>, GridView>
         type;
 };
 
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+template<typename GV, int k, class MI, class GridView>
+struct changeGridView<Functions::LagrangePreBasis<GV, k, MI>, GridView>
+{
+  typedef Functions::LagrangePreBasis<GridView, k, MI> type;
+};
+#else
 template<typename GV, int k, class MI, class GridView>
 struct changeGridView<Functions::PQkPreBasis<GV, k, MI>, GridView>
 {
   typedef Functions::PQkPreBasis<GridView, k, MI> type;
 };
+#endif
 
 template<typename GV, int k, class MI, class GridView>
 struct changeGridView<Functions::LagrangeDGPreBasis<GV, k, MI>, GridView>

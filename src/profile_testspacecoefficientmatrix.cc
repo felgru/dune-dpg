@@ -25,7 +25,7 @@
 #include <dune/istl/io.hh>
 #include <dune/istl/umfpack.hh>
 
-#include <dune/functions/functionspacebases/pqknodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangebasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
@@ -111,7 +111,7 @@ int main(int argc, char** argv)
   using Phi = FEBasisInterior;
 
   // w
-  using FEBasisTraceLifting = Functions::PQkNodalBasis<GridView, 2>;
+  using FEBasisTraceLifting = Functions::LagrangeBasis<GridView, 2>;
   using W = FEBasisTraceLifting;
 
   auto solutionSpaces
