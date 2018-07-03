@@ -818,12 +818,18 @@ aparser.add_argument('--conv-ylim', dest='conv_ylim', action='store',
                      help='limits of the y-axis of the convergence plot')
 aparser.add_argument('--dofs-ylim', dest='dofs_ylim', action='store',
                      help='limits of the y-axes of the dofs plot')
+aparser.add_argument('--apost-lim', dest='apost_lim', action='store',
+                     help='limits for the axes of the a posteriori / dofs plot')
 aparser.add_argument('infile', action='store')
 aparser.add_argument('prefixOutputFile', action='store',
                      help='prefix of the name of the plot files')
 args = aparser.parse_args()
 args.conv_ylim = parse_ylim(args.conv_ylim)
 args.dofs_ylim = parse_ylims(args.dofs_ylim)
+args.apost_lim = parse_ylims(args.apost_lim)
+if args.apost_lim:
+    args.apost_xlim = args.apost_lim[0]
+    args.apost_ylim = args.apost_lim[1]
 
 data = readData(args.infile)
 
@@ -872,4 +878,6 @@ plot_Dofs_per_direction(data,
 
 plot_a_posteriori_err_VS_dofs(data,
      outputfile=args.prefixOutputFile+"-a-posteriori-VS-dofs.pdf",
+     xlim=args.apost_xlim,
+     ylim=args.apost_ylim,
     )
