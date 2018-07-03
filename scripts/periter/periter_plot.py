@@ -32,14 +32,14 @@ def readData(datafile):
         r'(([0-9]+\.?[0-9]*e?-?[0-9]*)\n)*'
         , re.MULTILINE)
     iterationIndicesPattern = re.compile(r'Iteration n=([0-9]+)\n')
-    etaPattern = re.compile(r'eta_n = rhobar\^{-n}: ([0-9]*\.?[0-9]*)\n')
-    wltLevelPattern = re.compile(r'Current wavelet level: ([0-9]*\.?[0-9]*)\n')
-    numSPattern = re.compile(r'Number of directions: ([0-9]*\.?[0-9]*)\n')
-    svdRankPattern = re.compile(r'SVD rank: ([0-9]*\.?[0-9]*)\n')
+    etaPattern = re.compile(r'eta_n = rhobar\^{-n}: ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
+    wltLevelPattern = re.compile(r'Current wavelet level: ([0-9]+)\n')
+    numSPattern = re.compile(r'Number of directions: ([0-9]+)\n')
+    svdRankPattern = re.compile(r'SVD rank: ([0-9]+)\n')
     matrixTHpattern = re.compile(
-        r'Kernel matrix is of size ([0-9]*\.?[0-9]*)x([0-9]*\.?[0-9]*).'
-        r' It has ([0-9]*\.?[0-9]*) elements'
-        r' of which ([0-9]*\.?[0-9]*) are zero.\n'
+        r'Kernel matrix is of size ([0-9]+)x([0-9]+).'
+        r' It has ([0-9]+) elements'
+        r' of which ([0-9]+) are zero.\n'
         , re.MULTILINE)
     timeEvalKernelPattern = re.compile(r'Computing time: ([0-9]*\.?[0-9]*)us')
     aPostPattern = re.compile(r'Error transport solves \(a posteriori estimation\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
