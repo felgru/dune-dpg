@@ -32,14 +32,14 @@ def readData(datafile):
         r'(([0-9]+\.?[0-9]*e?-?[0-9]*)\n)*'
         , re.MULTILINE)
     iterationIndicesPattern = re.compile(r'Iteration n=([0-9]+)\n')
-    etaPattern = re.compile(r'eta_n = rhobar\^{-n}: ([0-9]*\.?[0-9]*)\n')
-    wltLevelPattern = re.compile(r'Current wavelet level: ([0-9]*\.?[0-9]*)\n')
-    numSPattern = re.compile(r'Number of directions: ([0-9]*\.?[0-9]*)\n')
-    svdRankPattern = re.compile(r'SVD rank: ([0-9]*\.?[0-9]*)\n')
+    etaPattern = re.compile(r'eta_n = rhobar\^{-n}: ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
+    wltLevelPattern = re.compile(r'Current wavelet level: ([0-9]+)\n')
+    numSPattern = re.compile(r'Number of directions: ([0-9]+)\n')
+    svdRankPattern = re.compile(r'SVD rank: ([0-9]+)\n')
     matrixTHpattern = re.compile(
-        r'Kernel matrix is of size ([0-9]*\.?[0-9]*)x([0-9]*\.?[0-9]*).'
-        r' It has ([0-9]*\.?[0-9]*) elements'
-        r' of which ([0-9]*\.?[0-9]*) are zero.\n'
+        r'Kernel matrix is of size ([0-9]+)x([0-9]+).'
+        r' It has ([0-9]+) elements'
+        r' of which ([0-9]+) are zero.\n'
         , re.MULTILINE)
     timeEvalKernelPattern = re.compile(r'Computing time: ([0-9]*\.?[0-9]*)us')
     aPostPattern = re.compile(r'Error transport solves \(a posteriori estimation\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
@@ -81,23 +81,26 @@ def readData(datafile):
         if(parameters['kernelApproxType']=='SVD'):
             svPat = re.compile(r'([0-9]+\.?[0-9]*e?-?[0-9]*)\n', re.MULTILINE)
             singularValues = svPat.findall(singularValuesPattern.search(errors).group())
-        iterationIndices = iterationIndicesPattern.findall(errors)
-        etas = etaPattern.findall(errors)
-        wltLevel = wltLevelPattern.findall(errors)
-        numS = numSPattern.findall(errors)
-        svdRank = svdRankPattern.findall(errors)
+        iterationIndices = map(int, iterationIndicesPattern.findall(errors))
+        etas = map(float, etaPattern.findall(errors))
+        wltLevel = map(int, wltLevelPattern.findall(errors))
+        numS = map(int, numSPattern.findall(errors))
+        svdRank = map(int, svdRankPattern.findall(errors))
         matrixTH = matrixTHpattern.findall(errors)
-        timeEvalKernel = timeEvalKernelPattern.findall(errors)
-        aPost = aPostPattern.findall(errors)
-        accKernel = accKernelPattern.findall(errors)
-        globalAccIterationApost = globalAccIterationApostPattern.findall(errors)
-        globalAccIteratesDiff = globalAccIteratesDiffPattern.findall(errors)
-        globalAccApriori = globalAccAprioriPattern.findall(errors)
-        globalAccAposteriori = globalAccAposterioriPattern.findall(errors)
-        dofs = dofsPattern.findall(errors)
+        timeEvalKernel = map(float, timeEvalKernelPattern.findall(errors))
+        aPost = map(float, aPostPattern.findall(errors))
+        accKernel = map(float, accKernelPattern.findall(errors))
+        globalAccIterationApost = map(float,
+                globalAccIterationApostPattern.findall(errors))
+        globalAccIteratesDiff = map(float,
+                globalAccIteratesDiffPattern.findall(errors))
+        globalAccApriori = map(float, globalAccAprioriPattern.findall(errors))
+        globalAccAposteriori = map(float,
+                globalAccAposterioriPattern.findall(errors))
+        dofs = map(int, dofsPattern.findall(errors))
         innerIterationsStats = defaultdict(list)
         for m in innerIterationsPattern.finditer(errors):
-            innerIterationsStats[m.group(1)].append(
+            innerIterationsStats[int(m.group(1))].append(
                     { 'numIterations': int(m.group(2))
                     , 'maxLevel': int(m.group(3))
                     , 'numDOFs': int(m.group(4))
@@ -708,6 +711,51 @@ def plot_Dofs_per_direction(data,
 
     plt.clf()
 
+def plot_a_posteriori_err_VS_dofs(data,
+         outputfile='periter_a_posteriori_VS_dofs.pdf',
+         title=None,
+         xlabel='#DoFs',
+         ylabel='a posteriori error',
+         xlim=None,
+         ylim=None,
+         xscale='log',
+         yscale='log',
+         colorPalette=[
+            '#0063cc', '#80bdff',  # blue
+            '#33cc33', '#99e699',  # green
+            '#cc0000', '#ff5c33',  # red
+            '#b800e6', '#e580ff',  # purple
+            '#cc9900', '#ffd24d'  # yellow
+            ],
+         simple_plot=False):
+    fig, ax = plt.subplots()
+    if title != None:
+        plt.title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.ticklabel_format(style='sci', scilimits=(0,0))
+
+    iterationIndices = data['iterationIndices']
+    numDoFs = data['dofs']
+    apost = data['globalAccAposteriori']
+    print('a posteriori errors:')
+    for i in iterationIndices:
+        print(i, numDoFs[i], apost[i])
+
+    # plot in RWTH blue
+    plt.plot('dofs', 'globalAccAposteriori', 'o-', data=data,
+             color=colorPalette[0])
+
+    ax.set_xscale(xscale)
+    ax.set_yscale(yscale)
+    if xlim != None:
+        plt.xlim(xlim)
+    if ylim != None:
+        plt.ylim(ylim)
+    plt.savefig(outputfile)
+
+    plt.clf()
+
 
 # TODO: Adapt to new version
 def print_table(data):
@@ -798,28 +846,24 @@ data = readData(args.infile)
 
 plot_convergence(data,
      outputfile=args.prefixOutputFile+"-conv.pdf",
-     # title='a posteriori errors of Periter',
      simple_plot=args.simple_plot,
      ylim=args.conv_ylim
     )
 plot_directions(data,
      outputfile=args.prefixOutputFile+"-directions.pdf",
-     # title='a posteriori errors of Periter',
     )
+
 plot_kernel_acc_VS_time(data,
      outputfile=args.prefixOutputFile+"-kernel-acc-VS-time.pdf",
-     # title='a posteriori errors of Periter',
     )
 
 plot_kernel_matrix_info(data,
      outputfile=args.prefixOutputFile+"-kernel-matrix-info.pdf",
-     # title='a posteriori errors of Periter',
     )
 
 if(data['params']['kernelApproxType'] == 'SVD'):
     plot_svd(data,
      outputfile=args.prefixOutputFile+"-svd.pdf",
-     # title='a posteriori errors of Periter',
     )
 
 plot_inner_iterations(data,
@@ -831,4 +875,8 @@ plot_Dofs_per_direction(data,
      outputfile=args.prefixOutputFile+"-num-dofs.pdf",
      simple_plot=args.simple_plot,
      ylim=args.dofs_ylim
+    )
+
+plot_a_posteriori_err_VS_dofs(data,
+     outputfile=args.prefixOutputFile+"-a-posteriori-VS-dofs.pdf",
     )
