@@ -173,8 +173,8 @@ def plot_convergence(data,
         line1___ = ax1.plot(iterationIndices, data['eta'],
                             label=r'$\eta_n (e_n\leq\eta_n)$')
 
-    line1____ = ax1.plot(iterationIndices, data['globalAccIteratesDiff'],
-        label=r'a posteriori bound for $||u_n - \bar u_n||$')
+        line1____ = ax1.plot(iterationIndices, data['globalAccIteratesDiff'],
+            label=r'a posteriori bound for $||u_n - \bar u_n||$')
 
     lineAposteriori = ax1.plot(iterationIndices, data['globalAccAposteriori'],
         label=r'a posteriori bound for $||u - \bar u_n||$')
@@ -205,10 +205,9 @@ def plot_convergence(data,
         plt.setp(line1___, linewidth=2.0,
                  marker='o', markersize=4.0,
                  color=colorPalette[3])
-    plt.setp(line1____, linewidth=2.0,
-             marker='o', markersize=4.0,
-             color=colorPalette[4])
-    if not simple_plot:
+        plt.setp(line1____, linewidth=2.0,
+                 marker='o', markersize=4.0,
+                 color=colorPalette[4])
         plt.setp(line1_____, linewidth=2.0,
                  marker='o', markersize=4.0,
                  color=colorPalette[5])
