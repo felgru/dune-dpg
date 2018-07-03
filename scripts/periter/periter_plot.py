@@ -81,23 +81,26 @@ def readData(datafile):
         if(parameters['kernelApproxType']=='SVD'):
             svPat = re.compile(r'([0-9]+\.?[0-9]*e?-?[0-9]*)\n', re.MULTILINE)
             singularValues = svPat.findall(singularValuesPattern.search(errors).group())
-        iterationIndices = iterationIndicesPattern.findall(errors)
-        etas = etaPattern.findall(errors)
-        wltLevel = wltLevelPattern.findall(errors)
-        numS = numSPattern.findall(errors)
-        svdRank = svdRankPattern.findall(errors)
+        iterationIndices = map(int, iterationIndicesPattern.findall(errors))
+        etas = map(float, etaPattern.findall(errors))
+        wltLevel = map(int, wltLevelPattern.findall(errors))
+        numS = map(int, numSPattern.findall(errors))
+        svdRank = map(int, svdRankPattern.findall(errors))
         matrixTH = matrixTHpattern.findall(errors)
-        timeEvalKernel = timeEvalKernelPattern.findall(errors)
-        aPost = aPostPattern.findall(errors)
-        accKernel = accKernelPattern.findall(errors)
-        globalAccIterationApost = globalAccIterationApostPattern.findall(errors)
-        globalAccIteratesDiff = globalAccIteratesDiffPattern.findall(errors)
-        globalAccApriori = globalAccAprioriPattern.findall(errors)
-        globalAccAposteriori = globalAccAposterioriPattern.findall(errors)
-        dofs = dofsPattern.findall(errors)
+        timeEvalKernel = map(float, timeEvalKernelPattern.findall(errors))
+        aPost = map(float, aPostPattern.findall(errors))
+        accKernel = map(float, accKernelPattern.findall(errors))
+        globalAccIterationApost = map(float,
+                globalAccIterationApostPattern.findall(errors))
+        globalAccIteratesDiff = map(float,
+                globalAccIteratesDiffPattern.findall(errors))
+        globalAccApriori = map(float, globalAccAprioriPattern.findall(errors))
+        globalAccAposteriori = map(float,
+                globalAccAposterioriPattern.findall(errors))
+        dofs = map(int, dofsPattern.findall(errors))
         innerIterationsStats = defaultdict(list)
         for m in innerIterationsPattern.finditer(errors):
-            innerIterationsStats[m.group(1)].append(
+            innerIterationsStats[int(m.group(1))].append(
                     { 'numIterations': int(m.group(2))
                     , 'maxLevel': int(m.group(3))
                     , 'numDOFs': int(m.group(4))
