@@ -745,6 +745,7 @@ def plot_a_posteriori_err_VS_dofs(data,
         plt.xlim(xlim)
     if ylim != None:
         plt.ylim(ylim)
+    ax.grid()
     plt.savefig(outputfile)
 
     plt.clf()
