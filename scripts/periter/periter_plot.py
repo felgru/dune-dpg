@@ -735,13 +735,6 @@ def plot_a_posteriori_err_VS_dofs(data,
     ax.set_ylabel(ylabel)
     ax.ticklabel_format(style='sci', scilimits=(0,0))
 
-    iterationIndices = data['iterationIndices']
-    numDoFs = data['dofs']
-    apost = data['globalAccAposteriori']
-    print('a posteriori errors:')
-    for i in iterationIndices:
-        print(i, numDoFs[i], apost[i])
-
     # plot in RWTH blue
     plt.plot('dofs', 'globalAccAposteriori', 'o-', data=data,
              color=colorPalette[0])
