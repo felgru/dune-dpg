@@ -711,6 +711,51 @@ def plot_Dofs_per_direction(data,
 
     plt.clf()
 
+def plot_a_posteriori_err_VS_dofs(data,
+         outputfile='periter_a_posteriori_VS_dofs.pdf',
+         title=None,
+         xlabel='#DoFs',
+         ylabel='a posteriori error',
+         xlim=None,
+         ylim=None,
+         xscale='log',
+         yscale='log',
+         colorPalette=[
+            '#0063cc', '#80bdff',  # blue
+            '#33cc33', '#99e699',  # green
+            '#cc0000', '#ff5c33',  # red
+            '#b800e6', '#e580ff',  # purple
+            '#cc9900', '#ffd24d'  # yellow
+            ],
+         simple_plot=False):
+    fig, ax = plt.subplots()
+    if title != None:
+        plt.title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.ticklabel_format(style='sci', scilimits=(0,0))
+
+    iterationIndices = data['iterationIndices']
+    numDoFs = data['dofs']
+    apost = data['globalAccAposteriori']
+    print('a posteriori errors:')
+    for i in iterationIndices:
+        print(i, numDoFs[i], apost[i])
+
+    # plot in RWTH blue
+    plt.plot('dofs', 'globalAccAposteriori', 'o-', data=data,
+             color=colorPalette[0])
+
+    ax.set_xscale(xscale)
+    ax.set_yscale(yscale)
+    if xlim != None:
+        plt.xlim(xlim)
+    if ylim != None:
+        plt.ylim(ylim)
+    plt.savefig(outputfile)
+
+    plt.clf()
+
 
 # TODO: Adapt to new version
 def print_table(data):
@@ -801,28 +846,24 @@ data = readData(args.infile)
 
 plot_convergence(data,
      outputfile=args.prefixOutputFile+"-conv.pdf",
-     # title='a posteriori errors of Periter',
      simple_plot=args.simple_plot,
      ylim=args.conv_ylim
     )
 plot_directions(data,
      outputfile=args.prefixOutputFile+"-directions.pdf",
-     # title='a posteriori errors of Periter',
     )
+
 plot_kernel_acc_VS_time(data,
      outputfile=args.prefixOutputFile+"-kernel-acc-VS-time.pdf",
-     # title='a posteriori errors of Periter',
     )
 
 plot_kernel_matrix_info(data,
      outputfile=args.prefixOutputFile+"-kernel-matrix-info.pdf",
-     # title='a posteriori errors of Periter',
     )
 
 if(data['params']['kernelApproxType'] == 'SVD'):
     plot_svd(data,
      outputfile=args.prefixOutputFile+"-svd.pdf",
-     # title='a posteriori errors of Periter',
     )
 
 plot_inner_iterations(data,
@@ -834,4 +875,8 @@ plot_Dofs_per_direction(data,
      outputfile=args.prefixOutputFile+"-num-dofs.pdf",
      simple_plot=args.simple_plot,
      ylim=args.dofs_ylim
+    )
+
+plot_a_posteriori_err_VS_dofs(data,
+     outputfile=args.prefixOutputFile+"-a-posteriori-VS-dofs.pdf",
     )
