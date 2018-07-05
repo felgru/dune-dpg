@@ -7,11 +7,15 @@
 
 #include <cmath>
 #include <iostream>
+#include <dune/common/parallel/mpihelper.hh>
 #include <dune/grid/yaspgrid.hh>
 #include <dune/functions/functionspacebases/lagrangebasis.hh>
 #include "../errortools.hh"
 
-int main() {
+int main (int argc, char* argv[])
+{
+  Dune::MPIHelper::instance(argc, argv);
+
   std::cout << "Testing L2 norm of constant FE function on unform 2D grid."
             << std::endl;
 

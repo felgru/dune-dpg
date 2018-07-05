@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include <dune/common/exceptions.hh>
+#include <dune/common/parallel/mpihelper.hh>
 
 #include <dune/grid/yaspgrid.hh>
 
@@ -15,8 +16,10 @@
 using namespace Dune;
 using namespace Dune::Functions;
 
-int main () try
+int main (int argc, char* argv[]) try
 {
+  Dune::MPIHelper::instance(argc, argv);
+
   // Generate grid for testing
   constexpr int dim = 2;
   typedef YaspGrid<dim> GridType;
