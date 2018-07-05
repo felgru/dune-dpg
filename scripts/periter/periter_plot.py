@@ -44,8 +44,6 @@ def readData(datafile):
     timeEvalKernelPattern = re.compile(r'Computing time: ([0-9]*\.?[0-9]*)us')
     aPostPattern = re.compile(r'Error transport solves \(a posteriori estimation\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
     accKernelPattern = re.compile(r'Accuracy kernel: ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
-    globalAccIterationApostPattern = re.compile(
-        r'Error bound \|\|bar u_n -T\^{-1}K bar u_{n-1}\|\| \(a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
     globalAccIteratesDiffPattern = re.compile(r'Error bound \|\|u_n - bar u_n\|\| \(a posteriori\): ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
     globalAccAprioriPattern = re.compile(
         r'A priori bound global accuracy \|\|u - bar u_n\|\|: ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)')
@@ -90,8 +88,6 @@ def readData(datafile):
         timeEvalKernel = map(float, timeEvalKernelPattern.findall(errors))
         aPost = map(float, aPostPattern.findall(errors))
         accKernel = map(float, accKernelPattern.findall(errors))
-        globalAccIterationApost = map(float,
-                globalAccIterationApostPattern.findall(errors))
         globalAccIteratesDiff = map(float,
                 globalAccIteratesDiffPattern.findall(errors))
         globalAccApriori = map(float, globalAccAprioriPattern.findall(errors))
@@ -117,7 +113,6 @@ def readData(datafile):
            , 'timeEvalKernel': timeEvalKernel
            , 'aPost': aPost
            , 'accKernel': accKernel
-           , 'globalAccIterationApost': globalAccIterationApost
            , 'globalAccIteratesDiff' : globalAccIteratesDiff
            , 'globalAccApriori': globalAccApriori
            , 'globalAccAposteriori': globalAccAposteriori
@@ -150,7 +145,7 @@ def plot_convergence(data,
     ax1.set_ylabel(ylabel)
     ax1.ticklabel_format(style='sci', scilimits=(0,0))
 
-    rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(data['globalAccIterationApost']))]
+    rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(data['globalAccIteratesDiff']))]
     errIdealIteration = []
     for n in range(len(rhoN)):
         t = ((np.asarray(map(float, data['eta'])))[0:n+1])[::-1]
@@ -165,11 +160,6 @@ def plot_convergence(data,
                      label='$t_n$: err transport solves (a posteriori estimation)')
 
     if not simple_plot:
-        line1__ = ax1.plot(iterationIndices
-                        , data['globalAccIterationApost']
-                        , label=r'$e_n = t_n+C_T k_n$ ($||\bar u_n -T^{-1}K'
-                                r'\bar u_{n-1}||\leq e_n)$')
-
         line1___ = ax1.plot(iterationIndices, data['eta'],
                             label=r'$\eta_n (e_n\leq\eta_n)$')
 
@@ -199,9 +189,6 @@ def plot_convergence(data,
              marker='o', markersize=4.0,
              color=colorPalette[1])
     if not simple_plot:
-        plt.setp(line1__, linewidth=2.0,
-                 marker='o', markersize=4.0,
-                 color=colorPalette[2])
         plt.setp(line1___, linewidth=2.0,
                  marker='o', markersize=4.0,
                  color=colorPalette[3])
@@ -528,7 +515,7 @@ def plot_inner_iterations(data,
     ax.set_ylabel(ylabel)
     ax.ticklabel_format(style='sci', scilimits=(0,0))
 
-    rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(data['globalAccIterationApost']))]
+    rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(data['globalAccIteratesDiff']))]
     errIdealIteration = []
     for n in range(len(rhoN)):
         t = ((np.asarray(map(float, data['eta'])))[0:n+1])[::-1]

@@ -315,7 +315,7 @@ class PeriterLogger {
       const std::vector<VectorType>& x,
       const double aposterioriTransportGlobal,
       const PeriterApproximationParameters& approximationParameters,
-      const std::vector<double>& aposterioriIter,
+      const double deviationOfInexactIterate,
       const double accuracy,
       const unsigned int n)
   {
@@ -323,14 +323,10 @@ class PeriterLogger {
         static_cast<size_t>(0),
         [](size_t acc, auto vec) { return acc + vec.size(); });
 
-    // Error bound for || u_n - \bar u_n || based on a posteriori errors
-    const double deviationOfInexactIterate
-        = approximationParameters.
-              errorBetweenExactAndInexactIterate(aposterioriIter);
-
     // Error bound for || u - \bar u_n || based on a posteriori errors
     const double aPosterioriError
-        = approximationParameters.combinedAPosterioriError(aposterioriIter);
+        = approximationParameters
+          .combinedAPosterioriError(deviationOfInexactIterate);
 
     ofs << "--------------------\n"
            "End inner iterations\n"
@@ -339,8 +335,6 @@ class PeriterLogger {
           << aposterioriTransportGlobal                  << '\n'
         << "Accuracy kernel: "
           << approximationParameters.scatteringAccuracy() << '\n'
-        << "Error bound ||bar u_n -T^{-1}K bar u_{n-1}|| (a posteriori): "
-          << aposterioriIter.back()   << '\n'
         << "Error bound ||u_n - bar u_n|| (a posteriori): "
           << deviationOfInexactIterate << '\n'
         << "A priori bound global accuracy ||u - bar u_n||: "
@@ -709,9 +703,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
   double accuracy = approximationParameters.aPrioriAccuracy();
-
-  std::vector<double> aposterioriIter;
-  aposterioriIter.reserve(maxNumberOfIterations);
+  double deviationOfInexactIterate = 0.;
 
   for(unsigned int n = 0; accuracy > targetAccuracy
                           && n < maxNumberOfIterations; ++n)
@@ -793,15 +785,16 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 
     plotter.plotSolutions(spaces, x, n, numS);
 
-    // A posteriori estimation of error ||bar u_n -T^{-1}K bar u_{n-1}||
-    aposterioriIter.push_back(approximationParameters
-        .aPosterioriErrorInLastOuterIteration(aposterioriTransportGlobal));
+    // Error bound for || u_{n+1} - bar u_{n+1} ||
+    deviationOfInexactIterate
+      = approximationParameters.errorBetweenExactAndInexactIterate(
+                                          deviationOfInexactIterate);
 
     // Error bound for || u - \bar u_n || based on a priori errors
     accuracy = approximationParameters.combinedAccuracy();
 
     logger.logInnerIterationStats(x, aposterioriTransportGlobal,
-        approximationParameters, aposterioriIter, accuracy, n);
+        approximationParameters, deviationOfInexactIterate, accuracy, n);
 
     approximationParameters.decreaseEta();
 

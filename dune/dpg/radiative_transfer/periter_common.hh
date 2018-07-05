@@ -198,29 +198,20 @@ class TransportSpaces {
       return static_cast<unsigned int>(std::max(m, 0));
     }
 
-    double aPosterioriErrorInLastOuterIteration(
-        double aposterioriTransportGlobal) const
-    {
-      return aposterioriTransportGlobal + CT * scatteringAccuracy();
-    }
-
     //! a posteriori estimate for $\|u_{n+1} - \bar u_{n+1}\|$
     double errorBetweenExactAndInexactIterate(
-        const std::vector<double>& aposterioriIter) const
+        double previousDeviationOfInexactIterate) const
     {
-      double errorAPosteriori = 0.;
-      for(size_t j=0; j <= n; j++) {
-        errorAPosteriori += std::pow(rho,j)*aposterioriIter[n-j];
-      }
-      return errorAPosteriori;
+      return rho * previousDeviationOfInexactIterate
+           + 2 * kappa3 * eta_
+           + CT * (kappa1 + kappa2) * eta_;
     }
 
     //! a posteriori estimate for $\|u - \bar u_{n+1}\|$
     double combinedAPosterioriError(
-        const std::vector<double>& aposterioriIter) const
+        double deviationOfInexactIterate) const
     {
-      return std::pow(rho,n+1)*err0
-              + errorBetweenExactAndInexactIterate(aposterioriIter);
+      return std::pow(rho,n+1)*err0 + deviationOfInexactIterate;
     }
 
     double eta() const {
