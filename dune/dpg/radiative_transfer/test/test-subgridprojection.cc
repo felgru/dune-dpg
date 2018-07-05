@@ -11,6 +11,9 @@
 
 #include "../subgridprojection.hh"
 #include "../subgrids.hh"
+
+#include <dune/common/parallel/mpihelper.hh>
+
 #include <dune/functions/functionspacebases/bernsteindgbasis.hh>
 #include <dune/functions/functionspacebases/interpolate.hh>
 #include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
@@ -122,7 +125,10 @@ void refineAt(Grid& grid, const std::vector<Coordinate>& coordinates)
   grid.postAdapt();
 }
 
-int main() {
+int main (int argc, char* argv[])
+{
+  Dune::MPIHelper::instance(argc, argv);
+
   constexpr int dim = 2;
   using HostGrid = UGGrid<dim>;
   const FieldVector<double,dim> lower = {0, 0};

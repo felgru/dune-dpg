@@ -7,6 +7,7 @@
 
 #include <iostream>
 
+#include <dune/common/parallel/mpihelper.hh>
 #include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
@@ -15,8 +16,10 @@
 
 using namespace Dune;
 
-int main()
+int main (int argc, char* argv[])
 {
+  Dune::MPIHelper::instance(argc, argv);
+
   constexpr int dim = 2;
   using HostGrid = UGGrid<dim>;
   const FieldVector<double,dim> lower = {0, 0};

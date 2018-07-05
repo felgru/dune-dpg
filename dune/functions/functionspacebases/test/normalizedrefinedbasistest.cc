@@ -7,6 +7,7 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/fvector.hh>
+#include <dune/common/parallel/mpihelper.hh>
 
 #include <dune/dpg/innerproductfactory.hh>
 #include <dune/dpg/spacetuple.hh>
@@ -41,8 +42,10 @@ void testNormedAdaptorOn(const typename Basis::GridView gridView)
   testRefinedScalarBasis(normedBasis);
 }
 
-int main () try
+int main (int argc, char* argv[]) try
 {
+  Dune::MPIHelper::instance(argc, argv);
+
   // Generate grid for testing
   const int dim = 2;
   typedef YaspGrid<dim> GridType;
