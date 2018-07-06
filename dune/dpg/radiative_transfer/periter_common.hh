@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include <boost/math/special_functions/zeta.hpp>
+
 #include <dune/dpg/assemble_helper.hh>
 #include <dune/dpg/spacetuple.hh>
 
@@ -118,8 +120,8 @@ class TransportSpaces {
     unsigned int n = 0;
     // η_n:
     double eta_ = 1;
+    const double alpha = 1.5;
     const double rho;
-    const double rhobar;
     const double CT;
     const double err0;
     // CT*kappa1 + CT*kappa2 + 2*kappa3 = 1.
@@ -129,6 +131,10 @@ class TransportSpaces {
 
     friend std::ostream& operator<<
         (std::ostream& os, const PeriterApproximationParameters& params);
+
+    double etaInStep(unsigned int m) const {
+      return std::pow(1+m, -alpha) * std::pow(rho, m);
+    }
 
     public:
 
@@ -140,7 +146,6 @@ class TransportSpaces {
     PeriterApproximationParameters(double accuracyRatio,
                                    double rho, double CT, double err0, FeRHS)
       : rho(rho)
-      , rhobar(2./rho)
       , CT(CT)
       , err0(err0)
       , kappa1(accuracyRatio/CT)
@@ -155,7 +160,6 @@ class TransportSpaces {
                                    double rho, double CT, double err0,
                                    ApproximateRHS)
       : rho(rho)
-      , rhobar(2./rho)
       , CT(CT)
       , err0(err0)
       , kappa1(accuracyRatio/CT)
@@ -167,7 +171,7 @@ class TransportSpaces {
     //       Adding a factor 1/4. to compensate for that.
     double finalScatteringAccuracy(double targetAccuracy) const {
       const int m = maxOuterIterationsForTargetAccuracy(targetAccuracy);
-      return kappa1*std::pow(rhobar, -m)/4.;
+      return kappa1*etaInStep(m)/4.;
     }
 
     double aPrioriAccuracy() const {
@@ -188,12 +192,14 @@ class TransportSpaces {
 
     //! a priori estimate for $\|u - \bar u_{n+1}\|$
     double combinedAccuracy() const {
-      return (rho*err0 + 2) * std::pow(rho,n);
+      // TODO: here we can replace zeta(alpha) with the sum
+      //       over the previous eta_j
+      return (rho*err0 + boost::math::zeta(alpha)) * std::pow(rho,n);
     }
 
     unsigned int maxOuterIterationsForTargetAccuracy(double target) const
     {
-      const double eps2 = target/(rho*err0+2);
+      const double eps2 = target/(rho*err0+boost::math::zeta(alpha));
       const int m = static_cast<int>(std::ceil(std::log(eps2) / std::log(rho)));
       return static_cast<unsigned int>(std::max(m, 0));
     }
@@ -219,8 +225,8 @@ class TransportSpaces {
     }
 
     void decreaseEta() {
-      eta_ /= rhobar;
       n++;
+      eta_ = etaInStep(n);
     }
   };
 
@@ -228,7 +234,6 @@ class TransportSpaces {
                            const PeriterApproximationParameters& params)
   {
     os << "rho = "    << params.rho    << '\n'
-       << "rhobar = " << params.rhobar << '\n'
        << "kappa1 = " << params.kappa1 << '\n'
        << "kappa2 = " << params.kappa2 << '\n'
        << "kappa3 = " << params.kappa3 << '\n'

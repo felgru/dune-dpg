@@ -272,7 +272,8 @@ class PeriterLogger {
       const std::chrono::steady_clock::time_point startScatteringApproximation,
       const std::chrono::steady_clock::time_point endScatteringApproximation)
   {
-    ofs << "eta_n = rhobar^{-n}: " << approximationParameters.eta() << '\n'
+    ofs << "eta_n = (1+n)^{-alpha} rho^n: "
+        << approximationParameters.eta() << '\n'
         << "\n--------------------\n"
         << "Info angular approx:\n"
         << "--------------------\n"

@@ -21,7 +21,6 @@ def readData(datafile):
         r'Maximum number of directions: ([0-9]*\.?[0-9]*)\n'
         r'Periter parameters:\n'
         r'rho = ([0-9]*\.?[0-9]*)\n'
-        r'rhobar = ([0-9]*\.?[0-9]*)\n'
         r'kappa1 = ([0-9]*\.?[0-9]*)\n'
         r'kappa2 = ([0-9]*\.?[0-9]*)\n'
         r'kappa3 = ([0-9]*\.?[0-9]*)\n'
@@ -32,7 +31,7 @@ def readData(datafile):
         r'(([0-9]+\.?[0-9]*e?-?[0-9]*)\n)*'
         , re.MULTILINE)
     iterationIndicesPattern = re.compile(r'Iteration n=([0-9]+)\n')
-    etaPattern = re.compile(r'eta_n = rhobar\^{-n}: ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
+    etaPattern = re.compile(r'eta_n = \(1\+n\)\^{-alpha} rho\^n: ([0-9]*\.?[0-9]*e?[+-]?[0-9]+?)\n')
     wltLevelPattern = re.compile(r'Current wavelet level: ([0-9]+)\n')
     numSPattern = re.compile(r'Number of directions: ([0-9]+)\n')
     svdRankPattern = re.compile(r'SVD rank: ([0-9]+)\n')
@@ -69,11 +68,10 @@ def readData(datafile):
                      , 'maxWltLevel':     parametersMatch.group(5)
                      , 'maxNumS': parametersMatch.group(6)
                      , 'rho': parametersMatch.group(7)
-                     , 'rhobar': parametersMatch.group(8)
-                     , 'kappa1': parametersMatch.group(9)
-                     , 'kappa2': parametersMatch.group(10)
-                     , 'kappa3': parametersMatch.group(11)
-                     , 'CT': parametersMatch.group(12)
+                     , 'kappa1': parametersMatch.group(8)
+                     , 'kappa2': parametersMatch.group(9)
+                     , 'kappa3': parametersMatch.group(10)
+                     , 'CT': parametersMatch.group(11)
                      }
         singularValues = []
         if(parameters['kernelApproxType']=='SVD'):
