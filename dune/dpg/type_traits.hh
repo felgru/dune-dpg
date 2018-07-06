@@ -29,7 +29,7 @@ namespace Functions {
   template<class PB>
   class ConstrainedGlobalBasis;
 
-#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,6)
   template<typename GV, int k, class MI>
   class LagrangePreBasis;
 #else
@@ -288,7 +288,7 @@ struct changeGridView<Functions::ConstrainedGlobalBasis<PB>, GridView>
         type;
 };
 
-#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
+#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,6)
 template<typename GV, int k, class MI, class GridView>
 struct changeGridView<Functions::LagrangePreBasis<GV, k, MI>, GridView>
 {
