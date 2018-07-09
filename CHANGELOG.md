@@ -15,6 +15,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * The radiative transfer code described in Felix’ thesis has been
   merged. You can use the example programs periter_checkerboard and
   periter_peaky to recreate the results in his thesis.
+* `DPGSystemAssembler` gained a new method
+  `applyHomogeneousDirichletBoundary` with a simpler interface than
+  `applyDirichletBoundary`.
 * A new `ConstrainedLocalView` was added that provides the indexing
   methods of `ConstrainedLocalIndexSet` like `DefaultLocalView` now
   provides indexing methods in dune-functions 2.7.

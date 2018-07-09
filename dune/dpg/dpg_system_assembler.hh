@@ -161,6 +161,25 @@ public:
                               const ValueType& value);
 
   /**
+   * \brief Apply homogeneous Dirichlet boundary values to a solution space
+   *
+   * \param[in,out] matrix      the matrix of the DPG system
+   * \param[in,out] rhs         the rhs vector of the DPG system
+   * \param[in] dirichletNodes  true marks the dofs in the Dirichlet boundary
+   * \tparam spaceIndex  the index of the solution space on which we apply
+   *                     the boundary data
+   */
+  template <size_t spaceIndex>
+  void applyHomogeneousDirichletBoundary(
+                              BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
+                              BlockVector<FieldVector<double,1> >& rhs,
+                              const std::vector<bool>& dirichletNodes)
+  {
+    applyDirichletBoundary<spaceIndex, double>
+      (matrix, rhs, dirichletNodes, 0.);
+  }
+
+  /**
    * \brief The same as applyDirichletBoundary but it only
    *        applies the boundary values to the matrix
    *

@@ -184,11 +184,10 @@ int main(int argc, char** argv)
       BoundaryTools::getInflowBoundaryMask(std::get<1>(*solutionSpaces),
                                            dirichletNodesInflow,
                                            beta);
-      systemAssembler.applyDirichletBoundary<1>
+      systemAssembler.applyHomogeneousDirichletBoundary<1>
           (stiffnessMatrix,
            rhs,
-           dirichletNodesInflow,
-           0.);
+           dirichletNodesInflow);
     }
     const auto endsystemassembler = std::chrono::steady_clock::now();
     std::cout << "The system assembler took "

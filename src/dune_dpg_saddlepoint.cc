@@ -122,11 +122,10 @@ int main()
     BoundaryTools::getInflowBoundaryMask(std::get<0>(*solutionSpaces),
                                          dirichletNodesInflow,
                                          beta);
-    systemAssembler.applyDirichletBoundary<0>
+    systemAssembler.applyHomogeneousDirichletBoundary<0>
         (stiffnessMatrix,
          rhs,
-         dirichletNodesInflow,
-         0.);
+         dirichletNodesInflow);
   }
 
 #if 0

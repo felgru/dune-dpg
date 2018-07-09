@@ -1190,11 +1190,10 @@ compute_transport_solution(
                 spaces.traceSolutionSpace(),
                 dirichletNodesInflow,
                 s);
-    systemAssembler.template applyDirichletBoundary<1>
+    systemAssembler.template applyHomogeneousDirichletBoundary<1>
         (stiffnessMatrix,
-        rhs,
-        dirichletNodesInflow,
-        0.);
+         rhs,
+         dirichletNodesInflow);
   }
 #if 0
   systemAssembler.template defineCharacteristicFaces<1>(

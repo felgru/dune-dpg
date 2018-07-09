@@ -234,11 +234,10 @@ int main()
                                            beta);
 
 
-      systemAssembler.applyDirichletBoundary<1>
+      systemAssembler.applyHomogeneousDirichletBoundary<1>
           (stiffnessMatrix,
            rhs,
-           dirichletNodesInflow,
-           0.);
+           dirichletNodesInflow);
     }
 
     ////////////////////////////
