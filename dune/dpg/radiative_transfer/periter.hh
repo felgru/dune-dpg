@@ -883,7 +883,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     // Error bound for || u_{n+1} - bar u_{n+1} ||
     deviationOfInexactIterate
       = approximationParameters.errorBetweenExactAndInexactIterate(
-                                          deviationOfInexactIterate);
+                                          deviationOfInexactIterate,
+                                          aposterioriTransportGlobal);
 
     // Error bound for || u - \bar u_n || based on a priori errors
     accuracy = approximationParameters.combinedAccuracy();

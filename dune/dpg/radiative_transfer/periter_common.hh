@@ -150,7 +150,7 @@ class TransportSpaces {
       , err0(err0)
       , kappa1(accuracyRatio/CT)
       , kappa2(0.)
-      , kappa3((1.-accuracyRatio)/2.)
+      , kappa3(1.-accuracyRatio)
     {
       if(accuracyRatio < 0. || accuracyRatio > 1.)
         throw std::domain_error("accuracyRatio needs to be in (0,1).");
@@ -164,7 +164,7 @@ class TransportSpaces {
       , err0(err0)
       , kappa1(accuracyRatio/CT)
       , kappa2((1.-accuracyRatio)/(2.*CT))
-      , kappa3((1.-accuracyRatio)/4.)
+      , kappa3((1.-accuracyRatio)/2.)
     {}
 
     // TODO: The accuracy also depends on the kappa from K = κG and on \|u\|.
@@ -206,11 +206,19 @@ class TransportSpaces {
 
     //! a posteriori estimate for $\|u_{n+1} - \bar u_{n+1}\|$
     double errorBetweenExactAndInexactIterate(
-        double previousDeviationOfInexactIterate) const
+        double previousDeviationOfInexactIterate,
+        double transportError) const
     {
-      return rho * previousDeviationOfInexactIterate
-           + 2 * kappa3 * eta_
-           + CT * (kappa1 + kappa2) * eta_;
+      if(n > 0) {
+        return rho * previousDeviationOfInexactIterate
+             + CT * (kappa1 + kappa2) * eta_
+             + transportError;
+      } else {
+        // In the first iteration we have K u_0 = u_0 = 0
+        return rho * previousDeviationOfInexactIterate
+             + CT * kappa2 * eta_
+             + transportError;
+      }
     }
 
     //! a posteriori estimate for $\|u - \bar u_{n+1}\|$
