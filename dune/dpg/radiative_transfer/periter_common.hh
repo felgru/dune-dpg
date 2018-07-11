@@ -208,9 +208,16 @@ class TransportSpaces {
     double errorBetweenExactAndInexactIterate(
         double previousDeviationOfInexactIterate) const
     {
-      return rho * previousDeviationOfInexactIterate
-           + 2 * kappa3 * eta_
-           + CT * (kappa1 + kappa2) * eta_;
+      if(n > 0) {
+        return rho * previousDeviationOfInexactIterate
+             + 2 * kappa3 * eta_
+             + CT * (kappa1 + kappa2) * eta_;
+      } else {
+        // In the first iteration we have K u_0 = u_0 = 0
+        return rho * previousDeviationOfInexactIterate
+             + 2 * kappa3 * eta_
+             + CT * kappa2 * eta_;
+      }
     }
 
     //! a posteriori estimate for $\|u - \bar u_{n+1}\|$
