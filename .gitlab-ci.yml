@@ -1,5 +1,9 @@
 ---
+variables:
+  DUNECI_TEST_LABELS: nompi
+
 before_script:
+  - . /duneci/bin/duneci-init-job
   - duneci-install-module https://gitlab.dune-project.org/core/dune-common.git
   - duneci-install-module https://gitlab.dune-project.org/core/dune-geometry.git
   - duneci-install-module https://gitlab.dune-project.org/core/dune-localfunctions.git
