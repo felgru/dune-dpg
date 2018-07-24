@@ -700,6 +700,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     x[i] = 0;
   }
 
+  double uNorm = 0.;
+
   /////////////////////////////////////////////////////////
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
@@ -714,20 +716,6 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     auto startScatteringApproximation = std::chrono::steady_clock::now();
 
     const double kappaNorm = 1.;
-    const double uNorm = [&]()
-        {
-          double uNorm = 0.;
-          const std::vector<double> quadWeight
-            = kernelApproximation.quadWeightsOfSubintervalOnCurrentLevel();
-          for(size_t i=0; i<numS; ++i) {
-            const double uiNorm =
-              ErrorTools::l2norm(spaces.interiorSolutionSpace(), x[i]);
-            uNorm += uiNorm * uiNorm
-                      * quadWeight[i % kernelApproximation.numSperInterval];
-          }
-          uNorm = std::sqrt(uNorm);
-          return uNorm;
-        }();
 
     const double accuKernel = approximationParameters.scatteringAccuracy()
                                            // To prevent division by zero.
@@ -797,7 +785,21 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     logger.logInnerIterationStats(x, aposterioriTransportGlobal,
         approximationParameters, deviationOfInexactIterate, accuracy, n);
 
-    approximationParameters.decreaseEta();
+    // compute L2 norm of u
+    {
+      uNorm = 0.;
+      const std::vector<double> quadWeight
+        = kernelApproximation.quadWeightsOfSubintervalOnCurrentLevel();
+      for(size_t i=0; i<numS; ++i) {
+        const double uiNorm =
+          ErrorTools::l2norm(spaces.interiorSolutionSpace(), x[i]);
+        uNorm += uiNorm * uiNorm
+                  * quadWeight[i % kernelApproximation.numSperInterval];
+      }
+      uNorm = std::sqrt(uNorm);
+    }
+
+    approximationParameters.decreaseEta(uNorm);
 
     plotter.plotIntegratedSolution(spaces.interiorSolutionSpace(),
                                    x, kernelApproximation, n);
