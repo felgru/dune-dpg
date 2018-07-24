@@ -790,6 +790,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     x[i] = 0;
   }
 
+  double uNorm = 0.;
+
   /////////////////////////////////////////////////////////
   //  Fixed-point iterations
   /////////////////////////////////////////////////////////
@@ -811,25 +813,10 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     auto startScatteringApproximation = std::chrono::steady_clock::now();
 
     const double kappaNorm = 1.;
-    const double uNorm = [&]()
-        {
-          double uNorm = 0.;
-          const std::vector<double> quadWeight
-            = kernelApproximation.quadWeightsOfSubintervalOnCurrentLevel();
-          for(size_t i=0; i<grids.size(); ++i) {
-            const double uiNorm =
-              ErrorTools::l2norm(spaces.interiorSolutionSpace(i), x[i]);
-            uNorm += uiNorm * uiNorm
-                      * quadWeight[i % kernelApproximation.numSperInterval];
-          }
-          uNorm = std::sqrt(uNorm);
-          // To prevent division by zero.
-          if(uNorm == 0.) uNorm = 1e-5;
-          return uNorm;
-        }();
 
     const double accuKernel = approximationParameters.scatteringAccuracy()
-                            / (kappaNorm * uNorm);
+                                           // To prevent division by zero.
+                            / (kappaNorm * ((uNorm>0.)?uNorm:1e-5));
 
     auto scatteringData = computeScatteringData
                             (hostGrid.leafGridView(),
@@ -892,16 +879,30 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     logger.logInnerIterationStats(x, aposterioriTransportGlobal,
         approximationParameters, deviationOfInexactIterate, accuracy, n);
 
-    approximationParameters.decreaseEta();
+    for(unsigned int i = 0; i < grids.size(); ++i)
+    {
+      grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
+                                               hostGrid);
+      spaces.update(i, grids[i]->leafGridView());
+    }
+
+    // compute L2 norm of u
+    {
+      uNorm = 0.;
+      const std::vector<double> quadWeight
+        = kernelApproximation.quadWeightsOfSubintervalOnCurrentLevel();
+      for(size_t i=0; i<grids.size(); ++i) {
+        const double uiNorm =
+          ErrorTools::l2norm(spaces.interiorSolutionSpace(i), x[i]);
+        uNorm += uiNorm * uiNorm
+                  * quadWeight[i % kernelApproximation.numSperInterval];
+      }
+      uNorm = std::sqrt(uNorm);
+    }
+
+    approximationParameters.decreaseEta(uNorm);
 
     if(plotter.plotIntegratedSolutionEnabled()) {
-      for(unsigned int i = 0; i < grids.size(); ++i)
-      {
-        grids[i] = restoreSubGridFromIdSet<Grid>(gridIdSets[i],
-                                                 hostGrid);
-        spaces.update(i, grids[i]->leafGridView());
-      }
-
       using HostGridView = typename HostGrid::LeafGridView;
 #ifdef PERITER_SKELETAL_SCATTERING
       // Discontinuous version of the trace space

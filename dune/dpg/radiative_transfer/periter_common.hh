@@ -123,7 +123,7 @@ class TransportSpaces {
     const double alpha = 1.5;
     const double rho;
     const double CT;
-    const double err0;
+    double uBound; // b(u) in our paper
     // CT*kappa1 + CT*kappa2 + 2*kappa3 = 1.
     const double kappa1;
     const double kappa2;
@@ -147,7 +147,7 @@ class TransportSpaces {
                                    double rho, double CT, double err0, FeRHS)
       : rho(rho)
       , CT(CT)
-      , err0(err0)
+      , uBound(err0)
       , kappa1(accuracyRatio/CT)
       , kappa2(0.)
       , kappa3(1.-accuracyRatio)
@@ -161,7 +161,7 @@ class TransportSpaces {
                                    ApproximateRHS)
       : rho(rho)
       , CT(CT)
-      , err0(err0)
+      , uBound(err0)
       , kappa1(accuracyRatio/CT)
       , kappa2((1.-accuracyRatio)/(2.*CT))
       , kappa3((1.-accuracyRatio)/2.)
@@ -175,7 +175,7 @@ class TransportSpaces {
     }
 
     double aPrioriAccuracy() const {
-      return err0;
+      return uBound;
     }
 
     double scatteringAccuracy() const {
@@ -194,12 +194,12 @@ class TransportSpaces {
     double combinedAccuracy() const {
       // TODO: here we can replace zeta(alpha) with the sum
       //       over the previous eta_j
-      return (rho*err0 + boost::math::zeta(alpha)) * std::pow(rho,n);
+      return (rho*uBound + boost::math::zeta(alpha)) * std::pow(rho,n);
     }
 
     unsigned int maxOuterIterationsForTargetAccuracy(double target) const
     {
-      const double eps2 = target/(rho*err0+boost::math::zeta(alpha));
+      const double eps2 = target/(rho*uBound+boost::math::zeta(alpha));
       const int m = static_cast<int>(std::ceil(std::log(eps2) / std::log(rho)));
       return static_cast<unsigned int>(std::max(m, 0));
     }
@@ -225,14 +225,16 @@ class TransportSpaces {
     double combinedAPosterioriError(
         double deviationOfInexactIterate) const
     {
-      return std::pow(rho,n+1)*err0 + deviationOfInexactIterate;
+      return std::pow(rho,n+1)*uBound + deviationOfInexactIterate;
     }
 
     double eta() const {
       return eta_;
     }
 
-    void decreaseEta() {
+    void decreaseEta(double uNorm) {
+      const double acc = combinedAccuracy();
+      uBound = uNorm + acc;
       n++;
       eta_ = etaInStep(n);
     }
