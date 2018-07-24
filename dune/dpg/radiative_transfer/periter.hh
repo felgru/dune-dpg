@@ -823,13 +823,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
                       * quadWeight[i % kernelApproximation.numSperInterval];
           }
           uNorm = std::sqrt(uNorm);
-          // To prevent division by zero.
-          if(uNorm == 0.) uNorm = 1e-5;
           return uNorm;
         }();
 
     const double accuKernel = approximationParameters.scatteringAccuracy()
-                            / (kappaNorm * uNorm);
+                                           // To prevent division by zero.
+                            / (kappaNorm * ((uNorm>0.)?uNorm:1e-5));
 
     auto scatteringData = computeScatteringData
                             (hostGrid.leafGridView(),
