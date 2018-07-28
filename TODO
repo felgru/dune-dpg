@@ -1,5 +1,13 @@
 known bugs:
 
+* check that I handle the RHS correctly.
+  IIRC I handle scattering, bv, rhs etc all in one vector
+  represented in the test space basis. This probably has to change.
+  We might need to handle it in two different vectors represented in
+  different bases.
+* After the normalization of test and trial spaces in Periter, the
+  version using a uniform grid does not work anymore, as it now would
+  need to use different spaces for different directions.
 * When calling the update() method of normalized spaces, we do not
   update the gridviews associated with the GridViewFunctions in the
   coefficients of the inner product that handles the normalization.

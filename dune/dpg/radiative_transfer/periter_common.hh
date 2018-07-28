@@ -10,6 +10,7 @@
 #include <boost/math/special_functions/zeta.hpp>
 
 #include <dune/dpg/assemble_helper.hh>
+#include <dune/dpg/functions/normalizedspaces.hh>
 #include <dune/dpg/integralterm.hh>
 #include <dune/dpg/spacetuple.hh>
 
@@ -76,6 +77,23 @@ class TransportSpaces {
     return make_normalized_space_tuple(innerProduct);
   }
 
+  template<typename FEBasisInterior, typename FEBasisTrace>
+  static auto
+  make_solution_spaces(const typename FEBasisInterior::GridView& gridView)
+  {
+    auto interiorSpace = make_space_tuple<FEBasisInterior>(gridView);
+    auto l2InnerProduct
+      = innerProductWithSpace(interiorSpace)
+        .template addIntegralTerm<0,0,IntegrationType::valueValue,
+                                      DomainOfIntegration::interior>(1.)
+        .create();
+    auto normedSpace = make_normalized_space(l2InnerProduct);
+    using NormedSpace = decltype(normedSpace);
+
+    return std::make_shared<std::tuple<NormedSpace, FEBasisTrace>>(
+        std::make_tuple(std::move(normedSpace), FEBasisTrace(gridView)));
+  }
+
   using UnnormalizedFEBasisInterior = Functions::BernsteinDGBasis<GV, 1>;
   using UnnormalizedFEBasisTrace = TraceBasis;
 
@@ -87,11 +105,10 @@ class TransportSpaces {
   public:
   using GridView = GV;
 
-  using FEBasisInterior = UnnormalizedFEBasisInterior;
-  using FEBasisTrace = UnnormalizedFEBasisTrace;
-
-  using SolutionSpacePtr = decltype(make_space_tuple<FEBasisInterior,
-                                    FEBasisTrace>(std::declval<GridView>()));
+  using SolutionSpacePtr
+    = decltype(make_solution_spaces<UnnormalizedFEBasisInterior,
+                                    UnnormalizedFEBasisTrace>
+                                   (std::declval<GridView>()));
   using TestSpacePtr = decltype(make_test_spaces<UnnormalizedFEBasisTest>
                                 (std::declval<GridView>(),
                                  std::declval<FieldVector<double, 2>>()));
@@ -100,13 +117,18 @@ class TransportSpaces {
                  (std::declval<GridView>(),
                   std::declval<FieldVector<double, 2>>()));
 
+  using FEBasisInterior
+      = std::tuple_element_t<0, typename SolutionSpacePtr::element_type>;
+  using FEBasisTrace
+      = std::tuple_element_t<1, typename SolutionSpacePtr::element_type>;
   using FEBasisTest
       = std::tuple_element_t<0, typename TestSpacePtr::element_type>;
   using FEBasisEnrichedTest
       = std::tuple_element_t<0, typename EnrichedTestSpacePtr::element_type>;
 
   TransportSpaces(const GridView& gridView, FieldVector<double, 2> direction)
-    : solutionSpace_(make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView))
+    : solutionSpace_(make_solution_spaces<UnnormalizedFEBasisInterior,
+                                          UnnormalizedFEBasisTrace>(gridView))
     , testSpace_(make_test_spaces<UnnormalizedFEBasisTest>(gridView, direction))
     , enrichedTestSpace_(make_test_spaces<UnnormalizedFEBasisEnrichedTest>
                                          (gridView, direction))

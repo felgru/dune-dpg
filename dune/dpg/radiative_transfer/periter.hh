@@ -325,8 +325,15 @@ class SubGridSpaces {
   }
 #else
   static auto scatteringHostGridBasis(HostGridView hostGridView) {
-    using FEBasisHost = changeGridView_t<FEBasisInterior, HostGridView>;
-    return FEBasisHost(hostGridView);
+    using FEBasisInteriorHost
+        = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
+    auto interiorSpace = make_space_tuple<FEBasisInteriorHost>(hostGridView);
+    auto l2InnerProduct
+      = innerProductWithSpace(interiorSpace)
+        .template addIntegralTerm<0,0,IntegrationType::valueValue,
+                                      DomainOfIntegration::interior>(1.)
+        .create();
+    return make_normalized_space(l2InnerProduct);
   }
 
   const FEBasisInterior& scatteringSubGridBasis(size_t i) const {

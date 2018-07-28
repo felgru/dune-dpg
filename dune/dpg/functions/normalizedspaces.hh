@@ -13,10 +13,10 @@
 namespace Dune {
 
 /**
- * Create a shared_ptr to a tuple of normalized spaces
+ * Create a normalized space
  */
 template<class InnerProduct>
-auto make_normalized_space_tuple(const InnerProduct& innerProduct)
+auto make_normalized_space(const InnerProduct& innerProduct)
 {
   using WrappedSpaces = typename InnerProduct::TestSpaces;
 
@@ -27,8 +27,20 @@ auto make_normalized_space_tuple(const InnerProduct& innerProduct)
     Functions::NormalizedRefinedBasis<InnerProduct>,
     Functions::NormalizedBasis<InnerProduct>>;
 
+  return NormalizedSpace(innerProduct);
+}
+
+/**
+ * Create a shared_ptr to a tuple of normalized spaces
+ */
+template<class InnerProduct>
+auto make_normalized_space_tuple(const InnerProduct& innerProduct)
+{
+  auto normalizedSpace = make_normalized_space(innerProduct);
+  using NormalizedSpace = decltype(normalizedSpace);
+
   return std::make_shared<std::tuple<NormalizedSpace>>(
-      std::make_tuple(NormalizedSpace(innerProduct)));
+      std::make_tuple(std::move(normalizedSpace)));
 }
 
 } // end namespace Dune
