@@ -8,7 +8,7 @@ install(FILES
         gridviewfunctions.hh
         interpolate.hh
         localindexsetiteration.hh
-        normedspaces.hh
+        normalizedspaces.hh
         refinementinterpolation.hh
         subgridinterpolation.hh
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/dpg/functions)

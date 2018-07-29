@@ -7,7 +7,7 @@
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
-#include <dune/dpg/functions/normedspaces.hh>
+#include <dune/dpg/functions/normalizedspaces.hh>
 #include <dune/dpg/innerproductfactory.hh>
 #include <dune/dpg/testspace_coefficient_matrix.hh>
 #include <dune/functions/functionspacebases/bernsteindgrefineddgnodalbasis.hh>

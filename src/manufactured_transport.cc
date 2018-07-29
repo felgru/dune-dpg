@@ -40,7 +40,7 @@
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/functionplotter.hh>
-#include <dune/dpg/functions/normedspaces.hh>
+#include <dune/dpg/functions/normalizedspaces.hh>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"

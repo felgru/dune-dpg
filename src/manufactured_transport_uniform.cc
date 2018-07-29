@@ -35,7 +35,7 @@
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/functionplotter.hh>
-#include <dune/dpg/functions/normedspaces.hh>
+#include <dune/dpg/functions/normalizedspaces.hh>
 #include <dune/dpg/rhs_assembler.hh>
 
 

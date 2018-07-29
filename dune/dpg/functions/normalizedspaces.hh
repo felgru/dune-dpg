@@ -1,5 +1,5 @@
-#ifndef DUNE_DPG_FUNCTIONS_NORMEDSPACES_HH
-#define DUNE_DPG_FUNCTIONS_NORMEDSPACES_HH
+#ifndef DUNE_DPG_FUNCTIONS_NORMALIZEDSPACES_HH
+#define DUNE_DPG_FUNCTIONS_NORMALIZEDSPACES_HH
 
 #include <memory>
 #include <tuple>
@@ -13,7 +13,7 @@
 namespace Dune {
 
 /**
- * Create a shared_ptr to a tuple of normed spaces
+ * Create a shared_ptr to a tuple of normalized spaces
  */
 template<class InnerProduct>
 auto make_normalized_space_tuple(const InnerProduct& innerProduct)
@@ -22,13 +22,13 @@ auto make_normalized_space_tuple(const InnerProduct& innerProduct)
 
   static_assert(std::tuple_size<WrappedSpaces>::value == 1,
       "make_normalized_space_tuple only implemented for tuples with one space.");
-  using NormedSpace = std::conditional_t<
+  using NormalizedSpace = std::conditional_t<
     is_RefinedFiniteElement<std::tuple_element_t<0, WrappedSpaces>>::value,
     Functions::NormalizedRefinedBasis<InnerProduct>,
     Functions::NormalizedBasis<InnerProduct>>;
 
-  return std::make_shared<std::tuple<NormedSpace>>(
-      std::make_tuple(NormedSpace(innerProduct)));
+  return std::make_shared<std::tuple<NormalizedSpace>>(
+      std::make_tuple(NormalizedSpace(innerProduct)));
 }
 
 } // end namespace Dune
