@@ -97,23 +97,23 @@ if(dune-subgrid_FOUND)
                              PUBLIC PERITER_CHECKERBOARD=1)
 endif()
 
-add_executable("periter_peaky_uniform"
-               dune_dpg_rad_trans_periter.cc)
-add_dune_suitesparse_flags(periter_peaky_uniform)
-add_dune_ug_flags(periter_peaky_uniform)
-target_link_dune_default_libraries("periter_peaky_uniform")
-target_compile_definitions(periter_peaky_uniform
-                           PUBLIC PERITER_USE_UNIFORM_GRID=1;
-                                  PERITER_PEAKY_BV=1)
+#add_executable("periter_peaky_uniform"
+#               dune_dpg_rad_trans_periter.cc)
+#add_dune_suitesparse_flags(periter_peaky_uniform)
+#add_dune_ug_flags(periter_peaky_uniform)
+#target_link_dune_default_libraries("periter_peaky_uniform")
+#target_compile_definitions(periter_peaky_uniform
+#                           PUBLIC PERITER_USE_UNIFORM_GRID=1;
+#                                  PERITER_PEAKY_BV=1)
 
-add_executable("periter_checkerboard_uniform"
-               dune_dpg_rad_trans_periter.cc)
-add_dune_suitesparse_flags(periter_checkerboard_uniform)
-add_dune_ug_flags(periter_checkerboard_uniform)
-target_link_dune_default_libraries("periter_checkerboard_uniform")
-target_compile_definitions(periter_checkerboard_uniform
-                           PUBLIC PERITER_USE_UNIFORM_GRID=1;
-                                  PERITER_CHECKERBOARD=1)
+#add_executable("periter_checkerboard_uniform"
+#               dune_dpg_rad_trans_periter.cc)
+#add_dune_suitesparse_flags(periter_checkerboard_uniform)
+#add_dune_ug_flags(periter_checkerboard_uniform)
+#target_link_dune_default_libraries("periter_checkerboard_uniform")
+#target_compile_definitions(periter_checkerboard_uniform
+#                           PUBLIC PERITER_USE_UNIFORM_GRID=1;
+#                                  PERITER_CHECKERBOARD=1)
 
 add_executable("kernel_svds" kernel_svds.cc)
 target_link_dune_default_libraries("kernel_svds")
