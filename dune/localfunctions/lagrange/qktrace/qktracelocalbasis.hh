@@ -86,7 +86,7 @@ namespace Dune
     {
       out.resize(size());
       size_t i = 0;
-      for (size_t l=0; l<StaticPower<k+1,d>::power; l++) //TODO warum hier size_t und nicht unsigned int? und wo ist size_t definiert?
+      for (size_t l=0; l<StaticPower<k+1,d>::power; l++)
       {
         // convert index l to multiindex
         Dune::FieldVector<int,d> alpha(multiindex(l));
@@ -121,7 +121,7 @@ namespace Dune
       out.resize(size());
 
       size_t i = 0;
-      for (size_t l=0; l<StaticPower<k+1,d>::power; l++) //TODO warum hier size_t und nicht unsigned int? und wo ist size_t definiert?
+      for (size_t l=0; l<StaticPower<k+1,d>::power; l++)
       {
         // convert index l to multiindex
         Dune::FieldVector<int,d> alpha(multiindex(l));
