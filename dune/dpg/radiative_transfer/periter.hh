@@ -319,6 +319,11 @@ class SubGridSpaces {
     return hostGridGlobalBasis;
   }
 
+  static auto bvHostGridBasis(HostGridView hostGridView) {
+    using FEBasisHostTrace = changeGridView_t<FEBasisTrace, HostGridView>;
+    return FEBasisHostTrace(hostGridView);
+  }
+
   Spaces& operator[](size_t i) {
     return spaces_[i];
   }
@@ -1093,15 +1098,14 @@ computeBvData(
       const HB& is_inflow_boundary_homogeneous)
 {
   using Spaces = SubGridSpaces<SubGridView>;
-  using FEBasisHostTrace
-      = changeGridView_t<typename Spaces::FEBasisTrace, HostGridView>;
+  auto hostGridGlobalBasis = Spaces::bvHostGridBasis(hostGridView);
+  using FEBasisHostTrace = decltype(hostGridGlobalBasis);
   using BVData = std::decay_t<decltype(attachDataToSubGrid(
             std::declval<typename Spaces::FEBasisTest>(),
             std::declval<FEBasisHostTrace>(),
             std::declval<VectorType>()))>;
   std::vector<Std::optional<BVData>> bvData;
 
-  FEBasisHostTrace hostGridGlobalBasis(hostGridView);
   const VectorType boundaryExtension
       = harmonic_extension_of_boundary_values(g, hostGridGlobalBasis);
   const size_t numS = sVector.size();
