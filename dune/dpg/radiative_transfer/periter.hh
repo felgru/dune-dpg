@@ -248,6 +248,8 @@ class Periter {
 
 template<class GridView>
 class SubGridSpaces {
+  using HostGridView = typename GridView::Grid::HostGridType::LeafGridView;
+
   public:
   using Spaces = TransportSpaces<GridView,
                     Functions::HangingNodeBernsteinP2Basis<GridView>>;
@@ -300,6 +302,21 @@ class SubGridSpaces {
 
   const FEBasisTest& testSpace(size_t i) const {
     return spaces_[i].testSpace();
+  }
+
+  static auto scatteringHostGridBasis(HostGridView hostGridView) {
+#ifdef PERITER_SKELETAL_SCATTERING
+    // Discontinuous version of the trace space
+    using FEBasisHost
+        = Functions::BernsteinDGBasis<HostGridView, 2>;
+#else
+    using FEBasisHost
+        = changeGridView_t<FEBasisInterior, HostGridView>;
+#endif
+
+    FEBasisHost hostGridGlobalBasis(hostGridView);
+
+    return hostGridGlobalBasis;
   }
 
   Spaces& operator[](size_t i) {
@@ -903,17 +920,8 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     approximationParameters.decreaseEta(uNorm);
 
     if(plotter.plotIntegratedSolutionEnabled()) {
-      using HostGridView = typename HostGrid::LeafGridView;
-#ifdef PERITER_SKELETAL_SCATTERING
-      // Discontinuous version of the trace space
-      using FEBasisHost
-          = Functions::BernsteinDGBasis<HostGridView, 2>;
-#else
-      using FEBasisHost
-          = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
-#endif
-
-      FEBasisHost hostGridGlobalBasis(hostGrid.leafGridView());
+      auto hostGridGlobalBasis
+          = Spaces::scatteringHostGridBasis(hostGrid.leafGridView());
 
       const auto xHost =
           interpolate_solutions_to_hostgrid(x, spaces, hostGridGlobalBasis);
@@ -945,21 +953,15 @@ computeScatteringData(
       unsigned int n)
 {
   using Spaces = SubGridSpaces<SubGridView>;
-#ifdef PERITER_SKELETAL_SCATTERING
-  // Discontinuous version of the trace space
-  using FEBasisHost
-      = Functions::BernsteinDGBasis<HostGridView, 2>;
-#else
-  using FEBasisHost
-      = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
-#endif
+
+  auto hostGridGlobalBasis = Spaces::scatteringHostGridBasis(hostGridView);
+  using FEBasisHost = decltype(hostGridGlobalBasis);
+
   using ScatteringData = std::decay_t<decltype(attachDataToSubGrid(
           std::declval<typename Spaces::FEBasisTest>(),
           std::declval<FEBasisHost>(),
           std::declval<VectorType>()))>;
   std::vector<ScatteringData> scatteringData;
-
-  FEBasisHost hostGridGlobalBasis(hostGridView);
 
   std::vector<VectorType> scatteringFunctional =
       apply_scattering (
@@ -1045,14 +1047,15 @@ computeRhsData(
       const F& f)
 {
   using Spaces = SubGridSpaces<SubGridView>;
-  using FEBasisHostInterior
-      = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
+
+  // TODO: is this the right space for the rhs function?
+  auto hostGridGlobalBasis = Spaces::scatteringHostGridBasis(hostGridView);
+  using FEBasisHostInterior = decltype(hostGridGlobalBasis);
   using RHSData = std::decay_t<decltype(attachDataToSubGrid(
             std::declval<typename Spaces::FEBasisTest>(),
             std::declval<FEBasisHostInterior>(),
             std::declval<VectorType>()))>;
   std::vector<RHSData> rhsData;
-  FEBasisHostInterior hostGridGlobalBasis(hostGridView);
 
   std::vector<VectorType> rhsFunctional =
       detail::approximate_rhs (
