@@ -658,15 +658,15 @@ public:
    */
   std::vector<FieldVector<double, 1>>
   restoreDataToRefinedSubGrid(
-      const SubGridGlobalBasis& subGridGlobalBasis)
+      const SubGridGlobalBasis& subGridGlobalBasis,
+      // TODO: After refinement, the leaf grid of the hostGridGlobalBasis
+      //       does not fit with the saved data anymore!
+      const HostGridGlobalBasis& hostGridGlobalBasis)
   {
     using SubGridElement = typename SubGridGlobalBasis::LocalView::Element;
 
     auto subGridView = subGridGlobalBasis.gridView();
     auto& subGrid = subGridView.grid();
-
-    HostGridGlobalBasis hostGridGlobalBasis(
-        subGrid.getHostGrid().leafGridView());
 
     std::vector<FieldVector<double, 1>> data(subGridGlobalBasis.size());
 
