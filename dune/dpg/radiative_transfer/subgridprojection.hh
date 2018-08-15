@@ -51,16 +51,15 @@ namespace detail {
     {}
 
     void evaluate(const Domain& x, Range& y) const {
-      y = Range(0);
-
       auto&& localBasis = finiteElement.localBasis();
 
       shapeFunctionValues.resize(localBasis.size());
       localBasis.evaluateFunction(x, shapeFunctionValues);
 
-      for(size_t i = 0; i < localBasis.size(); i++) {
-        y += elementData[i] * shapeFunctionValues[i];
-      }
+      y = std::inner_product(shapeFunctionValues.cbegin(),
+                             shapeFunctionValues.cend(),
+                             elementData.cbegin(),
+                             Range(0));
     }
 
     const FiniteElement& finiteElement;
@@ -95,17 +94,16 @@ namespace detail {
     {}
 
     void evaluate(const Domain& x, Range& y) const {
-      y = Range(0);
-
       auto&& localBasis = finiteElement.localBasis();
 
       shapeFunctionValues.resize(localBasis.size());
       localBasis.evaluateFunction(subGeometryInReferenceElement.global(x),
                                   shapeFunctionValues);
 
-      for(size_t i = 0; i < localBasis.size(); i++) {
-        y += elementData[i] * shapeFunctionValues[i];
-      }
+      y = std::inner_product(shapeFunctionValues.cbegin(),
+                             shapeFunctionValues.cend(),
+                             elementData.cbegin(),
+                             Range(0));
     }
 
     const FiniteElement& finiteElement;
