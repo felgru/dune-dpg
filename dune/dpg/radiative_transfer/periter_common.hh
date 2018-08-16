@@ -43,6 +43,12 @@ PeriterPlotFlags& operator|=(PeriterPlotFlags& a, PeriterPlotFlags b) {
   return a = (a | b);
 }
 
+constexpr inline
+bool flagIsSet(PeriterPlotFlags flags, PeriterPlotFlags flag) {
+  using T = std::underlying_type_t<PeriterPlotFlags>;
+  return static_cast<T>(flags & flag) != T{0};
+}
+
 struct FeRHS {};
 struct ApproximateRHS {};
 

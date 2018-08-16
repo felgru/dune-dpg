@@ -362,8 +362,7 @@ class PeriterPlotter {
     : plotFlags(plotFlags)
     , outputfolder(outputfolder)
   {
-    if((plotFlags & PeriterPlotFlags::plotLastIteration)
-        == PeriterPlotFlags::plotLastIteration) {
+    if(flagIsSet(plotFlags, PeriterPlotFlags::plotLastIteration)) {
       std::cerr
           << "Plotting of only the last iteration is not implemented yet!\n";
       std::exit(1);
@@ -377,7 +376,7 @@ class PeriterPlotter {
       const unsigned int n,
       const unsigned int numS) const
   {
-    if(plotOuterIterationsEnabled()) {
+    if(flagIsSet(plotFlags, PeriterPlotFlags::plotOuterIterations)) {
       //////////////////////////////////////////////////////////////////////
       //  Write result to VTK file
       //  We need to subsample, because VTK cannot natively display
@@ -419,7 +418,7 @@ class PeriterPlotter {
       const unsigned int n,
       const size_t numS) const
   {
-    if(plotScatteringEnabled()) {
+    if(flagIsSet(plotFlags, PeriterPlotFlags::plotScattering)) {
       std::cout << "Plot scattering:\n";
 
       for(unsigned int i = 0; i < numS; ++i)
@@ -445,7 +444,7 @@ class PeriterPlotter {
       const KernelApproximation& kernelApproximation,
       const unsigned int n) const
   {
-    if(plotIntegratedSolutionEnabled()) {
+    if(flagIsSet(plotFlags, PeriterPlotFlags::plotIntegratedSolution)) {
       std::cout << "Plot integrated solution of outer iteration "
                 << n << ":\n";
 
@@ -472,21 +471,6 @@ class PeriterPlotter {
   }
 
   private:
-  bool plotOuterIterationsEnabled() const {
-    return (plotFlags & PeriterPlotFlags::plotOuterIterations)
-           == PeriterPlotFlags::plotOuterIterations;
-  }
-
-  bool plotScatteringEnabled() const {
-    return (plotFlags & PeriterPlotFlags::plotScattering)
-           == PeriterPlotFlags::plotScattering;
-  }
-
-  bool plotIntegratedSolutionEnabled() const {
-    return (plotFlags & PeriterPlotFlags::plotIntegratedSolution)
-           == PeriterPlotFlags::plotIntegratedSolution;
-  }
-
   const PeriterPlotFlags plotFlags;
   const std::string outputfolder;
 };

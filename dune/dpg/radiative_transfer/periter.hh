@@ -563,7 +563,7 @@ class TransportPlotter {
       const VectorType& scatteringValues,
       const unsigned int nRefinement) const
   {
-    if(plotRhsEnabled()) {
+    if(flagIsSet(plotFlags, PeriterPlotFlags::plotRhs)) {
       std::string name = outputfolder
                         + "/rhs_rad_trans_n"
                         + std::to_string(n)
@@ -585,10 +585,6 @@ class TransportPlotter {
   }
 
   private:
-  bool plotRhsEnabled() const {
-    return (plotFlags & PeriterPlotFlags::plotRhs) == PeriterPlotFlags::plotRhs;
-  }
-
   const PeriterPlotFlags plotFlags;
   const std::string outputfolder;
   const unsigned int n;
@@ -601,8 +597,7 @@ class PeriterPlotter {
     : plotFlags(plotFlags)
     , outputfolder(outputfolder)
   {
-    if((plotFlags & PeriterPlotFlags::plotLastIteration)
-        == PeriterPlotFlags::plotLastIteration) {
+    if(flagIsSet(plotFlags, PeriterPlotFlags::plotLastIteration)) {
       std::cerr
           << "Plotting of only the last iteration is not implemented yet!\n";
       std::exit(1);
@@ -623,7 +618,7 @@ class PeriterPlotter {
       const unsigned int n,
       const unsigned int i) const
   {
-    if(plotOuterIterationsEnabled()) {
+    if(flagIsSet(plotFlags, PeriterPlotFlags::plotOuterIterations)) {
       //////////////////////////////////////////////////////////////////////
       //  Write result to VTK file
       //  We need to subsample, because VTK cannot natively display
@@ -660,7 +655,7 @@ class PeriterPlotter {
       const unsigned int n,
       const size_t numS) const
   {
-    if(plotScatteringEnabled()) {
+    if(flagIsSet(plotFlags, PeriterPlotFlags::plotScattering)) {
       std::cout << "Plot scattering:\n";
 
       for(unsigned int i = 0; i < numS; ++i)
@@ -713,21 +708,10 @@ class PeriterPlotter {
   }
 
   bool plotIntegratedSolutionEnabled() const {
-    return (plotFlags & PeriterPlotFlags::plotIntegratedSolution)
-           == PeriterPlotFlags::plotIntegratedSolution;
+    return flagIsSet(plotFlags, PeriterPlotFlags::plotIntegratedSolution);
   }
 
   private:
-  bool plotOuterIterationsEnabled() const {
-    return (plotFlags & PeriterPlotFlags::plotOuterIterations)
-           == PeriterPlotFlags::plotOuterIterations;
-  }
-
-  bool plotScatteringEnabled() const {
-    return (plotFlags & PeriterPlotFlags::plotScattering)
-           == PeriterPlotFlags::plotScattering;
-  }
-
   const PeriterPlotFlags plotFlags;
   const std::string outputfolder;
 };
