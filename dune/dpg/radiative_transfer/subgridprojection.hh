@@ -711,7 +711,7 @@ public:
                 std::make_tuple(child.seed(), childProjection, childData));
           }
           currentData = gridData.erase(currentData);
-        } else { // if(std::get<2>(*currentData).size() == 0) {
+        } else /* if(std::get<2>(*currentData).size() == 0) */ {
           // refined beyond hostGrid → interpolate cell data to children
           using LocalData = std::vector<FieldVector<double, 1>>;
           const LocalData& localData = std::get<1>(*currentData);
