@@ -2,12 +2,6 @@ known bugs:
 
 * src/kernel_svds.cc does not work for non-wavelet kernels due to
   changes in the scattering kernel functions.
-* IntegralTerm now works when factor is a callable object. We do however
-  not increase the quadrature order. Thus it will only give reliable
-  results when factor is a picewise constant function that is aligned
-  with the grid on which the FE spaces are defined.
-* Adjust quadrature order for non-constant function (rhs term) in
-  locallinearterm_impl.hh and in linearintegralterm.hh
 
 potential performance improvements:
 
