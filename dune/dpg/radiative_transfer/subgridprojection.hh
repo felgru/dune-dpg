@@ -138,7 +138,7 @@ namespace detail {
   void computeProjectionRhs(const Element& e,
       const CellData& cellData,
       const SubGridLocalView& subGridLocalView,
-      HostGridLocalView& hostGridLocalView,
+      const HostGridLocalView& hostGridLocalView,
       BlockVector<FieldVector<double,1>>& projectionRhs)
   {
     static_assert(!is_RefinedFiniteElement<typename
@@ -246,7 +246,7 @@ namespace detail {
   void computeProjectionRhs(const Element& e,
       const CellData& cellData,
       const SubGridLocalView& subGridLocalView,
-      HostGridLocalView& hostGridLocalView,
+      const HostGridLocalView& hostGridLocalView,
       BlockVector<FieldVector<double,1>>& projectionRhs)
   {
     static_assert(!is_RefinedFiniteElement<typename
