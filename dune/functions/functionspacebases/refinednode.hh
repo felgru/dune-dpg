@@ -3,6 +3,7 @@
 #ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_REFINEDNODE_HH
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_REFINEDNODE_HH
 
+#include <dune/common/hybridutilities.hh>
 #include <dune/common/power.hh>
 #include <dune/functions/functionspacebases/referencerefinementfactory.hh>
 #include <dune/typetree/traversal.hh>
@@ -69,6 +70,41 @@ struct DGRefinedPreBasisConstants<2, level, k>
   const static int numberOfSubTriangles    = StaticPower<4,level>::power;
   const static int numberOfSubQuads        = StaticPower<4,level>::power;
 };
+
+class ResetSubElementsVisitor
+  : public TypeTree::TreeVisitor
+  , public TypeTree::DynamicTraversal
+{
+  template<typename Node_>
+  using hasResetSubElements
+      = decltype(std::declval<Node_>().resetSubElements());
+
+public:
+  template<typename Node, typename TreePath>
+  void pre(Node& node, TreePath treePath)
+  {}
+
+  template<typename Node, typename TreePath>
+  void post(Node& node, TreePath treePath)
+  {}
+
+  template<typename Node, typename TreePath>
+  void leaf(Node& node, TreePath treePath)
+  {
+    Hybrid::ifElse(
+      Std::is_detected<hasResetSubElements,Node>{},
+      [&](auto id) {
+        id(node).resetSubElements();
+      });
+  }
+};
+
+template<typename Tree>
+void resetSubElementsOfTree(Tree& tree)
+{
+  ResetSubElementsVisitor visitor{};
+  TypeTree::applyToTree(tree,visitor);
+}
 
 template<typename Entity>
 struct BindToSubElementVisitor

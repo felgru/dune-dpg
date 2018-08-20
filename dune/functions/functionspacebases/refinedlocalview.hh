@@ -92,6 +92,11 @@ public:
       });
   }
 
+  void resetSubElements()
+  {
+    resetSubElementsOfTree(tree_);
+  }
+
   /**
    * \brief Bind the view to a subElement of the already bound element e
    */

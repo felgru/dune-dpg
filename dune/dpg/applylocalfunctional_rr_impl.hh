@@ -62,6 +62,8 @@ inline static void interiorImpl(
   unsigned int testSubElementOffset = 0;
   unsigned int solutionSubElementOffset = 0;
   unsigned int subElementIndex = 0;
+  testLocalView.resetSubElements();
+  solutionLocalView.resetSubElements();
   for(const auto& subElement : elements(referenceGridView)) {
     testLocalView.bindSubElement(subElement);
     solutionLocalView.bindSubElement(subElement);
@@ -170,6 +172,8 @@ faceImpl(TestLocalView& testLocalView,
   unsigned int testSubElementOffset = 0;
   unsigned int solutionSubElementOffset = 0;
   unsigned int subElementIndex = 0;
+  testLocalView.resetSubElements();
+  solutionLocalView.resetSubElements();
   for(const auto& subElement : elements(referenceGridView))
   {
     using SubElement = std::decay_t<decltype(subElement)>;

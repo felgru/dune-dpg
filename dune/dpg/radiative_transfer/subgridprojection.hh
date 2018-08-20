@@ -263,6 +263,7 @@ namespace detail {
 
     unsigned int subElementOffset = 0;
     unsigned int subElementIndex = 0;
+    subGridLocalView.resetSubElements();
     for(const auto& subElement : elements(referenceGridView)) {
       subGridLocalView.bindSubElement(subElement);
       const auto& subGridLocalFiniteElement
@@ -378,6 +379,7 @@ namespace detail {
     std::vector<FieldVector<double, 1>> interpolatedSubGridLocalData;
     unsigned int subElementOffset = 0;
     unsigned int subElementIndex = 0;
+    subGridLocalView.resetSubElements();
     for(const auto& subElement : elements(referenceGridView)) {
       subGridLocalView.bindSubElement(subElement);
       auto&& subGridLocalFiniteElement
@@ -757,6 +759,7 @@ public:
 
                 unsigned int sourceSubElementOffset = 0;
                 SubElement sourceSubElement;
+                id(localView).resetSubElements();
                 for(const auto& sourceSubElement_
                     : elements(referenceGridView)) {
                   id(localView).bindSubElement(sourceSubElement_);
@@ -789,6 +792,7 @@ public:
                     = sourceSubElement.geometry();
 
                 unsigned int targetSubElementOffset = 0;
+                id(localView).resetSubElements();
                 for(const auto& targetSubElement
                     : elements(referenceGridView)) {
                   id(localView).bindSubElement(targetSubElement);

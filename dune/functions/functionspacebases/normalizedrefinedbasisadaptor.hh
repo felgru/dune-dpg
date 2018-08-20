@@ -6,6 +6,8 @@
 #include <array>
 #include <cmath>
 
+#include <dune/common/hybridutilities.hh>
+
 #include <dune/dpg/assemble_helper.hh>
 
 #include <dune/functions/functionspacebases/nodes.hh>
@@ -221,9 +223,30 @@ public:
     return wrappedNode_;
   }
 
+private:
+
+  template<typename Node_>
+  using hasResetSubElements
+      = decltype(std::declval<Node_>().resetSubElements());
+
+public:
+
+  void resetSubElements()
+  {
+    nextScalingWeightsOffset_ = 0;
+    Hybrid::ifElse(
+      Std::is_detected<hasResetSubElements,WrappedNode>{},
+      [&](auto id) {
+        id(wrappedNode_).resetSubElements();
+      });
+  }
+
   /**
    * \note bindSubElement expects to bind the subelements in order and
    *       each one exactly once.
+   *       To iterate several times over the subelements of the same
+   *       element, you have to call resetSubElements() before binding
+   *       to the first subelelement again.
    */
   void bindSubElement(const SubElement& se)
   {

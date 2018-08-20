@@ -125,6 +125,7 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
 
     unsigned int subElementOffset = 0;
     unsigned int subElementIndex = 0;
+    localViewTest.resetSubElements();
     for(const auto& subElement : elements(referenceGridView)) {
       localViewTest.bindSubElement(subElement);
 

@@ -36,6 +36,8 @@ inline static void interiorImpl(LhsLocalView& lhsLocalView,
   unsigned int lhsSubElementOffset = 0;
   unsigned int rhsSubElementOffset = 0;
   unsigned int subElementIndex = 0;
+  lhsLocalView.resetSubElements();
+  rhsLocalView.resetSubElements();
   for(const auto& subElement : elements(referenceGridView)) {
     lhsLocalView.bindSubElement(subElement);
     rhsLocalView.bindSubElement(subElement);
@@ -134,6 +136,8 @@ faceImpl(LhsLocalView& lhsLocalView,
   unsigned int lhsSubElementOffset = 0;
   unsigned int rhsSubElementOffset = 0;
   unsigned int subElementIndex = 0;
+  lhsLocalView.resetSubElements();
+  rhsLocalView.resetSubElements();
   for(const auto& subElement : elements(referenceGridView))
   {
     lhsLocalView.bindSubElement(subElement);
