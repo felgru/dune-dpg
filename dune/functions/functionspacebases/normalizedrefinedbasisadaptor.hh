@@ -176,6 +176,7 @@ public:
     innerProduct_(preBasis.innerProduct()),
     localViews_(Dune::detail::getLocalViews(*innerProduct_.getTestSpaces())),
     scalingWeights_(),
+    nextScalingWeightsOffset_(0),
     finiteElement_()
   {
     scalingWeights_.reserve(preBasis.maxNodeSize());
@@ -207,6 +208,7 @@ public:
 
     finiteElement_.setWrappedFiniteElementAndWeights(
         wrappedNode_.finiteElement(), scalingWeights_.begin());
+    nextScalingWeightsOffset_ = 0;
   }
 
   const RefinementGridView refinedReferenceElementGridView() const
@@ -219,9 +221,17 @@ public:
     return wrappedNode_;
   }
 
+  /**
+   * \note bindSubElement expects to bind the subelements in order and
+   *       each one exactly once.
+   */
   void bindSubElement(const SubElement& se)
   {
     wrappedNode_.bindSubElement(se);
+    finiteElement_.setWrappedFiniteElementAndWeights(
+        wrappedNode_.finiteElement(),
+        scalingWeights_.begin() + nextScalingWeightsOffset_);
+    nextScalingWeightsOffset_ += finiteElement_.size();
   }
 
 protected:
@@ -230,6 +240,7 @@ protected:
   InnerProduct innerProduct_;
   LocalViews localViews_;
   std::vector<double> scalingWeights_;
+  std::size_t nextScalingWeightsOffset_;
   FiniteElement finiteElement_;
 };
 
