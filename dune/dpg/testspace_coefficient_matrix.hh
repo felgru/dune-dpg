@@ -23,7 +23,7 @@ namespace Dune {
 template <typename Geometry>
 class GeometryComparable
 {
-  typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
+  using GlobalCoordinate = typename Geometry::GlobalCoordinate;
 
   public:
   void set(const Geometry& geometry)
@@ -190,19 +190,18 @@ template<typename BilinForm, typename InnerProd>
 class UnbufferedTestspaceCoefficientMatrix
 {
 public:
-  typedef BilinForm BilinearForm;
-  typedef InnerProd InnerProduct;
-  typedef typename std::tuple_element<0,
-             typename BilinearForm::SolutionSpaces>::type::GridView GridView;
-  typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
-  typedef typename BilinearForm::TestSpaces TestSpaces;
+  using BilinearForm = BilinForm;
+  using InnerProduct = InnerProd;
+  using SolutionSpaces = typename BilinearForm::SolutionSpaces;
+  using TestSpaces     = typename BilinearForm::TestSpaces;
+  using GridView = typename std::tuple_element_t<0,SolutionSpaces>::GridView;
+  using Entity = typename GridView::template Codim<0>::Entity;
 
 private:
-  typedef detail::getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
+  using SolutionLocalViews = detail::getLocalViews_t<SolutionSpaces>;
+  using TestLocalViews     = detail::getLocalViews_t<TestSpaces>;
 
-  typedef detail::getLocalViews_t<TestSpaces>  TestLocalViews;
-
-  typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
+  using MatrixType = Matrix<FieldMatrix<double,1,1>>;
 
 public:
   UnbufferedTestspaceCoefficientMatrix(BilinearForm& bilinForm,
@@ -214,7 +213,7 @@ public:
     localViewsTest_(detail::getLocalViews(*bilinearForm_.getTestSpaces()))
   {}
 
-  void bind(const typename GridView::template Codim<0>::Entity& e)
+  void bind(const Entity& e)
   {
     coefMatrices_.set(e,
                       bilinearForm_,
@@ -261,8 +260,8 @@ public:
 template<typename Geometry>
 class GeometryBuffer
 {
-  typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
-  typedef CoefficientMatrices<MatrixType> CoefMatrices;
+  using MatrixType = Matrix<FieldMatrix<double,1,1>>;
+  using CoefMatrices = CoefficientMatrices<MatrixType>;
 public:
   GeometryBuffer() : bufferMap() {}
 
@@ -288,24 +287,25 @@ template<typename BilinForm, typename InnerProd>
 class BufferedTestspaceCoefficientMatrix
 {
   public:
-  typedef BilinForm BilinearForm;
-  typedef InnerProd InnerProduct;
-  typedef typename std::tuple_element<0,typename BilinearForm::SolutionSpaces>::type::GridView GridView;
-  typedef typename BilinearForm::SolutionSpaces SolutionSpaces;
-  typedef typename BilinearForm::TestSpaces TestSpaces;
-  typedef decltype(std::declval<typename GridView::template Codim<0>::Entity>().geometry()) Geometry;
-  typedef GeometryBuffer<Geometry> GeoBuffer;
-  typedef typename Geometry::GlobalCoordinate GlobalCoordinate;
+  using BilinearForm = BilinForm;
+  using InnerProduct = InnerProd;
+  using SolutionSpaces = typename BilinearForm::SolutionSpaces;
+  using TestSpaces     = typename BilinearForm::TestSpaces;
+  using GridView = typename std::tuple_element_t<0, SolutionSpaces>::GridView;
+  using Entity = typename GridView::template Codim<0>::Entity;
+  using Geometry = decltype(std::declval<Entity>().geometry());
+  using GeoBuffer = GeometryBuffer<Geometry>;
 
   private:
-  typedef detail::getLocalViews_t<SolutionSpaces>  SolutionLocalViews;
+  using SolutionLocalViews = detail::getLocalViews_t<SolutionSpaces>;
+  using TestLocalViews     = detail::getLocalViews_t<TestSpaces>;
 
-  typedef detail::getLocalViews_t<TestSpaces>  TestLocalViews;
-
-  typedef Matrix<FieldMatrix<double,1,1> > MatrixType;
+  using MatrixType = Matrix<FieldMatrix<double,1,1>>;
 
   public:
-  BufferedTestspaceCoefficientMatrix(BilinearForm& bilinForm, InnerProduct& innerProd, GeoBuffer& buffer) :
+  BufferedTestspaceCoefficientMatrix(BilinearForm& bilinForm,
+                                     InnerProduct& innerProd,
+                                     GeoBuffer& buffer) :
     bilinearForm_(bilinForm),
     innerProduct_(innerProd),
     localViewsSolution_(detail::getLocalViews(
@@ -320,7 +320,7 @@ class BufferedTestspaceCoefficientMatrix
   BufferedTestspaceCoefficientMatrix(BufferedTestspaceCoefficientMatrix&)
     = delete;
 
-  void bind(const typename GridView::template Codim<0>::Entity& e)
+  void bind(const Entity& e)
   {
     using namespace Dune::detail;
     GeometryComparable<Geometry> newGeometry;
