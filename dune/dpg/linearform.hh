@@ -84,7 +84,7 @@ namespace Dune {
      *
      * \pre The given localViews have to be bound to the same element.
      */
-    void bind(const LocalViews& lv)
+    void bind(LocalViews& lv)
     {
       constexpr bool usesOptimalTestBasis =
             is_OptimalTestSpace<
@@ -140,7 +140,7 @@ namespace Dune {
     size_t localSpaceOffsets[std::tuple_size<Spaces>::value];
     size_t localTotalSpaceSize;
 
-    const LocalViews* localViews;
+    LocalViews* localViews;
   };
 
 /**

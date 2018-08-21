@@ -99,7 +99,7 @@ namespace Dune {
      *
      * \pre The given localViews have to be bound to the same element.
      */
-    void bind(const TestLocalViews& tlv)
+    void bind(TestLocalViews& tlv)
     {
       testLocalViews = std::addressof(tlv);
 
@@ -129,7 +129,7 @@ namespace Dune {
     InnerProductTerms     terms;
     size_t localTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
     size_t localTotalTestSize;
-    const TestLocalViews* testLocalViews;
+    TestLocalViews* testLocalViews;
   };
 
 /**

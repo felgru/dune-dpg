@@ -6,10 +6,12 @@
 #include <array>
 #include <cmath>
 
+#include <dune/common/hybridutilities.hh>
+
 #include <dune/dpg/assemble_helper.hh>
 
 #include <dune/functions/functionspacebases/nodes.hh>
-#include <dune/functions/functionspacebases/defaultglobalbasis.hh>
+#include <dune/functions/functionspacebases/refinedglobalbasis.hh>
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
 #include <dune/functions/functionspacebases/refinednode.hh>
 
@@ -164,6 +166,7 @@ public:
   using size_type = std::size_t;
   using TreePath = TP;
   using Element = typename WrappedNode::Element;
+  using SubElement = typename WrappedNode::SubElement;
   using FiniteElement
       = ScaledLocalFiniteElement<typename WrappedNode::FiniteElement>;
   using RefinementGrid = typename WrappedNode::RefinementGrid;
@@ -175,6 +178,7 @@ public:
     innerProduct_(preBasis.innerProduct()),
     localViews_(Dune::detail::getLocalViews(*innerProduct_.getTestSpaces())),
     scalingWeights_(),
+    nextScalingWeightsOffset_(0),
     finiteElement_()
   {
     scalingWeights_.reserve(preBasis.maxNodeSize());
@@ -206,6 +210,7 @@ public:
 
     finiteElement_.setWrappedFiniteElementAndWeights(
         wrappedNode_.finiteElement(), scalingWeights_.begin());
+    nextScalingWeightsOffset_ = 0;
   }
 
   const RefinementGridView refinedReferenceElementGridView() const
@@ -218,12 +223,47 @@ public:
     return wrappedNode_;
   }
 
+private:
+
+  template<typename Node_>
+  using hasResetSubElements
+      = decltype(std::declval<Node_>().resetSubElements());
+
+public:
+
+  void resetSubElements()
+  {
+    nextScalingWeightsOffset_ = 0;
+    Hybrid::ifElse(
+      Std::is_detected<hasResetSubElements,WrappedNode>{},
+      [&](auto id) {
+        id(wrappedNode_).resetSubElements();
+      });
+  }
+
+  /**
+   * \note bindSubElement expects to bind the subelements in order and
+   *       each one exactly once.
+   *       To iterate several times over the subelements of the same
+   *       element, you have to call resetSubElements() before binding
+   *       to the first subelelement again.
+   */
+  void bindSubElement(const SubElement& se)
+  {
+    wrappedNode_.bindSubElement(se);
+    finiteElement_.setWrappedFiniteElementAndWeights(
+        wrappedNode_.finiteElement(),
+        scalingWeights_.begin() + nextScalingWeightsOffset_);
+    nextScalingWeightsOffset_ += finiteElement_.size();
+  }
+
 protected:
 
   WrappedNode wrappedNode_;
   InnerProduct innerProduct_;
   LocalViews localViews_;
   std::vector<double> scalingWeights_;
+  std::size_t nextScalingWeightsOffset_;
   FiniteElement finiteElement_;
 };
 
@@ -297,7 +337,7 @@ protected:
  */
 template<typename InnerProduct>
 using NormalizedRefinedBasis
-    = DefaultGlobalBasis<NormalizedRefinedPreBasis<InnerProduct>>;
+    = RefinedGlobalBasis<NormalizedRefinedPreBasis<InnerProduct>>;
 
 
 

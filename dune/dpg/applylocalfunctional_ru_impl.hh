@@ -23,7 +23,7 @@ template <class VectorType,
           class Element,
           class FunctionalVector>
 inline static void interiorImpl(
-    const TestLocalView& testLocalView,
+    TestLocalView& testLocalView,
     const SolutionLocalView& solutionLocalView,
     VectorType& elementVector,
     size_t spaceOffset,
@@ -37,8 +37,8 @@ inline static void interiorImpl(
   const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
-  const auto& testLocalFiniteElement = testLocalView.tree().finiteElement();
-  const auto& solutionLocalFiniteElement = solutionLocalView.tree().finiteElement();
+  const auto& solutionLocalFiniteElement
+      = solutionLocalView.tree().finiteElement();
 
   BlockVector<FieldVector<double,1>>
       localFunctionalVector(solutionLocalView.size());
@@ -58,24 +58,24 @@ inline static void interiorImpl(
     }
   );
 
-  const unsigned int quadratureOrder
-      = solutionLocalFiniteElement.localBasis().order()
-        + testLocalFiniteElement.localBasis().order();
-
-  typename detail::ChooseQuadrature<TestSpace, SolutionSpace, Element>::type quad
-    = detail::ChooseQuadrature<TestSpace, SolutionSpace, Element>
-      ::Quadrature(element, quadratureOrder);
-
   const auto referenceGridView =
       testLocalView.tree().refinedReferenceElementGridView();
 
-  const size_t subElementStride =
-      (is_DGRefinedFiniteElement<TestSpace>::value) ?
-        testLocalFiniteElement.size() : 0;
-
   unsigned int subElementOffset = 0;
   unsigned int subElementIndex = 0;
+  testLocalView.resetSubElements();
   for(const auto& subElement : elements(referenceGridView)) {
+    testLocalView.bindSubElement(subElement);
+    const auto& testLocalFiniteElement = testLocalView.tree().finiteElement();
+
+    const unsigned int quadratureOrder
+        = solutionLocalFiniteElement.localBasis().order()
+          + testLocalFiniteElement.localBasis().order();
+
+    typename detail::ChooseQuadrature<TestSpace, SolutionSpace, Element>::type quad
+      = detail::ChooseQuadrature<TestSpace, SolutionSpace, Element>
+        ::Quadrature(element, quadratureOrder);
+
     const auto subGeometryInReferenceElement = subElement.geometry();
     for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
 
@@ -110,7 +110,7 @@ inline static void interiorImpl(
       }
     }
     if(is_DGRefinedFiniteElement<TestSpace>::value)
-      subElementOffset += subElementStride;
+      subElementOffset += testLocalFiniteElement.size();
     subElementIndex++;
   }
 }
@@ -121,7 +121,7 @@ template <class VectorType,
           class FunctionalVector,
           class LocalCoefficients>
 inline static void
-faceImpl(const TestLocalView& testLocalView,
+faceImpl(TestLocalView& testLocalView,
          const SolutionLocalView& solutionLocalView,
          VectorType& elementVector,
          size_t testSpaceOffset,
@@ -136,7 +136,6 @@ faceImpl(const TestLocalView& testLocalView,
   const auto geometry = element.geometry();
 
   // Get set of shape functions for this element
-  const auto& testLocalFiniteElement = testLocalView.tree().finiteElement();
   const auto& solutionLocalFiniteElement
       = solutionLocalView.tree().finiteElement();
 
@@ -161,10 +160,6 @@ faceImpl(const TestLocalView& testLocalView,
   const auto referenceGridView =
       testLocalView.tree().refinedReferenceElementGridView();
 
-  const unsigned int subElementStride =
-      (is_DGRefinedFiniteElement<TestSpace>::value) ?
-        testLocalFiniteElement.size() : 0;
-
   static_assert(requiredQuadratureOrder
                 <typename LocalCoefficients::LocalDirection>::value == 0,
                 "LocalDirection has to be constant.");
@@ -172,9 +167,14 @@ faceImpl(const TestLocalView& testLocalView,
 
   unsigned int subElementOffset = 0;
   unsigned int subElementIndex = 0;
+  testLocalView.resetSubElements();
   for(const auto& subElement : elements(referenceGridView))
   {
     using SubElement = std::decay_t<decltype(subElement)>;
+
+    testLocalView.bindSubElement(subElement);
+    const auto& testLocalFiniteElement = testLocalView.tree().finiteElement();
+
     const auto subGeometryInReferenceElement = subElement.geometry();
 
     unsigned int nOutflowFaces = 0;
@@ -319,7 +319,7 @@ faceImpl(const TestLocalView& testLocalView,
       }
     }
     if(is_DGRefinedFiniteElement<TestSpace>::value)
-      subElementOffset += subElementStride;
+      subElementOffset += testLocalFiniteElement.size();
     subElementIndex++;
   }
 }

@@ -101,7 +101,7 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
 
   template<class Vector,
            class LocalCoefficients>
-  static void getLocalVector(const LocalViewTest& localViewTest,
+  static void getLocalVector(LocalViewTest& localViewTest,
                              Vector& elementVector,
                              size_t spaceOffset,
                              const unsigned int quadratureOrder,
@@ -116,24 +116,22 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
     constexpr int dim = Element::mydimension;
     const auto geometry = element.geometry();
 
-    // Get set of shape functions for this element
-    const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
-
     typename detail::ChooseQuadrature<TestSpace, TestSpace, Element>::type quad
       = detail::ChooseQuadrature<TestSpace, TestSpace, Element>
         ::Quadrature(element, quadratureOrder);
 
-
     const auto referenceGridView =
         localViewTest.tree().refinedReferenceElementGridView();
 
-    const unsigned int subElementStride =
-        (is_DGRefinedFiniteElement<Space>::value) ?
-          localFiniteElementTest.size() : 0;
-
     unsigned int subElementOffset = 0;
     unsigned int subElementIndex = 0;
+    localViewTest.resetSubElements();
     for(const auto& subElement : elements(referenceGridView)) {
+      localViewTest.bindSubElement(subElement);
+
+      // Get set of shape functions for this subElement
+      const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
+
       const auto subGeometryInReferenceElement = subElement.geometry();
       for ( size_t pt=0, qsize=quad.size(); pt < qsize; pt++ ) {
 
@@ -171,7 +169,7 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
 
       }
       if(is_DGRefinedFiniteElement<TestSpace>::value)
-        subElementOffset += subElementStride;
+        subElementOffset += localFiniteElementTest.size();
       subElementIndex++;
     }
   }

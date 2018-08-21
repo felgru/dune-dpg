@@ -14,8 +14,8 @@ using RhsLocalView = typename RhsSpace::LocalView;
 template <class MatrixType,
           class Element,
           class LocalCoefficients>
-inline static void interiorImpl(const LhsLocalView& lhsLocalView,
-                                const RhsLocalView& rhsLocalView,
+inline static void interiorImpl(LhsLocalView& lhsLocalView,
+                                RhsLocalView& rhsLocalView,
                                 MatrixType& elementMatrix,
                                 size_t lhsSpaceOffset,
                                 size_t rhsSpaceOffset,
@@ -26,13 +26,6 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
   constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
-  // Get set of shape functions for this element
-  const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
-  const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
-
-  const unsigned int nLhs(lhsLocalFiniteElement.size());
-  const unsigned int nRhs(rhsLocalFiniteElement.size());
-
   typename detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>::type quad
     = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
       ::Quadrature(element, quadratureOrder);
@@ -40,17 +33,29 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
   const auto referenceGridView =
       lhsLocalView.tree().refinedReferenceElementGridView();
 
-  const unsigned int lhsSubElementStride =
-      (is_DGRefinedFiniteElement<LhsSpace>::value) ?
-        lhsLocalFiniteElement.size() : 0;
-  const unsigned int rhsSubElementStride =
-      (is_DGRefinedFiniteElement<RhsSpace>::value) ?
-        rhsLocalFiniteElement.size() : 0;
-
   unsigned int lhsSubElementOffset = 0;
   unsigned int rhsSubElementOffset = 0;
   unsigned int subElementIndex = 0;
+  lhsLocalView.resetSubElements();
+  rhsLocalView.resetSubElements();
   for(const auto& subElement : elements(referenceGridView)) {
+    lhsLocalView.bindSubElement(subElement);
+    // When the IntegralTerm belongs to an InnerProduct, it can happen
+    // that lhsLocalView and rhsLocalView are references to the same
+    // localView of a test search space. In this case, we have to make
+    // sure that we bind only once to the subElement, so that we don't
+    // increment the subElement offset twice.
+    if(std::addressof(lhsLocalView) != std::addressof(rhsLocalView)) {
+      rhsLocalView.bindSubElement(subElement);
+    }
+
+    // Get set of shape functions for this subElement
+    const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
+    const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
+
+    const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
+    const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
+
     const auto subGeometryInReferenceElement = subElement.geometry();
     for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
 
@@ -104,10 +109,11 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
         }
       }
     }
+
     if(is_DGRefinedFiniteElement<LhsSpace>::value)
-      lhsSubElementOffset += lhsSubElementStride;
+      lhsSubElementOffset += lhsLocalFiniteElement.size();
     if(is_DGRefinedFiniteElement<RhsSpace>::value)
-      rhsSubElementOffset += rhsSubElementStride;
+      rhsSubElementOffset += rhsLocalFiniteElement.size();
     subElementIndex++;
   }
 }
@@ -117,8 +123,8 @@ template <class MatrixType,
           class Element,
           class LocalCoefficients>
 inline static void
-faceImpl(const LhsLocalView& lhsLocalView,
-         const RhsLocalView& rhsLocalView,
+faceImpl(LhsLocalView& lhsLocalView,
+         RhsLocalView& rhsLocalView,
          MatrixType& elementMatrix,
          size_t lhsSpaceOffset,
          size_t rhsSpaceOffset,
@@ -129,30 +135,28 @@ faceImpl(const LhsLocalView& lhsLocalView,
   constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
-  // Get set of shape functions for this element
-  const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
-  const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
-
-  const unsigned int nLhs(lhsLocalFiniteElement.size());
-  const unsigned int nRhs(rhsLocalFiniteElement.size());
-
   const auto referenceGridView =
       lhsLocalView.tree().refinedReferenceElementGridView();
-
-  const unsigned int lhsSubElementStride =
-      (is_DGRefinedFiniteElement<LhsSpace>::value) ?
-        lhsLocalFiniteElement.size() : 0;
-  const unsigned int rhsSubElementStride =
-      (is_DGRefinedFiniteElement<RhsSpace>::value) ?
-        rhsLocalFiniteElement.size() : 0;
 
   const auto direction = localCoefficients.localDirection()({0.5,0.5});
 
   unsigned int lhsSubElementOffset = 0;
   unsigned int rhsSubElementOffset = 0;
   unsigned int subElementIndex = 0;
+  lhsLocalView.resetSubElements();
+  rhsLocalView.resetSubElements();
   for(const auto& subElement : elements(referenceGridView))
   {
+    lhsLocalView.bindSubElement(subElement);
+    rhsLocalView.bindSubElement(subElement);
+
+    // Get set of shape functions for this subElement
+    const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
+    const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
+
+    const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
+    const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
+
     using SubElement = std::decay_t<decltype(subElement)>;
     const auto subGeometryInReferenceElement = subElement.geometry();
 
@@ -291,9 +295,9 @@ faceImpl(const LhsLocalView& lhsLocalView,
       }
     }
     if(is_DGRefinedFiniteElement<LhsSpace>::value)
-      lhsSubElementOffset += lhsSubElementStride;
+      lhsSubElementOffset += lhsLocalFiniteElement.size();
     if(is_DGRefinedFiniteElement<RhsSpace>::value)
-      rhsSubElementOffset += rhsSubElementStride;
+      rhsSubElementOffset += rhsLocalFiniteElement.size();
     subElementIndex++;
   }
 }

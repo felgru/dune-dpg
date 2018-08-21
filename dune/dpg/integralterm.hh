@@ -66,8 +66,8 @@ namespace Dune {
     template <class LhsLocalView,
               class RhsLocalView,
               class MatrixType>
-    void getLocalMatrix(const LhsLocalView& lhsLocalView,
-                        const RhsLocalView& rhsLocalView,
+    void getLocalMatrix(LhsLocalView& lhsLocalView,
+                        RhsLocalView& rhsLocalView,
                         MatrixType& elementMatrix,
                         size_t lhsSpaceOffset,
                         size_t rhsSpaceOffset) const;
@@ -96,35 +96,7 @@ namespace detail {
             class RhsSpace,
             bool = is_RefinedFiniteElement<LhsSpace>::value,
             bool = is_RefinedFiniteElement<RhsSpace>::value>
-  struct GetLocalMatrix
-  {
-    using LhsLocalView = typename LhsSpace::LocalView;
-    using RhsLocalView = typename RhsSpace::LocalView;
-
-    template <class MatrixType,
-              class Element,
-              class LocalCoefficients>
-    inline static void interiorImpl(const LhsLocalView&,
-                                    const RhsLocalView&,
-                                    MatrixType&,
-                                    size_t,
-                                    size_t,
-                                    unsigned int,
-                                    const Element&,
-                                    const LocalCoefficients&);
-
-    template <class MatrixType,
-              class Intersection,
-              class LocalCoefficients>
-    inline static void faceImpl(const LhsLocalView&,
-                                const RhsLocalView&,
-                                MatrixType&,
-                                size_t,
-                                size_t,
-                                unsigned int,
-                                const Intersection&,
-                                const LocalCoefficients&);
-  };
+  struct GetLocalMatrix;
 }
 
 
@@ -247,8 +219,8 @@ template <class LhsLocalView,
           class MatrixType>
 void IntegralTerm<type, domain_of_integration, LocalCoefficients>
      ::getLocalMatrix(
-        const LhsLocalView& lhsLocalView,
-        const RhsLocalView& rhsLocalView,
+        LhsLocalView& lhsLocalView,
+        RhsLocalView& rhsLocalView,
         MatrixType& elementMatrix,
         const size_t lhsSpaceOffset,
         const size_t rhsSpaceOffset) const
@@ -324,7 +296,7 @@ void IntegralTerm<type, domain_of_integration, LocalCoefficients>
 } // end namespace Dune
 
 #include "integralterm_uu_impl.hh"
-#include "integralterm_rr_impl.hh"
 #include "integralterm_ru_impl.hh"
+#include "integralterm_rr_impl.hh"
 
 #endif // DUNE_DPG_INTEGRALTERM_HH

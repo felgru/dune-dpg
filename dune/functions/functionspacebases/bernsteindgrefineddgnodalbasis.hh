@@ -12,9 +12,8 @@
 #include <dune/typetree/leafnode.hh>
 
 #include <dune/functions/functionspacebases/nodes.hh>
-#include <dune/functions/functionspacebases/defaultglobalbasis.hh>
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
-#include <dune/functions/functionspacebases/refinednode.hh>
+#include <dune/functions/functionspacebases/refinedglobalbasis.hh>
 
 
 
@@ -193,6 +192,7 @@ public:
   using size_type = std::size_t;
   using TreePath = TP;
   using Element = typename GV::template Codim<0>::Entity;
+  using SubElement = typename RefinedNodeBase::SubElement;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
 
   BernsteinDGRefinedDGNode(const TreePath& treePath) :
@@ -215,18 +215,24 @@ public:
   {
     this->element_ = &e;
     finiteElement_ = &(feCache_.get(this->element_->type()));
-    using Factory = BernsteinDGRefinedDGPreBasis<GV, level, k, void>;
+    using PreBasis = BernsteinDGRefinedDGPreBasis<GV, level, k, void>;
     size_type numberOfSubElements;
     if(e.type().isTriangle()) {
-      numberOfSubElements = Factory::numberOfSubTriangles;
+      numberOfSubElements = PreBasis::numberOfSubTriangles;
     } else if(e.type().isQuadrilateral()) {
-      numberOfSubElements = Factory::numberOfSubQuads;
+      numberOfSubElements = PreBasis::numberOfSubQuads;
     } else {
       DUNE_THROW(Dune::NotImplemented,
                  "BernsteinDGRefinedNode::bind() not implemented for element type "
                  << e.type().id());
     }
     this->setSize(numberOfSubElements*finiteElement_->size());
+  }
+
+  void bindSubElement(const SubElement& se)
+  {
+    this->subElement_ = &se;
+    assert(this->element_->type() == this->subElement_->type());
   }
 
 protected:
@@ -344,7 +350,7 @@ protected:
  * \tparam k The order of the basis
  */
 template<typename GV, int level, int k>
-using BernsteinDGRefinedDGBasis = DefaultGlobalBasis<BernsteinDGRefinedDGPreBasis<GV, level, k, FlatMultiIndex<std::size_t> > >;
+using BernsteinDGRefinedDGBasis = RefinedGlobalBasis<BernsteinDGRefinedDGPreBasis<GV, level, k, FlatMultiIndex<std::size_t> > >;
 
 
 

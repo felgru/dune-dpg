@@ -3,8 +3,11 @@
 #ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_REFINEDNODE_HH
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_REFINEDNODE_HH
 
+#include <dune/common/hybridutilities.hh>
 #include <dune/common/power.hh>
 #include <dune/functions/functionspacebases/referencerefinementfactory.hh>
+#include <dune/typetree/traversal.hh>
+#include <dune/typetree/visitor.hh>
 
 namespace Dune {
 namespace Functions {
@@ -19,9 +22,11 @@ public:
 
   using RefinementGrid = GridType;
   using RefinementGridView = typename RefinementGrid::LeafGridView;
+  using SubElement = typename RefinementGrid::template Codim<0>::Entity;
 
   RefinedNode() :
-    element_(nullptr)
+    element_(nullptr),
+    subElement_(nullptr)
   {}
 
   RefinementGridView refinedReferenceElementGridView() const
@@ -35,10 +40,16 @@ public:
     return *element_;
   }
 
+  const SubElement& subElement() const
+  {
+    return *subElement_;
+  }
+
 protected:
 
   static RefinementCache refinementCache_;
   const Element* element_;
+  const SubElement* subElement_;
 };
 
 template<typename Element, typename ctype, int dim, int level>
@@ -59,6 +70,76 @@ struct DGRefinedPreBasisConstants<2, level, k>
   const static int numberOfSubTriangles    = StaticPower<4,level>::power;
   const static int numberOfSubQuads        = StaticPower<4,level>::power;
 };
+
+class ResetSubElementsVisitor
+  : public TypeTree::TreeVisitor
+  , public TypeTree::DynamicTraversal
+{
+  template<typename Node_>
+  using hasResetSubElements
+      = decltype(std::declval<Node_>().resetSubElements());
+
+public:
+  template<typename Node, typename TreePath>
+  void pre(Node& node, TreePath treePath)
+  {}
+
+  template<typename Node, typename TreePath>
+  void post(Node& node, TreePath treePath)
+  {}
+
+  template<typename Node, typename TreePath>
+  void leaf(Node& node, TreePath treePath)
+  {
+    Hybrid::ifElse(
+      Std::is_detected<hasResetSubElements,Node>{},
+      [&](auto id) {
+        id(node).resetSubElements();
+      });
+  }
+};
+
+template<typename Tree>
+void resetSubElementsOfTree(Tree& tree)
+{
+  ResetSubElementsVisitor visitor{};
+  TypeTree::applyToTree(tree,visitor);
+}
+
+template<typename Entity>
+struct BindToSubElementVisitor
+  : public TypeTree::TreeVisitor
+  , public TypeTree::DynamicTraversal
+{
+
+  template<typename Node, typename TreePath>
+  void pre(Node& node, TreePath treePath)
+  {}
+
+  template<typename Node, typename TreePath>
+  void post(Node& node, TreePath treePath)
+  {}
+
+  template<typename Node, typename TreePath>
+  void leaf(Node& node, TreePath treePath)
+  {
+    node.bindSubElement(subEntity_);
+  }
+
+  BindToSubElementVisitor(const Entity& subEntity)
+    : subEntity_(subEntity)
+  {}
+
+  const Entity& subEntity_;
+
+};
+
+template<typename Tree, typename Entity>
+void bindTreeToSubElement(Tree& tree, const Entity& subEntity)
+{
+  BindToSubElementVisitor<Entity> visitor(subEntity);
+  TypeTree::applyToTree(tree,visitor);
+}
 
 }} // end namespace Dune::Functions
 

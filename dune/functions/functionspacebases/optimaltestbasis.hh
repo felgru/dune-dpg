@@ -17,7 +17,6 @@
 #include <dune/typetree/leafnode.hh>
 
 #include <dune/functions/functionspacebases/nodes.hh>
-#include <dune/functions/functionspacebases/defaultglobalbasis.hh>
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
 #include <dune/dpg/assemble_helper.hh>
 #include <dune/dpg/testspace_coefficient_matrix.hh>
@@ -30,6 +29,12 @@ namespace Dune {
 namespace Functions {
 
 /* some forward declarations for refined bases */
+
+template<class PB>
+class DefaultGlobalBasis;
+
+template<class PB>
+class RefinedGlobalBasis;
 
 template<typename Element, typename ctype, int dim, int level>
 class RefinedNode;
@@ -465,7 +470,18 @@ protected:
  * \tparam testIndex  index of the optimal test space in the test space tuple
  */
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex = 0>
-using OptimalTestBasis = DefaultGlobalBasis<OptimalTestBasisPreBasis<TestspaceCoefficientMatrix, testIndex, FlatMultiIndex<std::size_t> > >;
+using OptimalTestBasis = std::conditional
+           < Dune::is_RefinedFiniteElement<
+               typename std::tuple_element<testIndex,
+                     typename TestspaceCoefficientMatrix::TestSpaces
+               >::type>::value
+           , RefinedGlobalBasis<OptimalTestBasisPreBasis<
+                                     TestspaceCoefficientMatrix,
+                                     testIndex, FlatMultiIndex<std::size_t>>>
+           , DefaultGlobalBasis<OptimalTestBasisPreBasis<
+                                     TestspaceCoefficientMatrix,
+                                     testIndex, FlatMultiIndex<std::size_t>>>
+           >::type;
 
 
 

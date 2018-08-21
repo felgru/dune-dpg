@@ -109,8 +109,8 @@ struct getLocalMatrixHelper
   //! tuple type for the local views of the solution spaces
   using RhsLocalViews = getLocalViews_t<RhsSpaces>;
 
-  getLocalMatrixHelper(const LhsLocalViews& lhsLocalViews,
-                       const RhsLocalViews& rhsLocalViews,
+  getLocalMatrixHelper(LhsLocalViews& lhsLocalViews,
+                       RhsLocalViews& rhsLocalViews,
                        MatrixType& elementMatrix,
                        const array_of_same_size<size_t, LhsLocalViews>&
                            lhsLocalSpaceOffsets,
@@ -135,9 +135,9 @@ struct getLocalMatrixHelper
           rhsSpaceIndex,
           BilinearTerm>& termWithIndices) const
   {
-    const auto& lhsLV =
+    auto& lhsLV =
         std::get<lhsSpaceIndex::value>(lhsLocalViews);
-    const auto& rhsLV =
+    auto& rhsLV =
         std::get<rhsSpaceIndex::value>(rhsLocalViews);
     const size_t lhsLocalSpaceOffset =
         lhsLocalSpaceOffsets[lhsSpaceIndex::value];
@@ -153,8 +153,8 @@ struct getLocalMatrixHelper
   }
 
 private:
-  const LhsLocalViews& lhsLocalViews;
-  const RhsLocalViews& rhsLocalViews;
+  LhsLocalViews& lhsLocalViews;
+  RhsLocalViews& rhsLocalViews;
   MatrixType& elementMatrix;
   const array_of_same_size<size_t, LhsLocalViews>&
       lhsLocalSpaceOffsets;
@@ -173,7 +173,7 @@ struct getLocalVectorHelper
   //! tuple type for the local views of the test spaces
   using TestLocalViews = getLocalViews_t<TestSpaces>;
 
-  getLocalVectorHelper(const TestLocalViews& testLocalViews,
+  getLocalVectorHelper(TestLocalViews& testLocalViews,
                        VectorType& elementVector,
                        const array_of_same_size<size_t, TestLocalViews>&
                            localTestSpaceOffsets)
@@ -190,7 +190,7 @@ struct getLocalVectorHelper
   void operator()
          (const LinearTermWithIndex<testSpaceIndex, Term>& termWithIndex) const
   {
-    const auto& testLV = std::get<testSpaceIndex::value>(testLocalViews);
+    auto& testLV = std::get<testSpaceIndex::value>(testLocalViews);
     const size_t localTestSpaceOffset =
         localTestSpaceOffsets[testSpaceIndex::value];
 
@@ -201,7 +201,7 @@ struct getLocalVectorHelper
   }
 
 private:
-  const TestLocalViews& testLocalViews;
+  TestLocalViews& testLocalViews;
   VectorType& elementVector;
   const array_of_same_size<size_t, TestLocalViews>&
       localTestSpaceOffsets;

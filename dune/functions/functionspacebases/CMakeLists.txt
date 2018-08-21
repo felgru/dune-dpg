@@ -19,5 +19,7 @@ install(FILES
         pqksubsampleddgbasis.hh
         pqktracenodalbasis.hh
         referencerefinementfactory.hh
+        refinedglobalbasis.hh
+        refinedlocalview.hh
         refinednode.hh
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/functions/functionspacebases)

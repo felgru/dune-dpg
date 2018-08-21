@@ -28,6 +28,9 @@ namespace Functions {
   template<class PB>
   class ConstrainedGlobalBasis;
 
+  template<class PB>
+  class RefinedGlobalBasis;
+
   template<typename GV, int k, class MI>
   class LagrangePreBasis;
 
@@ -123,6 +126,13 @@ struct is_OptimalTestSpace<Functions::DefaultGlobalBasis<
                 TestspaceCoefficientMatrix, testIndex,
                 Functions::FlatMultiIndex<std::size_t> > > >
   : std::true_type {};
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
+struct is_OptimalTestSpace<Functions::RefinedGlobalBasis<
+            Functions::OptimalTestBasisPreBasis<
+                TestspaceCoefficientMatrix, testIndex,
+                Functions::FlatMultiIndex<std::size_t> > > >
+  : std::true_type {};
 #endif
 
 template <typename GlobalBasis>
@@ -133,19 +143,19 @@ struct is_DGRefinedFiniteElement : std::false_type {};
 
 #ifndef DOXYGEN
 template<typename GV, int level, int k>
-struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
+struct is_DGRefinedFiniteElement<Functions::RefinedGlobalBasis<
                Functions::PQkDGRefinedDGPreBasis
                    <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
 
 template<typename GV, int level, int k>
-struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
+struct is_DGRefinedFiniteElement<Functions::RefinedGlobalBasis<
                Functions::BernsteinDGRefinedDGPreBasis
                    <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
 
 template<typename InnerProduct>
-struct is_DGRefinedFiniteElement<Functions::DefaultGlobalBasis<
+struct is_DGRefinedFiniteElement<Functions::RefinedGlobalBasis<
                     Functions::NormalizedRefinedPreBasis<InnerProduct>>>
        : std::true_type {};
 #endif
@@ -155,7 +165,7 @@ struct is_ContinuouslyRefinedFiniteElement : std::false_type {};
 
 #ifndef DOXYGEN
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
-struct is_ContinuouslyRefinedFiniteElement<Functions::DefaultGlobalBasis<
+struct is_ContinuouslyRefinedFiniteElement<Functions::RefinedGlobalBasis<
             Functions::OptimalTestBasisPreBasis<
                 TestspaceCoefficientMatrix, testIndex,
                 Functions::FlatMultiIndex<std::size_t> > > >
@@ -175,25 +185,25 @@ struct levelOfFE : std::integral_constant<int, 0> {};
 
 #ifndef DOXYGEN
 template<class GV, int level, int k>
-struct levelOfFE<Functions::DefaultGlobalBasis<
+struct levelOfFE<Functions::RefinedGlobalBasis<
              Functions::PQkDGRefinedDGPreBasis
                  <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::integral_constant<int, level> {};
 
 template<class GV, int level, int k>
-struct levelOfFE<Functions::DefaultGlobalBasis<
+struct levelOfFE<Functions::RefinedGlobalBasis<
              Functions::BernsteinDGRefinedDGPreBasis
                  <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::integral_constant<int, level> {};
 
 template<class InnerProduct>
-struct levelOfFE<Functions::DefaultGlobalBasis<
+struct levelOfFE<Functions::RefinedGlobalBasis<
              Functions::NormalizedRefinedPreBasis<InnerProduct>>>
        : levelOfFE<typename std::tuple_element<static_cast<size_t>(0),
                               typename InnerProduct::TestSpaces>::type> {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
-struct levelOfFE<Functions::DefaultGlobalBasis<
+struct levelOfFE<Functions::RefinedGlobalBasis<
             Functions::OptimalTestBasisPreBasis<
                 TestspaceCoefficientMatrix, testIndex,
                 Functions::FlatMultiIndex<std::size_t> > > >
@@ -280,6 +290,12 @@ struct changeGridView<Functions::ConstrainedGlobalBasis<PB>, GridView>
 {
   typedef Functions::ConstrainedGlobalBasis<changeGridView_t<PB, GridView>>
         type;
+};
+
+template<class PB, class GridView>
+struct changeGridView<Functions::RefinedGlobalBasis<PB>, GridView>
+{
+  typedef Functions::RefinedGlobalBasis<changeGridView_t<PB, GridView>> type;
 };
 
 template<typename GV, int k, class MI, class GridView>
