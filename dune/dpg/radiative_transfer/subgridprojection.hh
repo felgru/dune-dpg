@@ -765,8 +765,7 @@ public:
               unsigned int sourceSubElementOffset = 0;
               SubElement sourceSubElement;
               id(localView).resetSubElements();
-              for(const auto& sourceSubElement_
-                  : elements(referenceGridView)) {
+              for(const auto& sourceSubElement_ : elements(referenceGridView)) {
                 id(localView).bindSubElement(sourceSubElement_);
                 auto&& localFiniteElement = localView.tree().finiteElement();
 
@@ -780,8 +779,7 @@ public:
                 const auto childEmbedding
                     = detail::hostInSubGridCellGeometry<dim>(child, e);
                 // Check if child lies in sourceSubElement.
-                if(subElementTriangle
-                      .containsPoint(childEmbedding.center()))
+                if(subElementTriangle.containsPoint(childEmbedding.center()))
                 {
                   sourceSubElement = sourceSubElement_;
                   break;
@@ -798,8 +796,7 @@ public:
 
               unsigned int targetSubElementOffset = 0;
               id(localView).resetSubElements();
-              for(const auto& targetSubElement
-                  : elements(referenceGridView)) {
+              for(const auto& targetSubElement : elements(referenceGridView)) {
                 id(localView).bindSubElement(targetSubElement);
                 auto&& localFiniteElement = localView.tree().finiteElement();
 
