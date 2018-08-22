@@ -645,7 +645,9 @@ public:
       std::vector<FieldVector<double, 1>> cellProjection
           = detail::projectCellDataToSubGrid(e, subGridGlobalBasis,
                                              hostGridGlobalBasis, cellData);
-      gridData.push_back(std::make_tuple(e.seed(), cellProjection, cellData));
+      gridData.push_back(std::make_tuple(e.seed(),
+                                         std::move(cellProjection),
+                                         cellData));
     }
   }
 
@@ -708,7 +710,8 @@ public:
                                                hostGridGlobalBasis,
                                                childData);
           gridData.insert(currentData,
-              std::make_tuple(child.seed(), childProjection, childData));
+              std::make_tuple(child.seed(),
+                std::move(childProjection), childData));
         }
         currentData = gridData.erase(currentData);
       } else /* if(std::get<2>(*currentData).size() == 0) */ {
