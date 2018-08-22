@@ -34,6 +34,8 @@ namespace Dune {
 namespace detail {
   template<class GlobalBasis>
   struct InterpolateOnCellLocalFunction {
+    static_assert(!is_RefinedFiniteElement<GlobalBasis>::value,
+        "Interpolation does not work with refined GlobalBasis!");
     using FiniteElement = typename GlobalBasis::LocalView::Tree::FiniteElement;
     using Domain = FieldVector<double, GlobalBasis::GridView::dimension>;
     using Range = FieldVector<double, 1>;
@@ -70,6 +72,8 @@ namespace detail {
 
   template<class HostGridGlobalBasis, class SubGridGlobalBasis>
   struct InterpolateOnSubCellLocalFunction {
+    static_assert(!is_RefinedFiniteElement<HostGridGlobalBasis>::value,
+        "Interpolation does not work with refined HostGridGlobalBasis!");
     using FiniteElement
         = typename HostGridGlobalBasis::LocalView::Tree::FiniteElement;
     using Domain = FieldVector<double,
