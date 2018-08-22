@@ -762,7 +762,7 @@ public:
 
               constexpr int dim = 2;
 
-              unsigned int sourceSubElementOffset = 0;
+              auto localDataBegin = localData.cbegin();
               SubElement sourceSubElement;
               id(localView).resetSubElements();
               for(const auto& sourceSubElement_ : elements(referenceGridView)) {
@@ -786,7 +786,7 @@ public:
                 }
 
                 if(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
-                  sourceSubElementOffset += localFiniteElement.size();
+                  localDataBegin += localFiniteElement.size();
               }
               assert(sourceSubElement != SubElement{});
 
@@ -794,7 +794,7 @@ public:
                 sourceSubGeometryInReferenceElement
                   = sourceSubElement.geometry();
 
-              unsigned int targetSubElementOffset = 0;
+              auto childLocalDataIterator = childLocalData.begin();
               id(localView).resetSubElements();
               for(const auto& targetSubElement : elements(referenceGridView)) {
                 id(localView).bindSubElement(targetSubElement);
@@ -823,9 +823,8 @@ public:
                     );
 
                 const LocalData localDataSegment(
-                    localData.cbegin() + sourceSubElementOffset,
-                    localData.cbegin() + sourceSubElementOffset
-                                       + localFiniteElement.size());
+                    localDataBegin,
+                    localDataBegin + localFiniteElement.size());
                 auto oldGridFunction
                   = detail::RestoreDataToRefinedGridFunction
                       <SubGridGlobalBasis,
@@ -839,12 +838,10 @@ public:
                     oldGridFunction,
                     interpolatedData);
 
-                std::copy(interpolatedData.cbegin(),
-                          interpolatedData.cend(),
-                          childLocalData.begin() + targetSubElementOffset);
-
-                if(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
-                  targetSubElementOffset += localFiniteElement.size();
+                childLocalDataIterator =
+                    std::copy(interpolatedData.cbegin(),
+                              interpolatedData.cend(),
+                              childLocalDataIterator);
               }
 
               gridData.insert(currentData,
