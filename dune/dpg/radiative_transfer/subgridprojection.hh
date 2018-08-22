@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_FUNCTIONS_SUBGRIDPROJECTION_HH
 #define DUNE_DPG_FUNCTIONS_SUBGRIDPROJECTION_HH
 
+#include <algorithm>
 #include <list>
 #include <numeric>
 #include <utility>
@@ -372,13 +373,12 @@ namespace detail {
       " finite elements!");
     std::vector<FieldVector<double, 1>>
         interpolatedLocalData(subGridLocalView.size());
+    auto interpolatedLocalDataIterator = interpolatedLocalData.begin();
 
     const auto referenceGridView =
         subGridLocalView.tree().refinedReferenceElementGridView();
 
     std::vector<FieldVector<double, 1>> interpolatedSubGridLocalData;
-    unsigned int subElementOffset = 0;
-    unsigned int subElementIndex = 0;
     subGridLocalView.resetSubElements();
     for(const auto& subElement : elements(referenceGridView)) {
       subGridLocalView.bindSubElement(subElement);
@@ -396,13 +396,10 @@ namespace detail {
       subGridLocalFiniteElement.localInterpolation()
         .interpolate(hostGridFunction, interpolatedSubGridLocalData);
 
-      std::copy(interpolatedSubGridLocalData.cbegin(),
-                interpolatedSubGridLocalData.cend(),
-                interpolatedLocalData.begin() + subElementOffset);
-
-      if(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
-        subElementOffset += subGridLocalFiniteElement.size();
-      subElementIndex++;
+      interpolatedLocalDataIterator =
+          std::copy(interpolatedSubGridLocalData.cbegin(),
+                    interpolatedSubGridLocalData.cend(),
+                    interpolatedLocalDataIterator);
     }
     return interpolatedLocalData;
   }
