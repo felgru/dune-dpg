@@ -99,14 +99,13 @@ namespace Dune
           localIndexSet.bind(localView);
           const VectorType localData = getLocalDataVector(localIndexSet, data);
 #endif
-          const auto& localFiniteElement = localView.tree().finiteElement();
           const auto refinementGridView
               = localView.tree().refinedReferenceElementGridView();
-          const unsigned int subElementStride =
-              (is_DGRefinedFiniteElement<FEBasis>::value) ?
-                localFiniteElement.size() : 0;
           unsigned int subElementOffset = 0;
+          localView.resetSubElements();
           for(const auto& eSub : elements(refinementGridView)) {
+            localView.bindSubElement(eSub);
+            const auto& localFiniteElement = localView.tree().finiteElement();
             const auto referenceElement
                 = Dune::referenceElement<ctype, dim>(eSub.type());
             for(int i = 0, iEnd = referenceElement.size(dim); i < iEnd; i++) {
@@ -120,7 +119,7 @@ namespace Dune
               arraywriter->write(value);
             }
             if(is_DGRefinedFiniteElement<FEBasis>::value)
-              subElementOffset += subElementStride;
+              subElementOffset += localFiniteElement.size();
           }
         }
       }
