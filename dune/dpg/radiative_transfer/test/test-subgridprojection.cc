@@ -185,7 +185,8 @@ int main (int argc, char* argv[])
             xHost);
 
   auto restoredX
-    = subGridData.restoreDataToRefinedSubGrid(feBasisProjecteeSubGrid);
+    = subGridData.restoreDataToRefinedSubGrid(feBasisProjecteeSubGrid,
+                                              feBasisHostGrid);
   success = success && finite_element_data_matches_function(restoredX,
                                         feBasisProjecteeSubGrid, testFunction);
 
@@ -198,7 +199,8 @@ int main (int argc, char* argv[])
   feBasisProjecteeSubGrid.update(subGrid->leafGridView());
 
   restoredX
-    = subGridData.restoreDataToRefinedSubGrid(feBasisProjecteeSubGrid);
+    = subGridData.restoreDataToRefinedSubGrid(feBasisProjecteeSubGrid,
+                                              feBasisHostGrid);
   success = success && finite_element_data_matches_function(restoredX,
                                         feBasisProjecteeSubGrid, testFunction);
 
@@ -209,7 +211,8 @@ int main (int argc, char* argv[])
   feBasisProjecteeSubGrid.update(subGrid->leafGridView());
 
   restoredX
-    = subGridData.restoreDataToRefinedSubGrid(feBasisProjecteeSubGrid);
+    = subGridData.restoreDataToRefinedSubGrid(feBasisProjecteeSubGrid,
+                                              feBasisHostGrid);
   success = success && finite_element_data_matches_function(restoredX,
                                         feBasisProjecteeSubGrid, testFunction);
 

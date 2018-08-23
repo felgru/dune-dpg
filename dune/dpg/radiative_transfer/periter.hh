@@ -183,11 +183,14 @@ class Periter {
    * until the given accuracy or the maximal number of iterations
    * is reached.
    */
-  template<class Spaces, class Grid, class GridIdSet, class Sigma,
+  template<class Spaces, class ScatteringHostGridBasis, class BvHostGridBasis,
+           class Grid, class GridIdSet, class Sigma,
            class RHSData, class ScatteringData, class BVData>
   static double compute_adaptive_transport_solution(
       VectorType& x,
       Spaces& spaces,
+      ScatteringHostGridBasis&& scatteringHostGridGlobalBasis,
+      BvHostGridBasis&& bvHostGridGlobalBasis,
       Grid& grid,
       GridIdSet& gridIdSet,
       const FieldVector<double, 2>& s,
@@ -862,7 +865,10 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
       spaces.update(i, grids[i]->leafGridView());
 
       const double aposteriori_s = compute_adaptive_transport_solution(
-          x[i], spaces[i], *grids[i], gridIdSets[i], sVector[i], sigma,
+          x[i], spaces[i],
+          Spaces::scatteringHostGridBasis(hostGrid.leafGridView()),
+          Spaces::bvHostGridBasis(hostGrid.leafGridView()),
+          *grids[i], gridIdSets[i], sVector[i], sigma,
           rhsData[i], scatteringData[i], bvData[i],
           logger.transportLogger(n, i),
           plotter.transportPlotter(n, i),
@@ -1263,13 +1269,16 @@ compute_transport_solution(
 }
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
-template<class Spaces, class Grid, class GridIdSet, class Sigma,
+template<class Spaces, class ScatteringHostGridBasis, class BvHostGridBasis,
+         class Grid, class GridIdSet, class Sigma,
          class RHSData, class ScatteringData, class BVData>
 double
 Periter<ScatteringKernelApproximation, RHSApproximation>::
 compute_adaptive_transport_solution(
     VectorType& x,
     Spaces& spaces,
+    ScatteringHostGridBasis&& scatteringHostGridGlobalBasis,
+    BvHostGridBasis&& bvHostGridGlobalBasis,
     Grid& grid,
     GridIdSet& gridIdSet,
     const FieldVector<double, 2>& s,
@@ -1294,7 +1303,8 @@ compute_adaptive_transport_solution(
     if(bvData) {
       const auto& feBasisTest = spaces.testSpace();
       auto newGridData
-          = bvData->restoreDataToRefinedSubGrid(feBasisTest);
+          = bvData->restoreDataToRefinedSubGrid(feBasisTest,
+                                                bvHostGridGlobalBasis);
       bvExtension = VectorType(newGridData.size());
       for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
         (*bvExtension)[k] = newGridData[k];
@@ -1308,10 +1318,12 @@ compute_adaptive_transport_solution(
       {
         auto& feBasisTest = spaces.testSpace();
         auto rhsValues
-            = rhsData.restoreDataToRefinedSubGrid(feBasisTest);
+            = rhsData.restoreDataToRefinedSubGrid(feBasisTest,
+                                    scatteringHostGridGlobalBasis);
 
         auto scatteringValues
-            = scatteringData.restoreDataToRefinedSubGrid(feBasisTest);
+            = scatteringData.restoreDataToRefinedSubGrid(feBasisTest,
+                                           scatteringHostGridGlobalBasis);
 
         transportPlotter.plotRhsAndScattering(feBasisTest,
                                 rhsValues, scatteringValues, nRefinement);
@@ -1347,6 +1359,8 @@ compute_adaptive_transport_solution(
       grid.adapt();
       grid.postAdapt();
       spaces.update(grid.leafGridView());
+      scatteringHostGridGlobalBasis.update(grid.getHostGrid().leafGridView());
+      bvHostGridGlobalBasis.update(grid.getHostGrid().leafGridView());
 
       transportLogger.logAccuracyAfterRefinement(aposteriori_s,
                                                  transportAccuracy);
