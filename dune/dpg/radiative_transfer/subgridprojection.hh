@@ -663,8 +663,6 @@ public:
       //       does not fit with the saved data anymore!
       const HostGridGlobalBasis& hostGridGlobalBasis)
   {
-    using SubGridElement = typename SubGridGlobalBasis::LocalView::Element;
-
     const auto subGridView = subGridGlobalBasis.gridView();
     const auto& subGrid = subGridView.grid();
 
@@ -850,6 +848,8 @@ public:
               auto&& targetLocalFiniteElement
                   = targetLocalView.tree().finiteElement();
 
+              using SubGridElement
+                  = typename SubGridGlobalBasis::LocalView::Element;
               auto oldGridFunction = detail::RestoreDataToRefinedGridFunction
                 <SubGridGlobalBasis,
                  typename SubGridElement::LocalGeometry,
