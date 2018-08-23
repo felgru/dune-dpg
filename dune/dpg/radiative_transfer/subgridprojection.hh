@@ -663,6 +663,18 @@ public:
       //       does not fit with the saved data anymore!
       const HostGridGlobalBasis& hostGridGlobalBasis)
   {
+    transferDataToCellsOfRefinedSubGrid(subGridGlobalBasis,
+                                        hostGridGlobalBasis);
+
+    return createRefinedSubGridData(subGridGlobalBasis);
+  }
+
+private:
+
+  void transferDataToCellsOfRefinedSubGrid(
+      const SubGridGlobalBasis& subGridGlobalBasis,
+      const HostGridGlobalBasis& hostGridGlobalBasis)
+  {
     const auto subGridView = subGridGlobalBasis.gridView();
     const auto& subGrid = subGridView.grid();
 
@@ -871,11 +883,7 @@ public:
         currentData = gridData.erase(currentData);
       }
     }
-
-    return createRefinedSubGridData(subGridGlobalBasis);
   }
-
-private:
 
   // This function assumes that gridData has already been transferred
   // to the refined subgrid by projection/interpolation.
