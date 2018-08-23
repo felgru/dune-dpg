@@ -15,6 +15,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * The radiative transfer code described in Felix’ thesis has been
   merged. You can use the example programs periter_checkerboard and
   periter_peaky to recreate the results in his thesis.
+* You can now normalize the basis functions in a GlobalBasis with
+  respect to a given inner product by using `NormalizedBasis`
+  or `NormalizedRefinedBasis`.
 * `DPGSystemAssembler` gained a new method
   `applyHomogeneousDirichletBoundary` with a simpler interface than
   `applyDirichletBoundary`.
