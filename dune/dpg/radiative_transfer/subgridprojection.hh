@@ -665,10 +665,8 @@ public:
   {
     using SubGridElement = typename SubGridGlobalBasis::LocalView::Element;
 
-    auto subGridView = subGridGlobalBasis.gridView();
-    auto& subGrid = subGridView.grid();
-
-    std::vector<FieldVector<double, 1>> data(subGridGlobalBasis.size());
+    const auto subGridView = subGridGlobalBasis.gridView();
+    const auto& subGrid = subGridView.grid();
 
     // Iterate over gridData. If cell is not leaf in subGrid project
     // or interpolate data to its children.
@@ -874,11 +872,23 @@ public:
       }
     }
 
-    // Iterate over gridData and transfer data to result vector.
+    return createRefinedSubGridData(subGridGlobalBasis);
+  }
+
+private:
+
+  // This function assumes that gridData has already been transferred
+  // to the refined subgrid by projection/interpolation.
+  std::vector<FieldVector<double, 1>>
+  createRefinedSubGridData(const SubGridGlobalBasis& subGridGlobalBasis) const
+  {
+    std::vector<FieldVector<double, 1>> data(subGridGlobalBasis.size());
+    const auto& subGrid = subGridGlobalBasis.gridView().grid();
     auto localView = subGridGlobalBasis.localView();
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
     auto localIndexSet = subGridGlobalBasis.localIndexSet();
 #endif
+    // Iterate over gridData and transfer data to result vector.
     for(auto& currentData : gridData)
     {
       auto e = subGrid.entity(std::get<0>(currentData));
@@ -909,7 +919,6 @@ public:
     return data;
   }
 
-private:
   GridData gridData;
 };
 
