@@ -72,16 +72,7 @@ public:
     }
 
     LocalFunction(const LocalFunction& other)
-      : globalFunction_(other.globalFunction_)
-      , localBasisView_(globalFunction_.basis().localView())
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-      , localIndexSet_(globalFunction_.basis().localIndexSet())
-#endif
-      , node_(localBasisView_.tree())
-    {
-      shapeFunctionValues_.reserve(localBasisView_.maxSize());
-      localDoFs_.reserve(localBasisView_.maxSize());
-    }
+      : LocalFunction(other.globalFunction_) {}
 
     LocalFunction operator=(const LocalFunction& other)
     {
