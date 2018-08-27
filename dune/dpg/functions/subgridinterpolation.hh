@@ -114,8 +114,7 @@ public:
     auto hostGridIndexSet = hostGridBasis.localIndexSet();
     hostGridIndexSet.bind(hostGridLocalView);
 #endif
-    for(size_t i = 0, imax = hostGridLocalView.size();
-        i < imax; i++) {
+    for(size_t i = 0, imax = hostGridLocalView.size(); i < imax; i++) {
 #if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
       hostGridCoefficients[hostGridLocalView.index(i)]
 #else
