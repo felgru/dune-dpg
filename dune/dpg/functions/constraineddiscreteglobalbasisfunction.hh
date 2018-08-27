@@ -66,7 +66,7 @@ public:
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       , localIndexSet_(globalFunction.basis().localIndexSet())
 #endif
-      , node_(localBasisView_.tree())
+      , node_(&localBasisView_.tree())
     {
       shapeFunctionValues_.reserve(localBasisView_.maxSize());
       localDoFs_.reserve(localBasisView_.maxSize());
@@ -82,7 +82,7 @@ public:
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       localIndexSet_ = other.localIndexSet_;
 #endif
-      node_ = localBasisView_.tree();
+      node_ = &localBasisView_.tree();
 
       shapeFunctionValues_.reserve(localBasisView_.maxSize());
       localDoFs_.reserve(localBasisView_.maxSize());
@@ -139,7 +139,7 @@ public:
      */
     Range operator()(const Domain& x) const
     {
-      auto&& fe = node_.finiteElement();
+      auto&& fe = node_->finiteElement();
       auto&& localBasis = fe.localBasis();
 
       shapeFunctionValues_.resize(localBasis.size());
@@ -171,7 +171,7 @@ public:
 
     mutable std::vector<typename V::value_type> shapeFunctionValues_;
     std::vector<typename V::value_type> localDoFs_;
-    const Node& node_;
+    const Node* node_;
   };
 
   ConstrainedDiscreteGlobalBasisFunction(const Basis & basis, const V & coefficients) :
