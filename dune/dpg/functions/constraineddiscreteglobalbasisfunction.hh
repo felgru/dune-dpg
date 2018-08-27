@@ -3,6 +3,7 @@
 #ifndef DUNE_FUNCTIONS_DPG_CONSTRAINEDDISCRETEGLOBALBASISFUNCTIONS_HH
 #define DUNE_FUNCTIONS_DPG_CONSTRAINEDDISCRETEGLOBALBASISFUNCTIONS_HH
 
+#include <numeric>
 #include <type_traits>
 #include <vector>
 
@@ -138,18 +139,15 @@ public:
      */
     Range operator()(const Domain& x) const
     {
-      auto y = Range(0);
-
       auto&& fe = node_.finiteElement();
       auto&& localBasis = fe.localBasis();
 
       shapeFunctionValues_.resize(localBasis.size());
       localBasis.evaluateFunction(x, shapeFunctionValues_);
 
-      for(size_type i = 0; i < localBasis.size(); i++) {
-        y += localDoFs_[i] * shapeFunctionValues_[i];
-      }
-
+      Range y = std::inner_product(shapeFunctionValues_.cbegin(),
+                                   shapeFunctionValues_.cend(),
+                                   localDoFs_.cbegin(), Range(0));
       return y;
     }
 
