@@ -307,20 +307,34 @@ class SubGridSpaces {
     return spaces_[i].testSpace();
   }
 
-  static auto scatteringHostGridBasis(HostGridView hostGridView) {
 #ifdef PERITER_SKELETAL_SCATTERING
+  static auto scatteringHostGridBasis(HostGridView hostGridView) {
     // Discontinuous version of the trace space
-    using FEBasisHost
-        = Functions::BernsteinDGBasis<HostGridView, 2>;
-#else
-    using FEBasisHost
-        = changeGridView_t<FEBasisInterior, HostGridView>;
-#endif
-
-    FEBasisHost hostGridGlobalBasis(hostGridView);
-
-    return hostGridGlobalBasis;
+    using FEBasisHost = Functions::BernsteinDGBasis<HostGridView, 2>;
+    return FEBasisHost(hostGridView);
   }
+
+  const FEBasisTrace& scatteringSubGridBasis(size_t i) const {
+    return traceSolutionSpace(i);
+  }
+
+  size_t scatteringSubGridBasisOffset(size_t i) const {
+    return interiorSolutionSpace(i).size();
+  }
+#else
+  static auto scatteringHostGridBasis(HostGridView hostGridView) {
+    using FEBasisHost = changeGridView_t<FEBasisInterior, HostGridView>;
+    return FEBasisHost(hostGridView);
+  }
+
+  const FEBasisInterior& scatteringSubGridBasis(size_t i) const {
+    return interiorSolutionSpace(i);
+  }
+
+  size_t scatteringSubGridBasisOffset(size_t i) const {
+    return 0;
+  }
+#endif
 
   static auto bvHostGridBasis(HostGridView hostGridView) {
     using FEBasisHostTrace = changeGridView_t<FEBasisTrace, HostGridView>;
@@ -1381,19 +1395,11 @@ interpolate_solutions_to_hostgrid(
 {
   std::vector<VectorType> solutionHost(solution.size());
   for(size_t i = 0, imax = solution.size(); i < imax; i++) {
-#ifdef PERITER_SKELETAL_SCATTERING
-    const auto& feBasisTrace = subGridSpaces.traceSolutionSpace(i);
-    const size_t  feBasisTraceOffset = subGridSpaces.interiorSolutionSpace(i)
-                                                    .size();
+    const auto& subGridBasis = subGridSpaces.scatteringSubGridBasis(i);
+    const size_t offset = subGridSpaces.scatteringSubGridBasisOffset(i);
     interpolateFromSubGrid(
-        feBasisTrace, solution[i].begin() + feBasisTraceOffset,
+        subGridBasis, solution[i].begin() + offset,
         hostGridBasis, solutionHost[i]);
-#else
-    const auto& feBasisInterior = subGridSpaces.interiorSolutionSpace(i);
-    interpolateFromSubGrid(
-        feBasisInterior, solution[i],
-        hostGridBasis, solutionHost[i]);
-#endif
   }
   return solutionHost;
 }
