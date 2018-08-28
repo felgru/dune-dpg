@@ -3,6 +3,7 @@
 #ifndef DUNE_FUNCTIONS_DPG_CONSTRAINEDDISCRETEGLOBALBASISFUNCTIONS_HH
 #define DUNE_FUNCTIONS_DPG_CONSTRAINEDDISCRETEGLOBALBASISFUNCTIONS_HH
 
+#include <numeric>
 #include <type_traits>
 #include <vector>
 
@@ -65,23 +66,14 @@ public:
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       , localIndexSet_(globalFunction.basis().localIndexSet())
 #endif
-      , node_(localBasisView_.tree())
+      , node_(&localBasisView_.tree())
     {
       shapeFunctionValues_.reserve(localBasisView_.maxSize());
       localDoFs_.reserve(localBasisView_.maxSize());
     }
 
     LocalFunction(const LocalFunction& other)
-      : globalFunction_(other.globalFunction_)
-      , localBasisView_(globalFunction_.basis().localView())
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-      , localIndexSet_(globalFunction_.basis().localIndexSet())
-#endif
-      , node_(localBasisView_.tree())
-    {
-      shapeFunctionValues_.reserve(localBasisView_.maxSize());
-      localDoFs_.reserve(localBasisView_.maxSize());
-    }
+      : LocalFunction(other.globalFunction_) {}
 
     LocalFunction operator=(const LocalFunction& other)
     {
@@ -90,7 +82,7 @@ public:
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
       localIndexSet_ = other.localIndexSet_;
 #endif
-      node_ = localBasisView_.tree();
+      node_ = &localBasisView_.tree();
 
       shapeFunctionValues_.reserve(localBasisView_.maxSize());
       localDoFs_.reserve(localBasisView_.maxSize());
@@ -147,18 +139,15 @@ public:
      */
     Range operator()(const Domain& x) const
     {
-      auto y = Range(0);
-
-      auto&& fe = node_.finiteElement();
+      auto&& fe = node_->finiteElement();
       auto&& localBasis = fe.localBasis();
 
       shapeFunctionValues_.resize(localBasis.size());
       localBasis.evaluateFunction(x, shapeFunctionValues_);
 
-      for(size_type i = 0; i < localBasis.size(); i++) {
-        y += localDoFs_[i] * shapeFunctionValues_[i];
-      }
-
+      Range y = std::inner_product(shapeFunctionValues_.cbegin(),
+                                   shapeFunctionValues_.cend(),
+                                   localDoFs_.cbegin(), Range(0));
       return y;
     }
 
@@ -182,7 +171,7 @@ public:
 
     mutable std::vector<typename V::value_type> shapeFunctionValues_;
     std::vector<typename V::value_type> localDoFs_;
-    const Node& node_;
+    const Node* node_;
   };
 
   ConstrainedDiscreteGlobalBasisFunction(const Basis & basis, const V & coefficients) :
