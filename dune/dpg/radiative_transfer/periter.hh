@@ -307,22 +307,13 @@ class SubGridSpaces {
     return spaces_[i].testSpace();
   }
 
-  static auto scatteringHostGridBasis(HostGridView hostGridView) {
 #ifdef PERITER_SKELETAL_SCATTERING
+  static auto scatteringHostGridBasis(HostGridView hostGridView) {
     // Discontinuous version of the trace space
-    using FEBasisHost
-        = Functions::BernsteinDGBasis<HostGridView, 2>;
-#else
-    using FEBasisHost
-        = changeGridView_t<FEBasisInterior, HostGridView>;
-#endif
-
-    FEBasisHost hostGridGlobalBasis(hostGridView);
-
-    return hostGridGlobalBasis;
+    using FEBasisHost = Functions::BernsteinDGBasis<HostGridView, 2>;
+    return FEBasisHost(hostGridView);
   }
 
-#ifdef PERITER_SKELETAL_SCATTERING
   const FEBasisTrace& scatteringSubGridBasis(size_t i) const {
     return traceSolutionSpace(i);
   }
@@ -331,6 +322,11 @@ class SubGridSpaces {
     return interiorSolutionSpace(i).size();
   }
 #else
+  static auto scatteringHostGridBasis(HostGridView hostGridView) {
+    using FEBasisHost = changeGridView_t<FEBasisInterior, HostGridView>;
+    return FEBasisHost(hostGridView);
+  }
+
   const FEBasisInterior& scatteringSubGridBasis(size_t i) const {
     return interiorSolutionSpace(i);
   }
