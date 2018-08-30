@@ -77,7 +77,7 @@ restoreSubGridFromIdSet(
     std::set<typename SubGrid::HostGridType::GlobalIdSet::IdType>&& idSet,
     typename SubGrid::HostGridType& hostGrid)
 {
-  const size_t numberOfLeafElements = idSet.size();
+  const int numberOfLeafElements = idSet.size();
   auto subGrid = std::make_unique<SubGrid>(hostGrid);
   subGrid->createBegin();
   subGrid->insertSetPartial(idSet);
