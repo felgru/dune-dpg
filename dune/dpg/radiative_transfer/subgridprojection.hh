@@ -702,6 +702,7 @@ private:
       if(std::get<2>(*currentData).size() > 1) {
         // project from hostGrid to children
         for (const auto& child : descendantElements(e, subGrid.maxLevel())) {
+          if(!child.isLeaf()) continue;
           CellData childData;
           const auto childLevel = child.level();
           const auto childInHostGrid
@@ -733,6 +734,7 @@ private:
         const LocalData& sourceLocalData = std::get<1>(*currentData);
         for (const auto& child : descendantElements(e, subGrid.maxLevel()))
         {
+          if(!child.isLeaf()) continue;
           const auto childEmbedding
               = detail::hostInSubGridCellGeometry(child, e);
 
