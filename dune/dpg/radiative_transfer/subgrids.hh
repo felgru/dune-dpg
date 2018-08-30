@@ -77,11 +77,15 @@ restoreSubGridFromIdSet(
     std::set<typename SubGrid::HostGridType::GlobalIdSet::IdType>&& idSet,
     typename SubGrid::HostGridType& hostGrid)
 {
+  const size_t numberOfLeafElements = idSet.size();
   auto subGrid = std::make_unique<SubGrid>(hostGrid);
   subGrid->createBegin();
   subGrid->insertSet(idSet);
   subGrid->createEnd();
   subGrid->setMaxLevelDifference(1);
+  if(subGrid->leafGridView().size(0) != numberOfLeafElements) {
+    DUNE_THROW(Dune::Exception, "restored SubGrid does not match idSet!");
+  }
   return subGrid;
 }
 
