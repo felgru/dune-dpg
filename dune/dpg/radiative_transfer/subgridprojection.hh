@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <list>
 #include <numeric>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -117,23 +118,33 @@ namespace detail {
     mutable std::vector<Range> shapeFunctionValues;
   };
 
-  template<int dim, class HostGridElement, class SubGridElement>
-  AffineGeometry<double, dim, dim>
+  template<class HostGridElement, class SubGridElement>
+  AffineGeometry<typename HostGridElement::Geometry::ctype,
+                 HostGridElement::mydimension,
+                 HostGridElement::mydimension>
   hostInSubGridCellGeometry(const HostGridElement& hostGridElement,
       const SubGridElement& subGridElement)
   {
+    static_assert(static_cast<int>(HostGridElement::mydimension)
+                  == static_cast<int>(SubGridElement::mydimension),
+        "HostGridElement and SubGridElement have different mydimension!");
+    static_assert(std::is_same<typename HostGridElement::Geometry::ctype,
+                               typename SubGridElement::Geometry::ctype>::value,
+        "HostGridElement and SubGridElement have different ctype!");
+    constexpr int dim = HostGridElement::mydimension;
+    using ctype = typename HostGridElement::Geometry::ctype;
     const auto referenceElement
-        = Dune::referenceElement<double, dim>(hostGridElement.type());
+        = Dune::referenceElement<ctype, dim>(hostGridElement.type());
     const auto hostGridCellGeometry = hostGridElement.geometry();
     const auto subGridCellGeometry = subGridElement.geometry();
     const size_t numVertices = referenceElement.size(dim);
-    std::vector<FieldVector<double, dim>> vertices(numVertices);
+    std::vector<FieldVector<ctype, dim>> vertices(numVertices);
     for(size_t i = 0; i < numVertices; i++) {
       vertices[i] = subGridCellGeometry.local(
                       hostGridCellGeometry.global(
                         referenceElement.position(i, dim)));
     }
-    return AffineGeometry<double, dim, dim>(referenceElement, vertices);
+    return AffineGeometry<ctype, dim, dim>(referenceElement, vertices);
   }
 
   template<class Element, class CellData, class SubGridLocalView,
@@ -281,7 +292,7 @@ namespace detail {
       for(const auto& hostCellData : cellData) {
         const auto eHost = hostGrid.entity(hostCellData.first);
         const auto eHostGeometry = eHost.geometry();
-        const auto hostCellEmbedding = hostInSubGridCellGeometry<dim>(eHost, e);
+        const auto hostCellEmbedding = hostInSubGridCellGeometry(eHost, e);
         // Check if eHost lies in subElement.
         if(!subElementTriangle.containsPoint(hostCellEmbedding.center()))
           continue;
@@ -779,7 +790,7 @@ private:
                     subElementTriangle(sourceSubGeometryInReferenceElement);
 
                 const auto childEmbedding
-                    = detail::hostInSubGridCellGeometry<dim>(child, e);
+                    = detail::hostInSubGridCellGeometry(child, e);
                 // Check if child lies in sourceSubElement.
                 if(subElementTriangle.containsPoint(childEmbedding.center()))
                 {
