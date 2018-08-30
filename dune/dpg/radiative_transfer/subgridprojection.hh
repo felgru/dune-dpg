@@ -905,7 +905,7 @@ private:
     auto localIndexSet = subGridGlobalBasis.localIndexSet();
 #endif
     // Iterate over gridData and transfer data to result vector.
-    for(auto& currentData : gridData)
+    for(const auto& currentData : gridData)
     {
       auto e = subGrid.entity(std::get<0>(currentData));
       localView.bind(e);
@@ -915,7 +915,7 @@ private:
 
       assert(e.isLeaf());
       // directly copy cell data
-      auto& localData = std::get<1>(currentData);
+      const auto& localData = std::get<1>(currentData);
       iterateOverLocalIndices(
 #if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
         localView,
