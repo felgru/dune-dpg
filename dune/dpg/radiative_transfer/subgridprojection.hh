@@ -168,7 +168,7 @@ namespace detail {
       const auto eHost = hostGrid.entity(hostCellData.first);
       const std::vector<FieldVector<double, 1>>& hostCellCoefficients
           = hostCellData.second;
-      const auto hostCellEmbedding = hostInSubGridCellGeometry<dim>(eHost, e);
+      const auto hostCellEmbedding = hostInSubGridCellGeometry(eHost, e);
 
       const auto quadratureOrder
           = subGridLocalView.tree().finiteElement().localBasis().order()
@@ -733,12 +733,8 @@ private:
         const LocalData& sourceLocalData = std::get<1>(*currentData);
         for (const auto& child : descendantElements(e, subGrid.maxLevel()))
         {
-          if(child.father() != e) {
-            std::cerr << "e is not father of child!\n"
-              << "e.level()=" << e.level()
-              << "child.level()=" << child.level() << '\n';
-            std::exit(1);
-          }
+          const auto childEmbedding
+              = detail::hostInSubGridCellGeometry(child, e);
 
           targetLocalView.bind(child);
 
@@ -771,8 +767,6 @@ private:
               using SubGeometryInReferenceElement
                   = typename SubElement::Geometry;
 
-              constexpr int dim = 2;
-
               auto sourceLocalDataBegin = sourceLocalData.cbegin();
               SubElement sourceSubElement;
               id(sourceLocalView).resetSubElements();
@@ -788,8 +782,6 @@ private:
                 const detail::PointInTriangleTest
                     subElementTriangle(sourceSubGeometryInReferenceElement);
 
-                const auto childEmbedding
-                    = detail::hostInSubGridCellGeometry(child, e);
                 // Check if child lies in sourceSubElement.
                 if(subElementTriangle.containsPoint(childEmbedding.center()))
                 {
@@ -820,19 +812,20 @@ private:
 
                 // Compute a Geometry that transformes from the
                 // target subElement to the source subElement.
-                const auto& geometryInFather = child.geometryInFather();
+                constexpr int dim = 2;
                 using SubGeometry = AffineGeometry<double, dim, dim>;
+                auto childEmbeddingJacobianTransposed
+                    = childEmbedding.jacobianTransposed({});
                 const SubGeometry subGeometry
                     ( child.type()
                     , sourceSubGeometryInReferenceElement.local(
-                        geometryInFather.global(
+                        childEmbedding.global(
                         targetSubGeometryInReferenceElement
                           .global(referenceElement<double, dim>
                             (child.type()).position(0,dim))))
                     , sourceSubGeometryInReferenceElement
                         .jacobianInverseTransposed({}).leftmultiply(
-                          geometryInFather
-                            .jacobianTransposed({}).leftmultiply(
+                          childEmbeddingJacobianTransposed.leftmultiply(
                               targetSubGeometryInReferenceElement
                                 .jacobianTransposed({})))
                     );
@@ -867,14 +860,12 @@ private:
               auto&& targetLocalFiniteElement
                   = targetLocalView.tree().finiteElement();
 
-              using SubGridElement
-                  = typename SubGridGlobalBasis::LocalView::Element;
               auto oldGridFunction = detail::RestoreDataToRefinedGridFunction
                 <SubGridGlobalBasis,
-                 typename SubGridElement::LocalGeometry,
+                 decltype(childEmbedding),
                  typename LocalData::const_iterator>(
                     sourceLocalFiniteElement,
-                    id(child).geometryInFather(),
+                    childEmbedding,
                     sourceLocalData.cbegin());
               std::vector<FieldVector<double, 1>> childLocalData;
               targetLocalFiniteElement.localInterpolation().interpolate(
@@ -882,7 +873,7 @@ private:
                   childLocalData);
 
               gridData.insert(currentData,
-                  std::make_tuple(child.seed(), std::move(childLocalData),
+                  std::make_tuple(id(child).seed(), std::move(childLocalData),
                                   CellData{}));
             }
           );
