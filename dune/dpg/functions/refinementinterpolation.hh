@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_FUNCTIONS_REFINEMENTINTERPOLATION_HH
 #define DUNE_DPG_FUNCTIONS_REFINEMENTINTERPOLATION_HH
 
+#include <numeric>
 #include <utility>
 #include <vector>
 
