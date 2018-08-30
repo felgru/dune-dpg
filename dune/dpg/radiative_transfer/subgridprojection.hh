@@ -797,9 +797,6 @@ private:
                   = sourceSubElement.geometry();
               auto&& sourceLocalFiniteElement
                   = sourceLocalView.tree().finiteElement();
-              const LocalData sourceLocalDataSegment(
-                  sourceLocalDataBegin,
-                  sourceLocalDataBegin + sourceLocalFiniteElement.size());
 
               auto childLocalDataIterator = childLocalData.begin();
               id(targetLocalView).resetSubElements();
@@ -834,10 +831,10 @@ private:
                   = detail::RestoreDataToRefinedGridFunction
                       <SubGridGlobalBasis,
                        SubGeometry,
-                       const LocalData>(
+                       decltype(sourceLocalDataBegin)>(
                           sourceLocalFiniteElement,
                           subGeometry,
-                          sourceLocalDataSegment);
+                          sourceLocalDataBegin);
                 std::vector<FieldVector<double, 1>> interpolatedData;
                 targetLocalFiniteElement.localInterpolation().interpolate(
                     oldGridFunction,
@@ -865,10 +862,10 @@ private:
               auto oldGridFunction = detail::RestoreDataToRefinedGridFunction
                 <SubGridGlobalBasis,
                  typename SubGridElement::LocalGeometry,
-                 LocalData>(
+                 typename LocalData::const_iterator>(
                     sourceLocalFiniteElement,
                     id(child).geometryInFather(),
-                    sourceLocalData);
+                    sourceLocalData.cbegin());
               std::vector<FieldVector<double, 1>> childLocalData;
               targetLocalFiniteElement.localInterpolation().interpolate(
                   oldGridFunction,

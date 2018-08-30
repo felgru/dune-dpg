@@ -75,7 +75,7 @@ namespace detail {
     RestoreDataToRefinedGridFunction(
         const FiniteElement& finiteElement,
         const Geometry& childInElementGeometry,
-        const Iterator& elementData)
+        const Iterator elementData)
       : finiteElement(finiteElement),
         childInElementGeometry(childInElementGeometry),
         elementData(elementData)
@@ -84,21 +84,19 @@ namespace detail {
     void evaluate(const Domain& x, Range& y) const {
       const Domain xElement = childInElementGeometry.global(x);
 
-      y = Range(0);
-
       auto&& localBasis = finiteElement.localBasis();
 
       shapeFunctionValues.resize(localBasis.size());
       localBasis.evaluateFunction(xElement, shapeFunctionValues);
 
-      for(size_t i = 0; i < localBasis.size(); i++) {
-        y += elementData[i] * shapeFunctionValues[i];
-      }
+      y = std::inner_product(shapeFunctionValues.cbegin(),
+                             shapeFunctionValues.cend(),
+                             elementData, Range(0));
     }
 
     const FiniteElement& finiteElement;
     const Geometry childInElementGeometry;
-    const Iterator& elementData;
+    const Iterator elementData;
     mutable std::vector<Range> shapeFunctionValues;
   };
 }
@@ -135,7 +133,7 @@ restoreDataToRefinedGrid(
     localView.bind(e);
     localIndexSet.bind(localView);
 
-    auto localData = storedData.second.begin() + eIdx * maxEntityDoFs;
+    const auto localData = storedData.second.cbegin() + eIdx * maxEntityDoFs;
     if(e.isLeaf()) {
       // directly copy cell data
       iterateOverLocalIndices(
