@@ -118,30 +118,30 @@ namespace detail {
     mutable std::vector<Range> shapeFunctionValues;
   };
 
-  template<class HostGridElement, class SubGridElement>
-  AffineGeometry<typename HostGridElement::Geometry::ctype,
-                 HostGridElement::mydimension,
-                 HostGridElement::mydimension>
-  hostInSubGridCellGeometry(const HostGridElement& hostGridElement,
-      const SubGridElement& subGridElement)
+  template<class DescendantElement, class AncestorElement>
+  AffineGeometry<typename DescendantElement::Geometry::ctype,
+                 DescendantElement::mydimension,
+                 DescendantElement::mydimension>
+  descendantInAncestorGeometry(const DescendantElement& descendantElement,
+      const AncestorElement& ancestorElement)
   {
-    static_assert(static_cast<int>(HostGridElement::mydimension)
-                  == static_cast<int>(SubGridElement::mydimension),
-        "HostGridElement and SubGridElement have different mydimension!");
-    static_assert(std::is_same<typename HostGridElement::Geometry::ctype,
-                               typename SubGridElement::Geometry::ctype>::value,
-        "HostGridElement and SubGridElement have different ctype!");
-    constexpr int dim = HostGridElement::mydimension;
-    using ctype = typename HostGridElement::Geometry::ctype;
+    static_assert(static_cast<int>(DescendantElement::mydimension)
+                  == static_cast<int>(AncestorElement::mydimension),
+        "DescendantElement and AncestorElement have different mydimension!");
+    static_assert(std::is_same<typename DescendantElement::Geometry::ctype,
+                               typename AncestorElement::Geometry::ctype>::value,
+        "DescendantElement and AncestorElement have different ctype!");
+    constexpr int dim = DescendantElement::mydimension;
+    using ctype = typename DescendantElement::Geometry::ctype;
     const auto referenceElement
-        = Dune::referenceElement<ctype, dim>(hostGridElement.type());
-    const auto hostGridCellGeometry = hostGridElement.geometry();
-    const auto subGridCellGeometry = subGridElement.geometry();
+        = Dune::referenceElement<ctype, dim>(descendantElement.type());
+    const auto descendantGeometry = descendantElement.geometry();
+    const auto ancestorGeometry = ancestorElement.geometry();
     const size_t numVertices = referenceElement.size(dim);
     std::vector<FieldVector<ctype, dim>> vertices(numVertices);
     for(size_t i = 0; i < numVertices; i++) {
-      vertices[i] = subGridCellGeometry.local(
-                      hostGridCellGeometry.global(
+      vertices[i] = ancestorGeometry.local(
+                      descendantGeometry.global(
                         referenceElement.position(i, dim)));
     }
     return AffineGeometry<ctype, dim, dim>(referenceElement, vertices);
@@ -168,7 +168,7 @@ namespace detail {
       const auto eHost = hostGrid.entity(hostCellData.first);
       const std::vector<FieldVector<double, 1>>& hostCellCoefficients
           = hostCellData.second;
-      const auto hostCellEmbedding = hostInSubGridCellGeometry(eHost, e);
+      const auto hostCellEmbedding = descendantInAncestorGeometry(eHost, e);
 
       const auto quadratureOrder
           = subGridLocalView.tree().finiteElement().localBasis().order()
@@ -292,7 +292,7 @@ namespace detail {
       for(const auto& hostCellData : cellData) {
         const auto eHost = hostGrid.entity(hostCellData.first);
         const auto eHostGeometry = eHost.geometry();
-        const auto hostCellEmbedding = hostInSubGridCellGeometry(eHost, e);
+        const auto hostCellEmbedding = descendantInAncestorGeometry(eHost, e);
         // Check if eHost lies in subElement.
         if(!subElementTriangle.containsPoint(hostCellEmbedding.center()))
           continue;
@@ -794,7 +794,7 @@ private:
     {
       if(!child.isLeaf()) continue;
       const auto childEmbedding
-          = detail::hostInSubGridCellGeometry(child, e);
+          = detail::descendantInAncestorGeometry(child, e);
 
       targetLocalView.bind(child);
 
@@ -840,7 +840,7 @@ private:
     {
       if(!child.isLeaf()) continue;
       const auto childEmbedding
-          = detail::hostInSubGridCellGeometry(child, e);
+          = detail::descendantInAncestorGeometry(child, e);
 
       targetLocalView.bind(child);
 
