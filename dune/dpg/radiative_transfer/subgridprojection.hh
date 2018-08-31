@@ -699,34 +699,78 @@ private:
 
       // e has been refined
       if(std::get<2>(*currentData).size() > 1) {
-        // project from hostGrid to children
+        // the currently processed element from the subgrid before refinement
+        // was not a leaf in the original host grid
+        // When we refined more by more than one level, we could have the
+        // situation that // we have to project for some children, but
+        // interpolate for others.
         for (const auto& child : descendantElements(e, subGrid.maxLevel())) {
           if(!child.isLeaf()) continue;
           CellData childData;
-          const auto childLevel = child.level();
+          auto childLevel = child.level();
           const auto childInHostGrid
               = subGrid.template getHostEntity<0>(child);
-          for(auto& hostLeafData : std::get<2>(*currentData)) {
-            auto hostCell = subGrid.getHostGrid().entity(hostLeafData.first);
-            for(auto level = hostCell.level(); level > childLevel; level--)
-              hostCell = hostCell.father();
-            if(hostCell == childInHostGrid) {
-              childData.push_back(std::move(hostLeafData));
+          auto& hostLeafDataVector = std::get<2>(*currentData);
+          for(auto hostLeafData = hostLeafDataVector.begin();
+              hostLeafData != hostLeafDataVector.end(); )
+          {
+            auto hostCell = subGrid.getHostGrid().entity(hostLeafData->first);
+            auto level = hostCell.level();
+            if(level >= childLevel) {
+              // later, project from hostGrid to children
+              for(; level > childLevel; level--)
+                hostCell = hostCell.father();
+              if(hostCell == childInHostGrid) {
+                childData.push_back(std::move(*hostLeafData));
+                hostLeafData = hostLeafDataVector.erase(hostLeafData);
+              } else {
+                ++hostLeafData;
+              }
+            } else {
+              // later, interpolate from hostGrid to children
+              auto childsAncestor = child;
+              for(; childLevel > level; childLevel--)
+                childsAncestor = childsAncestor.father();
+              const auto hostCellInSubGrid
+                  = subGrid.template getSubGridEntity<0>(hostCell);
+              if(childsAncestor != hostCellInSubGrid) {
+                ++hostLeafData;
+                continue;
+              }
+              std::vector<FieldVector<double, 1>> localData
+                  = std::exchange(hostLeafData->second, {});
+              hostLeafData = hostLeafDataVector.erase(hostLeafData);
+              std::vector<FieldVector<double, 1>> hostInterpolation
+                = detail::maybeInterpolateDataOnSameCell(
+                      hostCellInSubGrid, hostCell,
+                      subGridGlobalBasis, hostGridGlobalBasis, localData);
+              auto dataToInterpolate =
+                  gridData.insert(currentData,
+                      std::make_tuple(hostCellInSubGrid.seed(),
+                                      std::move(localData),
+                                      CellData{}));
+              interpolateToRefinementDescendants(dataToInterpolate,
+                                                 hostCellInSubGrid,
+                                                 subGridGlobalBasis);
+              gridData.erase(dataToInterpolate);
             }
           }
-          std::vector<FieldVector<double, 1>> childProjection
-            = detail::projectCellDataToSubGrid(child,
-                                               subGridGlobalBasis,
-                                               hostGridGlobalBasis,
-                                               childData);
-          gridData.insert(currentData,
-              std::make_tuple(child.seed(),
-                std::move(childProjection), childData));
+          if(!childData.empty()) {
+            std::vector<FieldVector<double, 1>> childProjection
+              = detail::projectCellDataToSubGrid(child,
+                                                 subGridGlobalBasis,
+                                                 hostGridGlobalBasis,
+                                                 childData);
+            gridData.insert(currentData,
+                std::make_tuple(child.seed(),
+                  std::move(childProjection), childData));
+          }
         }
         currentData = gridData.erase(currentData);
       } else /* if(std::get<2>(*currentData).size() == 0) */ {
         // refined beyond hostGrid → interpolate cell data to children
         interpolateToRefinementDescendants(currentData, e, subGridGlobalBasis);
+        currentData = gridData.erase(currentData);
       }
     }
   }
@@ -775,7 +819,6 @@ private:
           std::make_tuple(child.seed(), std::move(childLocalData),
                           CellData{}));
     }
-    currentData = gridData.erase(currentData);
   }
 
   template<class SGGlobalBasis, typename std::enable_if_t<
@@ -908,7 +951,6 @@ private:
           std::make_tuple(child.seed(), std::move(childLocalData),
                           CellData{}));
     }
-    currentData = gridData.erase(currentData);
   }
 
   // This function assumes that gridData has already been transferred
