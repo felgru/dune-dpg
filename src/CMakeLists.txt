@@ -95,6 +95,22 @@ if(dune-subgrid_FOUND)
   target_link_dune_default_libraries("periter_checkerboard")
   target_compile_definitions(periter_checkerboard
                              PUBLIC PERITER_CHECKERBOARD=1)
+
+  add_executable("periter_peaky_normalized" dune_dpg_rad_trans_periter.cc)
+  add_dune_suitesparse_flags(periter_peaky_normalized)
+  add_dune_ug_flags(periter_peaky_normalized)
+  target_link_dune_default_libraries("periter_peaky_normalized")
+  target_compile_definitions(periter_peaky_normalized
+                             PUBLIC PERITER_PEAKY_BV=1;
+                                    PERITER_NORMALIZED_SPACES=1)
+
+  add_executable("periter_checkerboard_normalized" dune_dpg_rad_trans_periter.cc)
+  add_dune_suitesparse_flags(periter_checkerboard_normalized)
+  add_dune_ug_flags(periter_checkerboard_normalized)
+  target_link_dune_default_libraries("periter_checkerboard_normalized")
+  target_compile_definitions(periter_checkerboard_normalized
+                             PUBLIC PERITER_CHECKERBOARD=1;
+                                    PERITER_NORMALIZED_SPACES=1)
 endif()
 
 #add_executable("periter_peaky_uniform"

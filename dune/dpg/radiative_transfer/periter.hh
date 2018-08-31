@@ -33,7 +33,9 @@
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/functionplotter.hh>
 #include <dune/dpg/functions/interpolate.hh>
-#include <dune/dpg/functions/normalizedspaces.hh>
+#if PERITER_NORMALIZED_SPACES
+#  include <dune/dpg/functions/normalizedspaces.hh>
+#endif
 #include <dune/dpg/functions/refinementinterpolation.hh>
 #include <dune/dpg/functions/subgridinterpolation.hh>
 #include <dune/dpg/linearfunctionalterm.hh>
@@ -269,6 +271,7 @@ class SubGridSpaces {
 
   using GridsVector = std::vector<std::unique_ptr<typename GridView::Grid>>;
 
+#if PERITER_NORMALIZED_SPACES
   SubGridSpaces(const GridsVector& grids,
                 const std::vector<FieldVector<double, 2>>& directions)
   {
@@ -277,6 +280,16 @@ class SubGridSpaces {
       spaces_.emplace_back(grids[i]->leafGridView(), directions[i]);
     }
   }
+#else
+  SubGridSpaces(const GridsVector& grids)
+  {
+    spaces_.reserve(grids.size());
+    for(const auto& grid : grids)
+    {
+      spaces_.emplace_back(grid->leafGridView());
+    }
+  }
+#endif
 
   void update(size_t i, const GridView& gridView) {
     spaces_[i].update(gridView);
@@ -285,6 +298,7 @@ class SubGridSpaces {
   /**
    * insert new spaces in apply_scattering after adding new grids
    */
+#if PERITER_NORMALIZED_SPACES
   void create_new_spaces(const GridsVector& grids,
                          const std::vector<FieldVector<double, 2>>& directions)
   {
@@ -296,6 +310,18 @@ class SubGridSpaces {
       }
     }
   }
+#else
+  void create_new_spaces(const GridsVector& grids)
+  {
+    if(spaces_.size() != grids.size()) {
+      spaces_.clear();
+      spaces_.reserve(grids.size());
+      for(const auto& grid : grids) {
+        spaces_.emplace_back(grid->leafGridView());
+      }
+    }
+  }
+#endif
 
   const FEBasisInterior& interiorSolutionSpace(size_t i) const {
     return spaces_[i].interiorSolutionSpace();
@@ -325,6 +351,7 @@ class SubGridSpaces {
   }
 #else
   static auto scatteringHostGridBasis(HostGridView hostGridView) {
+#if PERITER_NORMALIZED_SPACES
     using FEBasisInteriorHost
         = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
     auto interiorSpace = make_space_tuple<FEBasisInteriorHost>(hostGridView);
@@ -334,6 +361,10 @@ class SubGridSpaces {
                                       DomainOfIntegration::interior>(1.)
         .create();
     return make_normalized_space(l2InnerProduct);
+#else
+    using FEBasisHost = changeGridView_t<FEBasisInterior, HostGridView>;
+    return FEBasisHost(hostGridView);
+#endif
   }
 
   const FEBasisInterior& scatteringSubGridBasis(size_t i) const {
@@ -813,7 +844,11 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   //////////////////////////////////
   std::vector<VectorType> x(numS);
   using Spaces = SubGridSpaces<LeafGridView>;
+#if PERITER_NORMALIZED_SPACES
   Spaces spaces(grids, sVector);
+#else
+  Spaces spaces(grids);
+#endif
 
   for(unsigned int i = 0; i < grids.size(); ++i)
   {
@@ -1167,8 +1202,17 @@ compute_transport_solution(
   auto bilinearFormEnriched =
       replaceTestSpaces(bilinearForm, spaces.enrichedTestSpacePtr());
   auto innerProduct =
+#if PERITER_NORMALIZED_SPACES
     replaceTestSpaces(spaces.testSpace().preBasis().innerProduct(),
                       spaces.testSpacePtr());
+#else
+    innerProductWithSpace(spaces.testSpacePtr())
+    .template addIntegralTerm<0,0, IntegrationType::gradGrad,
+                                   DomainOfIntegration::interior>(1., s)
+    .template addIntegralTerm<0,0, IntegrationType::travelDistanceWeighted,
+                                   DomainOfIntegration::face>(1., s)
+    .create();
+#endif
   auto innerProductEnriched =
       replaceTestSpaces(innerProduct, spaces.enrichedTestSpacePtr());
 
@@ -1441,7 +1485,11 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
 
   create_new_grids(grids, numS);
   save_grids_to_gridIdSets(gridIdSets, grids);
+#if PERITER_NORMALIZED_SPACES
   subGridSpaces.create_new_spaces(grids, sVector);
+#else
+  subGridSpaces.create_new_spaces(grids);
+#endif
 
   return rhsFunctional;
 }
