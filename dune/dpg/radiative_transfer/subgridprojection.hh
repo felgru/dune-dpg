@@ -622,34 +622,33 @@ public:
       } else { // e is not contained in the HostLeafGridView:
         for(const auto& child : descendantElements(eHost, maxHostGridLevel))
         {
-          if(child.isLeaf())
-          {
-            localView.bind(child);
+          if(!child.isLeaf()) continue;
+
+          localView.bind(child);
 #if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-            localIndexSet.bind(localView);
+          localIndexSet.bind(localView);
 #endif
 
-            std::vector<FieldVector<double, 1>>
-                hostGridLocalData(localView.size());
-            iterateOverLocalIndices(
+          std::vector<FieldVector<double, 1>>
+              hostGridLocalData(localView.size());
+          iterateOverLocalIndices(
 #if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
-              localView,
+            localView,
 #else
-              localIndexSet,
+            localIndexSet,
 #endif
-              [&](size_t i, auto gi)
-              {
-                hostGridLocalData[i] = hostGridData[gi[0]];
-              },
-              [&](size_t i){ hostGridLocalData[i] = 0; },
-              [&](size_t i, auto gi, double wi)
-              {
-                hostGridLocalData[i] += wi * hostGridData[gi[0]];
-              }
-            );
-            cellData.push_back(std::make_pair(child.seed(),
-                                              std::move(hostGridLocalData)));
-          }
+            [&](size_t i, auto gi)
+            {
+              hostGridLocalData[i] = hostGridData[gi[0]];
+            },
+            [&](size_t i){ hostGridLocalData[i] = 0; },
+            [&](size_t i, auto gi, double wi)
+            {
+              hostGridLocalData[i] += wi * hostGridData[gi[0]];
+            }
+          );
+          cellData.push_back(std::make_pair(child.seed(),
+                                            std::move(hostGridLocalData)));
         }
       }
 
