@@ -731,13 +731,13 @@ private:
     }
   }
 
-  template<typename std::enable_if_t<
-    !is_RefinedFiniteElement<SubGridGlobalBasis>{}>* = nullptr>
+  template<class SGGlobalBasis, typename std::enable_if_t<
+    !is_RefinedFiniteElement<SGGlobalBasis>{}>* = nullptr>
   void
   interpolateToRefinementDescendants(
       typename GridData::iterator& currentData,
       const SubGridElement e,
-      const SubGridGlobalBasis& subGridGlobalBasis)
+      const SGGlobalBasis& subGridGlobalBasis)
   {
     auto sourceLocalView = subGridGlobalBasis.localView();
     sourceLocalView.bind(e);
@@ -778,13 +778,13 @@ private:
     currentData = gridData.erase(currentData);
   }
 
-  template<typename std::enable_if_t<
-    is_RefinedFiniteElement<SubGridGlobalBasis>{}>* = nullptr>
+  template<class SGGlobalBasis, typename std::enable_if_t<
+    is_RefinedFiniteElement<SGGlobalBasis>{}>* = nullptr>
   void
   interpolateToRefinementDescendants(
       typename GridData::iterator& currentData,
       const SubGridElement e,
-      const SubGridGlobalBasis& subGridGlobalBasis)
+      const SGGlobalBasis& subGridGlobalBasis)
   {
     auto sourceLocalView = subGridGlobalBasis.localView();
     sourceLocalView.bind(e);
