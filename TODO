@@ -1,5 +1,8 @@
 known bugs:
 
+* Using normalized test and trial spaces in the uniform grid version
+  of Periter does not work, as it would need to use different spaces
+  for different directions.
 * When calling the update() method of normalized spaces, we do not
   update the gridviews associated with the GridViewFunctions in the
   coefficients of the inner product that handles the normalization.
@@ -7,6 +10,14 @@ known bugs:
   but might lead to wrong evaluations for other GridViewFunctions.
 * src/kernel_svds.cc does not work for non-wavelet kernels due to
   changes in the scattering kernel functions.
+
+janitorial tasks:
+
+* Periter: check that I handle the RHS correctly.
+  IIRC I handle scattering, bv, rhs etc all in one vector
+  represented in the test space basis. This probably has to change.
+  We might need to handle it in two different vectors represented in
+  different bases.
 
 potential performance improvements:
 
