@@ -823,7 +823,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // accuracy to a large enough value.
   std::vector<Direction>
     sVector(kernelApproximation.setInitialAccuracy(1e5));
-  unsigned int numS = sVector.size();
+  size_t numS = sVector.size();
 
   std::vector<std::unique_ptr<Grid>> grids;
   grids.reserve(sVector.size());
@@ -1023,7 +1023,7 @@ computeScatteringData(
         sVector, grids, gridIdSets,
         accuKernel);
 
-  size_t numS = sVector.size();
+  const size_t numS = sVector.size();
   x.resize(numS);
   scatteringData.reserve(numS);
 

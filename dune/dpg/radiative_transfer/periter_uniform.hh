@@ -670,7 +670,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // accuracy to a large enough value.
   std::vector<Direction>
     sVector(kernelApproximation.setInitialAccuracy(1e5));
-  size_t numS = sVector.size();
+  const size_t numS = sVector.size();
 
   //////////////////////////////////
   //   Solution vectors

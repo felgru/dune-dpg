@@ -668,7 +668,7 @@ namespace ScatteringKernelApproximation {
         {
           using namespace Eigen;
 
-          size_t inLevel = level;
+          const size_t inLevel = level;
           setDimensions(accuracy, inputSize);
 
           std::vector<Direction> sVector(rows);
