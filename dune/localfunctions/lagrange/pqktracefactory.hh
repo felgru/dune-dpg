@@ -89,11 +89,8 @@ namespace Dune
     //! create finite element for given GeometryType
     static FiniteElementType* create(const GeometryType& gt)
     {
-      if (k==0)
-      {
-        DUNE_THROW(Dune::NotImplemented, "k=0 does not make sense for traces");
-        return new LocalFiniteElementVirtualImp<P0>(P0(gt));
-      }
+      static_assert(k!=0, "k=0 does not make sense for faces");
+
       if (gt.isCube())
         return new LocalFiniteElementVirtualImp<Qk>(Qk());
 
