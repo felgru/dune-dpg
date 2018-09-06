@@ -3,6 +3,9 @@ known bugs:
 * Using normalized test and trial spaces in the uniform grid version
   of Periter does not work, as it would need to use different spaces
   for different directions.
+* Normalized spaces currently do not work correctly if they are
+  normalized with an inner product that contains a
+  travelDistanceWeighted IntegralTerm.
 * When calling the update() method of normalized spaces, we do not
   update the gridviews associated with the GridViewFunctions in the
   coefficients of the inner product that handles the normalization.
