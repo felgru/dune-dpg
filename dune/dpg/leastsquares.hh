@@ -7,6 +7,8 @@
 #include <Eigen/Dense>
 #include <Eigen/QR>
 
+#include "eigen_conversions.hh"
+
 namespace Dune {
 
 /**
@@ -19,24 +21,12 @@ namespace Dune {
 template<class Matrix>
 void solveLeastSquares(const Matrix& A, const Matrix& b, Matrix& x)
 {
-      using Eigen::Dynamic;
-      using RowMatrix
-          = Eigen::Matrix<double, Dynamic, Dynamic, Eigen::RowMajor>;
-      RowMatrix eigenA(A.N(), A.M());
-      for(size_t i = 0; i < A.N(); i++)
-        for(size_t j = 0; j < A.M(); j++)
-          eigenA(i, j) = A[i][j][0];
-      Eigen::ColPivHouseholderQR<Eigen::Ref<RowMatrix>>
-        decomposition(eigenA);
-      RowMatrix eigenB(b.N(), b.M());
-      for(size_t i = 0; i < b.N(); i++)
-        for(size_t j = 0; j < b.M(); j++)
-          eigenB(i, j) = b[i][j][0];
-      auto solution = decomposition.solve(eigenB);
-      x.setSize(eigenA.rows(), eigenB.cols());
-      for(size_t i = 0; i < x.N(); i++)
-        for(size_t j = 0; j < x.M(); j++)
-          x[i][j][0] = solution(i, j);
+  EigenRowMatrix eigenA = toEigenMatrix(A);
+  Eigen::ColPivHouseholderQR<Eigen::Ref<EigenRowMatrix>>
+      decomposition(eigenA);
+  EigenRowMatrix eigenB = toEigenMatrix(b);
+  const auto solution = decomposition.solve(eigenB);
+  copyEigenMatrixToDuneMatrix(solution, x);
 }
 
 /**
@@ -52,22 +42,12 @@ void solveLeastSquares(const Matrix& A, const Matrix& b, Matrix& x)
 template<class Matrix, class Vector>
 void solveLeastSquares(const Matrix& A, Vector& b)
 {
-      using Eigen::Dynamic;
-      using RowMatrix
-          = Eigen::Matrix<double, Dynamic, Dynamic, Eigen::RowMajor>;
-      RowMatrix eigenA(A.N(), A.M());
-      for(size_t i = 0; i < A.N(); i++)
-        for(size_t j = 0; j < A.M(); j++)
-          eigenA(i, j) = A[i][j][0];
-      Eigen::ColPivHouseholderQR<Eigen::Ref<RowMatrix>>
-        decomposition(eigenA);
-      Eigen::VectorXd eigenB(b.N());
-      for(size_t i = 0; i < b.N(); i++)
-        eigenB(i) = b[i][0];
-      auto solution = decomposition.solve(eigenB);
-      b.resize(eigenA.rows());
-      for(size_t i = 0; i < b.N(); i++)
-        b[i][0] = solution(i);
+  EigenRowMatrix eigenA = toEigenMatrix(A);
+  Eigen::ColPivHouseholderQR<Eigen::Ref<EigenRowMatrix>>
+      decomposition(eigenA);
+  Eigen::VectorXd eigenB = toEigenVector(b);
+  const auto solution = decomposition.solve(eigenB);
+  copyEigenVectorToDuneVector(solution, b);
 }
 
 } // end namespace Dune
