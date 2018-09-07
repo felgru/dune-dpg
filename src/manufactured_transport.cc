@@ -239,8 +239,8 @@ int main(int argc, char** argv)
       = innerProductWithSpace(unnormalizedTestSpaces)
         .addIntegralTerm<0,0,IntegrationType::gradGrad,
                              DomainOfIntegration::interior>(1., beta)
-        .addIntegralTerm<0,0,IntegrationType::valueValue,
-                             DomainOfIntegration::interior>(1.)
+        .addIntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                             DomainOfIntegration::face>(1., beta)
         .create();
     auto testSpaces = make_normalized_space_tuple(unnormalizedInnerProduct);
     auto unnormalizedInnerProduct_aposteriori
