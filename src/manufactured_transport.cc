@@ -151,6 +151,23 @@ auto make_solution_spaces(const typename FEBasisInterior::GridView& gridView)
       std::make_tuple(std::move(normedSpace), FEBasisTrace(gridView)));
 }
 
+template<typename FEBasisTest>
+auto
+make_test_spaces(const typename FEBasisTest::GridView& gridView,
+                 const FieldVector<double, 2> direction)
+{
+  auto unnormalizedTestSpaces = make_space_tuple<FEBasisTest>(gridView);
+  auto unnormalizedInnerProduct
+    = innerProductWithSpace(unnormalizedTestSpaces)
+      .template addIntegralTerm<0,0,IntegrationType::gradGrad,
+                                    DomainOfIntegration::interior>
+                               (1., direction)
+      .template addIntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                    DomainOfIntegration::face>(1., direction)
+      .create();
+  return make_normalized_space_tuple(unnormalizedInnerProduct);
+}
+
 int main(int argc, char** argv)
 {
   if(argc != 2) {
@@ -203,6 +220,11 @@ int main(int argc, char** argv)
     const auto startiteration = std::chrono::steady_clock::now();
     GridView gridView = grid->leafGridView();
 
+    const FieldVector<double, dim> beta
+               = {std::cos(boost::math::constants::pi<double>()/8),
+                  std::sin(boost::math::constants::pi<double>()/8)};
+    const double c = sigma;
+
     /////////////////////////////////////////////////////////
     //   Choose finite element spaces
     /////////////////////////////////////////////////////////
@@ -218,36 +240,20 @@ int main(int argc, char** argv)
 
     // v search space
     using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
-    auto unnormalizedTestSpaces = make_space_tuple<FEBasisTest>(gridView);
+    auto testSpaces = make_test_spaces<FEBasisTest>(gridView, beta);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
         = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 4>;
-    auto unnormalizedTestSpaces_aposteriori
-        = make_space_tuple<FEBasisTest_aposteriori>(gridView);
-
-    FieldVector<double, dim> beta
-               = {std::cos(boost::math::constants::pi<double>()/8),
-                  std::sin(boost::math::constants::pi<double>()/8)};
-    const double c = sigma;
-
-    auto unnormalizedInnerProduct
-      = innerProductWithSpace(unnormalizedTestSpaces)
-        .addIntegralTerm<0,0,IntegrationType::gradGrad,
-                             DomainOfIntegration::interior>(1., beta)
-        .addIntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                             DomainOfIntegration::face>(1., beta)
-        .create();
-    auto testSpaces = make_normalized_space_tuple(unnormalizedInnerProduct);
-    auto unnormalizedInnerProduct_aposteriori
-        = replaceTestSpaces(unnormalizedInnerProduct,
-                            unnormalizedTestSpaces_aposteriori);
     auto testSpaces_aposteriori
-        = make_normalized_space_tuple(unnormalizedInnerProduct_aposteriori);
-    auto innerProduct
-        = replaceTestSpaces(unnormalizedInnerProduct, testSpaces);
-    auto innerProduct_aposteriori
-       = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
+        = make_test_spaces<FEBasisTest_aposteriori>(gridView, beta);
+
+    auto innerProduct = replaceTestSpaces(
+        std::get<0>(*testSpaces).preBasis().innerProduct(),
+        testSpaces);
+    auto innerProduct_aposteriori = replaceTestSpaces(
+        std::get<0>(*testSpaces_aposteriori).preBasis().innerProduct(),
+        testSpaces_aposteriori);
 
     auto bilinearForm
       = bilinearFormWithSpaces(testSpaces, solutionSpaces)
