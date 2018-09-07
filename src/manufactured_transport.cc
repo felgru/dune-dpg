@@ -55,8 +55,7 @@ double fInner(const Domain& x,
               const Direction& s)
 {
   const FieldVector<double,2> c{1., 1.};
-  return std::expm1(c[0]*x[0])*std::expm1(c[1]*x[1]); //v pure transport
-  // return 1-(x[0]-0.5)*(x[0]-0.5)-(x[1]-0.5)*(x[1]-0.5); //v RT
+  return std::expm1(c[0]*x[0])*std::expm1(c[1]*x[1]);
 }
 // Partial derivative of fInner with respect to x[0]
 template <class Domain,class Direction>
@@ -64,8 +63,7 @@ double fInnerD0(const Domain& x,
                 const Direction& s)
 {
   const FieldVector<double,2> c{1., 1.};
-  return c[0]*std::exp(c[0]*x[0])*std::expm1(c[1]*x[1]); //v pure transport
-  // return -2*(x[0]-0.5); //v RT
+  return c[0]*std::exp(c[0]*x[0])*std::expm1(c[1]*x[1]);
 }
 // Partial derivative of fInner with respect to x[1]
 template <class Domain,class Direction>
@@ -73,8 +71,7 @@ double fInnerD1(const Domain& x,
                 const Direction& s)
 {
   const FieldVector<double,2> c{1., 1.};
-  return std::expm1(c[0]*x[0])*std::exp(c[1]*x[1])*c[1]; //v pure transport
-  // return -2*(x[1]-0.5); //v RT
+  return std::expm1(c[0]*x[0])*std::exp(c[1]*x[1])*c[1];
 }
 
 // This function satifies the zero incoming flux bounday conditions
@@ -82,9 +79,7 @@ template <class Domain,class Direction>
 double fBoundary(const Domain& x,
                  const Direction& s)
 {
-  return 1.; //v pure transport
-  // return ( (s[0]>0)*x[0] + (s[0]==0)*1. + (s[0]<0)*(1-x[0]) ) *
-  //        ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) ); //v RT
+  return 1.;
 }
 
 // Partial derivative of fBoundary with respect to x[0]
@@ -92,9 +87,7 @@ template <class Domain,class Direction>
 double fBoundaryD0(const Domain& x,
                    const Direction& s)
 {
-  return 0.; //v pure transport
-  // return ( (s[0]>0)*1 + (s[0]==0)*0. + (s[0]<0)*(-1.) ) *
-  //        ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) ); //v RT
+  return 0.;
 }
 
 // Partial derivative of fBoundary with respect to x[1]
@@ -102,9 +95,7 @@ template <class Domain,class Direction>
 double fBoundaryD1(const Domain& x,
                    const Direction& s)
 {
-  return 0.; //v pure transport
-  // return ( (s[0]>0)*x[0] + (s[0]==0)*1. + (s[0]<0)*(1-x[0]) )*
-  //        ( (s[1]>0)*1 + (s[1]==0)*0. + (s[1]<0)*(-1.) ); //v RT
+  return 0.;
 }
 
 // Optical parameter: sigma
@@ -189,9 +180,6 @@ int main(int argc, char** argv)
   FieldVector<double,dim> upper = {1,1};
   std::array<unsigned int,dim> elements = {nelements,nelements};
 
-  // std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
-  //                                 ::createCubeGrid(lower, upper, elements);
-
   std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
                                   ::createSimplexGrid(lower, upper, elements);
   hostGrid->setClosureType(HostGrid::NONE);
@@ -267,17 +255,12 @@ int main(int argc, char** argv)
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
 
-    //  System assembler without geometry buffer
-    //auto systemAssembler
-    //   = make_DPGSystemAssembler(bilinearForm, innerProduct);
-
-    //  System assembler with geometry buffer
     auto systemAssembler
      = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
+
     /////////////////////////////////////////////////////////
     //   Stiffness matrix and right hand side vector
     /////////////////////////////////////////////////////////
-
 
     typedef BlockVector<FieldVector<double,1> > VectorType;
     typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
