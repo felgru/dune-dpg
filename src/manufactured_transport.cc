@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdlib> // for std::exit()
 #include <iostream>
+#include <unistd.h>
 
 #include <array>
 #include <chrono>
@@ -55,8 +56,7 @@ double fInner(const Domain& x,
               const Direction& s)
 {
   const FieldVector<double,2> c{1., 1.};
-  return std::expm1(c[0]*x[0])*std::expm1(c[1]*x[1]); //v pure transport
-  // return 1-(x[0]-0.5)*(x[0]-0.5)-(x[1]-0.5)*(x[1]-0.5); //v RT
+  return std::expm1(c[0]*x[0])*std::expm1(c[1]*x[1]);
 }
 // Partial derivative of fInner with respect to x[0]
 template <class Domain,class Direction>
@@ -64,8 +64,7 @@ double fInnerD0(const Domain& x,
                 const Direction& s)
 {
   const FieldVector<double,2> c{1., 1.};
-  return c[0]*std::exp(c[0]*x[0])*std::expm1(c[1]*x[1]); //v pure transport
-  // return -2*(x[0]-0.5); //v RT
+  return c[0]*std::exp(c[0]*x[0])*std::expm1(c[1]*x[1]);
 }
 // Partial derivative of fInner with respect to x[1]
 template <class Domain,class Direction>
@@ -73,8 +72,7 @@ double fInnerD1(const Domain& x,
                 const Direction& s)
 {
   const FieldVector<double,2> c{1., 1.};
-  return std::expm1(c[0]*x[0])*std::exp(c[1]*x[1])*c[1]; //v pure transport
-  // return -2*(x[1]-0.5); //v RT
+  return std::expm1(c[0]*x[0])*std::exp(c[1]*x[1])*c[1];
 }
 
 // This function satifies the zero incoming flux bounday conditions
@@ -82,9 +80,7 @@ template <class Domain,class Direction>
 double fBoundary(const Domain& x,
                  const Direction& s)
 {
-  return 1.; //v pure transport
-  // return ( (s[0]>0)*x[0] + (s[0]==0)*1. + (s[0]<0)*(1-x[0]) ) *
-  //        ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) ); //v RT
+  return 1.;
 }
 
 // Partial derivative of fBoundary with respect to x[0]
@@ -92,9 +88,7 @@ template <class Domain,class Direction>
 double fBoundaryD0(const Domain& x,
                    const Direction& s)
 {
-  return 0.; //v pure transport
-  // return ( (s[0]>0)*1 + (s[0]==0)*0. + (s[0]<0)*(-1.) ) *
-  //        ( (s[1]>0)*x[1] + (s[1]==0)*1. + (s[1]<0)*(1-x[1]) ); //v RT
+  return 0.;
 }
 
 // Partial derivative of fBoundary with respect to x[1]
@@ -102,9 +96,7 @@ template <class Domain,class Direction>
 double fBoundaryD1(const Domain& x,
                    const Direction& s)
 {
-  return 0.; //v pure transport
-  // return ( (s[0]>0)*x[0] + (s[0]==0)*1. + (s[0]<0)*(1-x[0]) )*
-  //        ( (s[1]>0)*1 + (s[1]==0)*0. + (s[1]<0)*(-1.) ); //v RT
+  return 0.;
 }
 
 // Optical parameter: sigma
@@ -144,24 +136,58 @@ auto make_solution_spaces(const typename FEBasisInterior::GridView& gridView)
       .template addIntegralTerm<0,0,IntegrationType::valueValue,
                                     DomainOfIntegration::interior>(1.)
       .create();
-  using InnerProduct = decltype(l2InnerProduct);
-  using WrappedSpaces = typename InnerProduct::TestSpaces;
-  using NormedSpace = std::conditional_t<
-    is_RefinedFiniteElement<std::tuple_element_t<0, WrappedSpaces>>::value,
-    Functions::NormalizedRefinedBasis<InnerProduct>,
-    Functions::NormalizedBasis<InnerProduct>>;
+  auto normedSpace = make_normalized_space(l2InnerProduct);
+  using NormedSpace = decltype(normedSpace);
 
   return std::make_shared<std::tuple<NormedSpace, FEBasisTrace>>(
-      std::make_tuple(NormedSpace(l2InnerProduct), FEBasisTrace(gridView)));
+      std::make_tuple(std::move(normedSpace), FEBasisTrace(gridView)));
+}
+
+template<typename FEBasisTest>
+auto
+make_test_spaces(const typename FEBasisTest::GridView& gridView,
+                 const FieldVector<double, 2> direction)
+{
+  auto unnormalizedTestSpaces = make_space_tuple<FEBasisTest>(gridView);
+  auto unnormalizedInnerProduct
+    = innerProductWithSpace(unnormalizedTestSpaces)
+      .template addIntegralTerm<0,0,IntegrationType::gradGrad,
+                                    DomainOfIntegration::interior>
+                               (1., direction)
+      .template addIntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
+                                    DomainOfIntegration::face>(1., direction)
+      .create();
+  return make_normalized_space_tuple(unnormalizedInnerProduct);
+}
+
+void printHelp(const char* name) {
+  std::cerr << "Usage: " << name << " [-p] <n>\n"
+            << "Solves the transport problem on an nxn grid.\n\n"
+            << "Options:\n"
+            << " -p: plot solutions and error estimates\n";
+  std::exit(0);
 }
 
 int main(int argc, char** argv)
 {
-  if(argc != 2) {
-    std::cerr << "Usage: " << argv[0] << " n" << std::endl << std::endl
-              << "Solves the transport problem on an nxn grid." << std::endl;
-    std::exit(1);
+  bool plot = false;
+  {
+    int opt;
+    while ((opt = getopt(argc,argv,"ph")) != EOF)
+      switch(opt)
+      {
+        case 'p': plot = true; break;
+        default:
+        case '?':
+        case 'h':
+          printHelp(argv[0]);
+      }
+    if(optind != argc-1) {
+      printHelp(argv[0]);
+    }
   }
+  const unsigned int nelements = atoi(argv[optind]);
+
   ///////////////////////////////////
   //   Generate the grid
   ///////////////////////////////////
@@ -170,14 +196,9 @@ int main(int argc, char** argv)
   using HostGrid = UGGrid<dim>;
   using Grid = SubGrid<dim, HostGrid, false>;
 
-  unsigned int nelements = atoi(argv[1]);
-
-  FieldVector<double,dim> lower = {0,0};
-  FieldVector<double,dim> upper = {1,1};
-  std::array<unsigned int,dim> elements = {nelements,nelements};
-
-  // std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
-  //                                 ::createCubeGrid(lower, upper, elements);
+  const FieldVector<double,dim> lower = {0,0};
+  const FieldVector<double,dim> upper = {1,1};
+  const std::array<unsigned int,dim> elements = {nelements,nelements};
 
   std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
                                   ::createSimplexGrid(lower, upper, elements);
@@ -207,6 +228,11 @@ int main(int argc, char** argv)
     const auto startiteration = std::chrono::steady_clock::now();
     GridView gridView = grid->leafGridView();
 
+    const FieldVector<double, dim> beta
+               = {std::cos(boost::math::constants::pi<double>()/8),
+                  std::sin(boost::math::constants::pi<double>()/8)};
+    const double c = sigma;
+
     /////////////////////////////////////////////////////////
     //   Choose finite element spaces
     /////////////////////////////////////////////////////////
@@ -222,36 +248,20 @@ int main(int argc, char** argv)
 
     // v search space
     using FEBasisTest = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 3>;
-    auto unnormalizedTestSpaces = make_space_tuple<FEBasisTest>(gridView);
+    auto testSpaces = make_test_spaces<FEBasisTest>(gridView, beta);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
         = Functions::BernsteinDGRefinedDGBasis<GridView, 1, 4>;
-    auto unnormalizedTestSpaces_aposteriori
-        = make_space_tuple<FEBasisTest_aposteriori>(gridView);
-
-    FieldVector<double, dim> beta
-               = {std::cos(boost::math::constants::pi<double>()/8),
-                  std::sin(boost::math::constants::pi<double>()/8)};
-    const double c = sigma;
-
-    auto unnormalizedInnerProduct
-      = innerProductWithSpace(unnormalizedTestSpaces)
-        .addIntegralTerm<0,0,IntegrationType::gradGrad,
-                             DomainOfIntegration::interior>(1., beta)
-        .addIntegralTerm<0,0,IntegrationType::travelDistanceWeighted,
-                             DomainOfIntegration::face>(1., beta)
-        .create();
-    auto testSpaces = make_normalized_space_tuple(unnormalizedInnerProduct);
-    auto unnormalizedInnerProduct_aposteriori
-        = replaceTestSpaces(unnormalizedInnerProduct,
-                            unnormalizedTestSpaces_aposteriori);
     auto testSpaces_aposteriori
-        = make_normalized_space_tuple(unnormalizedInnerProduct_aposteriori);
-    auto innerProduct
-        = replaceTestSpaces(unnormalizedInnerProduct, testSpaces);
-    auto innerProduct_aposteriori
-       = replaceTestSpaces(innerProduct, testSpaces_aposteriori);
+        = make_test_spaces<FEBasisTest_aposteriori>(gridView, beta);
+
+    auto innerProduct = replaceTestSpaces(
+        std::get<0>(*testSpaces).preBasis().innerProduct(),
+        testSpaces);
+    auto innerProduct_aposteriori = replaceTestSpaces(
+        std::get<0>(*testSpaces_aposteriori).preBasis().innerProduct(),
+        testSpaces_aposteriori);
 
     auto bilinearForm
       = bilinearFormWithSpaces(testSpaces, solutionSpaces)
@@ -265,17 +275,12 @@ int main(int argc, char** argv)
     auto bilinearForm_aposteriori
         = replaceTestSpaces(bilinearForm, testSpaces_aposteriori);
 
-    //  System assembler without geometry buffer
-    //auto systemAssembler
-    //   = make_DPGSystemAssembler(bilinearForm, innerProduct);
-
-    //  System assembler with geometry buffer
     auto systemAssembler
      = make_DPGSystemAssembler(bilinearForm, innerProduct, geometryBuffer);
+
     /////////////////////////////////////////////////////////
     //   Stiffness matrix and right hand side vector
     /////////////////////////////////////////////////////////
-
 
     typedef BlockVector<FieldVector<double,1> > VectorType;
     typedef BCRSMatrix<FieldMatrix<double,1,1> > MatrixType;
@@ -344,27 +349,27 @@ int main(int argc, char** argv)
                  (endsolve - startsolve).count()
               << "us.\n";
 
-#if 1
-    const auto startresults = std::chrono::steady_clock::now();
-    //////////////////////////////////////////////////////////////////
-    //  Write result to VTK file
-    //////////////////////////////////////////////////////////////////
-    FunctionPlotter uPlotter("transport_solution_"
-                            + std::to_string(nelements)
-                            + "_" + std::to_string(i));
-    FunctionPlotter thetaPlotter("transport_solution_trace_"
-                                + std::to_string(nelements)
-                                + "_" + std::to_string(i));
-    uPlotter.plot("u", x, std::get<0>(*solutionSpaces), 0, 0);
-    thetaPlotter.plot("theta", x, std::get<1>(*solutionSpaces),
-                      2, std::get<0>(*solutionSpaces).size());
+    if(plot) {
+      const auto startresults = std::chrono::steady_clock::now();
+      //////////////////////////////////////////////////////////////////
+      //  Write result to VTK file
+      //////////////////////////////////////////////////////////////////
+      FunctionPlotter uPlotter("transport_solution_"
+                              + std::to_string(nelements)
+                              + "_" + std::to_string(i));
+      FunctionPlotter thetaPlotter("transport_solution_trace_"
+                                  + std::to_string(nelements)
+                                  + "_" + std::to_string(i));
+      uPlotter.plot("u", x, std::get<0>(*solutionSpaces), 0, 0);
+      thetaPlotter.plot("theta", x, std::get<1>(*solutionSpaces),
+                        2, std::get<0>(*solutionSpaces).size());
 
-    const auto endresults = std::chrono::steady_clock::now();
-    std::cout << "Saving the results took "
-              << std::chrono::duration_cast<std::chrono::microseconds>
-                 (endresults - startresults).count()
-              << "us.\n";
-#endif
+      const auto endresults = std::chrono::steady_clock::now();
+      std::cout << "Saving the results took "
+                << std::chrono::duration_cast<std::chrono::microseconds>
+                   (endresults - startresults).count()
+                << "us.\n";
+    }
 
     ////////////////////////////////////////////////////
     // Estimate a posteriori error and refine
@@ -381,10 +386,12 @@ int main(int argc, char** argv)
                                      bilinearForm_aposteriori,
                                      innerProduct_aposteriori,
                                      x, rhs);
-    ErrorPlotter errPlotter("transport_error_"
-                            + std::to_string(nelements)
-                            + "_" + std::to_string(i));
-    errPlotter.plot("errors", errorEstimates, gridView);
+    if(plot) {
+      ErrorPlotter errPlotter("transport_error_"
+                              + std::to_string(nelements)
+                              + "_" + std::to_string(i));
+      errPlotter.plot("errors", errorEstimates, gridView);
+    }
     err = std::sqrt(
         ErrorTools::DoerflerMarking(*grid, ratio, std::move(errorEstimates)));
 
