@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdlib> // for std::exit()
 #include <iostream>
+#include <unistd.h>
 
 #include <array>
 #include <chrono>
@@ -159,13 +160,34 @@ make_test_spaces(const typename FEBasisTest::GridView& gridView,
   return make_normalized_space_tuple(unnormalizedInnerProduct);
 }
 
+void printHelp(const char* name) {
+  std::cerr << "Usage: " << name << " [-p] <n>\n"
+            << "Solves the transport problem on an nxn grid.\n\n"
+            << "Options:\n"
+            << " -p: plot solutions and error estimates\n";
+  std::exit(0);
+}
+
 int main(int argc, char** argv)
 {
-  if(argc != 2) {
-    std::cerr << "Usage: " << argv[0] << " n" << std::endl << std::endl
-              << "Solves the transport problem on an nxn grid." << std::endl;
-    std::exit(1);
+  bool plot = false;
+  {
+    int opt;
+    while ((opt = getopt(argc,argv,"ph")) != EOF)
+      switch(opt)
+      {
+        case 'p': plot = true; break;
+        default:
+        case '?':
+        case 'h':
+          printHelp(argv[0]);
+      }
+    if(optind != argc-1) {
+      printHelp(argv[0]);
+    }
   }
+  const unsigned int nelements = atoi(argv[optind]);
+
   ///////////////////////////////////
   //   Generate the grid
   ///////////////////////////////////
@@ -174,11 +196,9 @@ int main(int argc, char** argv)
   using HostGrid = UGGrid<dim>;
   using Grid = SubGrid<dim, HostGrid, false>;
 
-  unsigned int nelements = atoi(argv[1]);
-
-  FieldVector<double,dim> lower = {0,0};
-  FieldVector<double,dim> upper = {1,1};
-  std::array<unsigned int,dim> elements = {nelements,nelements};
+  const FieldVector<double,dim> lower = {0,0};
+  const FieldVector<double,dim> upper = {1,1};
+  const std::array<unsigned int,dim> elements = {nelements,nelements};
 
   std::unique_ptr<HostGrid> hostGrid = StructuredGridFactory<HostGrid>
                                   ::createSimplexGrid(lower, upper, elements);
@@ -329,27 +349,27 @@ int main(int argc, char** argv)
                  (endsolve - startsolve).count()
               << "us.\n";
 
-#if 1
-    const auto startresults = std::chrono::steady_clock::now();
-    //////////////////////////////////////////////////////////////////
-    //  Write result to VTK file
-    //////////////////////////////////////////////////////////////////
-    FunctionPlotter uPlotter("transport_solution_"
-                            + std::to_string(nelements)
-                            + "_" + std::to_string(i));
-    FunctionPlotter thetaPlotter("transport_solution_trace_"
-                                + std::to_string(nelements)
-                                + "_" + std::to_string(i));
-    uPlotter.plot("u", x, std::get<0>(*solutionSpaces), 0, 0);
-    thetaPlotter.plot("theta", x, std::get<1>(*solutionSpaces),
-                      2, std::get<0>(*solutionSpaces).size());
+    if(plot) {
+      const auto startresults = std::chrono::steady_clock::now();
+      //////////////////////////////////////////////////////////////////
+      //  Write result to VTK file
+      //////////////////////////////////////////////////////////////////
+      FunctionPlotter uPlotter("transport_solution_"
+                              + std::to_string(nelements)
+                              + "_" + std::to_string(i));
+      FunctionPlotter thetaPlotter("transport_solution_trace_"
+                                  + std::to_string(nelements)
+                                  + "_" + std::to_string(i));
+      uPlotter.plot("u", x, std::get<0>(*solutionSpaces), 0, 0);
+      thetaPlotter.plot("theta", x, std::get<1>(*solutionSpaces),
+                        2, std::get<0>(*solutionSpaces).size());
 
-    const auto endresults = std::chrono::steady_clock::now();
-    std::cout << "Saving the results took "
-              << std::chrono::duration_cast<std::chrono::microseconds>
-                 (endresults - startresults).count()
-              << "us.\n";
-#endif
+      const auto endresults = std::chrono::steady_clock::now();
+      std::cout << "Saving the results took "
+                << std::chrono::duration_cast<std::chrono::microseconds>
+                   (endresults - startresults).count()
+                << "us.\n";
+    }
 
     ////////////////////////////////////////////////////
     // Estimate a posteriori error and refine
@@ -366,10 +386,12 @@ int main(int argc, char** argv)
                                      bilinearForm_aposteriori,
                                      innerProduct_aposteriori,
                                      x, rhs);
-    ErrorPlotter errPlotter("transport_error_"
-                            + std::to_string(nelements)
-                            + "_" + std::to_string(i));
-    errPlotter.plot("errors", errorEstimates, gridView);
+    if(plot) {
+      ErrorPlotter errPlotter("transport_error_"
+                              + std::to_string(nelements)
+                              + "_" + std::to_string(i));
+      errPlotter.plot("errors", errorEstimates, gridView);
+    }
     err = std::sqrt(
         ErrorTools::DoerflerMarking(*grid, ratio, std::move(errorEstimates)));
 
