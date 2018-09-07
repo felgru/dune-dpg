@@ -144,15 +144,11 @@ auto make_solution_spaces(const typename FEBasisInterior::GridView& gridView)
       .template addIntegralTerm<0,0,IntegrationType::valueValue,
                                     DomainOfIntegration::interior>(1.)
       .create();
-  using InnerProduct = decltype(l2InnerProduct);
-  using WrappedSpaces = typename InnerProduct::TestSpaces;
-  using NormedSpace = std::conditional_t<
-    is_RefinedFiniteElement<std::tuple_element_t<0, WrappedSpaces>>::value,
-    Functions::NormalizedRefinedBasis<InnerProduct>,
-    Functions::NormalizedBasis<InnerProduct>>;
+  auto normedSpace = make_normalized_space(l2InnerProduct);
+  using NormedSpace = decltype(normedSpace);
 
   return std::make_shared<std::tuple<NormedSpace, FEBasisTrace>>(
-      std::make_tuple(NormedSpace(l2InnerProduct), FEBasisTrace(gridView)));
+      std::make_tuple(std::move(normedSpace), FEBasisTrace(gridView)));
 }
 
 int main(int argc, char** argv)
