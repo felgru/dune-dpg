@@ -148,7 +148,14 @@ faceImpl(LhsLocalView& lhsLocalView,
   for(const auto& subElement : elements(referenceGridView))
   {
     lhsLocalView.bindSubElement(subElement);
-    rhsLocalView.bindSubElement(subElement);
+    // When the IntegralTerm belongs to an InnerProduct, it can happen
+    // that lhsLocalView and rhsLocalView are references to the same
+    // localView of a test search space. In this case, we have to make
+    // sure that we bind only once to the subElement, so that we don't
+    // increment the subElement offset twice.
+    if(std::addressof(lhsLocalView) != std::addressof(rhsLocalView)) {
+      rhsLocalView.bindSubElement(subElement);
+    }
 
     // Get set of shape functions for this subElement
     const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
