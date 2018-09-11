@@ -22,7 +22,8 @@ janitorial tasks:
 potential performance improvements:
 
 * Using the Eigen::Map wrapper around Dune's matrix and vector classes
-  might spare us some temporary copies in the wavelet code.
+  might spare us some temporary copies in the Cholesky decomposition
+  and in the wavelet code.
   We need however to check that Map works with vectors of FieldVectors.
 
 proposed features:

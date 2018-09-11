@@ -24,10 +24,10 @@ The installation of pkg-config is recommended:
 
     brew install pkg-config
 
-Boost 1.63 or newer is needed, since we make use of Boost Hana for
-template meta programming:
+We also need Boost 1.63, or newer, and the Eigen linear algebra library:
 
     brew install boost
+    brew install eigen
 
 UMFPACK installation:
 
