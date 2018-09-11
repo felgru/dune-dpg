@@ -2,7 +2,7 @@
 include(DuneBoost)
 find_package(BoostHana 1.61 REQUIRED)
 find_package(SuiteSparse COMPONENTS UMFPACK)
-find_package(Eigen3)
+find_package(Eigen3 REQUIRED)
 if(${EIGEN3_FOUND})
   include_directories(${EIGEN3_INCLUDE_DIR})
   # dune_register_package_flags(INCLUDE_DIRS "${EIGEN3_INCLUDE_DIR}")
