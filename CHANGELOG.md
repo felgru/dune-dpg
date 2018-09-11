@@ -38,6 +38,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   `requiredQuadratureOrder<LocalFunction>::value`.
   If you write your own GridViewFunction, make sure to specialize
   `requiredQuadratureOrder` for its `LocalFunction`.
+* Our own textbook implementation of the Cholesky decomposition has
+  been replaced with the one implemented in Eigen which seems to be
+  much more robust when the matrix is very badly conditioned.
 * The `interpolate` method of all localfunctions can now be called with
   a function object f that implements `f(x)` instead of the
   `f.evaluate(x,y)` interface. This is in accordance with changes in
