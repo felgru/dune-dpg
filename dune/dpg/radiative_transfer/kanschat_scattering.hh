@@ -6,6 +6,7 @@
 #include <cmath>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace Dune {
 

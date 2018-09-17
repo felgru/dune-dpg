@@ -628,21 +628,26 @@ namespace ScatteringKernelApproximation {
 
         template<class Function>
         SVD(const Function& kernelFunction,
-            double accuracyKernel,
-            size_t minLevel)
+            size_t minLevel,
+            size_t truthLevel)
           : minLevel(minLevel),
-            maxLevel(std::max(minLevel, requiredLevel(accuracyKernel,100))),
+            maxLevel(truthLevel),
             nQuadAngle(30),
             truthMatrix(waveletKernelMatrix(kernelFunction,
                         wltOrder, maxLevel, nQuadAngle)),
+            truncationErrors(initializeTruncationErrors(truthMatrix,
+                                                        truthLevel)),
             level(maxLevel),
             rows((wltOrder+1) << maxLevel),
             rank(rows) {
-          std::cout << "Accuracy kernel " << accuracyKernel
-            << " with wlt order " << wltOrder
-            << " requires level J = " << maxLevel
-            << " and " << rows << " directions." << std::endl;
+          std::cout << "kernel with wlt order " << wltOrder
+            << " and truth level = " << maxLevel
+            << ", i.e. " << rows << " directions.\n";
           assert(truthMatrix.rows()>0 && truthMatrix.cols()>0);
+          if(minLevel > maxLevel) {
+            DUNE_THROW(Exception,
+                "truthLevel has to be larger than minLevel!");
+          }
         }
 
         // Given a vector of u(s_i), compute (Ku)(s_i) with SVD
@@ -680,9 +685,10 @@ namespace ScatteringKernelApproximation {
               Eigen::ComputeThinU | Eigen::ComputeThinV);
 
           singularValues = kernelSVD.singularValues();
+          const double svdAccuracy = accuracy / 2. - truncationErrors[level];
           Index i = 0;
           while (i < singularValues.size()
-                 && singularValues(i) > accuracy / 2.) {
+                 && singularValues(i) > svdAccuracy) {
             i += 1;
           }
           rank = (i>0)?i:1;
@@ -780,6 +786,10 @@ namespace ScatteringKernelApproximation {
           return wltOrder;
         }
 
+        const std::vector<double>& getTruncationErrors() const {
+          return truncationErrors;
+        }
+
         std::string typeApprox() const {
           return "Kernel approximation with: SVD";
         }
@@ -794,6 +804,27 @@ namespace ScatteringKernelApproximation {
 
       private:
 
+        static inline double
+        truncationError(const Eigen::MatrixXd& truthMatrix, size_t level) {
+          const size_t rows = (wltOrder+1) * (1 << level);
+          Eigen::MatrixXd differenceMatrix = truthMatrix;
+          differenceMatrix.topLeftCorner(rows, rows)
+            = Eigen::MatrixXd::Zero(rows, rows);
+          return differenceMatrix.operatorNorm();
+        }
+
+        static inline std::vector<double>
+        initializeTruncationErrors(const Eigen::MatrixXd& truthMatrix,
+                                   const size_t truthLevel)
+        {
+          std::vector<double> truncationErrors(truthLevel);
+          std::generate(truncationErrors.begin(), truncationErrors.end(),
+              [&truthMatrix, n = 0] () mutable {
+                return truncationError(truthMatrix, n++);
+              });
+          return truncationErrors;
+        }
+
         static inline size_t requiredLevel(double accuracy, size_t maxLevel) {
           size_t level=0;
 
@@ -806,7 +837,11 @@ namespace ScatteringKernelApproximation {
         }
 
         void setDimensions(double accuracy, size_t inputSize) {
-          level = std::max(minLevel, requiredLevel(accuracy/2., maxLevel));
+          size_t level_ = minLevel;
+          for( ; level_ < maxLevel; ++level_) {
+            if(truncationErrors[level_] < accuracy/2.) break;
+          }
+          level = level_;
           rows = (wltOrder+1) << level;
           cols = inputSize;
         }
@@ -863,6 +898,7 @@ namespace ScatteringKernelApproximation {
         Eigen::VectorXd singularValues;
         Eigen::MatrixXd Uscaling;
         Eigen::MatrixXd Vscaling;
+        const std::vector<double> truncationErrors;
         size_t level; //!< level of scaling functions in output vector
         size_t rows;
         size_t cols;

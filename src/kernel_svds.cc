@@ -23,7 +23,7 @@
 std::vector<double> exponentialDecay(size_t n) {
   std::vector<double> a(n);
   for(std::ptrdiff_t i=0; (size_t)i<n; ++i) {
-    a[i] = exp(-i);
+    a[i] = std::exp(-i);
   }
   return a;
 }

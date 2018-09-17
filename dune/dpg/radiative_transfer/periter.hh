@@ -813,7 +813,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   ////////////////////////////////////////////
 
   ScatteringKernelApproximation kernelApproximation(kernel,
-      approximationParameters.finalScatteringAccuracy(targetAccuracy), 2);
+      2, approximationParameters.scatteringTruthLevel());
 
   logger.logPeriterOverview(targetAccuracy, kernel,
       kernelApproximation, approximationParameters);

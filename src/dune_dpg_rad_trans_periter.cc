@@ -44,7 +44,7 @@ using namespace Dune;
 
 void printHelp(const char* name) {
   std::cerr << "Usage: " << name
-            << " [-psri] [-n <n>] [-o <dir>] [-k <k>]"
+            << " [-psri] [-n <n>] [-o <dir>] [-k <k>] [-l <l>]"
             << " <target accuracy>"
             << " <gamma>"
             << " <# of iterations>"
@@ -57,7 +57,9 @@ void printHelp(const char* name) {
             << " -o <dir>: set output directory to <dir>, default is "
                "\"../results/\"\n"
             << " -k <k>: set ratio between kernel and transport accuracy"
-               " to <k>\n";
+               " to <k>\n"
+            << " -l <l>: set wavelet level of truth matrix for the scattering"
+               " to <l>\n";
   std::exit(0);
 }
 
@@ -91,10 +93,11 @@ int main(int argc, char** argv)
   std::string basedir = "../results/";
   unsigned int maxNumberOfInnerIterations = 64;
   double accuracyRatio = 0.5;
+  size_t scatteringTruthLevel = 6;
 
   {
     int opt;
-    while ((opt = getopt(argc,argv,"n:o:k:psrih")) != EOF)
+    while ((opt = getopt(argc,argv,"n:o:k:l:psrih")) != EOF)
       switch(opt)
       {
         case 'p': plotFlags |= PeriterPlotFlags::plotOuterIterations; break;
@@ -104,6 +107,7 @@ int main(int argc, char** argv)
         case 'n': maxNumberOfInnerIterations = std::atoi(optarg); break;
         case 'o': basedir = optarg; break;
         case 'k': accuracyRatio = std::atof(optarg); break;
+        case 'l': scatteringTruthLevel = std::atoi(optarg); break;
         default:
         case '?':
         case 'h':
@@ -278,6 +282,7 @@ int main(int argc, char** argv)
 
   PeriterApproximationParameters approximationParameters(accuracyRatio,
                                                          rho, CT, err0,
+                                                         scatteringTruthLevel,
                                                          RHSApproximation{});
 
   Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,

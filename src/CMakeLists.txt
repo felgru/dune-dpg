@@ -133,3 +133,6 @@ target_compile_definitions(periter_checkerboard_uniform
 
 add_executable("kernel_svds" kernel_svds.cc)
 target_link_dune_default_libraries("kernel_svds")
+
+add_executable("kernel_truncations" kernel_truncations.cc)
+target_link_dune_default_libraries("kernel_truncations")
