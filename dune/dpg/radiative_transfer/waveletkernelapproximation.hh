@@ -681,10 +681,8 @@ namespace ScatteringKernelApproximation {
 
           singularValues = kernelSVD.singularValues();
           Index i = 0;
-          double rank_err = singularValues(i) * singularValues(i);
           while (i < singularValues.size()
-                 && (rank_err = singularValues(i) * singularValues(i))
-                    > (accuracy * accuracy / 4.)) {
+                 && singularValues(i) > accuracy / 2.) {
             i += 1;
           }
           rank = (i>0)?i:1;
@@ -1512,10 +1510,8 @@ namespace ScatteringKernelApproximation {
           using namespace Eigen;
           VectorXd singularValues = kernelSVD.singularValues();
           Index i = 0;
-          double rank_err = singularValues(i) * singularValues(i);
           while (i < singularValues.size()
-                 && (rank_err = singularValues(i) * singularValues(i))
-                    > (accuracy * accuracy / 4.)) {
+                 && singularValues(i) > accuracy / 2.) {
             i += 1;
           }
           rank = (i>0)?i:1;
