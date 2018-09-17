@@ -213,6 +213,7 @@ class TransportSpaces {
     const double kappa1;
     const double kappa2;
     const double kappa3;
+    const size_t scatteringTruthLevel_;
 
     friend std::ostream& operator<<
         (std::ostream& os, const PeriterApproximationParameters& params);
@@ -229,13 +230,15 @@ class TransportSpaces {
      *        mean more accuracy for the kernel approximation
      */
     PeriterApproximationParameters(double accuracyRatio,
-                                   double rho, double CT, double err0, FeRHS)
+                                   double rho, double CT, double err0,
+                                   size_t scatteringTruthLevel, FeRHS)
       : rho(rho)
       , CT(CT)
       , uBound(err0)
       , kappa1(accuracyRatio/CT)
       , kappa2(0.)
       , kappa3(1.-accuracyRatio)
+      , scatteringTruthLevel_(scatteringTruthLevel)
     {
       if(accuracyRatio < 0. || accuracyRatio > 1.)
         throw std::domain_error("accuracyRatio needs to be in (0,1).");
@@ -243,6 +246,7 @@ class TransportSpaces {
 
     PeriterApproximationParameters(double accuracyRatio,
                                    double rho, double CT, double err0,
+                                   size_t scatteringTruthLevel,
                                    ApproximateRHS)
       : rho(rho)
       , CT(CT)
@@ -250,6 +254,7 @@ class TransportSpaces {
       , kappa1(accuracyRatio/CT)
       , kappa2((1.-accuracyRatio)/(2.*CT))
       , kappa3((1.-accuracyRatio)/2.)
+      , scatteringTruthLevel_(scatteringTruthLevel)
     {}
 
     // TODO: The accuracy also depends on the kappa from K = κG and on \|u\|.
@@ -257,6 +262,10 @@ class TransportSpaces {
     double finalScatteringAccuracy(double targetAccuracy) const {
       const int m = maxOuterIterationsForTargetAccuracy(targetAccuracy);
       return kappa1*etaInStep(m)/4.;
+    }
+
+    size_t scatteringTruthLevel() const {
+      return scatteringTruthLevel_;
     }
 
     double aPrioriAccuracy() const {
