@@ -631,14 +631,14 @@ namespace ScatteringKernelApproximation {
             size_t minLevel,
             size_t truthLevel)
           : minLevel(minLevel),
-            maxLevel(truthLevel),
+            maxLevel(std::max(truthLevel, minLevel+1)),
             nQuadAngle(30),
             truthMatrix(waveletKernelMatrix(kernelFunction,
                         wltOrder, maxLevel, nQuadAngle)),
             truncationErrors(initializeTruncationErrors(truthMatrix,
                                                         truthLevel)),
-            level(maxLevel),
-            rows((wltOrder+1) << maxLevel),
+            level(minLevel),
+            rows((wltOrder+1) << minLevel),
             rank(rows) {
           std::cout << "kernel with wlt order " << wltOrder
             << " and truth level = " << maxLevel
@@ -672,6 +672,8 @@ namespace ScatteringKernelApproximation {
                                                        size_t inputSize)
         {
           using namespace Eigen;
+
+          iteration++;
 
           const size_t inLevel = level;
           setDimensions(accuracy, inputSize);
@@ -837,7 +839,7 @@ namespace ScatteringKernelApproximation {
         }
 
         void setDimensions(double accuracy, size_t inputSize) {
-          size_t level_ = minLevel;
+          size_t level_ = (iteration==2)?(level+1):level;
           for( ; level_ < maxLevel; ++level_) {
             if(truncationErrors[level_] < accuracy/2.) break;
           }
@@ -903,6 +905,7 @@ namespace ScatteringKernelApproximation {
         size_t rows;
         size_t cols;
         size_t rank;
+        unsigned int iteration = -1;
       };
 
     template<unsigned int wltOrder>
