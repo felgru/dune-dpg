@@ -73,25 +73,28 @@ def readData(datafile):
                      , 'kappa3': parametersMatch.group(10)
                      , 'CT': parametersMatch.group(11)
                      }
+        # We always remove the first iteration step, as it is used
+        # to initialize the scattering error estimate and thus has
+        # scattering error = 0.
         singularValues = []
         if(parameters['kernelApproxType']=='SVD'):
             svPat = re.compile(r'([0-9]+\.?[0-9]*e?-?[0-9]*)\n', re.MULTILINE)
-            singularValues = svPat.findall(singularValuesPattern.search(errors).group())
-        iterationIndices = map(int, iterationIndicesPattern.findall(errors))
-        etas = map(float, etaPattern.findall(errors))
-        wltLevel = map(int, wltLevelPattern.findall(errors))
-        numS = map(int, numSPattern.findall(errors))
-        svdRank = map(int, svdRankPattern.findall(errors))
-        matrixTH = matrixTHpattern.findall(errors)
-        timeEvalKernel = map(float, timeEvalKernelPattern.findall(errors))
-        aPost = map(float, aPostPattern.findall(errors))
-        accKernel = map(float, accKernelPattern.findall(errors))
+            singularValues = svPat.findall(singularValuesPattern.search(errors).group())[1:]
+        iterationIndices = map(int, iterationIndicesPattern.findall(errors))[1:]
+        etas = map(float, etaPattern.findall(errors))[1:]
+        wltLevel = map(int, wltLevelPattern.findall(errors))[1:]
+        numS = map(int, numSPattern.findall(errors))[1:]
+        svdRank = map(int, svdRankPattern.findall(errors))[1:]
+        matrixTH = matrixTHpattern.findall(errors)[1:]
+        timeEvalKernel = map(float, timeEvalKernelPattern.findall(errors))[1:]
+        aPost = map(float, aPostPattern.findall(errors))[1:]
+        accKernel = map(float, accKernelPattern.findall(errors))[1:]
         globalAccIteratesDiff = map(float,
-                globalAccIteratesDiffPattern.findall(errors))
-        globalAccApriori = map(float, globalAccAprioriPattern.findall(errors))
+                globalAccIteratesDiffPattern.findall(errors))[1:]
+        globalAccApriori = map(float, globalAccAprioriPattern.findall(errors))[1:]
         globalAccAposteriori = map(float,
-                globalAccAposterioriPattern.findall(errors))
-        dofs = map(int, dofsPattern.findall(errors))
+                globalAccAposterioriPattern.findall(errors))[1:]
+        dofs = map(int, dofsPattern.findall(errors))[1:]
         innerIterationsStats = defaultdict(list)
         for m in innerIterationsPattern.finditer(errors):
             innerIterationsStats[int(m.group(1))].append(
@@ -99,7 +102,10 @@ def readData(datafile):
                     , 'maxLevel': int(m.group(3))
                     , 'numDOFs': int(m.group(4))
                     })
+        del innerIterationsStats[0]
 
+    # remove first iteration step, as it is used to initialize the
+    # estimate for the scattering accuracy
     return { 'params': parameters
            , 'singularValues': singularValues
            , 'iterationIndices': iterationIndices
@@ -647,7 +653,7 @@ def plot_Dofs_per_direction(data,
     pointVal = []
     violinPos = []
     violinVal = []
-    for i, num_Dofs in enumerate(num_Dofs_per_iteration):
+    for i, num_Dofs in zip(iterationIndices, num_Dofs_per_iteration):
         minNum = sys.maxint
         maxNum = 0
         for num in num_Dofs:
