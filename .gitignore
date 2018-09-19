@@ -1,4 +1,6 @@
 # CMake generated files
 build-*/
+# Python bytecode
+*.pyc
 # Results file
 results/
