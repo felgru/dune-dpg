@@ -625,51 +625,6 @@ def plot_a_posteriori_err_VS_dofs(data,
 
     plt.clf()
 
-
-# TODO: Adapt to new version
-def print_table(data):
-    if data['parameters']['adaptiveInS']:
-        up_to = 'up to'
-    else:
-        up_to = ''
-    print((r'convergence table for $\rho = {p[rho]}$'
-           r', $C_T = {p[CT]}$, $\kappa_1 = {p[kappa1]}$'
-           r', $\kappa_2 = {p[kappa2]}$, $\kappa_3 = {p[kappa3]}$'
-           r' with {up_to} {p[numS]} directions'
-           '\n'
-          ).format(p=data['parameters'], up_to=up_to))
-    print(r'\begin{tabular}{r|rrrl}')
-    print(r'& \multicolumn{2}{c}{kernel approximation} & & \\')
-    print('iteration & duration / s & rank & \#DOFs & aposteriori error \\\\\n')
-    for row in range(len(data['iterationIndices'])):
-        print(r'\hline')
-        print(r'{n} '.format(n=data['iterationIndices'][row]))
-        print(r'& {t} & {r} '
-                .format(t=data['kernelTimings'][row], r=data['ranks'][row]))
-        print(r'& {dofs} & {err} \\'
-               .format(dofs=data['dofs'][row],
-                        err=data['aposterioriErrors'][row]))
-    print(r'\end{tabular}')
-
-# TODO: Adapt to new version
-def print_preamble():
-    print(r'\documentclass[11pt,a4paper]{article}' '\n'
-          '%\n'
-          '% For narrow margins\n'
-          r'\usepackage{fullpage}' '\n'
-          '\n'
-          r'\usepackage[utf8]{inputenc}' '\n'
-          '\n'
-          '% packages from the American Mathematical Society (AMS)\n'
-          r'\usepackage{amsmath, amsthm, amssymb}' '\n'
-          '% More fancy functionality for theorems\n'
-          r'\usepackage{thmtools, thm-restate}' '\n'
-          '\n'
-          r'% For \MoveEqLeft, \coloneqq, etc.' '\n'
-          r'\usepackage{mathtools}' '\n'
-          '\n'
-          r'\begin{document}')
-
 def parse_ylim(ylim_string):
     if not ylim_string:
         return None
