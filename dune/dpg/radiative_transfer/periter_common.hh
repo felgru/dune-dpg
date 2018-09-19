@@ -205,7 +205,7 @@ class TransportSpaces {
     unsigned int n = 0;
     // η_n:
     double eta_ = 1;
-    const double alpha = 1.5;
+    const double beta = 1.5;
     const double rho;
     const double CT;
     double uBound; // b(u) in our paper
@@ -219,7 +219,7 @@ class TransportSpaces {
         (std::ostream& os, const PeriterApproximationParameters& params);
 
     double etaInStep(unsigned int m) const {
-      return std::pow(1+m, -alpha) * std::pow(rho, m);
+      return std::pow(1+m, -beta) * std::pow(rho, m);
     }
 
     public:
@@ -286,14 +286,14 @@ class TransportSpaces {
 
     //! a priori estimate for $\|u - \bar u_{n+1}\|$
     double combinedAccuracy() const {
-      // TODO: here we can replace zeta(alpha) with the sum
+      // TODO: here we can replace zeta(beta) with the sum
       //       over the previous eta_j
-      return (rho*uBound + boost::math::zeta(alpha)) * std::pow(rho,n);
+      return (rho*uBound + boost::math::zeta(beta)) * std::pow(rho,n);
     }
 
     unsigned int maxOuterIterationsForTargetAccuracy(double target) const
     {
-      const double eps2 = target/(rho*uBound+boost::math::zeta(alpha));
+      const double eps2 = target/(rho*uBound+boost::math::zeta(beta));
       const int m = static_cast<int>(std::ceil(std::log(eps2) / std::log(rho)));
       return static_cast<unsigned int>(std::max(m, 0));
     }
@@ -327,10 +327,19 @@ class TransportSpaces {
     }
 
     void decreaseEta(double uNorm) {
-      const double acc = combinedAccuracy();
-      uBound = uNorm + acc;
+      updateUBound(uNorm);
       n++;
       eta_ = etaInStep(n);
+    }
+
+    private:
+
+    void updateUBound(const double uNorm) {
+      // TODO: here we can probably replace zeta(beta) with the sum
+      //       over the previous eta_j
+      const double uBoundUpdate = uNorm
+          + (rho*uBound + boost::math::zeta(beta)) * std::pow(rho,n-1);
+      uBound = std::min(uBound, uBoundUpdate);
     }
   };
 
