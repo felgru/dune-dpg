@@ -327,10 +327,19 @@ class TransportSpaces {
     }
 
     void decreaseEta(double uNorm) {
-      const double acc = combinedAccuracy();
-      uBound = uNorm + acc;
+      updateUBound(uNorm);
       n++;
       eta_ = etaInStep(n);
+    }
+
+    private:
+
+    void updateUBound(const double uNorm) {
+      // TODO: here we can probably replace zeta(beta) with the sum
+      //       over the previous eta_j
+      const double uBoundUpdate = uNorm
+          + (rho*uBound + boost::math::zeta(beta)) * std::pow(rho,n-1);
+      uBound = std::min(uBound, uBoundUpdate);
     }
   };
 
