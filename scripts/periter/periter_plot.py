@@ -552,6 +552,42 @@ def _plot_Dofs_per_direction(data,
     if ylim != None:
         ax.set_ylim(ylim)
 
+def plot_Dofs_per_direction(data,
+         outputfile='periter_dofs.pdf',
+         title=None,
+         xlabel='Outer Iteration',
+         ylabel='#DoFs / direction',
+         xlim=None,
+         ylim=None,
+         xscale='linear',
+         yscale='log',
+         colorPalette=[
+            '#0063cc', '#80bdff',  # blue
+            '#33cc33', '#99e699',  # green
+            '#cc0000', '#ff5c33',  # red
+            '#b800e6', '#e580ff',  # purple
+            '#cc9900', '#ffd24d'  # yellow
+            ]):
+    fig, ax = plt.subplots()
+    if title != None:
+        plt.title(title)
+    ax.set_xlabel(xlabel)
+
+    _plot_Dofs_per_direction(data,
+         ax,
+         ylabel=ylabel,
+         ylim=ylim,
+         yscale=yscale,
+         color=colorPalette[0])
+
+    ax.set_xscale(xscale)
+    ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
+    if xlim != None:
+        plt.xlim(xlim)
+    plt.savefig(outputfile)
+
+    plt.clf()
+
 def _plot_num_directions(data,
          ax,
          ylabel='#directions',
@@ -576,6 +612,42 @@ def _plot_num_directions(data,
     if ylim != None:
         ax.set_ylim(ylim)
 
+def plot_num_directions(data,
+         outputfile='periter_directions.pdf',
+         title=None,
+         xlabel='Outer Iteration',
+         ylabel='#directions',
+         xlim=None,
+         ylim=None,
+         xscale='linear',
+         yscale='linear',
+         colorPalette=[
+            '#0063cc', '#80bdff',  # blue
+            '#33cc33', '#99e699',  # green
+            '#cc0000', '#ff5c33',  # red
+            '#b800e6', '#e580ff',  # purple
+            '#cc9900', '#ffd24d'  # yellow
+            ]):
+    fig, ax = plt.subplots()
+    if title != None:
+        plt.title(title)
+    ax.set_xlabel(xlabel)
+
+    _plot_num_directions(data,
+         ax,
+         ylabel=ylabel,
+         ylim=ylim,
+         yscale=yscale,
+         color=colorPalette[4])
+
+    ax.set_xscale(xscale)
+    ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(integer=True))
+    if xlim != None:
+        plt.xlim(xlim)
+    plt.savefig(outputfile)
+
+    plt.clf()
+
 def plot_Dofs_and_directions_vs_iteration(data,
          outputfile='periter_dofs.pdf',
          title=None,
@@ -591,8 +663,7 @@ def plot_Dofs_and_directions_vs_iteration(data,
             '#cc0000', '#ff5c33',  # red
             '#b800e6', '#e580ff',  # purple
             '#cc9900', '#ffd24d'  # yellow
-            ],
-         simple_plot=False):
+            ]):
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
     if title != None:
@@ -680,6 +751,10 @@ aparser = argparse.ArgumentParser(
 aparser.add_argument('--paper', dest='simple_plot',
                      action='store_true', default=False,
                      help='generate simpler plot for our paper')
+aparser.add_argument('--combined-dofs-and-directions-plot',
+                     dest='combined_plot',
+                     action='store_true', default=False,
+                     help='combine plots of #DoFs and #directions')
 aparser.add_argument('--conv-ylim', dest='conv_ylim', action='store',
                      help='limits of the y-axis of the convergence plot')
 aparser.add_argument('--dofs-ylim', dest='dofs_ylim', action='store',
@@ -736,11 +811,20 @@ plot_inner_iterations(data,
      simple_plot=args.simple_plot
     )
 
-plot_Dofs_and_directions_vs_iteration(data,
-     outputfile=args.prefixOutputFile+"-num-dofs.pdf",
-     simple_plot=args.simple_plot,
-     ylim=args.dofs_ylim
-    )
+if args.combined_plot:
+    plot_Dofs_and_directions_vs_iteration(data,
+         outputfile=args.prefixOutputFile+"-num-dofs.pdf",
+         ylim=args.dofs_ylim
+        )
+else:
+    plot_Dofs_per_direction(data,
+         outputfile=args.prefixOutputFile+"-num-dofs.pdf",
+         ylim=args.dofs_ylim[0]
+        )
+    plot_num_directions(data,
+         outputfile=args.prefixOutputFile+"-num-directions.pdf",
+         ylim=args.dofs_ylim[1]
+        )
 
 plot_a_posteriori_err_VS_dofs(data,
      outputfile=args.prefixOutputFile+"-a-posteriori-VS-dofs.pdf",
