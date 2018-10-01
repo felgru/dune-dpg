@@ -532,21 +532,21 @@ namespace Dune {
     SolutionLocalViews solutionLocalViews
         = getLocalViews(*innerProduct.getTestSpaces());
 
-    // Variable where we compute the residual
-    double res = 0.;
+    double squaredResidual = 0.;
 
     for(const auto& e : elements(gridView))
     {
       bindLocalViews(solutionLocalViews, e);
 
-      res += aPosterioriL2ErrorSquareElement(innerProduct,
+      squaredResidual
+          += aPosterioriL2ErrorSquareElement(innerProduct,
                                              linearForm,
                                              f,
                                              solutionLocalViews,
                                              solution);
     }
 
-    return std::sqrt(res);
+    return std::sqrt(squaredResidual);
   }
 
 
@@ -672,15 +672,15 @@ namespace Dune {
     TestLocalViews testLocalViews
         = getLocalViews(*bilinearForm.getTestSpaces());
 
-    // Variable where we compute the residual
-    double res = 0.;
+    double squaredResidual = 0.;
 
     for(const auto& e : elements(gridView))
     {
       bindLocalViews(testLocalViews, e);
       bindLocalViews(solutionLocalViews, e);
 
-      res += aPosterioriErrorSquareElement(bilinearForm,
+      squaredResidual
+          += aPosterioriErrorSquareElement(bilinearForm,
                                            innerProduct,
                                            testLocalViews,
                                            solutionLocalViews,
@@ -688,7 +688,7 @@ namespace Dune {
                                            rhs);
    }
 
-   return std::sqrt(res);
+   return std::sqrt(squaredResidual);
 
   }
 
