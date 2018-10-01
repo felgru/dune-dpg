@@ -83,9 +83,6 @@ namespace Dune
           (writer.makeArrayWriter<float>(dataName, 1, npoints));
 
         auto localView = feBasis.localView();
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-        auto localIndexSet = feBasis.localIndexSet();
-#endif
         using GridView = typename FEBasis::GridView;
         using ctype = typename GridView::Grid::ctype;
         constexpr static int dim = GridView::dimension;
@@ -93,12 +90,7 @@ namespace Dune
         std::vector<FieldVector<double,1> > feValues;
         for(const auto& e : elements(gridView)) {
           localView.bind(e);
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
           const VectorType localData = getLocalDataVector(localView, data);
-#else
-          localIndexSet.bind(localView);
-          const VectorType localData = getLocalDataVector(localIndexSet, data);
-#endif
           const auto refinementGridView
               = localView.tree().refinedReferenceElementGridView();
           unsigned int subElementOffset = 0;

@@ -13,7 +13,6 @@
 #include <boost/hana.hpp>
 
 #include <dune/common/exceptions.hh>
-#include <dune/common/version.hh>
 #include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/dpg/functions/refinementinterpolation.hh>
@@ -575,9 +574,6 @@ public:
         typename HostGridGlobalBasis::GridView::Grid::LeafGridView>::value,
         "The HostGridGlobalBasis has to be defined on a LeafGridView!");
     auto localView = hostGridGlobalBasis.localView();
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-    auto localIndexSet = hostGridGlobalBasis.localIndexSet();
-#endif
 
     const unsigned int maxHostGridLevel =
         hostGridGlobalBasis.gridView().grid().maxLevel();
@@ -589,18 +585,11 @@ public:
       const auto eHost = subGrid.template getHostEntity<0>(e);
       if(eHost.isLeaf()) {
         localView.bind(eHost);
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-        localIndexSet.bind(localView);
-#endif
 
         std::vector<FieldVector<double, 1>>
             hostGridLocalData(localView.size());
         iterateOverLocalIndices(
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
           localView,
-#else
-          localIndexSet,
-#endif
           [&](size_t i, auto gi)
           {
             hostGridLocalData[i] = hostGridData[gi[0]];
@@ -624,18 +613,11 @@ public:
           if(!child.isLeaf()) continue;
 
           localView.bind(child);
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-          localIndexSet.bind(localView);
-#endif
 
           std::vector<FieldVector<double, 1>>
               hostGridLocalData(localView.size());
           iterateOverLocalIndices(
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
             localView,
-#else
-            localIndexSet,
-#endif
             [&](size_t i, auto gi)
             {
               hostGridLocalData[i] = hostGridData[gi[0]];
@@ -961,27 +943,17 @@ private:
     std::vector<FieldVector<double, 1>> data(subGridGlobalBasis.size());
     const auto& subGrid = subGridGlobalBasis.gridView().grid();
     auto localView = subGridGlobalBasis.localView();
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-    auto localIndexSet = subGridGlobalBasis.localIndexSet();
-#endif
     // Iterate over gridData and transfer data to result vector.
     for(const auto& currentData : gridData)
     {
       auto e = subGrid.entity(std::get<0>(currentData));
       localView.bind(e);
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-      localIndexSet.bind(localView);
-#endif
 
       assert(e.isLeaf());
       // directly copy cell data
       const auto& localData = std::get<1>(currentData);
       iterateOverLocalIndices(
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
         localView,
-#else
-        localIndexSet,
-#endif
         [&](size_t i, auto gi)
         {
           data[gi[0]] = localData[i];

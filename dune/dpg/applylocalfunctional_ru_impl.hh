@@ -1,5 +1,4 @@
 #include <numeric>
-#include <dune/common/version.hh>
 #include <dune/geometry/quadraturerules/splitquadraturerule.hh>
 #include "quadratureorder.hh"
 #include "refinedfaces.hh"
@@ -15,9 +14,6 @@ struct ApplyLocalFunctional<type, TestSpace, SolutionSpace, true, false>
 {
 using TestLocalView = typename TestSpace::LocalView;
 using SolutionLocalView = typename SolutionSpace::LocalView;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-using SolutionLocalIndexSet = typename SolutionSpace::LocalIndexSet;
-#endif
 
 template <class VectorType,
           class Element,
@@ -27,9 +23,6 @@ inline static void interiorImpl(
     const SolutionLocalView& solutionLocalView,
     VectorType& elementVector,
     size_t spaceOffset,
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-    const SolutionLocalIndexSet& solutionLocalIndexSet,
-#endif
     const Element& element,
     const FunctionalVector& functionalVector)
 {
@@ -44,11 +37,7 @@ inline static void interiorImpl(
       localFunctionalVector(solutionLocalView.size());
 
   iterateOverLocalIndices(
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
     solutionLocalView,
-#else
-    solutionLocalIndexSet,
-#endif
     [&](size_t j, auto gj) {
       localFunctionalVector[j] = functionalVector[gj[0]];
     },
@@ -125,9 +114,6 @@ faceImpl(TestLocalView& testLocalView,
          const SolutionLocalView& solutionLocalView,
          VectorType& elementVector,
          size_t testSpaceOffset,
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-         const SolutionLocalIndexSet& solutionLocalIndexSet,
-#endif
          const Element& element,
          const FunctionalVector& functionalVector,
          const LocalCoefficients& localCoefficients)
@@ -143,11 +129,7 @@ faceImpl(TestLocalView& testLocalView,
       localFunctionalVector(solutionLocalView.size());
 
   iterateOverLocalIndices(
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
     solutionLocalView,
-#else
-    solutionLocalIndexSet,
-#endif
     [&](size_t j, auto gj) {
       localFunctionalVector[j] = functionalVector[gj[0]];
     },

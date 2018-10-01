@@ -7,7 +7,6 @@
 #include <vector>
 
 #include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
 
 #include <dune/dpg/assemble_types.hh>
 #include <dune/dpg/assemble_helper.hh>
@@ -40,9 +39,6 @@ namespace Dune {
   class LinearFunctionalTerm
   {
     using SolutionLocalView = typename SolutionSpace::LocalView;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-    using SolutionLocalIndexSet = typename SolutionSpace::LocalIndexSet;
-#endif
   public:
     using Element = typename SolutionLocalView::Element;
 
@@ -57,9 +53,6 @@ namespace Dune {
                           const SolutionSpace& solutionSpace)
         : functionalVector(functionalVector)
         , solutionLocalView(solutionSpace.localView())
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-        , solutionLocalIndexSet(solutionSpace.localIndexSet())
-#endif
     {};
 
     /**
@@ -84,17 +77,11 @@ namespace Dune {
     void bind(const Element& element)
     {
       solutionLocalView.bind(element);
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-      solutionLocalIndexSet.bind(solutionLocalView);
-#endif
     }
 
   private:
     const FunctionalVector& functionalVector;
     mutable SolutionLocalView solutionLocalView;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-    SolutionLocalIndexSet solutionLocalIndexSet;
-#endif
   };
 
 /**
@@ -154,9 +141,6 @@ getLocalVector(LocalView& localView,
           solutionLocalView,
           elementVector,
           spaceOffset,
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-          solutionLocalIndexSet,
-#endif
           localView.element(),
           functionalVector);
 }
@@ -186,9 +170,6 @@ getLocalVector(LocalView& localView,
   class SkeletalLinearFunctionalTerm
   {
     using SolutionLocalView = typename SolutionSpace::LocalView;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-    using SolutionLocalIndexSet = typename SolutionSpace::LocalIndexSet;
-#endif
     using LocalCoefficients
         = detail::LocalCoefficients::FactorAndDirection<Factor, Direction>;
   public:
@@ -209,9 +190,6 @@ getLocalVector(LocalView& localView,
         : localCoefficients(coefficient, direction)
         , functionalVector(functionalVector)
         , solutionLocalView(solutionSpace.localView())
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-        , solutionLocalIndexSet(solutionSpace.localIndexSet())
-#endif
     {};
 
     /**
@@ -236,9 +214,6 @@ getLocalVector(LocalView& localView,
     void bind(const Element& element)
     {
       solutionLocalView.bind(element);
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-      solutionLocalIndexSet.bind(solutionLocalView);
-#endif
       localCoefficients.bind(element);
     }
 
@@ -246,9 +221,6 @@ getLocalVector(LocalView& localView,
     LocalCoefficients localCoefficients;
     const FunctionalVector& functionalVector;
     mutable SolutionLocalView solutionLocalView;
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-    SolutionLocalIndexSet solutionLocalIndexSet;
-#endif
   };
 
 /**
@@ -312,9 +284,6 @@ getLocalVector(LocalView& localView,
           solutionLocalView,
           elementVector,
           spaceOffset,
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-          solutionLocalIndexSet,
-#endif
           localView.element(),
           functionalVector,
           localCoefficients);

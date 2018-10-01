@@ -10,7 +10,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <dune/common/version.hh>
 #include <dune/dpg/functions/constraineddiscreteglobalbasisfunction.hh>
 #include <dune/dpg/functions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
@@ -110,16 +109,8 @@ public:
     hostGridFiniteElement.localInterpolation().interpolate(subGridFunction,
         localHostGridCoefficients);
 
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-    auto hostGridIndexSet = hostGridBasis.localIndexSet();
-    hostGridIndexSet.bind(hostGridLocalView);
-#endif
     for(size_t i = 0, imax = hostGridLocalView.size(); i < imax; i++) {
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
       hostGridCoefficients[hostGridLocalView.index(i)]
-#else
-      hostGridCoefficients[hostGridIndexSet.index(i)]
-#endif
           = localHostGridCoefficients[i];
     }
   }
