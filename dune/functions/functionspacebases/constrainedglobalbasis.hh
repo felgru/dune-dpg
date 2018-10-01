@@ -72,7 +72,7 @@ public:
   //! Type used for prefixes handed to the size() method
   using SizePrefix = typename PreBasis::SizePrefix;
 
-  //! Type of local indixes set exported by localIndexSet()
+  //! Type of local index set exported by localIndexSet()
   using LocalIndexSet = ConstrainedLocalIndexSet<LocalView, NodeIndexSet>;
 
 
