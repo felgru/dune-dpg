@@ -11,7 +11,6 @@
 #include <boost/hana.hpp>
 
 #include <dune/common/hybridutilities.hh>
-#include <dune/common/version.hh>
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixindexset.hh>
@@ -238,11 +237,6 @@ getOccupationPattern(MatrixIndexSet& nb,
   auto solutionLocalViews = getLocalViews(*solutionSpaces);
   auto testLocalViews     = getLocalViews(*testSpaces);
 
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-  auto solutionLocalIndexSets = getLocalIndexSets(*solutionSpaces);
-  auto testLocalIndexSets = getLocalIndexSets(*testSpaces);
-#endif
-
   typedef typename std::tuple_element<0,TestSpaces>::type::GridView GridView;
   const GridView gridView = std::get<0>(*testSpaces).gridView();
 
@@ -264,19 +258,9 @@ getOccupationPattern(MatrixIndexSet& nb,
     bindLocalViews(solutionLocalViews, e);
     bindLocalViews(testLocalViews, e);
 
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-    bindLocalIndexSets(solutionLocalIndexSets, solutionLocalViews);
-    bindLocalIndexSets(testLocalIndexSets, testLocalViews);
-#endif
-
     detail::getOccupationPattern<IndexPairs, mirror>(
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
                          testLocalViews,
                          solutionLocalViews,
-#else
-                         testLocalIndexSets,
-                         solutionLocalIndexSets,
-#endif
                          globalTestSpaceOffsets,
                          globalSolutionSpaceOffsets,
                          nb);

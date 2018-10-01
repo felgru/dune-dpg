@@ -11,7 +11,6 @@
 #include <dune/common/typeutilities.hh>
 #include <dune/common/concept.hh>
 #include <dune/common/deprecated.hh>
-#include <dune/common/version.hh>
 
 #include <dune/dpg/functions/concepts.hh>
 #include <dune/functions/common/type_traits.hh>
@@ -73,7 +72,7 @@ public:
   //! Type used for prefixes handed to the size() method
   using SizePrefix = typename PreBasis::SizePrefix;
 
-  //! Type of local indixes set exported by localIndexSet()
+  //! Type of local index set exported by localIndexSet()
   using LocalIndexSet = ConstrainedLocalIndexSet<LocalView, NodeIndexSet>;
 
 
@@ -146,9 +145,7 @@ public:
 
   //! Return local index set for basis
   LocalIndexSet
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
     DUNE_DEPRECATED_MSG("localIndexSet() is deprecated. The indexing method are now available in the ConstrainedLocalView. Indices are computed when binding the ConstrainedLocalView.")
-#endif
     localIndexSet() const
   {
     return LocalIndexSet(preBasis_.template indexSet<PrefixPath>());

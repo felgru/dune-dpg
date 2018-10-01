@@ -23,7 +23,7 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   `applyDirichletBoundary`.
 * A new `ConstrainedLocalView` was added that provides the indexing
   methods of `ConstrainedLocalIndexSet` like `DefaultLocalView` now
-  provides indexing methods in dune-functions 2.7.
+  provides indexing methods in dune-functions 2.6.
 * FunctionPlotter can now be used to plot functions defined over a
   finite element space with local grid refinement. This is useful to
   plot data defined in the test search space.
@@ -47,7 +47,7 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   dune-localfunctions 2.7.
 * `iterateOverLocalIndexSet` has been renamed to `iterateOverLocalIndices`.
 * The `BasisBuilder` namespace has been renamed to `BasisFactory` in
-  accordance with a rename in dune-functions 2.7.
+  accordance with a rename in dune-functions 2.6.
   (Since we never use the members of this namespace, this rename will
    probably not affect you.)
 
@@ -55,7 +55,7 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
 ### Deprecated
 * The `localIndexSet()` method of `ConstrainedGlobalBasis` has been
-  marked as deprecated when using dune-functions >= 2.7.
+  marked as deprecated.
 
 ### Removed
 * The workarounds for missing dune-subgrid functionality have been removed

@@ -41,7 +41,6 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
-#include <dune/common/version.hh>
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
@@ -125,24 +124,14 @@ void getOccupationPattern(const FEBasis& feBasis, MatrixIndexSet& nb)
 
   // A view on the FE basis on a single element
   auto localView = feBasis.localView();
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-  auto localIndexSet = feBasis.localIndexSet();
-#endif
 
   // Loop over all leaf elements
   const auto gridView = feBasis.gridView();
   for(const auto& e : elements(gridView))
   {
     localView.bind(e);
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-    localIndexSet.bind(localView);
-#endif
 
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
     using MultiIndex = typename decltype(localView)::MultiIndex;
-#else
-    using MultiIndex = typename decltype(localIndexSet)::MultiIndex;
-#endif
 
     auto fillOccupationPattern = [&](size_t /* i */, MultiIndex gi)
         {
@@ -154,11 +143,7 @@ void getOccupationPattern(const FEBasis& feBasis, MatrixIndexSet& nb)
                        gj[0]);
               };
           iterateOverLocalIndices(
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
               localView,
-#else
-              localIndexSet,
-#endif
               fillOccupationPatternInner,
               [](size_t j){},
               [&](size_t j, MultiIndex gj, double /* wj */)
@@ -168,11 +153,7 @@ void getOccupationPattern(const FEBasis& feBasis, MatrixIndexSet& nb)
           );
         };
     iterateOverLocalIndices(
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
         localView,
-#else
-        localIndexSet,
-#endif
         fillOccupationPattern,
         [](size_t i){},
         [&](size_t i, MultiIndex gi, double /* wi */)
@@ -208,18 +189,12 @@ void assembleLaplaceSystem(const FEBasis& feBasis,
 
   // A view on the FE basis on a single element
   auto localView = feBasis.localView();
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-  auto localIndexSet = feBasis.localIndexSet();
-#endif
 
   // A loop over all elements of the grid
   for(const auto& e : elements(gridView))
   {
     // Bind the local FE basis view to the current element
     localView.bind(e);
-#if not(DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7))
-    localIndexSet.bind(localView);
-#endif
 
     // Now let's get the element stiffness matrix
     // A dense matrix is used for the element stiffness matrix
@@ -228,13 +203,8 @@ void assembleLaplaceSystem(const FEBasis& feBasis,
 
     // Add element stiffness matrix onto the global stiffness matrix
     addToGlobalMatrix(
-#if DUNE_VERSION_NEWER(DUNE_FUNCTIONS,2,7)
         localView,
         localView,
-#else
-        localIndexSet,
-        localIndexSet,
-#endif
         [&elementMatrix](size_t i, size_t j) -> auto {
           return elementMatrix[i][j];
         },
