@@ -207,11 +207,9 @@ namespace Dune {
       std::vector<FieldVector<double,1> > shapeFunctionValues;
       localBasis.evaluateFunction(quadPos, shapeFunctionValues);
 
-      double uQuad = 0;
-      for(unsigned int i=0, imax=shapeFunctionValues.size(); i<imax; i++)
-      {
-        uQuad += shapeFunctionValues[i]*u[i];
-      }
+      const double uQuad = std::inner_product(shapeFunctionValues.cbegin(),
+                                              shapeFunctionValues.cend(),
+                                              cbegin(u), 0.);
 
       l2NormSquared += uQuad * uQuad * quadPoint.weight() * integrationElement;
     }
@@ -323,10 +321,9 @@ namespace Dune {
 
       // Evaluation of u at the point globalQuadPos, which is quadPos
       // mapped to the physical domain
-      for(unsigned int i=0; i<shapeFunctionValues.size(); i++)
-      {
-        uQuad += shapeFunctionValues[i]*u[i];
-      }
+      const double uQuad = std::inner_product(shapeFunctionValues.cbegin(),
+                                              shapeFunctionValues.cend(),
+                                              cbegin(u), 0.);
 
       // Value of uRef at globalQuadPos
       const double uExactQuad = uRef(globalQuadPos);
