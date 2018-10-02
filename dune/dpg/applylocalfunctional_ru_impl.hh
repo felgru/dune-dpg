@@ -93,9 +93,10 @@ inline static void interiorImpl(
             localFunctionalVector.begin(), localFunctionalVector.end(),
             shapeFunctionValues.begin(), 0.)
           * integrationWeight;
-      for (size_t i=0, i_max=testLocalFiniteElement.size(); i<i_max; i++) {
-        elementVector[i+spaceOffset+subElementOffset]
-            += functionalValue * testShapeFunctionValues[i];
+      auto entry = elementVector.begin() + spaceOffset + subElementOffset;
+      for (const auto& shapeFunctionValue : testShapeFunctionValues) {
+        *entry += functionalValue * shapeFunctionValue;
+        ++entry;
       }
     }
     if(is_DGRefinedFiniteElement<TestSpace>::value)
@@ -293,10 +294,12 @@ faceImpl(TestLocalView& testLocalView,
               localFunctionalVector.begin(), localFunctionalVector.end(),
               solutionValues.begin(), 0.)
             * integrationWeight;
-        for (size_t i=0, i_max=testValues.size(); i<i_max; i++)
+        auto entry = elementVector.begin()
+                      + testSpaceOffset + subElementOffset;
+        for (const auto& testValue : testValues)
         {
-          elementVector[i+testSpaceOffset+subElementOffset]
-                  += functionalValue * testValues[i];
+          *entry += functionalValue * testValue;
+          ++entry;
         }
       }
     }

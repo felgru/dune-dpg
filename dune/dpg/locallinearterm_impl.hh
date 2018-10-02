@@ -164,9 +164,11 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
                            subGeometryInReferenceElement,
                            localCoefficients);
 
-        for (size_t i=0, rhsSize=shapeFunctionValues.size(); i<rhsSize; i++)
-          elementVector[i+spaceOffset+subElementOffset] += shapeFunctionValues[i] * weightedfunctionValue;
-
+        auto entry = elementVector.begin() + spaceOffset + subElementOffset;
+        for(const auto& shapeFunctionValue : shapeFunctionValues) {
+          *entry += shapeFunctionValue * weightedfunctionValue;
+          ++entry;
+        }
       }
       if(is_DGRefinedFiniteElement<TestSpace>::value)
         subElementOffset += localFiniteElementTest.size();

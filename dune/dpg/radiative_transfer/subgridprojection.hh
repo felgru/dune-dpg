@@ -209,8 +209,10 @@ namespace detail {
                 FieldVector<double, 1>{0.});
 
         // compute projectionRhs[i] = <v_{sg,i}, \sum_j c_j v_{hg,j}>
-        for (unsigned int i=0, imax=subGridValues.size(); i<imax; i++) {
-          projectionRhs[i] += subGridValues[i] * hostValue * integrationWeight;
+        auto p = projectionRhs.begin();
+        for (const auto& subGridValue : subGridValues) {
+          *p += subGridValue * hostValue * integrationWeight;
+          ++p;
         }
       }
     }
@@ -352,8 +354,8 @@ namespace detail {
           // compute projectionRhs[i+subElementOffset]
           //            = <v_{sg,i}, \sum_j c_j v_{hg,j}>
           auto p = projectionRhs.begin() + subElementOffset;
-          for (unsigned int i=0, imax=subGridValues.size(); i<imax; i++) {
-            *p += subGridValues[i] * hostValue * integrationWeight;
+          for (const auto& subGridValue : subGridValues) {
+            *p += subGridValue * hostValue * integrationWeight;
             ++p;
           }
         }
@@ -535,10 +537,8 @@ namespace detail {
         cholesky.apply(projectionRhs);
       }
 #endif
-      std::vector<FieldVector<double, 1>> projection(subGridLocalView.size());
-      for(size_t i = 0; i < projection.size(); i++) {
-        projection[i] = projectionRhs[i];
-      }
+      std::vector<FieldVector<double, 1>>
+          projection(projectionRhs.begin(), projectionRhs.end());
       return projection;
     } else {
       DUNE_THROW(InvalidStateException,
@@ -946,7 +946,7 @@ private:
     // Iterate over gridData and transfer data to result vector.
     for(const auto& currentData : gridData)
     {
-      auto e = subGrid.entity(std::get<0>(currentData));
+      const auto e = subGrid.entity(std::get<0>(currentData));
       localView.bind(e);
 
       assert(e.isLeaf());

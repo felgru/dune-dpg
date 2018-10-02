@@ -79,9 +79,11 @@ inline static void interiorImpl(
           localFunctionalVector.begin(), localFunctionalVector.end(),
           shapeFunctionValues.begin(), 0.)
         * integrationWeight;
-    for (size_t i=0, i_max=testShapeFunctionValues.size(); i<i_max; i++) {
-      elementVector[i+spaceOffset] += functionalValue
-                                      * testShapeFunctionValues[i];
+
+    auto entry = elementVector.begin() + spaceOffset;
+    for (const auto& shapeFunctionValue : testShapeFunctionValues) {
+      *entry += functionalValue * shapeFunctionValue;
+      ++entry;
     }
   }
 }
@@ -261,9 +263,11 @@ faceImpl(const TestLocalView& testLocalView,
             localFunctionalVector.begin(), localFunctionalVector.end(),
             solutionValues.begin(), 0.)
           * integrationWeight;
-      for (size_t i=0, i_max=testValues.size(); i<i_max; i++)
-      {
-        elementVector[i+spaceOffset] += functionalValue * testValues[i];
+
+      auto entry = elementVector.begin() + spaceOffset;
+      for(const auto& testValue : testValues) {
+        *entry += functionalValue * testValue;
+        ++entry;
       }
     }
   }

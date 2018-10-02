@@ -3,9 +3,11 @@
 #ifndef DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
 #define DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <ctime>
+#include <functional>
 #include <iomanip>
 #include <memory>
 #include <set>
@@ -1062,10 +1064,10 @@ namespace detail {
     const size_t numS = sVector.size();
     std::vector<VectorType> rhsFunctional(numS);
     auto rhsFunction = f(hostGridBasis.gridView());
-    for(unsigned int i = 0; i < numS; ++i)
+    for(auto& rhsFunctionalEntry : rhsFunctional)
     {
-      rhsFunctional[i].resize(hostGridBasis.size());
-      Functions::interpolate(hostGridBasis, rhsFunctional[i], rhsFunction);
+      rhsFunctionalEntry.resize(hostGridBasis.size());
+      Functions::interpolate(hostGridBasis, rhsFunctionalEntry, rhsFunction);
     }
     return rhsFunctional;
   }
@@ -1369,13 +1371,12 @@ compute_adaptive_transport_solution(
     if(bvData) {
       // TODO: subGridGlobalBasis should be normalized in L2!
       const auto& subGridGlobalBasis = spaces.testSpace();
-      auto newGridData
+      const auto newGridData
           = bvData->restoreDataToRefinedSubGrid(subGridGlobalBasis,
                                                 bvHostGridGlobalBasis);
       bvExtension = VectorType(newGridData.size());
-      for(size_t k = 0, kmax = newGridData.size(); k < kmax; k++) {
-        (*bvExtension)[k] = newGridData[k];
-      }
+      std::copy(newGridData.cbegin(), newGridData.cend(),
+                bvExtension->begin());
     }
 
     {
@@ -1384,11 +1385,11 @@ compute_adaptive_transport_solution(
       VectorType rhsFunctional;
       {
         auto& feBasisTest = spaces.testSpace();
-        auto rhsValues
+        const auto rhsValues
             = rhsData.restoreDataToRefinedSubGrid(feBasisTest,
                                     scatteringHostGridGlobalBasis);
 
-        auto scatteringValues
+        const auto scatteringValues
             = scatteringData.restoreDataToRefinedSubGrid(feBasisTest,
                                            scatteringHostGridGlobalBasis);
 
@@ -1396,9 +1397,10 @@ compute_adaptive_transport_solution(
                                 rhsValues, scatteringValues, nRefinement);
 
         rhsFunctional.resize(rhsValues.size());
-        for(size_t k = 0, kmax = rhsValues.size(); k < kmax; k++) {
-          rhsFunctional[k] = rhsValues[k] + scatteringValues[k];
-        }
+        std::transform(rhsValues.cbegin(), rhsValues.cend(),
+                       scatteringValues.cbegin(),
+                       rhsFunctional.begin(),
+                       std::plus<>());
       }
 
       aposteriori_s
