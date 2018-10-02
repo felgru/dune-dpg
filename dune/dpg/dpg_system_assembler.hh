@@ -427,16 +427,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     rhsLinearForm.getLocalVector(localEnrichedRhs);
 
     // compute the local right-hand side vector C^T*F for the optimal test space
-    BlockVector<FieldVector<double,1> > localRhs;
-    localRhs.resize(coefficientMatrix.M());
-    for (unsigned int i=0; i<coefficientMatrix.M(); i++)
-      {
-        localRhs[i]=0;
-        for (unsigned int k=0; k<coefficientMatrix.N(); k++)
-        {
-          localRhs[i]+=(localEnrichedRhs[k]*coefficientMatrix[k][i]);
-        }
-      }
+    BlockVector<FieldVector<double,1> > localRhs(coefficientMatrix.M());
+    coefficientMatrix.mtv(localEnrichedRhs, localRhs);
 
     // compute the local stiffness matrix
     const Matrix<FieldMatrix<double,1,1> >& elementMatrix
@@ -600,16 +592,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     rhsLinearForm.getLocalVector(localEnrichedRhs);
 
     // compute the local right-hand side vector C^T*F for the optimal test space
-    BlockVector<FieldVector<double,1> > localRhs;
-    localRhs.resize(coefficientMatrix.M());
-    for (unsigned int i=0; i<coefficientMatrix.M(); i++)
-      {
-        localRhs[i]=0;
-        for (unsigned int k=0; k<coefficientMatrix.N(); k++)
-        {
-          localRhs[i]+=(localEnrichedRhs[k]*coefficientMatrix[k][i]);
-        }
-      }
+    BlockVector<FieldVector<double,1> > localRhs(coefficientMatrix.M());
+    coefficientMatrix.mtv(localEnrichedRhs, localRhs);
 
     /* copy every local subvector indexed by an index from
      * lfIndices exactly once. */
