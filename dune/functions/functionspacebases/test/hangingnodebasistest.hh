@@ -77,10 +77,10 @@ bool constraintsFulfillContinuityEquation(const GlobalBasis& feBasis)
               = intersection.geometryInOutside();
           const auto& quad // TODO: replace 3 with degree of basis
               = QuadratureRules<double, 1>::rule(GeometryTypes::line, 3);
-          for(size_t pt=0; pt < quad.size(); pt++)
+          for(const auto& quadPoint : quad)
           {
             // point-wise check of continuity condition
-            const FieldVector<double,1>& quadPos = quad[pt].position();
+            const FieldVector<double,1>& quadPos = quadPoint.position();
             const auto quadPosDominated
                 = geometryInDominatedElement.global(quadPos);
             const auto quadPosDominating

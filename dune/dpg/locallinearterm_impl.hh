@@ -49,7 +49,7 @@ struct GetLocalLinearTermVector<integrationType, Space, false>
 
     // Get the grid element from the local FE basis view
     typedef typename LocalViewTest::Element Element;
-    const Element& element = localViewTest.element();
+    const Element element = localViewTest.element();
 
     constexpr int dim = Element::mydimension;
     const auto geometry = element.geometry();
@@ -64,14 +64,14 @@ struct GetLocalLinearTermVector<integrationType, Space, false>
         ::Quadrature(element, quadratureOrder);
 
 
-    for ( size_t pt=0, qsize=quad.size(); pt < qsize; pt++ ) {
+    for (const auto& quadPoint : quad) {
 
       // Position of the current quadrature point in the reference element
-      const FieldVector<double,dim>& quadPos = quad[pt].position();
+      const FieldVector<double,dim>& quadPos = quadPoint.position();
 
       // The multiplicative factor in the integral transformation formula
       const double integrationWeight = geometry.integrationElement(quadPos)
-                                       * quad[pt].weight()
+                                       * quadPoint.weight()
                                        * localCoefficients.localFactor()(quadPos);
 
       using FunctionEvaluator
@@ -111,7 +111,7 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
 
     // Get the grid element from the local FE basis view
     typedef typename LocalViewTest::Element Element;
-    const Element& element = localViewTest.element();
+    const Element element = localViewTest.element();
 
     constexpr int dim = Element::mydimension;
     const auto geometry = element.geometry();
@@ -133,10 +133,10 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
       const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
 
       const auto subGeometryInReferenceElement = subElement.geometry();
-      for ( size_t pt=0, qsize=quad.size(); pt < qsize; pt++ ) {
+      for (const auto& quadPoint : quad) {
 
         // Position of the current quadrature point in the reference element
-        const FieldVector<double,dim>& quadPos = quad[pt].position();
+        const FieldVector<double,dim>& quadPos = quadPoint.position();
         const FieldVector<double,dim> elementQuadPos
             = subGeometryInReferenceElement.global(quadPos);
 
@@ -145,7 +145,7 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
           = localCoefficients.localFactor()(elementQuadPos)
           * geometry.integrationElement(elementQuadPos)
           * subGeometryInReferenceElement.integrationElement(quadPos)
-          * quad[pt].weight();
+          * quadPoint.weight();
 
         ////////////////////
         // Test Functions //

@@ -82,10 +82,10 @@ void getLocalMatrix(const LocalView& localView, Matrix& elementMatrix)
       = QuadratureRules<double, dim>::rule(element.type(), order);
 
   // Loop over all quadrature points
-  for (size_t pt=0; pt < quad.size(); pt++) {
+  for (const auto& quadPoint : quad) {
 
     // Position of the current quadrature point in the reference element
-    const FieldVector<double,dim>& quadPos = quad[pt].position();
+    const FieldVector<double,dim>& quadPos = quadPoint.position();
 
     // The transposed inverse Jacobian of the map from the reference
     // element to the element
@@ -108,7 +108,7 @@ void getLocalMatrix(const LocalView& localView, Matrix& elementMatrix)
     for (size_t i=0; i<elementMatrix.N(); i++)
       for (size_t j=0; j<elementMatrix.M(); j++)
         elementMatrix[i][j] += ( gradients[i] * gradients[j] )
-                              * quad[pt].weight() * integrationElement;
+                              * quadPoint.weight() * integrationElement;
 
   }
 }

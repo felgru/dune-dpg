@@ -839,16 +839,16 @@ applyWeakBoundaryCondition
                   QuadratureRules<double, dim-1>::rule(intersection.type(),
                                                        quadratureOrder);
 
-          for (size_t pt=0; pt < quadFace.size(); pt++)
+          for (const auto& quadPoint : quadFace)
           {
             // position of the current quadrature point in the
             // reference element (face!)
             const FieldVector<double,dim-1>& quadFacePos
-                = quadFace[pt].position();
+                = quadPoint.position();
 
             const double integrationWeight
                 = intersection.geometry().integrationElement(quadFacePos)
-                * quadFace[pt].weight();
+                * quadPoint.weight();
 
             // position of the quadrature point within the element
             const FieldVector<double,dim> elementQuadPos

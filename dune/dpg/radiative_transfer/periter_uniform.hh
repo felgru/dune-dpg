@@ -561,12 +561,12 @@ namespace detail {
                                                          quadratureOrder);
           auto geometry = e.geometry();
           double local_error = 0.;
-          for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
-            const FieldVector<double,dim>& quadPos = quad[pt].position();
+          for (const auto& quadPoint : quad) {
+            const FieldVector<double,dim>& quadPos = quadPoint.position();
             const double diff = localGExact(quadPos) - localGApprox(quadPos);
             local_error += diff*diff
                          * geometry.integrationElement(quadPos)
-                         * quad[pt].weight();
+                         * quadPoint.weight();
           }
           rhsError_i += local_error;
         }

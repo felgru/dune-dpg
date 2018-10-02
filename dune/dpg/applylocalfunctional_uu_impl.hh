@@ -57,14 +57,14 @@ inline static void interiorImpl(
       ::Quadrature(element, quadratureOrder);
 
   // Loop over all quadrature points
-  for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
+  for (const auto& quadPoint : quad) {
 
     // Position of the current quadrature point in the reference element
-    const FieldVector<double,dim>& quadPos = quad[pt].position();
+    const FieldVector<double,dim>& quadPos = quadPoint.position();
 
     // The transformed quadrature weight
     const double integrationWeight
-        = quad[pt].weight() * geometry.integrationElement(quadPos);
+        = quadPoint.weight() * geometry.integrationElement(quadPos);
 
     // Evaluate all shape function values at this quadrature point
     std::vector<FieldVector<double,1>> testShapeFunctionValues;
@@ -176,11 +176,11 @@ faceImpl(const TestLocalView& testLocalView,
               faceComputations.geometryInElement(), referenceBeta));
     }
 
-    for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
+    for (const auto& quadPoint : quadFace) {
 
       // Position of the current quadrature point in the reference element
       // (face!)
-      const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
+      const FieldVector<double,dim-1>& quadFacePos = quadPoint.position();
 
       // position of the quadrature point within the element
       const FieldVector<double,dim> elementQuadPos =
@@ -197,7 +197,7 @@ faceImpl(const TestLocalView& testLocalView,
       if(type == IntegrationType::normalVector ||
          type == IntegrationType::travelDistanceWeighted) {
         integrationWeight = localCoefficients.localFactor()(elementQuadPos)
-                          * quadFace[pt].weight();
+                          * quadPoint.weight();
         if(type == IntegrationType::travelDistanceWeighted)
         {
           // |direction * n|*integrationweight
@@ -232,7 +232,7 @@ faceImpl(const TestLocalView& testLocalView,
 
         integrationWeight = sign
                           * localCoefficients.localFactor()(elementQuadPos)
-                          * quadFace[pt].weight() * integrationElement;
+                          * quadPoint.weight() * integrationElement;
       }
 
       if(type == IntegrationType::travelDistanceWeighted) {

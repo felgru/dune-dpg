@@ -180,9 +180,9 @@ namespace detail {
               typename HostGridLocalView::GlobalBasis, Element>
             ::Quadrature(e, quadratureOrder);
 
-      for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
+      for (const auto& quadPoint : quad) {
         // Position of the current quadrature point in the reference element
-        const FieldVector<double, dim>& quadPos = quad[pt].position();
+        const FieldVector<double, dim>& quadPos = quadPoint.position();
         // Global position of the current quadrature point
         const FieldVector<double, dim>& subGridQuadPos
               = hostCellEmbedding.global(quadPos);
@@ -190,7 +190,7 @@ namespace detail {
         // The multiplicative factor in the integral transformation formula
         const double integrationWeight
             = eHost.geometry().integrationElement(quadPos)
-            * quad[pt].weight();
+            * quadPoint.weight();
 
         const auto& subGridLocalFiniteElement
             = subGridLocalView.tree().finiteElement();
@@ -310,9 +310,9 @@ namespace detail {
                 typename HostGridLocalView::GlobalBasis, Element>
               ::Quadrature(e, quadratureOrder);
 
-        for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
+        for (const auto& quadPoint : quad) {
           // Position of the current quadrature point in the reference element
-          const FieldVector<double, dim>& quadPos = quad[pt].position();
+          const FieldVector<double, dim>& quadPos = quadPoint.position();
           // Global position of the current quadrature point
           const FieldVector<double, dim>& subGridQuadPos
                 = subGeometryInReferenceElement.local(
@@ -321,7 +321,7 @@ namespace detail {
           // The multiplicative factor in the integral transformation formula
           const double integrationWeight
               = eHostGeometry.integrationElement(quadPos)
-              * quad[pt].weight();
+              * quadPoint.weight();
 
           std::vector<FieldVector<double, 1> > subGridValues;
           boost::hana::eval_if(
