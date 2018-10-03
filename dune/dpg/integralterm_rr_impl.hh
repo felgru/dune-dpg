@@ -57,10 +57,10 @@ inline static void interiorImpl(LhsLocalView& lhsLocalView,
     const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
     const auto subGeometryInReferenceElement = subElement.geometry();
-    for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
+    for (const auto& quadPoint : quad) {
 
       // Position of the current quadrature point in the reference element
-      const FieldVector<double,dim>& quadPos = quad[pt].position();
+      const FieldVector<double,dim>& quadPos = quadPoint.position();
      // Global position of the current quadrature point
      const FieldVector<double,dim> elementQuadPos
           = subGeometryInReferenceElement.global(quadPos);
@@ -69,7 +69,7 @@ inline static void interiorImpl(LhsLocalView& lhsLocalView,
       const double integrationWeight
         = geometry.integrationElement(elementQuadPos)
         * subGeometryInReferenceElement.integrationElement(quadPos)
-        * quad[pt].weight() * localCoefficients.localFactor()(elementQuadPos);
+        * quadPoint.weight() * localCoefficients.localFactor()(elementQuadPos);
 
       ///////////////////////////////////////
       // evaluate finite element functions //
@@ -216,11 +216,11 @@ faceImpl(LhsLocalView& lhsLocalView,
                 faceComputations.geometryInElement(), referenceBeta));
       }
 
-      for (size_t pt=0, qsize=quadFace.size(); pt < qsize; pt++) {
+      for (const auto& quadPoint : quadFace) {
 
         // Position of the current quadrature point in the reference element
         // (face!)
-        const FieldVector<double,dim-1>& quadFacePos = quadFace[pt].position();
+        const FieldVector<double,dim-1>& quadFacePos = quadPoint.position();
 
         // position of the quadrature point within the subelement
         const FieldVector<double,dim> elementQuadPosSubCell =
@@ -234,7 +234,7 @@ faceImpl(LhsLocalView& lhsLocalView,
         if(type == IntegrationType::normalVector ||
            type == IntegrationType::travelDistanceWeighted) {
           integrationWeight = localCoefficients.localFactor()(elementQuadPos)
-                            * quadFace[pt].weight()
+                            * quadPoint.weight()
                             * integrationElement;
           // TODO: scale direction to length 1
           if(type == IntegrationType::travelDistanceWeighted)
@@ -262,7 +262,7 @@ faceImpl(LhsLocalView& lhsLocalView,
 
           integrationWeight = sign
                             * localCoefficients.localFactor()(elementQuadPos)
-                            * quadFace[pt].weight() * integrationElement;
+                            * quadPoint.weight() * integrationElement;
         }
 
         if(type == IntegrationType::travelDistanceWeighted) {

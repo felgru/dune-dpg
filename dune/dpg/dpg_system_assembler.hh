@@ -427,16 +427,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
     rhsLinearForm.getLocalVector(localEnrichedRhs);
 
     // compute the local right-hand side vector C^T*F for the optimal test space
-    BlockVector<FieldVector<double,1> > localRhs;
-    localRhs.resize(coefficientMatrix.M());
-    for (unsigned int i=0; i<coefficientMatrix.M(); i++)
-      {
-        localRhs[i]=0;
-        for (unsigned int k=0; k<coefficientMatrix.N(); k++)
-        {
-          localRhs[i]+=(localEnrichedRhs[k]*coefficientMatrix[k][i]);
-        }
-      }
+    BlockVector<FieldVector<double,1> > localRhs(coefficientMatrix.M());
+    coefficientMatrix.mtv(localEnrichedRhs, localRhs);
 
     // compute the local stiffness matrix
     const Matrix<FieldMatrix<double,1,1> >& elementMatrix
@@ -600,16 +592,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
     rhsLinearForm.getLocalVector(localEnrichedRhs);
 
     // compute the local right-hand side vector C^T*F for the optimal test space
-    BlockVector<FieldVector<double,1> > localRhs;
-    localRhs.resize(coefficientMatrix.M());
-    for (unsigned int i=0; i<coefficientMatrix.M(); i++)
-      {
-        localRhs[i]=0;
-        for (unsigned int k=0; k<coefficientMatrix.N(); k++)
-        {
-          localRhs[i]+=(localEnrichedRhs[k]*coefficientMatrix[k][i]);
-        }
-      }
+    BlockVector<FieldVector<double,1> > localRhs(coefficientMatrix.M());
+    coefficientMatrix.mtv(localEnrichedRhs, localRhs);
 
     /* copy every local subvector indexed by an index from
      * lfIndices exactly once. */
@@ -670,29 +654,26 @@ applyDirichletBoundaryToMatrix
   //   Modify Dirichlet rows
   ////////////////////////////////////////////
 
-  // loop over the matrix rows
+  // loop over indices of dirichlet nodes
   for (size_t i=0; i<spaceSize; i++)
   {
-    if (dirichletNodes[i])
+    if (!dirichletNodes[i]) continue;
+    auto cIt    = matrix[globalOffset+i].begin();
+    auto cEndIt = matrix[globalOffset+i].end();
+    // loop over nonzero matrix entries in current row
+    for (; cIt!=cEndIt; ++cIt)
     {
-      auto cIt    = matrix[globalOffset+i].begin();
-      auto cEndIt = matrix[globalOffset+i].end();
-      // loop over nonzero matrix entries in current row
-      for (; cIt!=cEndIt; ++cIt)
+      if (globalOffset+i==cIt.index())
       {
-        if (globalOffset+i==cIt.index())
-        {
-          *cIt = 1;
-        }
-        else
-        {
-          /* Zero out row and column to keep symmetry. */
-          *cIt = 0;
-          matrix[cIt.index()][globalOffset+i]=0;
-        }
+        *cIt = 1;
+      }
+      else
+      {
+        /* Zero out row and column to keep symmetry. */
+        *cIt = 0;
+        matrix[cIt.index()][globalOffset+i]=0;
       }
     }
-
   }
 }
 
@@ -755,30 +736,27 @@ applyNonzeroDirichletBoundary(
   //   Modify Dirichlet rows in matrix
   ////////////////////////////////////////////
 
-  // loop over the matrix rows
+  // loop over indices of dirichlet nodes
   for (size_t i=0; i<spaceSize; i++)
   {
-    if (dirichletNodes[i])
+    if (!dirichletNodes[i]) continue;
+    auto cIt    = matrix[globalOffset+i].begin();
+    auto cEndIt = matrix[globalOffset+i].end();
+    // loop over nonzero matrix entries in current row
+    for (; cIt!=cEndIt; ++cIt)
     {
-      auto cIt    = matrix[globalOffset+i].begin();
-      auto cEndIt = matrix[globalOffset+i].end();
-      // loop over nonzero matrix entries in current row
-      for (; cIt!=cEndIt; ++cIt)
+      if (globalOffset+i==cIt.index())
       {
-        if (globalOffset+i==cIt.index())
-        {
-          *cIt = 1;
-        }
-        else
-        {
-          /* Zero out row and column to keep symmetry. Modify RHS accordingly*/
-          *cIt = 0;
-          rhs[cIt.index()]-=(matrix[cIt.index()][globalOffset+i]*dirichletValues[i]);
-          matrix[cIt.index()][globalOffset+i]=0;
-        }
+        *cIt = 1;
+      }
+      else
+      {
+        /* Zero out row and column to keep symmetry. Modify RHS accordingly*/
+        *cIt = 0;
+        rhs[cIt.index()]-=(matrix[cIt.index()][globalOffset+i]*dirichletValues[i]);
+        matrix[cIt.index()][globalOffset+i]=0;
       }
     }
-
   }
 
   // Set Dirichlet values in rhs
@@ -828,46 +806,40 @@ applyWeakBoundaryCondition
 
     for (auto&& intersection : intersections(gridView, e))
     {
-      if (intersection.boundary())
-      { // the intersection is at the (physical) boundary of the domain
-        const FieldVector<double,dim>& centerOuterNormal =
-               intersection.centerUnitOuterNormal();
+      // we only care for intersections at the (physical) boundary of the domain
+      if (!intersection.boundary()) continue;
+      // skip over inflow boundary
+      if ((beta*intersection.centerUnitOuterNormal()) <= -1e-10) continue;
 
-        if ((beta*centerOuterNormal) > -1e-10)
-        { // everywhere except inflow boundary
-          const QuadratureRule<double, dim-1>& quadFace =
-                  QuadratureRules<double, dim-1>::rule(intersection.type(),
-                                                       quadratureOrder);
+      const QuadratureRule<double, dim-1>& quadFace =
+              QuadratureRules<double, dim-1>::rule(intersection.type(),
+                                                   quadratureOrder);
 
-          for (size_t pt=0; pt < quadFace.size(); pt++)
+      for (const auto& quadPoint : quadFace)
+      {
+        // position of the current quadrature point in the
+        // reference element (face!)
+        const FieldVector<double,dim-1>& quadFacePos = quadPoint.position();
+
+        const double integrationWeight
+            = intersection.geometry().integrationElement(quadFacePos)
+            * quadPoint.weight();
+
+        // position of the quadrature point within the element
+        const FieldVector<double,dim> elementQuadPos
+            = intersection.geometryInInside().global(quadFacePos);
+
+        // values of the shape functions
+        std::vector<FieldVector<double,1> > solutionValues;
+        localFiniteElement.localBasis().evaluateFunction(elementQuadPos,
+                                                         solutionValues);
+        for (size_t i=0; i<n; i++)
+        {
+          for (size_t j=0; j<n; j++)
           {
-            // position of the current quadrature point in the
-            // reference element (face!)
-            const FieldVector<double,dim-1>& quadFacePos
-                = quadFace[pt].position();
-
-            const double integrationWeight
-                = intersection.geometry().integrationElement(quadFacePos)
-                * quadFace[pt].weight();
-
-            // position of the quadrature point within the element
-            const FieldVector<double,dim> elementQuadPos
-                = intersection.geometryInInside().global(quadFacePos);
-
-            // values of the shape functions
-            std::vector<FieldVector<double,1> > solutionValues;
-            localFiniteElement.localBasis().evaluateFunction(elementQuadPos,
-                                                             solutionValues);
-            for (size_t i=0; i<n; i++)
-            {
-              for (size_t j=0; j<n; j++)
-              {
-                elementMatrix[i][j]
-                        += (mu * solutionValues[i] * solutionValues[j])
-                           * integrationWeight;
-              }
-            }
-
+            elementMatrix[i][j]
+                    += (mu * solutionValues[i] * solutionValues[j])
+                       * integrationWeight;
           }
         }
       }
@@ -916,8 +888,8 @@ defineCharacteristicFaces_impl(
     const size_t n = localFiniteElement.size();
 
     std::vector<bool>  characteristicFaces(e.subEntities(1), false);
-    bool characteristicFound = false;
 
+    bool characteristicFound = false;
     for (auto&& intersection : intersections(gridView, e))
     {
       const bool characteristic =
@@ -925,77 +897,73 @@ defineCharacteristicFaces_impl(
       characteristicFaces[intersection.indexInInside()] = characteristic;
       characteristicFound = characteristicFound || characteristic;
     }
+    if(!characteristicFound) continue;
 
-    if(characteristicFound)
+    std::map<size_t,std::list<std::pair<size_t,size_t>>> characteristicDOFs;
+    std::vector<size_t> vertexDOFs(e.subEntities(dim));
+
+    for (unsigned int i=0; i<n; i++)
     {
-      std::map<size_t,std::list<std::pair<size_t,size_t>>> characteristicDOFs;
-      std::vector<size_t> vertexDOFs(e.subEntities(dim));
-
-      for (unsigned int i=0; i<n; i++)
+      if (localFiniteElement.localCoefficients().localKey(i).codim()==1)
+          // edge DOFs
       {
-        if (localFiniteElement.localCoefficients().localKey(i).codim()==1)
-            // edge DOFs
-        {
-          const size_t face =
-              localFiniteElement.localCoefficients().localKey(i).subEntity();
-          const size_t localIndex =
-              localFiniteElement.localCoefficients().localKey(i).index();
-          if(characteristicFaces[face])
-            characteristicDOFs[face].emplace_back(i,localIndex);
-        } else if (localFiniteElement.localCoefficients().localKey(i).codim()
-                   == dim)
-        {
-          const size_t vertex =
-              localFiniteElement.localCoefficients().localKey(i).subEntity();
-          vertexDOFs[vertex] = i;
-        }
-        // Vertex DOFs are never characteristic because the corresponding
-        // basis functions have support on at least two edges which can
-        // never be both (almost) characteristic.
-      }
-
-      std::vector<std::pair<size_t,size_t>> endpoints(e.subEntities(1));
-      if(e.type().isQuadrilateral()) {
-        endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
-        endpoints[1] = std::make_pair(vertexDOFs[1], vertexDOFs[3]);
-        endpoints[2] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
-        endpoints[3] = std::make_pair(vertexDOFs[2], vertexDOFs[3]);
-      } else if(e.type().isTriangle()) {
-        endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
-        endpoints[1] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
-        endpoints[2] = std::make_pair(vertexDOFs[1], vertexDOFs[2]);
-      } else {
-        DUNE_THROW(Dune::NotImplemented,
-                   "defineCharacteristicFaces not implemented for element type"
-                   << e.type().id());
-      }
-
-      for (auto&& faceAndDOFs: characteristicDOFs)
+        const size_t face =
+            localFiniteElement.localCoefficients().localKey(i).subEntity();
+        const size_t localIndex =
+            localFiniteElement.localCoefficients().localKey(i).index();
+        if(characteristicFaces[face])
+          characteristicDOFs[face].emplace_back(i,localIndex);
+      } else if (localFiniteElement.localCoefficients().localKey(i).codim()
+                 == dim)
       {
-        size_t face;
-        std::list<std::pair<size_t,size_t>> dofs;
-        std::tie(face, dofs) = faceAndDOFs;
-        size_t left, right;
-        std::tie(left, right) = endpoints[face];
-        for(auto&& dof: dofs)
-        {
-          const auto row = solutionLocalView.index(dof.first)[0];
-          auto col = row;
-          const size_t k = dofs.size()+1;
+        const size_t vertex =
+            localFiniteElement.localCoefficients().localKey(i).subEntity();
+        vertexDOFs[vertex] = i;
+      }
+      // Vertex DOFs are never characteristic because the corresponding
+      // basis functions have support on at least two edges which can
+      // never be both (almost) characteristic.
+    }
 
-          /* replace the row of dof on characteristic face
-           * by an interpolation of the two endpoints of the
-           * characteristic face. */
-          matrix[row+globalOffset][col+globalOffset] = -1;
-          col = solutionLocalView.index(left)[0];
-          matrix[row+globalOffset][col+globalOffset]
-              = static_cast<double>(k-dof.second-1)/k;
-          col = solutionLocalView.index(right)[0];
-          matrix[row+globalOffset][col+globalOffset]
-              = static_cast<double>(dof.second+1)/k;
+    std::vector<std::pair<size_t,size_t>> endpoints(e.subEntities(1));
+    if(e.type().isQuadrilateral()) {
+      endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
+      endpoints[1] = std::make_pair(vertexDOFs[1], vertexDOFs[3]);
+      endpoints[2] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
+      endpoints[3] = std::make_pair(vertexDOFs[2], vertexDOFs[3]);
+    } else if(e.type().isTriangle()) {
+      endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
+      endpoints[1] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
+      endpoints[2] = std::make_pair(vertexDOFs[1], vertexDOFs[2]);
+    } else {
+      DUNE_THROW(Dune::NotImplemented,
+                 "defineCharacteristicFaces not implemented for element type"
+                 << e.type().id());
+    }
 
-          rhs[row+globalOffset] = 0;
-        }
+    for (auto&& faceAndDOFs: characteristicDOFs)
+    {
+      size_t face;
+      std::list<std::pair<size_t,size_t>> dofs;
+      std::tie(face, dofs) = faceAndDOFs;
+      size_t left, right;
+      std::tie(left, right) = endpoints[face];
+      for(auto&& dof: dofs)
+      {
+        const auto row = solutionLocalView.index(dof.first)[0] + globalOffset;
+        auto col = row;
+        const size_t k = dofs.size()+1;
+
+        /* replace the row of dof on characteristic face
+         * by an interpolation of the two endpoints of the
+         * characteristic face. */
+        matrix[row][col] = -1;
+        col = solutionLocalView.index(left)[0] + globalOffset;
+        matrix[row][col] = static_cast<double>(k-dof.second-1)/k;
+        col = solutionLocalView.index(right)[0] + globalOffset;
+        matrix[row][col] = static_cast<double>(dof.second+1)/k;
+
+        rhs[row] = 0;
       }
     }
   }
@@ -1059,8 +1027,8 @@ defineCharacteristicFaces_impl(
     const size_t n = localFiniteElement.size();
 
     std::vector<bool>  characteristicFaces(e.subEntities(1), false);
-    bool characteristicFound = false;
 
+    bool characteristicFound = false;
     for (auto&& intersection : intersections(gridView, e))
     {
       if (intersection.conforming()) {
@@ -1070,78 +1038,77 @@ defineCharacteristicFaces_impl(
         characteristicFound = characteristicFound || characteristic;
       }
     }
+    if(!characteristicFound) continue;
 
-    if(characteristicFound)
+    std::map<size_t,std::list<std::pair<size_t,size_t>>> characteristicDOFs;
+    std::vector<size_t> vertexDOFs(e.subEntities(dim));
+
+    for (unsigned int i=0; i<n; i++)
     {
-      std::map<size_t,std::list<std::pair<size_t,size_t>>> characteristicDOFs;
-      std::vector<size_t> vertexDOFs(e.subEntities(dim));
-
-      for (unsigned int i=0; i<n; i++)
+      if (localFiniteElement.localCoefficients().localKey(i).codim()==1)
+          // edge DOFs
       {
-        if (localFiniteElement.localCoefficients().localKey(i).codim()==1)
-            // edge DOFs
-        {
-          const size_t face =
-              localFiniteElement.localCoefficients().localKey(i).subEntity();
-          const size_t localIndex =
-              localFiniteElement.localCoefficients().localKey(i).index();
-          if(characteristicFaces[face])
-            characteristicDOFs[face].emplace_back(i,localIndex);
-        } else if (localFiniteElement.localCoefficients().localKey(i).codim()
-                   == dim)
-        {
-          const size_t vertex =
-              localFiniteElement.localCoefficients().localKey(i).subEntity();
-          vertexDOFs[vertex] = i;
-        }
-        // Vertex DOFs are never characteristic because the corresponding
-        // basis functions have support on at least two edges which can
-        // never be both (almost) characteristic.
-      }
-
-      std::vector<std::pair<size_t,size_t>> endpoints(e.subEntities(1));
-      if(e.type().isQuadrilateral()) {
-        endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
-        endpoints[1] = std::make_pair(vertexDOFs[1], vertexDOFs[3]);
-        endpoints[2] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
-        endpoints[3] = std::make_pair(vertexDOFs[2], vertexDOFs[3]);
-      } else if(e.type().isTriangle()) {
-        endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
-        endpoints[1] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
-        endpoints[2] = std::make_pair(vertexDOFs[1], vertexDOFs[2]);
-      } else {
-        DUNE_THROW(Dune::NotImplemented,
-                   "defineCharacteristicFaces not implemented for element type"
-                   << e.type().id());
-      }
-
-      for (auto&& faceAndDOFs: characteristicDOFs)
+        const size_t face =
+            localFiniteElement.localCoefficients().localKey(i).subEntity();
+        const size_t localIndex =
+            localFiniteElement.localCoefficients().localKey(i).index();
+        if(characteristicFaces[face])
+          characteristicDOFs[face].emplace_back(i,localIndex);
+      } else if (localFiniteElement.localCoefficients().localKey(i).codim()
+                 == dim)
       {
-        size_t face;
-        std::list<std::pair<size_t,size_t>> dofs;
-        std::tie(face, dofs) = faceAndDOFs;
-        size_t left, right;
-        std::tie(left, right) = endpoints[face];
-        for(auto&& dof: dofs)
-        {
-          const auto row = detail::getUnconstrainedIndex(solutionLocalView,
-                                                         dof.first)[0];
-          auto col = row;
-          const size_t k = dofs.size()+1;
+        const size_t vertex =
+            localFiniteElement.localCoefficients().localKey(i).subEntity();
+        vertexDOFs[vertex] = i;
+      }
+      // Vertex DOFs are never characteristic because the corresponding
+      // basis functions have support on at least two edges which can
+      // never be both (almost) characteristic.
+    }
 
-          /* replace the row of dof on characteristic face
-           * by an interpolation of the two endpoints of the
-           * characteristic face. */
-          matrix[row+globalOffset][col+globalOffset] = -1;
-          col = detail::getUnconstrainedIndex(solutionLocalView, left)[0];
-          matrix[row+globalOffset][col+globalOffset]
-              = static_cast<double>(k-dof.second-1)/k;
-          col = detail::getUnconstrainedIndex(solutionLocalView, right)[0];
-          matrix[row+globalOffset][col+globalOffset]
-              = static_cast<double>(dof.second+1)/k;
+    std::vector<std::pair<size_t,size_t>> endpoints(e.subEntities(1));
+    if(e.type().isQuadrilateral()) {
+      endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
+      endpoints[1] = std::make_pair(vertexDOFs[1], vertexDOFs[3]);
+      endpoints[2] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
+      endpoints[3] = std::make_pair(vertexDOFs[2], vertexDOFs[3]);
+    } else if(e.type().isTriangle()) {
+      endpoints[0] = std::make_pair(vertexDOFs[0], vertexDOFs[1]);
+      endpoints[1] = std::make_pair(vertexDOFs[0], vertexDOFs[2]);
+      endpoints[2] = std::make_pair(vertexDOFs[1], vertexDOFs[2]);
+    } else {
+      DUNE_THROW(Dune::NotImplemented,
+                 "defineCharacteristicFaces not implemented for element type"
+                 << e.type().id());
+    }
 
-          rhs[row+globalOffset] = 0;
-        }
+    for (auto&& faceAndDOFs: characteristicDOFs)
+    {
+      size_t face;
+      std::list<std::pair<size_t,size_t>> dofs;
+      std::tie(face, dofs) = faceAndDOFs;
+      size_t left, right;
+      std::tie(left, right) = endpoints[face];
+      for(auto&& dof: dofs)
+      {
+        const auto row = detail::getUnconstrainedIndex(solutionLocalView,
+                                                       dof.first)[0]
+                                            + globalOffset;
+        auto col = row;
+        const size_t k = dofs.size()+1;
+
+        /* replace the row of dof on characteristic face
+         * by an interpolation of the two endpoints of the
+         * characteristic face. */
+        matrix[row][col] = -1;
+        col = detail::getUnconstrainedIndex(solutionLocalView, left)[0]
+            + globalOffset;
+        matrix[row][col] = static_cast<double>(k-dof.second-1)/k;
+        col = detail::getUnconstrainedIndex(solutionLocalView, right)[0]
+            + globalOffset;
+        matrix[row][col] = static_cast<double>(dof.second+1)/k;
+
+        rhs[row] = 0;
       }
     }
   }
@@ -1258,56 +1225,48 @@ applyMinimization
       std::get<spaceIndex>(solutionLocalViews),
       [&](size_t i, MultiIndex gi)
       {
-        if (relevantDOFs[i])
-        {
-          auto row = gi[0];
-          iterateOverLocalIndices(
-            std::get<spaceIndex>(solutionLocalViews),
-            [&](size_t j, MultiIndex gj)
-            {
-              auto col = gj[0];
-              matrix[row+globalOffset][col+globalOffset]
-                  += elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
-                                  [localSolutionSpaceOffsets[spaceIndex]+j];
-            },
-            [](size_t j) {},
-            [&](size_t j, MultiIndex gj, double wj)
-            {
-              auto col = gj[0];
-              matrix[row+globalOffset][col+globalOffset]
-                += wj * elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
-                                     [localSolutionSpaceOffsets[spaceIndex]+j];
-            }
-          );
-        }
+        if (!relevantDOFs[i]) return;
+        const auto row = gi[0] + globalOffset;
+        const auto localRow = localSolutionSpaceOffsets[spaceIndex] + i;
+        iterateOverLocalIndices(
+          std::get<spaceIndex>(solutionLocalViews),
+          [&](size_t j, MultiIndex gj)
+          {
+            const auto col = gj[0] + globalOffset;
+            const auto localCol = localSolutionSpaceOffsets[spaceIndex] + j;
+            matrix[row][col] += elementMatrix[localRow][localCol];
+          },
+          [](size_t j) {},
+          [&](size_t j, MultiIndex gj, double wj)
+          {
+            const auto col = gj[0] + globalOffset;
+            const auto localCol = localSolutionSpaceOffsets[spaceIndex] + j;
+            matrix[row][col] += wj * elementMatrix[localRow][localCol];
+          }
+        );
       },
       [](size_t i) {},
       [&](size_t i, MultiIndex gi, double wi)
       {
-        if (relevantDOFs[i])
-        {
-          auto row = gi[0];
-          iterateOverLocalIndices(
-            std::get<spaceIndex>(solutionLocalViews),
-            [&](size_t j, MultiIndex gj)
-            {
-              auto col = gj[0];
-              matrix[row+globalOffset][col+globalOffset]
-                  += wi
-                     * elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
-                                    [localSolutionSpaceOffsets[spaceIndex]+j];
-            },
-            [](size_t j) {},
-            [&](size_t j, MultiIndex gj, double wj)
-            {
-              auto col = gj[0];
-              matrix[row+globalOffset][col+globalOffset]
-                += wi * wj
-                   * elementMatrix[localSolutionSpaceOffsets[spaceIndex]+i]
-                                  [localSolutionSpaceOffsets[spaceIndex]+j];
-            }
-          );
-        }
+        if (!relevantDOFs[i]) return;
+        const auto row = gi[0] + globalOffset;
+        const auto localRow = localSolutionSpaceOffsets[spaceIndex] + i;
+        iterateOverLocalIndices(
+          std::get<spaceIndex>(solutionLocalViews),
+          [&](size_t j, MultiIndex gj)
+          {
+            const auto col = gj[0] + globalOffset;
+            const auto localCol = localSolutionSpaceOffsets[spaceIndex] + j;
+            matrix[row][col] += wi * elementMatrix[localRow][localCol];
+          },
+          [](size_t j) {},
+          [&](size_t j, MultiIndex gj, double wj)
+          {
+            const auto col = gj[0] + globalOffset;
+            const auto localCol = localSolutionSpaceOffsets[spaceIndex] + j;
+            matrix[row][col] += wi * wj * elementMatrix[localRow][localCol];
+          }
+        );
       }
     );
   }

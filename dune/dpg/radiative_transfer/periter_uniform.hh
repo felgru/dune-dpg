@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_RADIATIVE_TRANSFER_PERITER_UNIFORM_HH
 #define DUNE_DPG_RADIATIVE_TRANSFER_PERITER_UNIFORM_HH
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <ctime>
@@ -492,18 +493,15 @@ namespace detail {
         "Functions::interpolate won't work for refined finite elements");
     const size_t numS = sVector.size();
     auto rhsFunction = f(feBasisInterior.gridView());
-    for(unsigned int i = 0; i < numS; ++i)
+    for(auto& rhsFunctionalEntry : rhsFunctional)
     {
       VectorType gInterpolation(feBasisInterior.size());
       Functions::interpolate(feBasisInterior, gInterpolation, rhsFunction);
 
-      // Add gInterpolate to first feBasisInterior.size() entries of
-      // rhsFunctional[i].
-      using Iterator = std::decay_t<decltype(rhsFunctional[i].begin())>;
-      for(Iterator rIt=rhsFunctional[i].begin(),
-                   rEnd=rhsFunctional[i].begin()+feBasisInterior.size(),
-                   gIt=gInterpolation.begin(); rIt!=rEnd; ++rIt, ++gIt) {
-        *rIt += *gIt;
+      auto rIt = rhsFunctionalEntry.begin();
+      for(const auto& gEntry : gInterpolation) {
+        *rIt += gEntry;
+        ++rIt;
       }
     }
   }
@@ -531,18 +529,18 @@ namespace detail {
       static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
           "Functions::interpolate won't work for refined finite elements");
       auto rhsFunction = f(gridView);
-      for(unsigned int i = 0; i < numS; ++i)
+      for(auto& bv : boundaryValues)
       {
         VectorType gInterpolation(feBasisInterior.size());
         Functions::interpolate(feBasisInterior, gInterpolation, rhsFunction);
-        std::swap(boundaryValues[i], gInterpolation);
+        std::swap(bv, gInterpolation);
       }
 
       double rhsError = 0.;
-      for(unsigned int i = 0; i < numS; ++i)
+      for(const auto& bv : boundaryValues)
       {
         auto gApprox = Functions::makeDiscreteGlobalBasisFunction<double>(
-              feBasisInterior, boundaryValues[i]);
+              feBasisInterior, bv);
 
         auto localGExact = localFunction(rhsFunction);
         auto localGApprox = localFunction(gApprox);
@@ -561,12 +559,12 @@ namespace detail {
                                                          quadratureOrder);
           auto geometry = e.geometry();
           double local_error = 0.;
-          for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
-            const FieldVector<double,dim>& quadPos = quad[pt].position();
+          for (const auto& quadPoint : quad) {
+            const FieldVector<double,dim>& quadPos = quadPoint.position();
             const double diff = localGExact(quadPos) - localGApprox(quadPos);
             local_error += diff*diff
                          * geometry.integrationElement(quadPos)
-                         * quad[pt].weight();
+                         * quadPoint.weight();
           }
           rhsError_i += local_error;
         }
@@ -594,15 +592,10 @@ namespace detail {
     }
     for(unsigned int i = 0; i < numS; ++i)
     {
-      FEBasisInterior feBasisInterior(gridView);
-      // Add boundaryValues[i] to first feBasisInterior.size() entries of
-      // rhsFunctional[i].
-      using Iterator = std::decay_t<decltype(rhsFunctional[i].begin())>;
-      for(Iterator rIt=rhsFunctional[i].begin(),
-                   rEnd=rhsFunctional[i].begin()+feBasisInterior.size(),
-                   gIt=boundaryValues[i].begin();
-          rIt!=rEnd; ++rIt, ++gIt) {
-        *rIt += *gIt;
+      auto rIt = rhsFunctional[i].begin();
+      for(const auto& gEntry : boundaryValues[i]) {
+        *rIt += gEntry;
+        ++rIt;
       }
     }
   }
@@ -669,11 +662,11 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   //////////////////////////////////
   std::vector<VectorType> x(numS);
 
-  for(unsigned int i = 0; i < numS; ++i)
+  for(auto& entry : x)
   {
-    x[i].resize(spaces.interiorSolutionSpace().size()
+    entry.resize(spaces.interiorSolutionSpace().size()
                  + spaces.traceSolutionSpace().size());
-    x[i] = 0;
+    entry = 0;
   }
 
   double uNorm = 0.;
@@ -722,11 +715,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     }
 
     std::vector<bool> boundary_is_homogeneous(numS, false);
-    for(size_t i = 0; i < numS; i++) {
-      boundary_is_homogeneous[i]
-          = is_inflow_boundary_homogeneous(sVector[i]);
-      // TODO: write a generic test for homogeneous inflow boundary
-    }
+    std::transform(sVector.cbegin(), sVector.cend(),
+                   boundary_is_homogeneous.begin(),
+                   [&] (auto s) {
+                     // TODO: write a generic test for homogeneous inflow boundary
+                     return is_inflow_boundary_homogeneous(s);
+                   });
     // get bv contribution to rhs
     VectorType boundaryExtension
         = harmonic_extension_of_boundary_values(g,
@@ -1008,12 +1002,14 @@ compute_adaptive_transport_solution(
         std::vector<VectorType> rhsFunctionalCoarse(numS);
         std::swap(rhsFunctional, rhsFunctionalCoarse);
 
-        for(unsigned int i = 0; i < numS; ++i)
-        {
-          rhsFunctional[i] = interpolateToUniformlyRefinedGrid(
-              coarseInteriorBasis, feBasisInterior,
-              rhsFunctionalCoarse[i]);
-        }
+        std::transform(rhsFunctionalCoarse.cbegin(),
+                       rhsFunctionalCoarse.cend(),
+                       rhsFunctional.begin(),
+                       [&] (const VectorType& rhsCoarse) {
+                         interpolateToUniformlyRefinedGrid(
+                            coarseInteriorBasis, feBasisInterior,
+                            rhsCoarse);
+                       });
       }
       {
         using FEBasisCoarseTrace

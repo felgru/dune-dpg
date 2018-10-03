@@ -49,8 +49,8 @@ bool functions_are_identical
     const Dune::QuadratureRule<double, dim>& quad =
           Dune::QuadratureRules<double, dim>::rule(e.type(),
                                                    quadratureOrder);
-    for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
-      const FieldVector<double,dim>& quadPos = quad[pt].position();
+    for (const auto& quadPoint : quad) {
+      const FieldVector<double,dim>& quadPos = quadPoint.position();
       const auto difference
         = std::fabs(localFunction1(quadPos)-localFunction2(quadPos));
       if(difference > tolerance)

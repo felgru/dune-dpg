@@ -47,13 +47,13 @@ std::vector<double> angles(unsigned int wltOrder,
   const QuadratureRule<double, dim>& quad =
     QuadratureRules<double, dim>::rule(GeometryTypes::line,
       quadOrder, QuadratureType::GaussLegendre);
-  using namespace boost::math::constants;
   std::vector<double> angles;
   angles.reserve((1<<level)*quad.size());
   for(int k = 0; k < (1<<level); ++k)
   {
-    for (size_t pt=0, qsize=quad.size(); pt < qsize; pt++) {
-      const double angle = 2*pi<double>()*(k+quad[pt].position())
+    for (const auto& quadPoint : quad) {
+      using namespace boost::math::constants;
+      const double angle = 2*pi<double>()*(k+quadPoint.position())
                            / (1<<level) - pi<double>(); // Angle in [-pi,pi]
       angles.push_back(angle);
     }

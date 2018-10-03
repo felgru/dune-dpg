@@ -103,15 +103,17 @@ computeScattering(std::vector<GridData>& scattering,
   using namespace Dune::detail;
 
   const size_t numDoFs = x[0].size();
-  const size_t numSscattered = scattering.size();
-  for(size_t i = 0; i < numSscattered; i++) {
-    scattering[i].resize(numDoFs);
+  for(auto& s : scattering) {
+    s.resize(numDoFs);
   }
 
-  const size_t numS = x.size();
-  for(size_t i = 0; i < numS; i++) {
-    assert(x[i].size() == numDoFs);
+#ifndef NDEBUG
+  for(const auto& entry : x) {
+    assert(entry.size() == numDoFs);
   }
+#endif
+
+  const size_t numS = x.size();
   for(size_t row = 0; row < numDoFs; row++) {
     Eigen::VectorXd uValues(numS);
 
@@ -123,6 +125,7 @@ computeScattering(std::vector<GridData>& scattering,
 
     kernelApproximation.applyToVector(uValues);
 
+    const size_t numSscattered = scattering.size();
     for (size_t scatteringAngle=0;
          scatteringAngle<numSscattered; ++scatteringAngle) {
       scattering[scatteringAngle][row] = uValues(scatteringAngle);

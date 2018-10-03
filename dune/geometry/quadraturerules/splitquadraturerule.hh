@@ -32,23 +32,18 @@ namespace Dune {
     {
       this->reserve(2*quad.size());
       ctype volumeFraction = splitPoint;
-      for (size_t q=0, qsize=quad.size(); q<qsize; q++) {
-
-        Dune::FieldVector<ctype,1> position = quad[q].position();
-        position[0] *= volumeFraction;
-        // position[0] += 0.;
+      for (const auto& q : quad) {
+        const Dune::FieldVector<ctype,1> position
+            = {q.position()[0] * volumeFraction + 0.};
         this->emplace_back(position,
-                           volumeFraction*quad[q].weight());
-
+                           volumeFraction * q.weight());
       }
       volumeFraction = 1 - splitPoint;
-      for (size_t q=0, qsize=quad.size(); q<qsize; q++) {
-
-        Dune::FieldVector<ctype,1> position = quad[q].position();
-        position[0] *= volumeFraction;
-        position[0] += splitPoint;
+      for (const auto& q : quad) {
+        const Dune::FieldVector<ctype,1> position
+            = {q.position()[0] * volumeFraction + splitPoint};
         this->emplace_back(position,
-                           volumeFraction*quad[q].weight());
+                           volumeFraction * q.weight());
 
       }
     }
