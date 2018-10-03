@@ -715,11 +715,12 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
     }
 
     std::vector<bool> boundary_is_homogeneous(numS, false);
-    for(size_t i = 0; i < numS; i++) {
-      boundary_is_homogeneous[i]
-          = is_inflow_boundary_homogeneous(sVector[i]);
-      // TODO: write a generic test for homogeneous inflow boundary
-    }
+    std::transform(sVector.cbegin(), sVector.cend(),
+                   boundary_is_homogeneous.begin(),
+                   [&] (auto s) {
+                     // TODO: write a generic test for homogeneous inflow boundary
+                     return is_inflow_boundary_homogeneous(s);
+                   });
     // get bv contribution to rhs
     VectorType boundaryExtension
         = harmonic_extension_of_boundary_values(g,

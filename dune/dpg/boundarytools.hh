@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+#include <algorithm>
 #include <array>
 #include <vector>
 
@@ -253,10 +254,9 @@ namespace Dune {
 
     } // end element e
 
-    for(size_t i=0; i<dirichletNodes.size(); i++)
-    {
-      dirichletNodes[i] = (dirichletNodesInt[i]>0);
-    }
+    std::transform(dirichletNodesInt.cbegin(), dirichletNodesInt.cend(),
+                   dirichletNodes.begin(),
+                   [] (unsigned int dni) { return dni > 0; });
   }
 
   /**
@@ -376,10 +376,9 @@ namespace Dune {
 
     } // end element e
 
-    for(size_t i=0; i<dirichletNodes.size(); i++)
-    {
-      dirichletNodes[i] = (dirichletNodesInt[i]>0);
-    }
+    std::transform(dirichletNodesInt.cbegin(), dirichletNodesInt.cend(),
+                   dirichletNodes.begin(),
+                   [] (unsigned int dni) { return dni > 0; });
   }
 
   /**
