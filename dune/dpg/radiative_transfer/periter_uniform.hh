@@ -1006,9 +1006,9 @@ compute_adaptive_transport_solution(
                        rhsFunctionalCoarse.cend(),
                        rhsFunctional.begin(),
                        [&] (const VectorType& rhsCoarse) {
-                         interpolateToUniformlyRefinedGrid(
-                            coarseInteriorBasis, feBasisInterior,
-                            rhsCoarse);
+                         return interpolateToUniformlyRefinedGrid(
+                                coarseInteriorBasis, feBasisInterior,
+                                rhsCoarse);
                        });
       }
       {
