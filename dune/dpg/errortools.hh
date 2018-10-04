@@ -196,13 +196,15 @@ namespace Dune {
     const QuadratureRule<double, dim>& quad =
         QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
 
-    const double l2NormSquared = std::accumulate(cbegin(quad), cend(quad), 0.,
-        [&](double acc, const auto& quadPoint) {
+    const double l2NormSquared = std::transform_reduce(
+        quad.cbegin(), quad.cend(), 0., std::plus<>(),
+        [&](const auto& quadPoint) {
           // Position of the current quadrature point in the reference element
           const FieldVector<double,dim>& quadPos = quadPoint.position();
 
           // The multiplicative factor in the integral transformation formula
-          const double integrationElement = geometry.integrationElement(quadPos);
+          const double integrationElement
+              = geometry.integrationElement(quadPos);
 
           std::vector<FieldVector<double,1> > shapeFunctionValues;
           localBasis.evaluateFunction(quadPos, shapeFunctionValues);
@@ -211,8 +213,7 @@ namespace Dune {
                                                   shapeFunctionValues.cend(),
                                                   cbegin(u), 0.);
 
-          return acc
-               + uQuad * uQuad * quadPoint.weight() * integrationElement;
+          return uQuad * uQuad * quadPoint.weight() * integrationElement;
         });
 
     return l2NormSquared;
@@ -297,15 +298,18 @@ namespace Dune {
         QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
     const SubsampledQuadratureRule<double, subsamples, dim>& quad(quadSection);
 
-    const double errSquare = std::accumulate(cbegin(quad), cend(quad), 0.,
-        [&](double acc, const auto& quadPoint) {
+    const double errSquare = std::transform_reduce(cbegin(quad), cend(quad),
+        0., std::plus<>(),
+        [&](const auto& quadPoint) {
           // Position of the current quadrature point in the reference element
           const FieldVector<double,dim>& quadPos = quadPoint.position();
           // Position of the current quadrature point in the current element
-          const FieldVector<double,dim> globalQuadPos = geometry.global(quadPos);
+          const FieldVector<double,dim> globalQuadPos
+              = geometry.global(quadPos);
 
           // The multiplicative factor in the integral transformation formula
-          const double integrationElement = geometry.integrationElement(quadPos);
+          const double integrationElement
+              = geometry.integrationElement(quadPos);
 
           // Evaluate all shape function values at quadPos (which is a
           // quadrature point in the reference element)
@@ -318,12 +322,10 @@ namespace Dune {
                                                   shapeFunctionValues.cend(),
                                                   cbegin(u), 0.);
 
-          // Value of uRef at globalQuadPos
           const double uExactQuad = uRef(globalQuadPos);
 
-          // we add the squared error at the quadrature point
-          return acc
-                 + (uQuad - uExactQuad) * (uQuad - uExactQuad)
+          // squared error at the quadrature point
+          return (uQuad - uExactQuad) * (uQuad - uExactQuad)
                  * quadPoint.weight() * integrationElement;
         });
 
@@ -458,16 +460,15 @@ namespace Dune {
     const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(element.type(),
                                                      quadratureOrder);
-    const double fSquareIntegral = std::accumulate(cbegin(quad), cend(quad),
-        0.,
-        [&](double acc, const auto& quadPoint) {
+    const double fSquareIntegral = std::transform_reduce(
+        cbegin(quad), cend(quad), 0., std::plus<>(),
+        [&](const auto& quadPoint) {
           // Position of the current quadrature point in the reference element
           const auto& quadPos = quadPoint.position();
           // Global position of the current quadrature point
           const auto globalQuadPos = geometry.global(quadPos);
           const double fValue = f(globalQuadPos);
-          return acc
-                 + geometry.integrationElement(quadPos)
+          return geometry.integrationElement(quadPos)
                  * quadPoint.weight()
                  * fValue * fValue;
         });
