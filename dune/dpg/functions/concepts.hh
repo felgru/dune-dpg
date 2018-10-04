@@ -43,30 +43,6 @@ struct ConstrainedNodeIndexSet
   );
 };
 
-template<class LocalView>
-struct ConstrainedLocalIndexSet
-{
-  template<class I>
-  auto require(const I& indexSet) -> decltype(
-    requireType<typename I::size_type>(),
-    requireType<typename I::MultiIndex>(),
-    requireType<typename I::LocalView>(),
-    requireSameType<typename I::LocalView, LocalView>(),
-    requireConvertible<typename I::LocalView>(indexSet.localView()),
-    const_cast<I&>(indexSet).bind(std::declval<typename I::LocalView>()),
-    const_cast<I&>(indexSet).unbind(),
-    requireConvertible<typename I::size_type>(indexSet.size()),
-    requireConvertible<const std::vector<typename I::MultiIndex>&>
-        (indexSet.indicesLocalGlobal()),
-    requireConvertible<typename I::size_type>(indexSet.constraintsSize()),
-    requireConvertible<typename I::size_type>(
-        indexSet.constraintOffset(std::declval<typename I::size_type>())),
-    requireConvertible<const typename I::ConstraintWeights&>(
-        indexSet.constraintWeights(std::declval<typename I::size_type>()))
-  );
-};
-
-
 template<class GridView>
 struct ConstrainedPreBasis
 {
@@ -136,17 +112,13 @@ struct ConstrainedGlobalBasis
     requireType<typename B::size_type>(),
     requireType<typename B::MultiIndex>(),
     requireType<typename B::SizePrefix>(),
-    requireType<typename B::LocalIndexSet>(),
     requireType<typename B::LocalView>(),
     requireSameType<typename B::GridView, GridView>(),
     requireConvertible<typename B::GridView>(basis.gridView()),
-    requireConvertible<typename B::LocalIndexSet>(basis.localIndexSet()),
     requireConvertible<typename B::LocalView>(basis.localView()),
     requireConvertible<typename B::size_type>(basis.size()),
     requireConvertible<typename B::size_type>(basis.size(std::declval<typename B::SizePrefix>())),
     requireConvertible<typename B::size_type>(basis.dimension()),
-    requireConcept<ConstrainedLocalIndexSet<typename B::LocalView>>
-        (basis.localIndexSet()),
     requireConcept<ConstrainedLocalView<B>>(basis.localView())
   );
 };
