@@ -20,31 +20,6 @@ namespace Dune {
 
 namespace detail {
 
-struct getLocalIndexSetFunctor
-{
-  template<class T>
-  struct TypeEvaluator
-  {
-    typedef typename T::LocalIndexSet Type;
-  };
-
-  template<class T>
-  typename TypeEvaluator<T>::Type operator()(const T& t) const
-  {
-    return t.localIndexSet();
-  }
-};
-
-template<class Spaces>
-using getLocalIndexSets_t
-    = typename ForEachType<detail::getLocalIndexSetFunctor::TypeEvaluator,
-                           Spaces>::Type;
-
-template<class Spaces>
-inline getLocalIndexSets_t<Spaces> getLocalIndexSets(const Spaces& spaces) {
-  return genericTransformSpaceTuple(spaces, getLocalIndexSetFunctor());
-}
-
 struct getLocalViewFunctor
 {
   template<class T>
@@ -75,18 +50,6 @@ inline void bindLocalViews(LocalViews& localViews,
                            const Element& e)
 {
   Hybrid::forEach(localViews, [&](auto& lv) { lv.bind(e); });
-}
-
-template<class LocalIndexSets, class LocalViews>
-inline void bindLocalIndexSets(LocalIndexSets&   lis,
-                               const LocalViews& lvs)
-{
-  Hybrid::forEach(
-      Std::make_index_sequence<
-          std::tuple_size<LocalIndexSets>::value>{},
-      [&](auto i) {
-        std::get<i>(lis).bind(std::get<i>(lvs));
-      });
 }
 
 template<class Spaces, class GridView>
