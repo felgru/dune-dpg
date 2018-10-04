@@ -491,7 +491,6 @@ namespace detail {
       FeRHS) {
     static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
         "Functions::interpolate won't work for refined finite elements");
-    const size_t numS = sVector.size();
     auto rhsFunction = f(feBasisInterior.gridView());
     for(auto& rhsFunctionalEntry : rhsFunctional)
     {
