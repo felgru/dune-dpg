@@ -491,7 +491,6 @@ namespace detail {
       FeRHS) {
     static_assert(!is_RefinedFiniteElement<FEBasisInterior>::value,
         "Functions::interpolate won't work for refined finite elements");
-    const size_t numS = sVector.size();
     auto rhsFunction = f(feBasisInterior.gridView());
     for(auto& rhsFunctionalEntry : rhsFunctional)
     {
@@ -1006,9 +1005,9 @@ compute_adaptive_transport_solution(
                        rhsFunctionalCoarse.cend(),
                        rhsFunctional.begin(),
                        [&] (const VectorType& rhsCoarse) {
-                         interpolateToUniformlyRefinedGrid(
-                            coarseInteriorBasis, feBasisInterior,
-                            rhsCoarse);
+                         return interpolateToUniformlyRefinedGrid(
+                                coarseInteriorBasis, feBasisInterior,
+                                rhsCoarse);
                        });
       }
       {

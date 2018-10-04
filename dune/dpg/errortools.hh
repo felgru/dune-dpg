@@ -299,12 +299,9 @@ namespace Dune {
 
     // Variables employed in the loop
     double errSquare = 0;     // we store here the square of the error
-    double uQuad = 0;         // we store here the value of u at a quadrature point
 
     // Loop over all quadrature points
     for (const auto& quadPoint : quad) {
-
-      uQuad = 0;
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quadPoint.position();
