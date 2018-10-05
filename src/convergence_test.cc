@@ -7,6 +7,7 @@
 
 #include <array>
 #include <memory>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -252,11 +253,11 @@ int main(int argc, char** argv)
             << aposterioriErr << std::endl;
 
   std::string filename
-      = std::string("convergence_error_ls")
+      = "convergence_error_ls"
       + std::to_string(LEVEL_SEARCH)
-      + std::string("_ks") + std::to_string(K_SEARCH)
-      + std::string("_la") + std::to_string(LEVEL_APOSTERIORI)
-      + std::string("_ka") + std::to_string(K_APOSTERIORI);
+      + "_ks" + std::to_string(K_SEARCH)
+      + "_la" + std::to_string(LEVEL_APOSTERIORI)
+      + "_ka" + std::to_string(K_APOSTERIORI);
 
   std::ofstream ofs(filename, std::ios_base::app);
   ofs << LEVEL_SEARCH << " " << K_SEARCH << " "

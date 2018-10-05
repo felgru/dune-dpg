@@ -15,6 +15,7 @@
 
 #include <dune/istl/bvector.hh>
 
+#include <string>
 #include <type_traits>
 
 namespace Dune {
