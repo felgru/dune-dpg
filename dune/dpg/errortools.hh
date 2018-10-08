@@ -4,6 +4,7 @@
 #define DUNE_DPG_ERROR_TOOLS
 
 #include <algorithm>
+#include <array>
 #include <numeric>
 #include <tuple>
 #include <type_traits>
@@ -420,11 +421,13 @@ namespace Dune {
     typedef typename InnerProduct::TestSpaces SolutionSpaces;
 
     // Create and fill vector with offsets for global dofs
-    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+        globalSolutionSpaceOffsets;
     computeOffsets(globalSolutionSpaceOffsets, *innerProduct.getTestSpaces());
 
     // Create and fill vector with offsets for local dofs on element
-    size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+        localSolutionSpaceOffsets;
     const size_t localSolutionDofs
         = computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
 
@@ -574,16 +577,20 @@ namespace Dune {
     typedef typename BilinearForm::TestSpaces EnrichedTestspaces;
 
     // Create and fill vector with offsets for global dofs
-    size_t globalTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
-    size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    std::array<size_t,std::tuple_size<EnrichedTestspaces>::value>
+        globalTestSpaceOffsets;
+    std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+        globalSolutionSpaceOffsets;
 
     computeOffsets(globalTestSpaceOffsets, *bilinearForm.getTestSpaces());
     computeOffsets(globalSolutionSpaceOffsets,
                    *bilinearForm.getSolutionSpaces());
 
     // Create and fill vector with offsets for local dofs on element
-    size_t localTestSpaceOffsets[std::tuple_size<EnrichedTestspaces>::value];
-    size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    std::array<size_t,std::tuple_size<EnrichedTestspaces>::value>
+        localTestSpaceOffsets;
+    std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+        localSolutionSpaceOffsets;
 
     const size_t localSolutionDofs
         = computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);

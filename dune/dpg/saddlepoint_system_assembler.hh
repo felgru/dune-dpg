@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_SADDLEPOINT_SYSTEM_ASSEMBLER_HH
 #define DUNE_DPG_SADDLEPOINT_SYSTEM_ASSEMBLER_HH
 
+#include <array>
 #include <list>
 #include <map>
 #include <memory>
@@ -300,8 +301,10 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   const auto gridView = std::get<0>(*testSpaces).gridView();
 
   /* set up global offsets */
-  size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+  std::array<size_t,std::tuple_size<TestSpaces>::value>
+      globalTestSpaceOffsets;
+  std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+      globalSolutionSpaceOffsets;
   const size_t globalTotalTestSize = computeOffsets(globalTestSpaceOffsets,
                                                     *testSpaces);
 
@@ -393,7 +396,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   const auto gridView = std::get<0>(*spaces).gridView();
 
   /* set up global offsets */
-  size_t globalSpaceOffsets[std::tuple_size<Spaces>::value];
+  std::array<size_t,std::tuple_size<Spaces>::value> globalSpaceOffsets;
   const size_t globalTotalSpaceSize =
       computeOffsets(globalSpaceOffsets, *spaces);
 

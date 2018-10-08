@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_ASSEMBLE_HELPER_HH
 #define DUNE_DPG_ASSEMBLE_HELPER_HH
 
+#include <array>
 #include <memory>
 #include <utility>
 #include <tuple>
@@ -101,8 +102,7 @@ template <class MatrixType,
 struct getLocalMatrixHelper
 {
   template<class T, class Tuple>
-  using array_of_same_size =
-      T[std::tuple_size<Tuple>::value];
+  using array_of_same_size = std::array<T,std::tuple_size<Tuple>::value>;
 
   //! tuple type for the local views of the test spaces
   using LhsLocalViews = getLocalViews_t<LhsSpaces>;
@@ -167,8 +167,7 @@ template <class VectorType,
 struct getLocalVectorHelper
 {
   template<class T, class Tuple>
-  using array_of_same_size =
-      T[std::tuple_size<Tuple>::value];
+  using array_of_same_size = std::array<T,std::tuple_size<Tuple>::value>;
 
   //! tuple type for the local views of the test spaces
   using TestLocalViews = getLocalViews_t<TestSpaces>;
@@ -213,7 +212,7 @@ template <class TestLocalIndexSets,
 struct getOccupationPatternHelper
 {
   template<class T, class Tuple>
-  using array_of_same_size = T[std::tuple_size<Tuple>::value];
+  using array_of_same_size = std::array<T,std::tuple_size<Tuple>::value>;
 
   getOccupationPatternHelper(
       const TestLocalIndexSets& testLocalIndexSets,

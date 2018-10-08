@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_LINEARFORM_HH
 #define DUNE_DPG_LINEARFORM_HH
 
+#include <array>
 #include <tuple>
 #include <vector>
 #include <memory>
@@ -86,27 +87,23 @@ namespace Dune {
      */
     void bind(LocalViews& lv)
     {
+      localViews = std::addressof(lv);
+
+      const auto e = std::get<0>(lv).element();
+      Hybrid::forEach(terms, [&](auto& t) { t.term.bind(e); });
+
       constexpr bool usesOptimalTestBasis =
             is_OptimalTestSpace<
                 typename std::tuple_element<std::tuple_size<Spaces>::value-1,
                                             Spaces>::type
             >::value;
 
-      localViews = std::addressof(lv);
-
-      const auto& e = std::get<0>(lv).element();
-      Hybrid::forEach(terms, [&](auto& t) { t.term.bind(e); });
-
-      constexpr size_t size = std::tuple_size<LocalViews>::value;
-
       /* set up local offsets */
       if(!usesOptimalTestBasis) {
         localTotalSpaceSize = detail::computeOffsets(localSpaceOffsets, lv);
       } else { /* DPG formulation */
-        for(size_t i=0; i<size; ++i)
-        {
-          localSpaceOffsets[i] = 0;
-        }
+        localSpaceOffsets.fill(0);
+        constexpr size_t size = std::tuple_size<LocalViews>::value;
         localTotalSpaceSize = std::get<size-1>(lv).size();
       }
     }
@@ -125,7 +122,7 @@ namespace Dune {
       return terms;
     }
 
-    using SpaceIndexArray = size_t[std::tuple_size<Spaces>::value];
+    using SpaceIndexArray = std::array<size_t,std::tuple_size<Spaces>::value>;
 
     /**
      * \brief Does exactly what it says on the tin.
@@ -137,7 +134,7 @@ namespace Dune {
     SpacesPtr    spaces;
     LinearTerms  terms;
 
-    size_t localSpaceOffsets[std::tuple_size<Spaces>::value];
+    std::array<size_t,std::tuple_size<Spaces>::value> localSpaceOffsets;
     size_t localTotalSpaceSize;
 
     LocalViews* localViews;

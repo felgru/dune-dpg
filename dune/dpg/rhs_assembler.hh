@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_RHS_ASSEMBLER_HH
 #define DUNE_DPG_RHS_ASSEMBLER_HH
 
+#include <array>
 #include <list>
 #include <map>
 #include <memory>
@@ -111,7 +112,7 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   GridView gridView = std::get<0>(*testSpaces).gridView();
 
   /* set up global offsets */
-  size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
+  std::array<size_t,std::tuple_size<TestSpaces>::value> globalTestSpaceOffsets;
   const size_t globalTotalTestSize =
       computeOffsets(globalTestSpaceOffsets, *testSpaces);
 

@@ -3,6 +3,7 @@
 #ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_OPTIMALTESTBASIS_HH
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_OPTIMALTESTBASIS_HH
 
+#include <array>
 #include <tuple>
 #include <memory>
 #include <type_traits>
@@ -200,7 +201,7 @@ public:
   // TODO: store testspaceCoefficientMatrix_ by reference or by value?
   TestspaceCoefficientMatrix& testspaceCoefficientMatrix_;
 
-  size_t globalOffsets[std::tuple_size<SolutionSpaces>::value];
+  std::array<size_t,std::tuple_size<SolutionSpaces>::value> globalOffsets;
 
 };
 

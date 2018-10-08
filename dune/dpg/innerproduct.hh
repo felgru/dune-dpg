@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_INNERPRODUCT_HH
 #define DUNE_DPG_INNERPRODUCT_HH
 
+#include <array>
 #include <tuple>
 #include <vector>
 #include <memory>
@@ -126,7 +127,8 @@ namespace Dune {
   private:
     TestSpacesPtr         testSpaces;
     InnerProductTerms     terms;
-    size_t localTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
+    std::array<size_t,std::tuple_size<TestSpaces>::value>
+        localTestSpaceOffsets;
     size_t localTotalTestSize;
     TestLocalViews* testLocalViews;
   };
@@ -161,7 +163,7 @@ getOccupationPattern(MatrixIndexSet& nb) const
   using namespace Dune::detail;
 
   /* set up global offsets */
-  size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
+  std::array<size_t,std::tuple_size<TestSpaces>::value> globalTestSpaceOffsets;
   computeOffsets(globalTestSpaceOffsets, *testSpaces);
 
   auto testLocalViews     = getLocalViews(*testSpaces);

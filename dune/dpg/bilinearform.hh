@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_BILINEARFORM_HH
 #define DUNE_DPG_BILINEARFORM_HH
 
+#include <array>
 #include <tuple>
 #include <vector>
 #include <memory>
@@ -155,9 +156,10 @@ namespace Dune {
       return terms;
     }
 
-    using TestSpaceIndexArray = size_t[std::tuple_size<TestSpaces>::value];
+    using TestSpaceIndexArray
+        = std::array<size_t,std::tuple_size<TestSpaces>::value>;
     using SolutionSpaceIndexArray
-        = size_t[std::tuple_size<SolutionSpaces>::value];
+        = std::array<size_t,std::tuple_size<SolutionSpaces>::value>;
 
     /**
      * \brief Does exactly what it says on the tin.
@@ -176,8 +178,10 @@ namespace Dune {
     SolutionSpacesPtr solutionSpaces;
     BilinearTerms     terms;
 
-    size_t localTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-    size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    std::array<size_t,std::tuple_size<TestSpaces>::value>
+        localTestSpaceOffsets;
+    std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+        localSolutionSpaceOffsets;
     size_t localTotalTestSize,
            localTotalSolutionSize;
 
@@ -228,8 +232,10 @@ getOccupationPattern(MatrixIndexSet& nb,
   using namespace Dune::detail;
 
   /* set up global offsets */
-  size_t globalTestSpaceOffsets[std::tuple_size<TestSpaces>::value];
-  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+  std::array<size_t,std::tuple_size<TestSpaces>::value>
+      globalTestSpaceOffsets;
+  std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+      globalSolutionSpaceOffsets;
   computeOffsets(globalTestSpaceOffsets, *testSpaces, testShift);
   computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces, solutionShift);
 

@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_SYSTEM_ASSEMBLER_DPG_HH
 #define DUNE_DPG_SYSTEM_ASSEMBLER_DPG_HH
 
+#include <array>
 #include <iterator>
 #include <list>
 #include <map>
@@ -361,7 +362,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
   const auto gridView = std::get<0>(*testSearchSpaces_).gridView();
 
   /* set up global offsets */
-  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+  std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+      globalSolutionSpaceOffsets;
 
   const size_t globalTotalSolutionSize =
       computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces_);
@@ -408,7 +410,8 @@ assembleSystem(BCRSMatrix<FieldMatrix<double,1,1> >& matrix,
 
     bindLocalViews(solutionLocalViews, e);
 
-    size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+        localSolutionSpaceOffsets;
     computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
 
     // compute the coefficient matrix C for the optimal test space
@@ -478,7 +481,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
   const auto gridView = std::get<0>(*testSearchSpaces_).gridView();
 
   /* set up global offsets */
-  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+  std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+      globalSolutionSpaceOffsets;
 
   const size_t globalTotalSolutionSize =
       computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces_);
@@ -523,7 +527,8 @@ assembleMatrix(BCRSMatrix<FieldMatrix<double,1,1> >& matrix)
     const Matrix<FieldMatrix<double,1,1> >& elementMatrix
         = testspaceCoefficientMatrix_.systemMatrix();
 
-    size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+        localSolutionSpaceOffsets;
     computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
 
     // Add element stiffness matrix onto the global stiffness matrix
@@ -553,7 +558,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
   const auto gridView = std::get<0>(*testSearchSpaces_).gridView();
 
   /* set up global offsets */
-  size_t globalSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+  std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+      globalSolutionSpaceOffsets;
 
   const size_t globalTotalSolutionSize =
       computeOffsets(globalSolutionSpaceOffsets, *solutionSpaces_);
@@ -573,7 +579,8 @@ assembleRhs(BlockVector<FieldVector<double,1> >& rhs,
 
     bindLocalViews(solutionLocalViews, e);
 
-    size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+    std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+        localSolutionSpaceOffsets;
     computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
 
     // compute the coefficient matrix C for the optimal test space
@@ -1163,7 +1170,8 @@ applyMinimization
   //const size_t globalOffset = computeOffset<spaceIndex>(*solutionSpaces_);
   const size_t globalOffset = 0;
 
-  size_t localSolutionSpaceOffsets[std::tuple_size<SolutionSpaces>::value];
+  std::array<size_t,std::tuple_size<SolutionSpaces>::value>
+      localSolutionSpaceOffsets;
 
   // get local view for solution space
   // (necessary if we want to use inner product) // TODO inefficient (why?)
