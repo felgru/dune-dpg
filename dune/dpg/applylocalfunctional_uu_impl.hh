@@ -215,20 +215,17 @@ faceImpl(const TestLocalView& testLocalView,
                faceComputations.unitOuterNormal();
 
         int sign = 1;
-        bool signfound = false;
-        for (unsigned int i=0;
-           i<centerOuterNormal.size() and signfound == false;
-           i++)
+        for (const auto& component : centerOuterNormal)
         {
-          if (centerOuterNormal[i]<(-1e-10))
+          if (component < -1e-10)
           {
             sign = -1;
-            signfound = true;
+            break;
           }
-          else if (centerOuterNormal[i]>(1e-10))
+          else if (component > 1e-10)
           {
             sign = 1;
-            signfound = true;
+            break;
           }
         }
 
