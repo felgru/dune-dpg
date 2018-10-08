@@ -44,7 +44,7 @@ VectorType interpolateToUniformlyRefinedGrid(
 
     for (size_t i=0, nCoarse=coarseLocalView.size(); i<nCoarse; i++)
     {
-      auto row = coarseLocalView.index(i)[0];
+      const auto row = coarseLocalView.index(i)[0];
       local_v_coarse[i] = v_coarse[row];
     }
 
@@ -63,7 +63,7 @@ VectorType interpolateToUniformlyRefinedGrid(
     {
       fineLocalView.bind(subE);
 
-      auto globalSubGeometry = subE.geometry();
+      const auto globalSubGeometry = subE.geometry();
 
       // TODO: replace double with correct typedef
       const AffineGeometry<double, dim, dim> subGeometry
