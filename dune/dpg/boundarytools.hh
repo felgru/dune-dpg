@@ -230,7 +230,7 @@ namespace Dune {
 
         },
         [](size_type) {},
-        [&](size_type i, MultiIndex gi, double wi) {
+        [&](size_type i, MultiIndex gi, double /* wi */) {
           unsigned int dofOnInflowBoundary = 0;
 
           // localkey of dof i
@@ -249,7 +249,7 @@ namespace Dune {
             dofOnInflowBoundary = vertexOnInflowBoundary[dofIndex];
           }
 
-          dirichletNodesInt[ gi[0] ] += wi * dofOnInflowBoundary;
+          dirichletNodesInt[ gi[0] ] += dofOnInflowBoundary;
         });
 
     } // end element e
@@ -352,7 +352,7 @@ namespace Dune {
           dirichletNodesInt[ gi[0] ] += dofOnBoundary;
         },
         [](size_type) {},
-        [&](size_type i, MultiIndex gi, double wi) {
+        [&](size_type i, MultiIndex gi, double /* wi */) {
           unsigned int dofOnBoundary = 0;
 
           // localkey of dof i
