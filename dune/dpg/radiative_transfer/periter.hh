@@ -690,16 +690,16 @@ class PeriterPlotter {
       std::cout << "Plot solution for direction " << i << '\n';
 
       std::string name = outputfolder
-                        + "/u_rad_trans_n"
+                        + std::string("/u_rad_trans_n")
                         + std::to_string(n)
-                        + "_s"
+                        + std::string("_s")
                         + std::to_string(i);
       FunctionPlotter uPlotter(name);
       uPlotter.plot("u", x, feBasisInterior, 0, 0);
       name = outputfolder
-                        + "/theta_rad_trans_n"
+                        + std::string("/theta_rad_trans_n")
                         + std::to_string(n)
-                        + "_s"
+                        + std::string("_s")
                         + std::to_string(i);
       FunctionPlotter thetaPlotter(name);
       thetaPlotter.plot("theta", x, feBasisTrace, 2,
@@ -722,9 +722,9 @@ class PeriterPlotter {
         std::cout << "Direction " << i << '\n';
 
         std::string name = outputfolder
-                        + "/scattering_n"
+                        + std::string("/scattering_n")
                         + std::to_string(n)
-                        + "_s"
+                        + std::string("_s")
                         + std::to_string(i);
         FunctionPlotter scatteringPlotter(name);
         scatteringPlotter.plot("scattering", scattering[i],
@@ -758,7 +758,7 @@ class PeriterPlotter {
       }
 
       std::string name = outputfolder
-                      + "/integrated_solution_n"
+                      + std::string("/integrated_solution_n")
                       + std::to_string(n);
       FunctionPlotter scatteringPlotter(name);
       scatteringPlotter.plot("integrated solution", integratedSolution,

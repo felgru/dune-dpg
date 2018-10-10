@@ -13,7 +13,6 @@
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
-#include <string>
 #include <type_traits>
 
 namespace Dune {
