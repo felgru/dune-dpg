@@ -56,10 +56,9 @@ namespace ScatteringKernelApproximation {
       quadWeight.resize(quad.size());
 
       for ( size_t iQuad=0; iQuad < quad.size(); iQuad++ ) {
-        quadPos(iQuad)=quad[iQuad].position()*(xmax-xmin)+xmin;
+        quadPos(iQuad) = quad[iQuad].position()*(xmax-xmin)+xmin;
         quadWeight(iQuad) = quad[iQuad].weight()*(xmax-xmin);
       }
-      return;
     }
 
     Eigen::VectorXd getLagrangePoly(const Eigen::VectorXd& quadPos,
@@ -170,10 +169,11 @@ namespace ScatteringKernelApproximation {
     {
       Eigen::VectorXd f_ortho=f;
       for(size_t l=0; l<L; l++){
-        Eigen::VectorXd legendrePolyNormalized
+        const Eigen::VectorXd legendrePolyNormalized
           = getLegendrePoly(quadPos,l)
-          /l2norm(getLegendrePoly(quadPos,l),quadWeight,xmin,xmax);
-        f_ortho-=ip(f,legendrePolyNormalized,quadWeight,xmin,xmax)*legendrePolyNormalized;
+          / l2norm(getLegendrePoly(quadPos,l),quadWeight,xmin,xmax);
+        f_ortho -= ip(f,legendrePolyNormalized,quadWeight,xmin,xmax)
+                   * legendrePolyNormalized;
       }
       f_ortho /= l2norm(f_ortho,quadWeight,xmin,xmax);
       f = std::move(f_ortho);
@@ -1279,8 +1279,10 @@ namespace ScatteringKernelApproximation {
         const double quadweight = quadweighty * quadweightx;
         double eval = 0.;
         for(size_t i = 0; i < nquadx; i++) {
+          // TODO: shouldn't that be i/nquadx?
           const double s_i = i*nquadx*2*boost::math::constants::pi<double>();
           for(size_t j = 0; j < nquady; j++) {
+          // TODO: shouldn't that be i/nquady?
             const double s_j = j*nquady*2*boost::math::constants::pi<double>();
             // Integral over [-pi,pi]x[-pi,pi]
             eval += kernelFunction(s_i - s_j)
@@ -1294,7 +1296,7 @@ namespace ScatteringKernelApproximation {
           size_t jx, size_t kx, double r, size_t maxLevel) {
         const double xmin = r *   kx   * std::exp2(-(double)jx+1) - r;
         const double xmax = r * (kx+1) * std::exp2(-(double)jx+1) - r;
-        size_t nquad = 1 << (maxLevel - jx);
+        const size_t nquad = 1 << (maxLevel - jx);
         Eigen::VectorXd x(nquad);
         for(size_t i=0; i < nquad; i++) {
           x[i] = xmin + (2*i+1)/(2.*nquad) * (xmax - xmin);
@@ -1317,10 +1319,11 @@ namespace ScatteringKernelApproximation {
           }
           data.head(2*len) = tmp.head(2*len);
         }
-        double scaling_factor = sqrt(2*boost::math::constants::pi<double>());
+        double scaling_factor
+            = std::sqrt(2*boost::math::constants::pi<double>());
         data.segment(0, 1) *= scaling_factor;
         for(size_t len=1, max_len=data.size()>>1; len < max_len; len <<=1) {
-          scaling_factor /= sqrt(2);
+          scaling_factor /= std::sqrt(2);
           data.segment(len, len) *= scaling_factor;
         }
       }
@@ -1330,10 +1333,11 @@ namespace ScatteringKernelApproximation {
       // for a natural number n.
       void IDWT(Eigen::VectorXd& data) {
         Eigen::VectorXd tmp(data.size());
-        double scaling_factor = 1./sqrt(2*boost::math::constants::pi<double>());
+        double scaling_factor
+            = 1./std::sqrt(2*boost::math::constants::pi<double>());
         data.segment(0, 1) *= scaling_factor;
         for(size_t len=1, max_len=data.size()>>1; len < max_len; len <<=1) {
-          scaling_factor *= sqrt(2);
+          scaling_factor *= std::sqrt(2);
           data.segment(len, len) *= scaling_factor;
         }
         const size_t max_len = data.size();
