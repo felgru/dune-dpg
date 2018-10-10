@@ -391,11 +391,8 @@ namespace ScatteringKernelApproximation {
         size_t quadOrder)
     {
       if(J==0){
-        std::vector<Eigen::VectorXd> w(1);
-        w[0]=data;
-        return std::make_pair(data,std::vector<Eigen::VectorXd>());
-      }
-      else{
+        return {data, {}};
+      } else {
         // Initializations
         std::vector<Eigen::VectorXd> w(J);
         Eigen::VectorXd c0(L);
@@ -417,7 +414,7 @@ namespace ScatteringKernelApproximation {
 
           }
         }
-        return std::make_pair(s,w);
+        return {s, w};
       }
     }
 
@@ -846,7 +843,7 @@ namespace ScatteringKernelApproximation {
         static std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
         XdToPair(const Eigen::VectorXd& v) {
           if(v.size() == wltOrder + 1) {
-            return std::make_pair(v, std::vector<Eigen::VectorXd>());
+            return {v, {}};
           }
           else {
             Eigen::VectorXd sf = v.segment(0,wltOrder+1);
@@ -861,7 +858,7 @@ namespace ScatteringKernelApproximation {
               pos1 = pos0 + ((wltOrder+1)<<j);
               wlt[j] = v.segment(pos0, (wltOrder+1)<<j);
             }
-            return std::make_pair(sf,wlt);
+            return {sf, wlt};
           }
         }
 
@@ -1087,7 +1084,7 @@ namespace ScatteringKernelApproximation {
         std::pair<Eigen::VectorXd,std::vector<Eigen::VectorXd>>
         XdToPair(Eigen::VectorXd& v) const {
           if(level==0) {
-            return std::make_pair(v,std::vector<Eigen::VectorXd>());
+            return {v, {}};
           }
           else {
             Eigen::VectorXd sf = v.segment(0,wltOrder+1);
@@ -1101,7 +1098,7 @@ namespace ScatteringKernelApproximation {
               pos1 = pos0 + ((wltOrder+1)<<j);
               wlt[j] = v.segment(pos0, (wltOrder+1)<<j);
             }
-            return std::make_pair(sf,wlt);
+            return {sf, wlt};
           }
         }
 
@@ -1173,7 +1170,7 @@ namespace ScatteringKernelApproximation {
             levelsVector.segment(pos0,(wltOrder+1)<<j) *= j;
           }
 
-          return std::make_pair(levelsVector*ones.transpose(),ones*levelsVector.transpose());
+          return {levelsVector*ones.transpose(), ones*levelsVector.transpose()};
         }
 
 
