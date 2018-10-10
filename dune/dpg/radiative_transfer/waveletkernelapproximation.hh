@@ -139,29 +139,28 @@ namespace ScatteringKernelApproximation {
       return F_ortho;
     }
 
-    std::vector<Eigen::VectorXd> orthogonalize_wrt_high_order_monomials(
+    void orthogonalize_wrt_high_order_monomials(
       std::vector<Eigen::VectorXd>& F,
-      std::vector<Eigen::VectorXd>& P,
+      const std::vector<Eigen::VectorXd>& P,
       const Eigen::VectorXd& quadWeight,
       double xmin, double xmax)
     {
-      if(F.size()==1) return F;
-      else{
-        alpert_sort(F,P[0],quadWeight,xmin,xmax);
+      if(F.size()==1) return;
 
-        std::vector<Eigen::VectorXd> Fsubset(F.size()-1);
-        std::vector<Eigen::VectorXd> Psubset(F.size()-1);
-        for(size_t l=1;l<F.size();l++){
-          double c=ip(F[l],P[0],quadWeight,xmin,xmax)/ip(F[0],P[0],quadWeight,xmin,xmax);
-          Fsubset[l-1]=F[l]-c*F[0];
-          Psubset[l-1]=P[l];
-        }
-        Fsubset=orthogonalize_wrt_high_order_monomials(Fsubset,Psubset,quadWeight,xmin,xmax);
-        for(size_t l=1;l<F.size();l++){
-          F[l]=Fsubset[l-1];
-        }
-        return F;
+      alpert_sort(F,P[0],quadWeight,xmin,xmax);
+
+      std::vector<Eigen::VectorXd> Fsubset(F.size()-1);
+      std::vector<Eigen::VectorXd> Psubset(F.size()-1);
+      for(size_t l=1;l<F.size();l++){
+        const double c = ip(F[l],P[0],quadWeight,xmin,xmax)
+                       / ip(F[0],P[0],quadWeight,xmin,xmax);
+        Fsubset[l-1] = F[l]-c*F[0];
+        Psubset[l-1] = P[l];
       }
+      orthogonalize_wrt_high_order_monomials(
+          Fsubset,Psubset,quadWeight,xmin,xmax);
+
+      std::move(Fsubset.begin(), Fsubset.end(), F.begin() + 1);
     }
 
     Eigen::VectorXd orthogonalize_wrt_space_poly(
@@ -214,12 +213,12 @@ namespace ScatteringKernelApproximation {
       // Step 2: Transform [f_1^2,...,f_k^2] --> [f_1^2,...,f_k^{k+1}]
       // such that < f_j^{j+1},x^i >=0 for i <= j+k-2
       // Remark: To have wlt with a certain number of vanishing moments, this step is in theory not required. Alpert added it to make his construction unique. It is in theory not required. I did not observe any significant difference in the MRA of the kernel if it is not done.
-      std::vector<Eigen::VectorXd> F2=orthogonalize_wrt_high_order_monomials(F1,P_higher,quadWeight,xmin,xmax);
+      orthogonalize_wrt_high_order_monomials(F1,P_higher,quadWeight,xmin,xmax);
 
       // Step 3: Gram-Schmidt orthonormalization of F2.
-      std::reverse(F2.begin(),F2.end());
+      std::reverse(F1.begin(),F1.end());
 
-      return gram_schmidt(F2,quadWeight,xmin,xmax);
+      return gram_schmidt(F1,quadWeight,xmin,xmax);
     }
 
     std::vector<Eigen::MatrixXd> get_alpert_transform_matrices(
