@@ -126,16 +126,15 @@ namespace ScatteringKernelApproximation {
       const Eigen::VectorXd& quadWeight,
       double xmin, double xmax)
     {
-      std::vector<Eigen::VectorXd> F_ortho(F.size());
-      F_ortho[0]=F[0]/l2norm(F[0],quadWeight,xmin,xmax);
-      if(F.size()>1){
-        for(size_t i=1; i<F.size(); i++){
-          F_ortho[i]=F[i];
-          for(size_t j=0; j<i; j++){
-            F_ortho[i]-=ip(F_ortho[i],F_ortho[j],quadWeight,xmin,xmax)*F_ortho[j];
-          }
-          F_ortho[i]=F_ortho[i]/l2norm(F_ortho[i],quadWeight,xmin,xmax);
+      std::vector<Eigen::VectorXd> F_ortho;
+      F_ortho.reserve(F.size());
+      for(size_t i=0; i<F.size(); i++) {
+        Eigen::VectorXd ortho = F[i];
+        for(size_t j=0; j<i; j++) {
+          ortho -= ip(ortho,F_ortho[j],quadWeight,xmin,xmax) * F_ortho[j];
         }
+        ortho /= l2norm(ortho,quadWeight,xmin,xmax);
+        F_ortho.push_back(std::move(ortho));
       }
       return F_ortho;
     }
