@@ -66,11 +66,10 @@ namespace ScatteringKernelApproximation {
                                     const Eigen::VectorXd& xInterp,
                                     int index)
     {
-      Eigen::VectorXd P=Eigen::VectorXd::Ones(quadPos.size());
+      Eigen::VectorXd P = Eigen::VectorXd::Ones(quadPos.size());
       for(int i=0; i<xInterp.size(); i++){
         if(i==index) continue;
-        // else P = P*(quadPos-xInterp(i))/(xInterp(index)-xInterp(i));
-        else P = P.array()*(quadPos.array()-xInterp(i))/(xInterp(index)-xInterp(i));
+        P = P.array()*(quadPos.array()-xInterp(i))/(xInterp(index)-xInterp(i));
       }
       return P;
     }
@@ -79,23 +78,22 @@ namespace ScatteringKernelApproximation {
     Eigen::VectorXd getLegendrePoly(const Eigen::VectorXd& quadPos,
                                     const size_t degree)
     {
-      Eigen::VectorXd P=Eigen::VectorXd::Zero(quadPos.size());
+      Eigen::VectorXd P;
 
-      if(degree==0) P=Eigen::VectorXd::Ones(quadPos.size());
-      else{
-        if(degree==1) P=quadPos;
-        else{
-          Eigen::VectorXd P_pp=Eigen::VectorXd::Ones(quadPos.size());
-          Eigen::VectorXd P_p=quadPos;
+      if(degree==0) P = Eigen::VectorXd::Ones(quadPos.size());
+      else if(degree==1) P = quadPos;
+      else {
+        P = Eigen::VectorXd::Zero(quadPos.size());
+        Eigen::VectorXd P_pp = Eigen::VectorXd::Ones(quadPos.size());
+        Eigen::VectorXd P_p = quadPos;
 
-          for(size_t deg=2; deg<=degree; deg++){
-            P=((2*deg-1)*quadPos.array()*P_p.array()-(deg-1)*P_pp.array())/deg;
-            P_pp= P_p;
-            P_p= P;
-          }
+        for(size_t deg=2; deg<=degree; deg++) {
+          P = ((2*deg-1)*quadPos.array()*P_p.array()-(deg-1)*P_pp.array())/deg;
+          P_pp = P_p;
+          P_p = P;
         }
       }
-      double l2NormP=std::sqrt(2./(2.*degree+1.));
+      const double l2NormP = std::sqrt(2./(2.*degree+1.));
       return P/l2NormP;
     }
 
@@ -1139,11 +1137,9 @@ namespace ScatteringKernelApproximation {
 
                   if(ymax < xmin)
                     d = (xmin-ymax < 2*r+ymin-xmax) ? (xmin-ymax) : (2*r+ymin-xmax);
-                  else{
-                    if(xmax < ymin)
-                      d = (ymin-xmax < 2*r+xmin-ymax) ? (ymin-xmax) : (2*r+xmin-ymax);
-                    else d=0.; //( (xmax <= ymax and xmax>=ymin) || (xmin<=ymax and xmin>=ymin) )
-                  }
+                  else if(xmax < ymin)
+                    d = (ymin-xmax < 2*r+xmin-ymax) ? (ymin-xmax) : (2*r+xmin-ymax);
+                  else d=0.; //( (xmax <= ymax and xmax>=ymin) || (xmin<=ymax and xmin>=ymin) )
 
                   for(size_t ly = 0; ly < wltOrder+1; ly++) {
                     for(size_t lx = 0; lx < wltOrder+1; lx++) {
