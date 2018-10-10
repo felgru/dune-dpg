@@ -397,7 +397,6 @@ namespace ScatteringKernelApproximation {
       }
       else{
         // Initializations
-        std::vector<Eigen::VectorXd> s(J+1); s[J]=data;
         std::vector<Eigen::VectorXd> w(J);
         Eigen::VectorXd c0(L);
         Eigen::VectorXd c1(L);
@@ -405,18 +404,20 @@ namespace ScatteringKernelApproximation {
         const std::vector<Eigen::MatrixXd> elem_matrix
                 = get_alpert_transform_matrices(L,quadOrder);
 
-        for(int j=J-1; j>=0; j--){
-          s[j].resize(L*(1 << j));
-          w[j].resize(L*(1 << j));
-          for(int k=0, kmax=(1<<j); k<kmax; k++){
-            c0=s[j+1].segment(L*2*k,L);
-            c1=s[j+1].segment(L*(2*k+1),L);
-            s[j].segment(k*L,L)=elem_matrix[0]*c0+elem_matrix[1]*c1;
-            w[j].segment(k*L,L)=elem_matrix[2]*c0+elem_matrix[3]*c1;
+        Eigen::VectorXd s = data;
+        for(int j=J-1; j>=0; j--) {
+          const Eigen::VectorXd sPrev = std::move(s);
+          s = Eigen::VectorXd(L*(1 << j));
+          w[j].resize(s.size());
+          for(int k=0, kmax=(1<<j); k<kmax; k++) {
+            c0 = sPrev.segment(L*2*k,L);
+            c1 = sPrev.segment(L*(2*k+1),L);
+            s.segment(k*L,L)    = elem_matrix[0]*c0+elem_matrix[1]*c1;
+            w[j].segment(k*L,L) = elem_matrix[2]*c0+elem_matrix[3]*c1;
 
           }
         }
-        return std::make_pair(s[0],w);
+        return std::make_pair(s,w);
       }
     }
 
@@ -430,29 +431,29 @@ namespace ScatteringKernelApproximation {
          size_t quadOrder)
     {
       // Get elementary wavelet transform matrices
-      std::vector<Eigen::MatrixXd>
+      const std::vector<Eigen::MatrixXd>
         elem_matrix = get_alpert_transform_matrices(L,quadOrder);
-      std::vector<Eigen::VectorXd> s(J+1);
-      s[0]=w.first;
+      Eigen::VectorXd s = w.first;
       for(size_t j=1; j<=J; j++) {
-        s[j].resize(L*(1 << j));
+        const Eigen::VectorXd sPrev = std::move(s);
+        s = Eigen::VectorXd(L*(1 << j));
         Eigen::VectorXd stmp(L);
         Eigen::VectorXd wtmp(L);
         for(int k=0, kmax=(1 << j); k<kmax; k++){
           const int kdiv2 = k/2;
           const int kmod2 = k%2;
-          stmp=s[j-1].segment(L*kdiv2,L);
-          wtmp=w.second[j-1].segment(L*kdiv2,L);
+          stmp = sPrev.segment(L*kdiv2,L);
+          wtmp = w.second[j-1].segment(L*kdiv2,L);
           if(kmod2==0) {
-            s[j].segment(L*k,L)=elem_matrix[0].transpose()*stmp
-                                +elem_matrix[2].transpose()*wtmp;
+            s.segment(L*k,L) = elem_matrix[0].transpose()*stmp
+                             + elem_matrix[2].transpose()*wtmp;
           } else {
-            s[j].segment(L*k,L)=elem_matrix[1].transpose()*stmp
-                                +elem_matrix[3].transpose()*wtmp;
+            s.segment(L*k,L) = elem_matrix[1].transpose()*stmp
+                             + elem_matrix[3].transpose()*wtmp;
           }
         }
       }
-      return s[J];
+      return s;
     }
 
     template<class Function>
