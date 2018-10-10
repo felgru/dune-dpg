@@ -25,27 +25,6 @@ namespace ScatteringKernelApproximation {
 
   namespace AlpertWavelet {
 
-    void add(Eigen::VectorXd& target,
-             const Eigen::VectorXd& data,
-             const int pos0)
-    {
-      for(int i=0; i<data.size(); i++){
-        target(pos0+i)=data(i);
-      }
-    }
-
-    Eigen::VectorXd extract(const Eigen::VectorXd& data,
-                            size_t pos0,
-                            size_t pos1)
-    {
-      Eigen::VectorXd result(pos1-pos0);
-      for (size_t i = pos0; i < pos1; i++)
-      {
-          result(i-pos0) = data(i);
-      }
-      return result;
-    }
-
     double ip(const Eigen::VectorXd& f,
               const Eigen::VectorXd& g,
               const Eigen::VectorXd& quadWeight,
