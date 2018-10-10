@@ -161,8 +161,8 @@ namespace ScatteringKernelApproximation {
       std::move(Fsubset.begin(), Fsubset.end(), F.begin() + 1);
     }
 
-    Eigen::VectorXd orthogonalize_wrt_space_poly(
-      const Eigen::VectorXd& f,
+    void orthogonalize_wrt_space_poly(
+      Eigen::VectorXd& f,
       size_t L,
       const Eigen::VectorXd& quadPos,
       const Eigen::VectorXd& quadWeight,
@@ -175,7 +175,8 @@ namespace ScatteringKernelApproximation {
           /l2norm(getLegendrePoly(quadPos,l),quadWeight,xmin,xmax);
         f_ortho-=ip(f,legendrePolyNormalized,quadWeight,xmin,xmax)*legendrePolyNormalized;
       }
-      return f_ortho/l2norm(f_ortho,quadWeight,xmin,xmax);
+      f_ortho /= l2norm(f_ortho,quadWeight,xmin,xmax);
+      f = std::move(f_ortho);
     }
 
     // Computes Alpert wlt with L vanishing moments in the interval [xmin,xmax]
@@ -202,21 +203,21 @@ namespace ScatteringKernelApproximation {
       }
 
       // Step 1: Orthogonalize [f_1^1,...,f_k^1] wrt P=[1,x,..,x^{k-1}].
-      // This yields [f_1^2,...,f_k^2] (store in F1)
-      std::vector<Eigen::VectorXd> F1(L);
-      for(size_t l=0; l<L; l++){
-        F1[l]= orthogonalize_wrt_space_poly(F[l],L,quadPos,quadWeight,xmin,xmax);
-      }
+      // This yields [f_1^2,...,f_k^2] (overwriting F)
+      std::for_each(F.begin(), F.end(),
+          [&](Eigen::VectorXd& Fl) {
+            orthogonalize_wrt_space_poly(Fl,L,quadPos,quadWeight,xmin,xmax);
+          });
 
       // Step 2: Transform [f_1^2,...,f_k^2] --> [f_1^2,...,f_k^{k+1}]
       // such that < f_j^{j+1},x^i >=0 for i <= j+k-2
       // Remark: To have wlt with a certain number of vanishing moments, this step is in theory not required. Alpert added it to make his construction unique. It is in theory not required. I did not observe any significant difference in the MRA of the kernel if it is not done.
-      orthogonalize_wrt_high_order_monomials(F1,P_higher,quadWeight,xmin,xmax);
+      orthogonalize_wrt_high_order_monomials(F,P_higher,quadWeight,xmin,xmax);
 
-      // Step 3: Gram-Schmidt orthonormalization of F2.
-      std::reverse(F1.begin(),F1.end());
+      // Step 3: Gram-Schmidt orthonormalization of F.
+      std::reverse(F.begin(),F.end());
 
-      return gram_schmidt(F1,quadWeight,xmin,xmax);
+      return gram_schmidt(F,quadWeight,xmin,xmax);
     }
 
     std::vector<Eigen::MatrixXd> get_alpert_transform_matrices(
