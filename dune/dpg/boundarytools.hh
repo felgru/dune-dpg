@@ -137,14 +137,14 @@ namespace Dune {
     const size_t dofs = feBasis.size();
 
     dirichletNodes.resize(dofs);
-    std::vector<unsigned int> dirichletNodesInt(dofs,0);
+    std::vector<unsigned char> dirichletNodesInt(dofs,0);
 
     auto localView = feBasis.localView();
     using LocalView = decltype(localView);
 
     auto localBeta = localFunction(beta);
 
-    for(const auto& e : elements(gridView))
+    for(const auto e : elements(gridView))
     {
       localBeta.bind(e);
       const auto betaAtElementCenter
@@ -159,47 +159,43 @@ namespace Dune {
 
       // For every vertex, we have to see whether it is on the inflow boundary.
       // If vertex i is on the inflow boundary, we will have vertexOnInflowBoundary[i] >0.
-      std::vector<unsigned int> vertexOnInflowBoundary(nVertex,0);
+      std::vector<unsigned char> vertexOnInflowBoundary(nVertex,0);
 
       // for all intersections, we see which one lies on the inflow boundary
       // if intersection i lies on the inflow boundary, then faceOnInflowBoundary[i]=true
       // we will assume that an intersection is simply a face for us
 
 
-      std::vector<unsigned int> faceOnInflowBoundary(nFace,0);
+      std::vector<unsigned char> faceOnInflowBoundary(nFace,0);
 
       for (auto&& intersection : intersections(gridView, e))
       {
-        // Local index of the intersection
-        const unsigned int indexIntersection = intersection.indexInInside();
-
-        // outer normal vector in the center of the face
-        const FieldVector<double,dim>& centerOuterNormal =
-               intersection.centerUnitOuterNormal();
-
         // n.beta
-        const double scalarProd = centerOuterNormal * betaAtElementCenter;
+        const double scalarProd = intersection.centerUnitOuterNormal()
+                                * betaAtElementCenter;
 
         // We see whether we are on the inflow boundary
         const double tolerance = -1e-8 * betaAtElementCenter.two_norm();
         const bool isOnInflowBoundary = (scalarProd < tolerance)
                                         && intersection.boundary();
 
-        // We store this information in faceOnInflowBoundary
-        faceOnInflowBoundary[indexIntersection] = isOnInflowBoundary;
-
+        if(!isOnInflowBoundary) continue;
         // if the intersection is on the inflow boundary, we have to update
         // what are the local vertices that are also on the inflow boundary
-        if(isOnInflowBoundary)
-        {
-          // We see what are the vertices associated to the current
-          // intersection (assumed to be a face)
-          std::array<unsigned int, 2> vertexOfIntersection
-              = getVerticesOfIntersection(indexIntersection, e.type());
 
-          vertexOnInflowBoundary[ vertexOfIntersection[0] ] += 1;
-          vertexOnInflowBoundary[ vertexOfIntersection[1] ] += 1;
-        }
+        // Local index of the intersection
+        const unsigned int indexIntersection = intersection.indexInInside();
+
+        // We store this information in faceOnInflowBoundary
+        faceOnInflowBoundary[indexIntersection] = true;
+
+        // We see what are the vertices associated to the current
+        // intersection (assumed to be a face)
+        std::array<unsigned int, 2> vertexOfIntersection
+            = getVerticesOfIntersection(indexIntersection, e.type());
+
+        vertexOnInflowBoundary[ vertexOfIntersection[0] ] += 1;
+        vertexOnInflowBoundary[ vertexOfIntersection[1] ] += 1;
       }
 
       // For each dof, we check whether it belongs to the inflow boundary
@@ -208,8 +204,6 @@ namespace Dune {
       iterateOverLocalIndices(localView,
         [&](size_type i, MultiIndex gi)
         {
-          unsigned int dofOnInflowBoundary = 0;
-
           // localkey of dof i
           const auto& dofLocalKey = localFE.localCoefficients().localKey(i);
 
@@ -217,6 +211,7 @@ namespace Dune {
           const unsigned int dofCodim = dofLocalKey.codim();
           const unsigned int dofIndex = dofLocalKey.subEntity();
 
+          unsigned char dofOnInflowBoundary = 0;
           if(dofCodim == 1) //the dof belongs to a face
           {
             dofOnInflowBoundary = faceOnInflowBoundary[dofIndex];
@@ -230,9 +225,7 @@ namespace Dune {
 
         },
         [](size_type) {},
-        [&](size_type i, MultiIndex gi, double wi) {
-          unsigned int dofOnInflowBoundary = 0;
-
+        [&](size_type i, MultiIndex gi, double /* wi */) {
           // localkey of dof i
           const auto& dofLocalKey = localFE.localCoefficients().localKey(i);
 
@@ -240,6 +233,7 @@ namespace Dune {
           const unsigned int dofCodim = dofLocalKey.codim();
           const unsigned int dofIndex = dofLocalKey.subEntity();
 
+          unsigned char dofOnInflowBoundary = 0;
           if(dofCodim == 1) //the dof belongs to a face
           {
             dofOnInflowBoundary = faceOnInflowBoundary[dofIndex];
@@ -249,7 +243,7 @@ namespace Dune {
             dofOnInflowBoundary = vertexOnInflowBoundary[dofIndex];
           }
 
-          dirichletNodesInt[ gi[0] ] += wi * dofOnInflowBoundary;
+          dirichletNodesInt[ gi[0] ] += dofOnInflowBoundary;
         });
 
     } // end element e
@@ -279,12 +273,12 @@ namespace Dune {
     const size_t dofs = feBasis.size();
 
     dirichletNodes.resize(dofs);
-    std::vector<unsigned int> dirichletNodesInt(dofs,0);
+    std::vector<unsigned char> dirichletNodesInt(dofs,0);
 
     auto localView = feBasis.localView();
     using LocalView = decltype(localView);
 
-    for(const auto& e : elements(gridView))
+    for(const auto e : elements(gridView))
     {
       localView.bind(e);
       const auto& localFE = localView.tree().finiteElement();
@@ -296,33 +290,31 @@ namespace Dune {
 
       // For every vertex, we have to see whether it is on the boundary.
       // If vertex i is on the boundary, we will have vertexOnBoundary[i] > 0.
-      std::vector<unsigned int> vertexOnBoundary(nVertex, 0);
+      std::vector<unsigned char> vertexOnBoundary(nVertex, 0);
 
       // for all intersections, we see which one lies on the boundary
       // if intersection i lies on the boundary, then faceOnBoundary[i] == true
       // we will assume that an intersection is simply a face for us
-      std::vector<unsigned int> faceOnBoundary(nFace, 0);
+      std::vector<unsigned char> faceOnBoundary(nFace, 0);
 
       for (auto&& intersection : intersections(gridView, e))
       {
+        if(!intersection.boundary()) continue;
+        // if the intersection is on the boundary, we have to update
+        // what are the local vertices that are also on the boundary
+
         // Local index of the intersection
         const unsigned int indexIntersection = intersection.indexInInside();
+        faceOnBoundary[indexIntersection] = true;
 
-        faceOnBoundary[indexIntersection] = intersection.boundary();
+        // We see what are the vertices associated to the current
+        // intersection (assumed to be a face)
+        // TODO: That might give false indices on elements with hanging nodes.
+        std::array<unsigned int, 2> vertexOfIntersection
+            = getVerticesOfIntersection(indexIntersection, e.type());
 
-        // if the intersection is on the inflow boundary, we have to update
-        // what are the local vertices that are also on the inflow boundary
-        if(faceOnBoundary[indexIntersection])
-        {
-          // We see what are the vertices associated to the current
-          // intersection (assumed to be a face)
-          // TODO: That might give false indices on elements with hanging nodes.
-          std::array<unsigned int, 2> vertexOfIntersection
-              = getVerticesOfIntersection(indexIntersection, e.type());
-
-          vertexOnBoundary[ vertexOfIntersection[0] ] += 1;
-          vertexOnBoundary[ vertexOfIntersection[1] ] += 1;
-        }
+        vertexOnBoundary[ vertexOfIntersection[0] ] += 1;
+        vertexOnBoundary[ vertexOfIntersection[1] ] += 1;
       }
 
       // For each dof, we check whether it belongs to the boundary
@@ -331,7 +323,7 @@ namespace Dune {
       iterateOverLocalIndices(localView,
         [&](size_type i, MultiIndex gi)
         {
-          unsigned int dofOnBoundary = 0;
+          unsigned char dofOnBoundary = 0;
 
           // localkey of dof i
           const auto& dofLocalKey = localFE.localCoefficients().localKey(i);
@@ -352,8 +344,8 @@ namespace Dune {
           dirichletNodesInt[ gi[0] ] += dofOnBoundary;
         },
         [](size_type) {},
-        [&](size_type i, MultiIndex gi, double wi) {
-          unsigned int dofOnBoundary = 0;
+        [&](size_type i, MultiIndex gi, double /* wi */) {
+          unsigned char dofOnBoundary = 0;
 
           // localkey of dof i
           const auto& dofLocalKey = localFE.localCoefficients().localKey(i);
