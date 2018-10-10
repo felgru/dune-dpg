@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_LOCALEVALUATION_HH
 #define DUNE_DPG_LOCALEVALUATION_HH
 
+#include <algorithm>
 #include <tuple>
 #include <vector>
 
@@ -48,12 +49,15 @@ evaluateLocalFunctionGrad
     // Compute the shape function gradients on the real element
     std::vector<FieldVector<double, 1> >
             derivatives(referenceGradients.size());
-    for (size_t i=0, i_max=referenceGradients.size(); i<i_max; i++)
-    {
-      FieldVector<double,dim> gradient;
-      jacobian.mv(referenceGradients[i][0], gradient);
-      derivatives[i] = beta * gradient;
-    }
+    std::transform(cbegin(referenceGradients),
+                   cend(referenceGradients),
+                   begin(derivatives),
+                   [&](const FieldMatrix<double,1,dim>& referenceGradient)
+                   {
+                      FieldVector<double,dim> gradient;
+                      jacobian.mv(referenceGradient[0], gradient);
+                      return beta * gradient;
+                   });
 
     return derivatives;
   }
@@ -260,15 +264,17 @@ struct LocalRefinedFunctionEvaluationHelper<false> {
             .evaluateJacobian(quadPos, referenceGradients);
 
     // Compute the shape function gradients on the real element
-    std::vector<FieldVector<double, 1> >
-            derivatives(referenceGradients.size());
-    for (size_t i=0, i_max=referenceGradients.size(); i<i_max; i++)
-    {
-      FieldVector<double,dim> gradientRef, gradient;
-      jacobianSub.mv(referenceGradients[i][0], gradientRef);
-      jacobian.mv(gradientRef, gradient);
-      derivatives[i] = beta * gradient;
-    }
+    std::vector<FieldVector<double,1>> derivatives(referenceGradients.size());
+    std::transform(cbegin(referenceGradients),
+                   cend(referenceGradients),
+                   begin(derivatives),
+                   [&](const FieldMatrix<double,1,dim>& referenceGradient)
+                   {
+                     FieldVector<double,dim> gradientRef, gradient;
+                     jacobianSub.mv(referenceGradient[0], gradientRef);
+                     jacobian.mv(gradientRef, gradient);
+                     return beta * gradient;
+                   });
 
     return derivatives;
   }
@@ -310,15 +316,17 @@ struct LocalRefinedFunctionEvaluationHelper<true> {
             .evaluateJacobian(subElement, quadPos, referenceGradients);
 
     // Compute the shape function gradients on the real element
-    std::vector<FieldVector<double, 1> >
-            derivatives(referenceGradients.size());
-    for (size_t i=0, i_max=referenceGradients.size(); i<i_max; i++)
-    {
-      FieldVector<double,dim> gradientRef, gradient;
-      jacobianSub.mv(referenceGradients[i][0], gradientRef);
-      jacobian.mv(gradientRef, gradient);
-      derivatives[i] = beta * gradient;
-    }
+    std::vector<FieldVector<double,1>> derivatives(referenceGradients.size());
+    std::transform(cbegin(referenceGradients),
+                   cend(referenceGradients),
+                   begin(derivatives),
+                   [&](const FieldMatrix<double,1,dim>& referenceGradient)
+                   {
+                     FieldVector<double,dim> gradientRef, gradient;
+                     jacobianSub.mv(referenceGradient[0], gradientRef);
+                     jacobian.mv(gradientRef, gradient);
+                     return beta * gradient;
+                   });
 
     return derivatives;
   }

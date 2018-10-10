@@ -57,12 +57,9 @@ struct GetLocalLinearTermVector<integrationType, Space, false>
     // Get set of shape functions for this element
     const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
 
-    const unsigned int nDofs(localFiniteElementTest.size());
-
     typename detail::ChooseQuadrature<TestSpace, TestSpace, Element>::type quad
       = detail::ChooseQuadrature<TestSpace, TestSpace, Element>
         ::Quadrature(element, quadratureOrder);
-
 
     for (const auto& quadPoint : quad) {
 
@@ -84,9 +81,11 @@ struct GetLocalLinearTermVector<integrationType, Space, false>
                        geometry,
                        localCoefficients);
 
-      for (size_t i=0; i<nDofs; i++)
+      auto entry = elementVector.begin() + spaceOffset;
+      for (const auto& shapeFunctionValue : shapeFunctionValues)
       {
-        elementVector[i+spaceOffset] += shapeFunctionValues[i] * integrationWeight;
+        *entry += shapeFunctionValue * integrationWeight;
+        ++entry;
       }
     }
 
