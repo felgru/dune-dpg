@@ -1,16 +1,16 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#if PERITER_NORMALIZED_SPACES
-#  define PERITER_SKELETAL_SCATTERING 1
+#if ASTI_NORMALIZED_SPACES
+#  define ASTI_SKELETAL_SCATTERING 1
 #endif
-#if PERITER_PEAKY_BV
+#if ASTI_PEAKY_BV
 #  define DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY 1
-#  define PERITER_SKELETAL_SCATTERING 1
+#  define ASTI_SKELETAL_SCATTERING 1
 #endif
-#if PERITER_CHECKERBOARD
-#  define PERITER_CHECKERBOARD_RHS 1
-#  define PERITER_CHECKERBOARD_SIGMA 1
+#if ASTI_CHECKERBOARD
+#  define ASTI_CHECKERBOARD_RHS 1
+#  define ASTI_CHECKERBOARD_SIGMA 1
 #endif
 #include <algorithm>
 #include <chrono>
@@ -32,10 +32,10 @@
 #include <dune/grid/utility/structuredgridfactory.hh>
 
 #include <dune/dpg/functions/gridviewfunctions.hh>
-#ifndef PERITER_USE_UNIFORM_GRID
-#  include <dune/dpg/radiative_transfer/periter.hh>
+#ifndef ASTI_USE_UNIFORM_GRID
+#  include <dune/dpg/radiative_transfer/asti.hh>
 #else
-#  include <dune/dpg/radiative_transfer/periter_uniform.hh>
+#  include <dune/dpg/radiative_transfer/asti_uniform.hh>
 #endif
 #include <dune/dpg/radiative_transfer/henyey_greenstein_scattering.hh>
 
@@ -89,7 +89,7 @@ int main(int argc, char** argv)
   // argv[4]: size of grid
   ///////////////////////////////////
 
-  PeriterPlotFlags plotFlags = PeriterPlotFlags::doNotPlot;
+  ASTIPlotFlags plotFlags = ASTIPlotFlags::doNotPlot;
   std::string basedir = "../results/";
   unsigned int maxNumberOfInnerIterations = 64;
   double accuracyRatio = 0.5;
@@ -100,10 +100,10 @@ int main(int argc, char** argv)
     while ((opt = getopt(argc,argv,"n:o:k:l:psrih")) != EOF)
       switch(opt)
       {
-        case 'p': plotFlags |= PeriterPlotFlags::plotOuterIterations; break;
-        case 's': plotFlags |= PeriterPlotFlags::plotScattering; break;
-        case 'r': plotFlags |= PeriterPlotFlags::plotRhs; break;
-        case 'i': plotFlags |= PeriterPlotFlags::plotIntegratedSolution; break;
+        case 'p': plotFlags |= ASTIPlotFlags::plotOuterIterations; break;
+        case 's': plotFlags |= ASTIPlotFlags::plotScattering; break;
+        case 'r': plotFlags |= ASTIPlotFlags::plotRhs; break;
+        case 'i': plotFlags |= ASTIPlotFlags::plotIntegratedSolution; break;
         case 'n': maxNumberOfInnerIterations = std::atoi(optarg); break;
         case 'o': basedir = optarg; break;
         case 'k': accuracyRatio = std::atof(optarg); break;
@@ -123,10 +123,10 @@ int main(int argc, char** argv)
   const double gamma = std::atof(argv[optind+1]);
   const unsigned int N = std::atoi(argv[optind+2]);
   const unsigned int sizeGrid = std::atoi(argv[optind+3]);
-#if PERITER_PEAKY_BV
+#if ASTI_PEAKY_BV
   checkSizeGrid(sizeGrid, 8);
 #endif
-#if PERITER_CHECKERBOARD
+#if ASTI_CHECKERBOARD
   checkSizeGrid(sizeGrid, 7);
 #endif
 
@@ -163,14 +163,14 @@ int main(int argc, char** argv)
 
   //std::unique_ptr<Grid> grid = GmshReader<Grid>::read("irregular-square.msh");
 
-#ifndef PERITER_USE_UNIFORM_GRID
+#ifndef ASTI_USE_UNIFORM_GRID
   // UG by default uses red-green refinements which would create and remove
   // auxiliary cells. This doesn't play well with the SubGrids we use, so
   // disable it here.
   grid->setClosureType(Grid::NONE);
 #endif
 
-#if PERITER_CHECKERBOARD_RHS
+#if ASTI_CHECKERBOARD_RHS
   const auto f
     = [](const GridView gridView)
       {
@@ -198,7 +198,7 @@ int main(int argc, char** argv)
 
   using RHSApproximation = FeRHS;
 
-#if PERITER_CHECKERBOARD_SIGMA
+#if ASTI_CHECKERBOARD_SIGMA
   const auto sigma = [](const auto gridView)
       {
         auto sigma_ = [](const Domain& x)
@@ -230,7 +230,7 @@ int main(int argc, char** argv)
   const double sigmaMax = sigma_;
 #endif
 
-#if PERITER_PEAKY_BV
+#if ASTI_PEAKY_BV
   const auto g = [](const Domain& x)
       {
         if(x[0] < .1) {
@@ -273,19 +273,19 @@ int main(int argc, char** argv)
 
   // TODO: estimate norm of rhs f in V'
   // Remark: Here, V=H_{0,+}(D\times S)
-#if PERITER_CHECKERBOARD_RHS
+#if ASTI_CHECKERBOARD_RHS
   const double fnorm = 1./7.;
 #else
   const double fnorm = 1;
 #endif
   const double err0 = fnorm / cB;
 
-  PeriterApproximationParameters approximationParameters(accuracyRatio,
+  ASTIApproximationParameters approximationParameters(accuracyRatio,
                                                          rho, CT, err0,
                                                          scatteringTruthLevel,
                                                          RHSApproximation{});
 
-  Periter<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
+  ASTI<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
           RHSApproximation>()
       .solve(*grid, f, g, homogeneous_inflow_boundary, sigma,
              HenyeyGreensteinScattering(gamma),

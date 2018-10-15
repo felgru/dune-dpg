@@ -5,7 +5,7 @@ import re
 
 def readData(datafile):
     parametersPattern = re.compile(
-        r'PERITER algorithm\n'
+        r'\(PERITER\|ASTI\) algorithm\n'
         r'=================\n'
         r'Prescribed final accuracy: ([0-9]*\.?[0-9]*)\n'
         r'Henyey Greenstein kernel with gamma = ([0-9]*\.?[0-9]*)\n'
@@ -13,7 +13,7 @@ def readData(datafile):
         r'Kernel approximation with: (.*)\n'
         r'Maximum wavelet level: ([0-9]*\.?[0-9]*)\n'
         r'Maximum number of directions: ([0-9]*\.?[0-9]*)\n'
-        r'Periter parameters:\n'
+        r'\(Periter\|ASTI\) parameters:\n'
         r'rho = ([0-9]*\.?[0-9]*)\n'
         r'kappa1 = ([0-9]*\.?[0-9]*)\n'
         r'kappa2 = ([0-9]*\.?[0-9]*)\n'
@@ -55,17 +55,17 @@ def readData(datafile):
     with open(datafile,"r") as errors:
         errors = errors.read()
         parametersMatch = parametersPattern.search(errors)
-        parameters = { 'eps': parametersMatch.group(1)
-                     , 'gamma':   parametersMatch.group(2)
-                     , 'wltOrder':    parametersMatch.group(3)
-                     , 'kernelApproxType':    parametersMatch.group(4)
-                     , 'maxWltLevel':     parametersMatch.group(5)
-                     , 'maxNumS': parametersMatch.group(6)
-                     , 'rho': parametersMatch.group(7)
-                     , 'kappa1': parametersMatch.group(8)
-                     , 'kappa2': parametersMatch.group(9)
-                     , 'kappa3': parametersMatch.group(10)
-                     , 'CT': parametersMatch.group(11)
+        parameters = { 'eps': parametersMatch.group(2)
+                     , 'gamma':   parametersMatch.group(3)
+                     , 'wltOrder':    parametersMatch.group(4)
+                     , 'kernelApproxType':    parametersMatch.group(5)
+                     , 'maxWltLevel':     parametersMatch.group(6)
+                     , 'maxNumS': parametersMatch.group(7)
+                     , 'rho': parametersMatch.group(9)
+                     , 'kappa1': parametersMatch.group(10)
+                     , 'kappa2': parametersMatch.group(11)
+                     , 'kappa3': parametersMatch.group(12)
+                     , 'CT': parametersMatch.group(13)
                      }
         # We always remove the first iteration step, as it is used
         # to initialize the scattering error estimate and thus has
