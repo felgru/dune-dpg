@@ -1,7 +1,7 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
-#define DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
+#ifndef DUNE_DPG_RADIATIVE_TRANSFER_ASTI_HH
+#define DUNE_DPG_RADIATIVE_TRANSFER_ASTI_HH
 
 #include <algorithm>
 #include <chrono>
@@ -35,7 +35,7 @@
 #include <dune/dpg/errortools.hh>
 #include <dune/dpg/functionplotter.hh>
 #include <dune/dpg/functions/interpolate.hh>
-#if PERITER_NORMALIZED_SPACES
+#if ASTI_NORMALIZED_SPACES
 #  include <dune/dpg/functions/normalizedspaces.hh>
 #endif
 #include <dune/dpg/functions/refinementinterpolation.hh>
@@ -44,7 +44,7 @@
 #include <dune/dpg/radiative_transfer/approximate_scattering.hh>
 #include <dune/dpg/radiative_transfer/boundary_extension.hh>
 #include <dune/dpg/radiative_transfer/passkey.hh>
-#include <dune/dpg/radiative_transfer/periter_common.hh>
+#include <dune/dpg/radiative_transfer/asti_common.hh>
 #include <dune/dpg/radiative_transfer/subgridprojection.hh>
 #include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
@@ -59,12 +59,12 @@ namespace Dune {
 template<class GridView>
 class SubGridSpaces;
 
-class PeriterLogger;
+class ASTILogger;
 class TransportLogger;
 class TransportPlotter;
 
 /**
- * This class describes the Periter algorithm for radiative transfer problems
+ * This class describes the ASTI algorithm for radiative transfer problems
  *
  * \tparam ScatteringKernelApproximation
  *         specifies the method used to approximate the scattering kernel
@@ -73,13 +73,13 @@ class TransportPlotter;
  *                           to FeRHS, otherwise set this to ApproximateRHS
  */
 template<class ScatteringKernelApproximation, class RHSApproximation>
-class Periter {
+class ASTI {
   public:
 
   using Direction = typename ScatteringKernelApproximation::Direction;
 
   /**
-   * Solve a radiative transfer problem using the Periter algorithm
+   * Solve a radiative transfer problem using the ASTI algorithm
    *
    * \param hostGrid
    * \param f  right hand side function
@@ -89,7 +89,7 @@ class Periter {
    * \param sigma   absorption coefficient
    * \param kernel  the scattering kernel, e.g. a Henyey–Greenstein kernel
    * \param approximationParameters
-   * \param targetAccuracy  periter solves up to this accuracy
+   * \param targetAccuracy  ASTI solves up to this accuracy
    * \param maxNumberOfIterations  ... or up to the given number of iterations
    *                               (whatever comes first)
    * \param plotFlags  specifies when to create .vtu files for plotting
@@ -97,7 +97,7 @@ class Periter {
    * \note By default, the scattering is computed from the inner degrees
    *       of freedom of the SolutionSpace. To use the skeletal degrees of
    *       freedom instead, define the preprocessor variable
-   *       PERITER_SKELETAL_SCATTERING before including periter.hh.
+   *       ASTI_SKELETAL_SCATTERING before including asti.hh.
    */
   template<class HostGrid, class F, class G, class HB,
            class Sigma, class Kernel>
@@ -107,12 +107,12 @@ class Periter {
              const HB& is_inflow_boundary_homogeneous,
              const Sigma sigma,
              const Kernel& kernel,
-             PeriterApproximationParameters& approximationParameters,
+             ASTIApproximationParameters& approximationParameters,
              double targetAccuracy,
              unsigned int maxNumberOfIterations,
              unsigned int maxNumberOfInnerIterations,
              const std::string& outputfolder,
-             PeriterPlotFlags plotFlags = PeriterPlotFlags::doNotPlot);
+             ASTIPlotFlags plotFlags = ASTIPlotFlags::doNotPlot);
 
   private:
   using VectorType = BlockVector<FieldVector<double,1>>;
@@ -217,7 +217,7 @@ class Periter {
   /**
    * Apply the scattering integral to a solution x
    *
-   * This corresponds to [K, u_n, κ_1 * η] in the Periter algorithm
+   * This corresponds to [K, u_n, κ_1 * η] in the ASTI algorithm
    * (see Dahmen, Gruber, Mula).
    *
    * \param kernelApproximation an approximation to the scattering kernel
@@ -273,7 +273,7 @@ class SubGridSpaces {
 
   using GridsVector = std::vector<std::unique_ptr<typename GridView::Grid>>;
 
-#if PERITER_NORMALIZED_SPACES
+#if ASTI_NORMALIZED_SPACES
   SubGridSpaces(const GridsVector& grids,
                 const std::vector<FieldVector<double, 2>>& directions)
   {
@@ -300,7 +300,7 @@ class SubGridSpaces {
   /**
    * insert new spaces in apply_scattering after adding new grids
    */
-#if PERITER_NORMALIZED_SPACES
+#if ASTI_NORMALIZED_SPACES
   void create_new_spaces(const GridsVector& grids,
                          const std::vector<FieldVector<double, 2>>& directions)
   {
@@ -337,7 +337,7 @@ class SubGridSpaces {
     return spaces_[i].testSpace();
   }
 
-#ifdef PERITER_SKELETAL_SCATTERING
+#ifdef ASTI_SKELETAL_SCATTERING
   static auto scatteringHostGridBasis(HostGridView hostGridView) {
     // Discontinuous version of the trace space
     using FEBasisHost = Functions::BernsteinDGBasis<HostGridView, 2>;
@@ -353,7 +353,7 @@ class SubGridSpaces {
   }
 #else
   static auto scatteringHostGridBasis(HostGridView hostGridView) {
-#if PERITER_NORMALIZED_SPACES
+#if ASTI_NORMALIZED_SPACES
     using FEBasisInteriorHost
         = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
     auto interiorSpace = make_space_tuple<FEBasisInteriorHost>(hostGridView);
@@ -397,7 +397,7 @@ class TransportLogger {
   explicit TransportLogger(std::ofstream& ofs,
                            unsigned int outerIteration,
                            unsigned int direction,
-                           PassKey<PeriterLogger>)
+                           PassKey<ASTILogger>)
     : ofs(ofs)
     , n(outerIteration)
     , i(direction) {};
@@ -460,11 +460,11 @@ class TransportLogger {
   const unsigned int i;
 };
 
-class PeriterLogger {
+class ASTILogger {
   public:
   template<class ScatteringKernelApproximation, class RHSApproximation>
-  explicit PeriterLogger(std::string filename,
-                         PassKey<Periter<ScatteringKernelApproximation,
+  explicit ASTILogger(std::string filename,
+                         PassKey<ASTI<ScatteringKernelApproximation,
                                          RHSApproximation>>) : ofs(filename) {}
 
   TransportLogger transportLogger(unsigned int outerIteration,
@@ -474,13 +474,13 @@ class PeriterLogger {
   }
 
   template<class Kernel, class KernelApproximation>
-  void logPeriterOverview(
+  void logASTIOverview(
       const double targetAccuracy,
       const Kernel& kernel,
       const KernelApproximation& kernelApproximation,
-      const PeriterApproximationParameters& approximationParameters)
+      const ASTIApproximationParameters& approximationParameters)
   {
-    ofs << "PERITER algorithm\n"
+    ofs << "ASTI algorithm\n"
         << "=================\n"
         << "Prescribed final accuracy: "
         << targetAccuracy << '\n'
@@ -492,7 +492,7 @@ class PeriterLogger {
         << kernelApproximation.getMaxLevel() << '\n'
         << "Maximum number of directions: "
         << kernelApproximation.maxNumS()     << '\n'
-        << "Periter parameters:" << '\n'
+        << "ASTI parameters:" << '\n'
         << approximationParameters;
   }
 
@@ -505,7 +505,7 @@ class PeriterLogger {
 
   template<class KernelApproximation>
   void logKernelApproximationInfo(
-      const PeriterApproximationParameters& approximationParameters,
+      const ASTIApproximationParameters& approximationParameters,
       const KernelApproximation& kernelApproximation,
       const double accuKernel,
       const std::vector<FieldVector<double, 2>>& sVector,
@@ -561,7 +561,7 @@ class PeriterLogger {
   void logInnerIterationStats(
       const std::vector<VectorType>& x,
       const double aposterioriTransportGlobal,
-      const PeriterApproximationParameters& approximationParameters,
+      const ASTIApproximationParameters& approximationParameters,
       const double deviationOfInexactIterate,
       const double accuracy,
       const unsigned int n)
@@ -605,7 +605,7 @@ class PeriterLogger {
 class TransportPlotter {
   public:
   TransportPlotter(
-      PeriterPlotFlags plotFlags,
+      ASTIPlotFlags plotFlags,
       std::string outputfolder,
       unsigned int outerIteration,
       unsigned int direction)
@@ -622,7 +622,7 @@ class TransportPlotter {
       const VectorType& scatteringValues,
       const unsigned int nRefinement) const
   {
-    if(flagIsSet(plotFlags, PeriterPlotFlags::plotRhs)) {
+    if(flagIsSet(plotFlags, ASTIPlotFlags::plotRhs)) {
       std::string name = outputfolder
                         + "/rhs_rad_trans_n"
                         + std::to_string(n)
@@ -644,19 +644,19 @@ class TransportPlotter {
   }
 
   private:
-  const PeriterPlotFlags plotFlags;
+  const ASTIPlotFlags plotFlags;
   const std::string outputfolder;
   const unsigned int n;
   const unsigned int i;
 };
 
-class PeriterPlotter {
+class ASTIPlotter {
   public:
-  PeriterPlotter(PeriterPlotFlags plotFlags, std::string outputfolder)
+  ASTIPlotter(ASTIPlotFlags plotFlags, std::string outputfolder)
     : plotFlags(plotFlags)
     , outputfolder(outputfolder)
   {
-    if(flagIsSet(plotFlags, PeriterPlotFlags::plotLastIteration)) {
+    if(flagIsSet(plotFlags, ASTIPlotFlags::plotLastIteration)) {
       std::cerr
           << "Plotting of only the last iteration is not implemented yet!\n";
       std::exit(1);
@@ -677,7 +677,7 @@ class PeriterPlotter {
       const unsigned int n,
       const unsigned int i) const
   {
-    if(flagIsSet(plotFlags, PeriterPlotFlags::plotOuterIterations)) {
+    if(flagIsSet(plotFlags, ASTIPlotFlags::plotOuterIterations)) {
       //////////////////////////////////////////////////////////////////////
       //  Write result to VTK file
       //  We need to subsample, because VTK cannot natively display
@@ -714,7 +714,7 @@ class PeriterPlotter {
       const unsigned int n,
       const size_t numS) const
   {
-    if(flagIsSet(plotFlags, PeriterPlotFlags::plotScattering)) {
+    if(flagIsSet(plotFlags, ASTIPlotFlags::plotScattering)) {
       std::cout << "Plot scattering:\n";
 
       for(unsigned int i = 0; i < numS; ++i)
@@ -767,30 +767,30 @@ class PeriterPlotter {
   }
 
   bool plotIntegratedSolutionEnabled() const {
-    return flagIsSet(plotFlags, PeriterPlotFlags::plotIntegratedSolution);
+    return flagIsSet(plotFlags, ASTIPlotFlags::plotIntegratedSolution);
   }
 
   private:
-  const PeriterPlotFlags plotFlags;
+  const ASTIPlotFlags plotFlags;
   const std::string outputfolder;
 };
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class HostGrid, class F, class G, class HB,
          class Sigma, class Kernel>
-void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
+void ASTI<ScatteringKernelApproximation, RHSApproximation>::solve(
            HostGrid& hostGrid,
            const F& f,
            const G& g,
            const HB& is_inflow_boundary_homogeneous,
            const Sigma sigma,
            const Kernel& kernel,
-           PeriterApproximationParameters& approximationParameters,
+           ASTIApproximationParameters& approximationParameters,
            double targetAccuracy,
            unsigned int maxNumberOfIterations,
            unsigned int maxNumberOfInnerIterations,
            const std::string& outputfolder,
-           PeriterPlotFlags plotFlags) {
+           ASTIPlotFlags plotFlags) {
   static_assert(std::is_same<RHSApproximation, FeRHS>::value
       || std::is_same<RHSApproximation, ApproximateRHS>::value,
       "Unknown type provided for RHSApproximation!\n"
@@ -806,9 +806,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // To print information in dune-dpg/results/
   /////////////////////////////////////////////
 
-  PeriterLogger logger(outputfolder+"/output",
-      PassKey<Periter<ScatteringKernelApproximation, RHSApproximation>>{});
-  PeriterPlotter plotter(plotFlags, outputfolder);
+  ASTILogger logger(outputfolder+"/output",
+      PassKey<ASTI<ScatteringKernelApproximation, RHSApproximation>>{});
+  ASTIPlotter plotter(plotFlags, outputfolder);
 
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
@@ -817,7 +817,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   ScatteringKernelApproximation kernelApproximation(kernel,
       2, approximationParameters.scatteringTruthLevel());
 
-  logger.logPeriterOverview(targetAccuracy, kernel,
+  logger.logASTIOverview(targetAccuracy, kernel,
       kernelApproximation, approximationParameters);
 
   // As the solution u we use for the initial scattering is 0, and the
@@ -846,7 +846,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   //////////////////////////////////
   std::vector<VectorType> x(numS);
   using Spaces = SubGridSpaces<LeafGridView>;
-#if PERITER_NORMALIZED_SPACES
+#if ASTI_NORMALIZED_SPACES
   Spaces spaces(grids, sVector);
 #else
   Spaces spaces(grids);
@@ -994,7 +994,7 @@ template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class HostGridView, class SubGridView, class Grid, class GridIdSet,
          class Plotter>
 auto
-Periter<ScatteringKernelApproximation, RHSApproximation>::
+ASTI<ScatteringKernelApproximation, RHSApproximation>::
 computeScatteringData(
       HostGridView hostGridView,
       ScatteringKernelApproximation& kernelApproximation,
@@ -1093,7 +1093,7 @@ namespace detail {
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class HostGridView, class SubGridView, class Grid, class F>
 auto
-Periter<ScatteringKernelApproximation, RHSApproximation>::
+ASTI<ScatteringKernelApproximation, RHSApproximation>::
 computeRhsData(
       HostGridView hostGridView,
       SubGridSpaces<SubGridView>& subGridSpaces,
@@ -1141,7 +1141,7 @@ computeRhsData(
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class HostGridView, class SubGridView, class G, class HB>
 auto
-Periter<ScatteringKernelApproximation, RHSApproximation>::
+ASTI<ScatteringKernelApproximation, RHSApproximation>::
 computeBvData(
       HostGridView hostGridView,
       const SubGridSpaces<SubGridView>& subGridSpaces,
@@ -1181,7 +1181,7 @@ computeBvData(
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class Spaces, class Grid, class Sigma, class RHSVector>
 double
-Periter<ScatteringKernelApproximation, RHSApproximation>::
+ASTI<ScatteringKernelApproximation, RHSApproximation>::
 compute_transport_solution(
     VectorType& x,
     Grid& grid,
@@ -1204,7 +1204,7 @@ compute_transport_solution(
   auto bilinearFormEnriched =
       replaceTestSpaces(bilinearForm, spaces.enrichedTestSpacePtr());
   auto innerProduct =
-#if PERITER_NORMALIZED_SPACES
+#if ASTI_NORMALIZED_SPACES
     replaceTestSpaces(spaces.testSpace().preBasis().innerProduct(),
                       spaces.testSpacePtr());
 #else
@@ -1341,7 +1341,7 @@ template<class Spaces, class ScatteringHostGridBasis, class BvHostGridBasis,
          class Grid, class GridIdSet, class Sigma,
          class RHSData, class ScatteringData, class BVData>
 double
-Periter<ScatteringKernelApproximation, RHSApproximation>::
+ASTI<ScatteringKernelApproximation, RHSApproximation>::
 compute_adaptive_transport_solution(
     VectorType& x,
     Spaces& spaces,
@@ -1440,9 +1440,9 @@ compute_adaptive_transport_solution(
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class SubGridView, class HostGridBasis>
-std::vector<typename Periter<ScatteringKernelApproximation,
+std::vector<typename ASTI<ScatteringKernelApproximation,
                              RHSApproximation>::VectorType>
-Periter<ScatteringKernelApproximation, RHSApproximation>::
+ASTI<ScatteringKernelApproximation, RHSApproximation>::
 interpolate_solutions_to_hostgrid(
       const std::vector<VectorType>& solution,
       SubGridSpaces<SubGridView>& subGridSpaces,
@@ -1461,9 +1461,9 @@ interpolate_solutions_to_hostgrid(
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class SubGridView, class HostGridBasis, class Grid, class GridIdSet>
-std::vector<typename Periter<ScatteringKernelApproximation,
+std::vector<typename ASTI<ScatteringKernelApproximation,
                              RHSApproximation>::VectorType>
-Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
+ASTI<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
       SubGridSpaces<SubGridView>& subGridSpaces,
@@ -1487,7 +1487,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
 
   create_new_grids(grids, numS);
   save_grids_to_gridIdSets(gridIdSets, grids);
-#if PERITER_NORMALIZED_SPACES
+#if ASTI_NORMALIZED_SPACES
   subGridSpaces.create_new_spaces(grids, sVector);
 #else
   subGridSpaces.create_new_spaces(grids);
@@ -1499,7 +1499,7 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class Grid>
 void
-Periter<ScatteringKernelApproximation, RHSApproximation>::
+ASTI<ScatteringKernelApproximation, RHSApproximation>::
 create_new_grids(
       std::vector<std::unique_ptr<Grid>>& grids,
       size_t numNewGrids)
@@ -1534,7 +1534,7 @@ create_new_grids(
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class GridIdSet, class Grid>
 void
-Periter<ScatteringKernelApproximation, RHSApproximation>::
+ASTI<ScatteringKernelApproximation, RHSApproximation>::
 save_grids_to_gridIdSets(
       std::vector<GridIdSet>& gridIdSets,
       const std::vector<std::unique_ptr<Grid>>& grids)
@@ -1549,4 +1549,4 @@ save_grids_to_gridIdSets(
 
 } // end namespace Dune
 
-#endif // DUNE_DPG_RADIATIVE_TRANSFER_PERITER_HH
+#endif // DUNE_DPG_RADIATIVE_TRANSFER_ASTI_HH

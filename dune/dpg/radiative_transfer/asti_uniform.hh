@@ -1,7 +1,7 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_DPG_RADIATIVE_TRANSFER_PERITER_UNIFORM_HH
-#define DUNE_DPG_RADIATIVE_TRANSFER_PERITER_UNIFORM_HH
+#ifndef DUNE_DPG_RADIATIVE_TRANSFER_ASTI_UNIFORM_HH
+#define DUNE_DPG_RADIATIVE_TRANSFER_ASTI_UNIFORM_HH
 
 #include <algorithm>
 #include <chrono>
@@ -35,7 +35,7 @@
 #include <dune/dpg/radiative_transfer/approximate_scattering.hh>
 #include <dune/dpg/radiative_transfer/boundary_extension.hh>
 #include <dune/dpg/radiative_transfer/passkey.hh>
-#include <dune/dpg/radiative_transfer/periter_common.hh>
+#include <dune/dpg/radiative_transfer/asti_common.hh>
 #include <dune/dpg/rhs_assembler.hh>
 #include <dune/dpg/dpg_system_assembler.hh>
 #include <dune/dpg/type_traits.hh>
@@ -44,11 +44,11 @@
 
 namespace Dune {
 
-class PeriterLogger;
+class ASTILogger;
 class TransportLogger;
 
 /**
- * This class describes the Periter algorithm for radiative transfer problems
+ * This class describes the ASTI algorithm for radiative transfer problems
  *
  * \tparam ScatteringKernelApproximation
  *         specifies the method used to approximate the scattering kernel
@@ -58,13 +58,13 @@ class TransportLogger;
  *                           ApproximateRHS
  */
 template<class ScatteringKernelApproximation, class RHSApproximation>
-class Periter {
+class ASTI {
   public:
 
   using Direction = typename ScatteringKernelApproximation::Direction;
 
   /**
-   * Solve a radiative transfer problem using the Periter algorithm
+   * Solve a radiative transfer problem using the ASTI algorithm
    *
    * \param grid
    * \param f  right hand side function
@@ -74,7 +74,7 @@ class Periter {
    * \param sigma   absorption coefficient
    * \param kernel  the scattering kernel, e.g. a Henyey–Greenstein kernel
    * \param approximationParameters
-   * \param targetAccuracy  periter solves up to this accuracy
+   * \param targetAccuracy  ASTI solves up to this accuracy
    * \param maxNumberOfIterations  ... or up to the given number of iterations
    *                               (whatever comes first)
    * \param plotFlags  specifies when to create .vtu files for plotting
@@ -87,12 +87,12 @@ class Periter {
              const HB& is_inflow_boundary_homogeneous,
              const Sigma sigma,
              const Kernel& kernel,
-             PeriterApproximationParameters& approximationParameters,
+             ASTIApproximationParameters& approximationParameters,
              double targetAccuracy,
              unsigned int maxNumberOfIterations,
              unsigned int maxNumberOfInnerIterations,
              const std::string& outputfolder,
-             PeriterPlotFlags plotFlags = PeriterPlotFlags::doNotPlot);
+             ASTIPlotFlags plotFlags = ASTIPlotFlags::doNotPlot);
 
   private:
   using VectorType = BlockVector<FieldVector<double,1>>;
@@ -146,7 +146,7 @@ class Periter {
       std::vector<VectorType>& rhsFunctional,
       VectorType& boundaryExtension,
       const std::vector<bool>& boundary_is_homogeneous,
-      PeriterLogger& logger,
+      ASTILogger& logger,
       unsigned int n,
       double transportAccuracy,
       const KernelApproximation& kernelApproximation,
@@ -155,7 +155,7 @@ class Periter {
   /**
    * Apply the scattering integral to a solution x
    *
-   * This corresponds to [K, u_n, κ_1 * η] in the Periter algorithm
+   * This corresponds to [K, u_n, κ_1 * η] in the ASTI algorithm
    * (see Dahmen, Gruber, Mula).
    *
    * \param kernelApproximation an approximation to the scattering kernel
@@ -180,7 +180,7 @@ class TransportLogger {
   explicit TransportLogger(std::ofstream& ofs,
                            unsigned int outerIteration,
                            unsigned int direction,
-                           PassKey<PeriterLogger>)
+                           PassKey<ASTILogger>)
     : ofs(ofs)
     , n(outerIteration)
     , i(direction) {};
@@ -219,11 +219,11 @@ class TransportLogger {
   const unsigned int i;
 };
 
-class PeriterLogger {
+class ASTILogger {
   public:
   template<class ScatteringKernelApproximation, class RHSApproximation>
-  explicit PeriterLogger(std::string filename,
-                         PassKey<Periter<ScatteringKernelApproximation,
+  explicit ASTILogger(std::string filename,
+                         PassKey<ASTI<ScatteringKernelApproximation,
                                          RHSApproximation>>) : ofs(filename) {}
 
   TransportLogger transportLogger(unsigned int outerIteration,
@@ -233,13 +233,13 @@ class PeriterLogger {
   }
 
   template<class Kernel, class KernelApproximation>
-  void logPeriterOverview(
+  void logASTIOverview(
       const double targetAccuracy,
       const Kernel& kernel,
       const KernelApproximation& kernelApproximation,
-      const PeriterApproximationParameters& approximationParameters)
+      const ASTIApproximationParameters& approximationParameters)
   {
-    ofs << "uniform PERITER algorithm\n"
+    ofs << "uniform ASTI algorithm\n"
         << "=================\n"
         << "Prescribed final accuracy: "
         << targetAccuracy << '\n'
@@ -251,7 +251,7 @@ class PeriterLogger {
         << kernelApproximation.getMaxLevel() << '\n'
         << "Maximum number of directions: "
         << kernelApproximation.maxNumS()     << '\n'
-        << "Periter parameters:" << '\n'
+        << "ASTI parameters:" << '\n'
         << approximationParameters;
   }
 
@@ -264,7 +264,7 @@ class PeriterLogger {
 
   template<class KernelApproximation>
   void logKernelApproximationInfo(
-      const PeriterApproximationParameters& approximationParameters,
+      const ASTIApproximationParameters& approximationParameters,
       const KernelApproximation& kernelApproximation,
       const double accuKernel,
       const std::vector<FieldVector<double, 2>>& sVector,
@@ -314,7 +314,7 @@ class PeriterLogger {
   void logInnerIterationStats(
       const std::vector<VectorType>& x,
       const double aposterioriTransportGlobal,
-      const PeriterApproximationParameters& approximationParameters,
+      const ASTIApproximationParameters& approximationParameters,
       const double deviationOfInexactIterate,
       const double accuracy,
       const unsigned int n)
@@ -355,13 +355,13 @@ class PeriterLogger {
   std::ofstream ofs;
 };
 
-class PeriterPlotter {
+class ASTIPlotter {
   public:
-  PeriterPlotter(PeriterPlotFlags plotFlags, std::string outputfolder)
+  ASTIPlotter(ASTIPlotFlags plotFlags, std::string outputfolder)
     : plotFlags(plotFlags)
     , outputfolder(outputfolder)
   {
-    if(flagIsSet(plotFlags, PeriterPlotFlags::plotLastIteration)) {
+    if(flagIsSet(plotFlags, ASTIPlotFlags::plotLastIteration)) {
       std::cerr
           << "Plotting of only the last iteration is not implemented yet!\n";
       std::exit(1);
@@ -375,7 +375,7 @@ class PeriterPlotter {
       const unsigned int n,
       const unsigned int numS) const
   {
-    if(flagIsSet(plotFlags, PeriterPlotFlags::plotOuterIterations)) {
+    if(flagIsSet(plotFlags, ASTIPlotFlags::plotOuterIterations)) {
       //////////////////////////////////////////////////////////////////////
       //  Write result to VTK file
       //  We need to subsample, because VTK cannot natively display
@@ -417,7 +417,7 @@ class PeriterPlotter {
       const unsigned int n,
       const size_t numS) const
   {
-    if(flagIsSet(plotFlags, PeriterPlotFlags::plotScattering)) {
+    if(flagIsSet(plotFlags, ASTIPlotFlags::plotScattering)) {
       std::cout << "Plot scattering:\n";
 
       for(unsigned int i = 0; i < numS; ++i)
@@ -443,7 +443,7 @@ class PeriterPlotter {
       const KernelApproximation& kernelApproximation,
       const unsigned int n) const
   {
-    if(flagIsSet(plotFlags, PeriterPlotFlags::plotIntegratedSolution)) {
+    if(flagIsSet(plotFlags, ASTIPlotFlags::plotIntegratedSolution)) {
       std::cout << "Plot integrated solution of outer iteration "
                 << n << ":\n";
 
@@ -470,7 +470,7 @@ class PeriterPlotter {
   }
 
   private:
-  const PeriterPlotFlags plotFlags;
+  const ASTIPlotFlags plotFlags;
   const std::string outputfolder;
 };
 
@@ -603,19 +603,19 @@ namespace detail {
 
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class Grid, class F, class G, class HB, class Sigma, class Kernel>
-void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
+void ASTI<ScatteringKernelApproximation, RHSApproximation>::solve(
            Grid& grid,
            const F& f,
            const G& g,
            const HB& is_inflow_boundary_homogeneous,
            const Sigma sigma,
            const Kernel& kernel,
-           PeriterApproximationParameters& approximationParameters,
+           ASTIApproximationParameters& approximationParameters,
            double targetAccuracy,
            unsigned int maxNumberOfIterations,
            unsigned int maxNumberOfInnerIterations,
            const std::string& outputfolder,
-           PeriterPlotFlags plotFlags) {
+           ASTIPlotFlags plotFlags) {
   static_assert(std::is_same<RHSApproximation, FeRHS>::value
       || std::is_same<RHSApproximation, ApproximateRHS>::value,
       "Unknown type provided for RHSApproximation!\n"
@@ -630,9 +630,9 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   // To print information in dune-dpg/results/
   /////////////////////////////////////////////
 
-  PeriterLogger logger(outputfolder+"/output",
-      PassKey<Periter<ScatteringKernelApproximation, RHSApproximation>>{});
-  PeriterPlotter plotter(plotFlags, outputfolder);
+  ASTILogger logger(outputfolder+"/output",
+      PassKey<ASTI<ScatteringKernelApproximation, RHSApproximation>>{});
+  ASTIPlotter plotter(plotFlags, outputfolder);
 
   ////////////////////////////////////////////
   // Handle directions of discrete ordinates
@@ -646,7 +646,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
   ScatteringKernelApproximation kernelApproximation(kernel,
       2, approximationParameters.scatteringTruthLevel());
 
-  logger.logPeriterOverview(targetAccuracy, kernel,
+  logger.logASTIOverview(targetAccuracy, kernel,
       kernelApproximation, approximationParameters);
 
   // As the solution u we use for the initial scattering is 0, and the
@@ -778,7 +778,7 @@ void Periter<ScatteringKernelApproximation, RHSApproximation>::solve(
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class Spaces, class Sigma>
 double
-Periter<ScatteringKernelApproximation, RHSApproximation>::
+ASTI<ScatteringKernelApproximation, RHSApproximation>::
 compute_transport_solution(
     VectorType& x,
     const Spaces& spaces,
@@ -928,7 +928,7 @@ compute_transport_solution(
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class Spaces, class Grid, class Sigma, class KernelApproximation>
 double
-Periter<ScatteringKernelApproximation, RHSApproximation>::
+ASTI<ScatteringKernelApproximation, RHSApproximation>::
 compute_adaptive_transport_solution(
     std::vector<VectorType>& x,
     Spaces& spaces,
@@ -938,7 +938,7 @@ compute_adaptive_transport_solution(
     std::vector<VectorType>& rhsFunctional,
     VectorType& boundaryExtension,
     const std::vector<bool>& boundary_is_homogeneous,
-    PeriterLogger& logger,
+    ASTILogger& logger,
     const unsigned int n,
     const double transportAccuracy,
     const KernelApproximation& kernelApproximation,
@@ -1031,7 +1031,7 @@ compute_adaptive_transport_solution(
 template<class ScatteringKernelApproximation, class RHSApproximation>
 template<class Spaces, class GridView>
 std::vector<Dune::BlockVector<Dune::FieldVector<double, 1> >>
-Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
+ASTI<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
       const Spaces& spaces,
@@ -1054,4 +1054,4 @@ Periter<ScatteringKernelApproximation, RHSApproximation>::apply_scattering(
 
 } // end namespace Dune
 
-#endif // DUNE_DPG_RADIATIVE_TRANSFER_PERITER_UNIFORM_HH
+#endif // DUNE_DPG_RADIATIVE_TRANSFER_ASTI_UNIFORM_HH

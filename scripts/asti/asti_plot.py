@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from output_parser import readData
 
 def plot_convergence(data,
-         outputfile='periter_error.pdf',
+         outputfile='asti_error.pdf',
          title=None,
          xlabel='Outer Iteration',
          ylabel='Error',
@@ -122,7 +122,7 @@ def plot_convergence(data,
     plt.clf()
 
 def plot_directions(data,
-         outputfile='periter_error.pdf',
+         outputfile='asti_error.pdf',
          title=None,
          xlabel='Outer Iteration',
          ylabel='',
@@ -189,7 +189,7 @@ def plot_directions(data,
     plt.clf()
 
 def plot_svd(data,
-         outputfile='periter_error.pdf',
+         outputfile='asti_error.pdf',
          title=None,
          xlabel='Outer Iteration',
          ylabel=(''),
@@ -247,7 +247,7 @@ def plot_svd(data,
     plt.clf()
 
 def plot_kernel_acc_VS_time(data,
-         outputfile='periter_error.pdf',
+         outputfile='asti_error.pdf',
          title=None,
          xlabel='outer iteration',
          ylabel=('Error Kernel approx',
@@ -308,7 +308,7 @@ def plot_kernel_acc_VS_time(data,
     plt.clf()
 
 def plot_kernel_matrix_info(data,
-         outputfile='periter_error.pdf',
+         outputfile='asti_error.pdf',
          title=None,
          xlabel='outer iteration',
          ylabel=(('SVD rank','# zeros entries / # entries in kernel matrix'),
@@ -380,7 +380,7 @@ def plot_kernel_matrix_info(data,
     plt.clf()
 
 def plot_inner_iterations(data,
-         outputfile='periter_error.pdf',
+         outputfile='asti_error.pdf',
          title=None,
          xlabel='Outer Iteration',
          ylabel='inner iterations',
@@ -553,7 +553,7 @@ def _plot_Dofs_per_direction(data,
         ax.set_ylim(ylim)
 
 def plot_Dofs_per_direction(data,
-         outputfile='periter_dofs.pdf',
+         outputfile='asti_dofs.pdf',
          title=None,
          xlabel='Outer Iteration',
          ylabel='#DoFs / direction',
@@ -613,7 +613,7 @@ def _plot_num_directions(data,
         ax.set_ylim(ylim)
 
 def plot_num_directions(data,
-         outputfile='periter_directions.pdf',
+         outputfile='asti_directions.pdf',
          title=None,
          xlabel='Outer Iteration',
          ylabel='#directions',
@@ -649,7 +649,7 @@ def plot_num_directions(data,
     plt.clf()
 
 def plot_Dofs_and_directions_vs_iteration(data,
-         outputfile='periter_dofs.pdf',
+         outputfile='asti_dofs.pdf',
          title=None,
          xlabel='Outer Iteration',
          ylabel=('#DoFs / direction', '#directions'),
@@ -693,7 +693,7 @@ def plot_Dofs_and_directions_vs_iteration(data,
     plt.clf()
 
 def plot_a_posteriori_err_VS_dofs(data,
-         outputfile='periter_a_posteriori_VS_dofs.pdf',
+         outputfile='asti_a_posteriori_VS_dofs.pdf',
          title=None,
          xlabel='#DoFs',
          ylabel='a posteriori error',
@@ -744,7 +744,7 @@ def parse_ylims(ylim_string):
 
 
 aparser = argparse.ArgumentParser(
-        description='Generate convergence plot and table for Periter')
+        description='Generate convergence plot and table for ASTI')
 #aparser.add_argument('--preamble', dest='print_preamble',
 #                     action='store_true', default=False,
 #                     help='print Latex preamble for the convergence table')
