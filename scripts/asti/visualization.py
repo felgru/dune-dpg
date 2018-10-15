@@ -104,7 +104,7 @@ aparser = argparse.ArgumentParser(description=description)
 aparser.add_argument("--elevate", type=str2bool, nargs='?',
                         const=True, default=True,
                         help="Work with elevated pictures.")
-aparser.add_argument('infile', action='store', help='output file created by running periter code')
+aparser.add_argument('infile', action='store', help='output file created by running asti code')
 args = aparser.parse_args()
 
 # Prefix depending on elevate mode

@@ -1,7 +1,7 @@
 known bugs:
 
 * Using normalized test and trial spaces in the uniform grid version
-  of Periter does not work, as it would need to use different spaces
+  of ASTI does not work, as it would need to use different spaces
   for different directions.
 * When calling the update() method of normalized spaces, we do not
   update the gridviews associated with the GridViewFunctions in the
@@ -13,7 +13,7 @@ known bugs:
 
 janitorial tasks:
 
-* Periter: check that I handle the RHS correctly.
+* ASTI: check that I handle the RHS correctly.
   IIRC I handle scattering, bv, rhs etc all in one vector
   represented in the test space basis. This probably has to change.
   We might need to handle it in two different vectors represented in
@@ -31,7 +31,7 @@ proposed features:
 * Implement a multi-grid preconditioner so that we can replace the
   UMFPACK solver with a CG solver.
   See e.g. Roberts and Chan 2017
-* In the Periter code we can currently only use scattering kernels that
+* In the ASTI code we can currently only use scattering kernels that
   are uniform in space. For more complex benchmark problems it would be
   useful if we could use different scattering kernels in different
   regions of the spatial domain.

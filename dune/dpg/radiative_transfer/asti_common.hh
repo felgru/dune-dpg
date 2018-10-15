@@ -1,7 +1,7 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_DPG_RADIATIVE_TRANSFER_PERITER_COMMON_HH
-#define DUNE_DPG_RADIATIVE_TRANSFER_PERITER_COMMON_HH
+#ifndef DUNE_DPG_RADIATIVE_TRANSFER_ASTI_COMMON_HH
+#define DUNE_DPG_RADIATIVE_TRANSFER_ASTI_COMMON_HH
 
 #include <ostream>
 #include <stdexcept>
@@ -10,7 +10,7 @@
 #include <boost/math/special_functions/zeta.hpp>
 
 #include <dune/dpg/assemble_helper.hh>
-#if PERITER_NORMALIZED_SPACES
+#if ASTI_NORMALIZED_SPACES
 #  include <dune/dpg/functions/normalizedspaces.hh>
 #  include <dune/dpg/integralterm.hh>
 #endif
@@ -21,7 +21,7 @@
 
 namespace Dune {
 
-enum class PeriterPlotFlags : unsigned char {
+enum class ASTIPlotFlags : unsigned char {
   doNotPlot = 0,
   plotOuterIterations = 1 << 0,
   plotLastIteration = 1 << 1,
@@ -31,25 +31,25 @@ enum class PeriterPlotFlags : unsigned char {
 };
 
 constexpr inline
-PeriterPlotFlags operator|(PeriterPlotFlags a, PeriterPlotFlags b) {
-  using T = std::underlying_type_t<PeriterPlotFlags>;
-  return static_cast<PeriterPlotFlags>(static_cast<T>(a) | static_cast<T>(b));
+ASTIPlotFlags operator|(ASTIPlotFlags a, ASTIPlotFlags b) {
+  using T = std::underlying_type_t<ASTIPlotFlags>;
+  return static_cast<ASTIPlotFlags>(static_cast<T>(a) | static_cast<T>(b));
 }
 
 constexpr inline
-PeriterPlotFlags operator&(PeriterPlotFlags a, PeriterPlotFlags b) {
-  using T = std::underlying_type_t<PeriterPlotFlags>;
-  return static_cast<PeriterPlotFlags>(static_cast<T>(a) & static_cast<T>(b));
+ASTIPlotFlags operator&(ASTIPlotFlags a, ASTIPlotFlags b) {
+  using T = std::underlying_type_t<ASTIPlotFlags>;
+  return static_cast<ASTIPlotFlags>(static_cast<T>(a) & static_cast<T>(b));
 }
 
 constexpr inline
-PeriterPlotFlags& operator|=(PeriterPlotFlags& a, PeriterPlotFlags b) {
+ASTIPlotFlags& operator|=(ASTIPlotFlags& a, ASTIPlotFlags b) {
   return a = (a | b);
 }
 
 constexpr inline
-bool flagIsSet(PeriterPlotFlags flags, PeriterPlotFlags flag) {
-  using T = std::underlying_type_t<PeriterPlotFlags>;
+bool flagIsSet(ASTIPlotFlags flags, ASTIPlotFlags flag) {
+  using T = std::underlying_type_t<ASTIPlotFlags>;
   return static_cast<T>(flags & flag) != T{0};
 }
 
@@ -61,7 +61,7 @@ class TransportSpaces {
   static_assert(std::is_same<typename TraceBasis::GridView, GV>::value,
                 "GridViews of transport spaces don't match!");
 
-#if PERITER_NORMALIZED_SPACES
+#if ASTI_NORMALIZED_SPACES
   template<typename FEBasisTest>
   static auto
   make_test_spaces(const typename FEBasisTest::GridView& gridView,
@@ -85,7 +85,7 @@ class TransportSpaces {
   static auto
   make_solution_spaces(const typename FEBasisInterior::GridView& gridView)
   {
-#if PERITER_NORMALIZED_SPACES
+#if ASTI_NORMALIZED_SPACES
     auto interiorSpace = make_space_tuple<FEBasisInterior>(gridView);
     auto l2InnerProduct
       = innerProductWithSpace(interiorSpace)
@@ -117,7 +117,7 @@ class TransportSpaces {
     = decltype(make_solution_spaces<UnnormalizedFEBasisInterior,
                                     UnnormalizedFEBasisTrace>
                                    (std::declval<GridView>()));
-#if PERITER_NORMALIZED_SPACES
+#if ASTI_NORMALIZED_SPACES
   using TestSpacePtr = decltype(make_test_spaces<UnnormalizedFEBasisTest>
                                 (std::declval<GridView>(),
                                  std::declval<FieldVector<double, 2>>()));
@@ -142,14 +142,14 @@ class TransportSpaces {
   using FEBasisEnrichedTest
       = std::tuple_element_t<0, typename EnrichedTestSpacePtr::element_type>;
 
-#if PERITER_NORMALIZED_SPACES
+#if ASTI_NORMALIZED_SPACES
   TransportSpaces(const GridView& gridView, FieldVector<double, 2> direction)
 #else
   TransportSpaces(const GridView& gridView)
 #endif
     : solutionSpace_(make_solution_spaces<UnnormalizedFEBasisInterior,
                                           UnnormalizedFEBasisTrace>(gridView))
-#if PERITER_NORMALIZED_SPACES
+#if ASTI_NORMALIZED_SPACES
     , testSpace_(make_test_spaces<UnnormalizedFEBasisTest>(gridView, direction))
     , enrichedTestSpace_(make_test_spaces<UnnormalizedFEBasisEnrichedTest>
                                          (gridView, direction))
@@ -200,7 +200,7 @@ class TransportSpaces {
   EnrichedTestSpacePtr enrichedTestSpace_;
 };
 
-  class PeriterApproximationParameters
+  class ASTIApproximationParameters
   {
     unsigned int n = 0;
     // η_n:
@@ -216,7 +216,7 @@ class TransportSpaces {
     const size_t scatteringTruthLevel_;
 
     friend std::ostream& operator<<
-        (std::ostream& os, const PeriterApproximationParameters& params);
+        (std::ostream& os, const ASTIApproximationParameters& params);
 
     double etaInStep(unsigned int m) const {
       return std::pow(1+m, -beta) * std::pow(rho, m);
@@ -229,7 +229,7 @@ class TransportSpaces {
      *        more accuracy for the transport solver and smaller values
      *        mean more accuracy for the kernel approximation
      */
-    PeriterApproximationParameters(double accuracyRatio,
+    ASTIApproximationParameters(double accuracyRatio,
                                    double rho, double CT, double err0,
                                    size_t scatteringTruthLevel, FeRHS)
       : rho(rho)
@@ -244,7 +244,7 @@ class TransportSpaces {
         throw std::domain_error("accuracyRatio needs to be in (0,1).");
     }
 
-    PeriterApproximationParameters(double accuracyRatio,
+    ASTIApproximationParameters(double accuracyRatio,
                                    double rho, double CT, double err0,
                                    size_t scatteringTruthLevel,
                                    ApproximateRHS)
@@ -344,7 +344,7 @@ class TransportSpaces {
   };
 
   std::ostream& operator<<(std::ostream& os,
-                           const PeriterApproximationParameters& params)
+                           const ASTIApproximationParameters& params)
   {
     os << "rho = "    << params.rho    << '\n'
        << "kappa1 = " << params.kappa1 << '\n'
@@ -355,4 +355,4 @@ class TransportSpaces {
   }
 } // end namespace Dune
 
-#endif // DUNE_DPG_RADIATIVE_TRANSFER_PERITER_COMMON_HH
+#endif // DUNE_DPG_RADIATIVE_TRANSFER_ASTI_COMMON_HH
