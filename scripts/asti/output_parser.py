@@ -5,7 +5,7 @@ import re
 
 def readData(datafile):
     parametersPattern = re.compile(
-        r'\(PERITER\|ASTI\) algorithm\n'
+        r'(PERITER|ASTI) algorithm\n'
         r'=================\n'
         r'Prescribed final accuracy: ([0-9]*\.?[0-9]*)\n'
         r'Henyey Greenstein kernel with gamma = ([0-9]*\.?[0-9]*)\n'
@@ -13,7 +13,7 @@ def readData(datafile):
         r'Kernel approximation with: (.*)\n'
         r'Maximum wavelet level: ([0-9]*\.?[0-9]*)\n'
         r'Maximum number of directions: ([0-9]*\.?[0-9]*)\n'
-        r'\(Periter\|ASTI\) parameters:\n'
+        r'(Periter|ASTI) parameters:\n'
         r'rho = ([0-9]*\.?[0-9]*)\n'
         r'kappa1 = ([0-9]*\.?[0-9]*)\n'
         r'kappa2 = ([0-9]*\.?[0-9]*)\n'
