@@ -787,6 +787,9 @@ data = readData(args.infile)
 
 #mpl.rc('text', usetex=True)
 
+if args.simple_plot:
+    mpl.rcParams['font.size'] = 14
+
 plot_convergence(data,
      outputfile=args.prefixOutputFile+"-conv.pdf",
      simple_plot=args.simple_plot,
