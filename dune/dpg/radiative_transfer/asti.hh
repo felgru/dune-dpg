@@ -1193,26 +1193,35 @@ compute_transport_solution(
 {
   auto bilinearForm =
     bilinearFormWithSpaces(spaces.testSpacePtr(), spaces.solutionSpacePtr())
-    .template addIntegralTerm<0,0, IntegrationType::valueValue,
-                                   DomainOfIntegration::interior>
+    .template addIntegralTerm<0,0,
+                              IntegrationType::valueValue,
+                              DomainOfIntegration::interior>
                              (sigma(spaces.gridView()))
-    .template addIntegralTerm<0,0, IntegrationType::gradValue,
-                                   DomainOfIntegration::interior>(-1., s)
-    .template addIntegralTerm<0,1, IntegrationType::normalVector,
-                                   DomainOfIntegration::face>(1., s)
+    .template addIntegralTerm<0,0,
+                              IntegrationType::gradValue,
+                              DomainOfIntegration::interior>
+                             (-1., s)
+    .template addIntegralTerm<0,1,
+                              IntegrationType::normalVector,
+                              DomainOfIntegration::face>
+                             (1., s)
     .create();
   auto bilinearFormEnriched =
       replaceTestSpaces(bilinearForm, spaces.enrichedTestSpacePtr());
   auto innerProduct =
 #if ASTI_NORMALIZED_SPACES
-    replaceTestSpaces(spaces.testSpace().preBasis().innerProduct(),
+    replaceTestSpaces(spaces.testSpace().preBasis()
+                                        .innerProduct(),
                       spaces.testSpacePtr());
 #else
     innerProductWithSpace(spaces.testSpacePtr())
-    .template addIntegralTerm<0,0, IntegrationType::gradGrad,
-                                   DomainOfIntegration::interior>(1., s)
-    .template addIntegralTerm<0,0, IntegrationType::travelDistanceWeighted,
-                                   DomainOfIntegration::face>(1., s)
+    .template addIntegralTerm<0,0,
+                              IntegrationType::gradGrad,
+                              DomainOfIntegration::interior>
+                             (1., s)
+    .template addIntegralTerm<0,0,
+                      IntegrationType::travelDistanceWeighted,
+                      DomainOfIntegration::face>(1., s)
     .create();
 #endif
   auto innerProductEnriched =
@@ -1232,8 +1241,10 @@ compute_transport_solution(
   /////////////////////////////////////////////////////////
   if(!bvExtension) {
     auto rhsFunction
-      = linearFormWithSpace(systemAssembler.getTestSearchSpaces())
-        .template addFunctionalTerm<0>(rhsFunctional, spaces.testSpace())
+      = linearFormWithSpace(systemAssembler
+                            .getTestSearchSpaces())
+        .template addFunctionalTerm<0>(rhsFunctional,
+                                       spaces.testSpace())
         .create();
     systemAssembler.assembleSystem(
         stiffnessMatrix, rhs,
@@ -1241,9 +1252,12 @@ compute_transport_solution(
   } else {
     assert(bvExtension->size() == spaces.testSpace().size());
     auto rhsFunction
-      = linearFormWithSpace(systemAssembler.getTestSearchSpaces())
-        .template addFunctionalTerm<0>(rhsFunctional, spaces.testSpace())
-        .template addSkeletalFunctionalTerm<0, IntegrationType::normalVector>
+      = linearFormWithSpace(systemAssembler
+                            .getTestSearchSpaces())
+        .template addFunctionalTerm<0>(rhsFunctional,
+                                       spaces.testSpace())
+        .template addSkeletalFunctionalTerm<0,
+                          IntegrationType::normalVector>
               (*bvExtension, spaces.testSpace(), -1., s)
         .create();
     systemAssembler.assembleSystem(
