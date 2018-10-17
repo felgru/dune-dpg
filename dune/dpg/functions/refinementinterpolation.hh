@@ -117,20 +117,22 @@ restoreDataToRefinedGrid(
 {
   using Element = typename GlobalBasis::LocalView::Element;
 
-  auto gridView = globalBasis.gridView();
-  auto& grid = gridView.grid();
+  const auto& grid = globalBasis.gridView().grid();
   auto localView = globalBasis.localView();
 
-  size_t maxEntityDoFs = localView.maxSize();
+  const size_t maxEntityDoFs = localView.maxSize();
 
   std::vector<FieldVector<double, 1>> data(globalBasis.size());
 
-  for(size_t eIdx = 0, eMax = storedData.first.size(); eIdx < eMax; eIdx++)
+  auto localData = storedData.second.cbegin();
+  for(auto entitySeed = storedData.first.cbegin(),
+           entitySeedEnd = storedData.first.cend();
+      entitySeed != entitySeedEnd;
+      ++entitySeed, localDataIterator += maxEntityDoFs)
   {
-    const auto e = grid.entity(storedData.first[eIdx]);
+    const auto e = grid.entity(*entitySeed);
     localView.bind(e);
 
-    const auto localData = storedData.second.cbegin() + eIdx * maxEntityDoFs;
     if(e.isLeaf()) {
       // directly copy cell data
       iterateOverLocalIndices(
