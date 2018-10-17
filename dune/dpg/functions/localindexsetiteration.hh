@@ -13,92 +13,92 @@ namespace Functions {
 
 namespace detail {
 
-  template<class LocalIndexSet,
+  template<class LocalView,
            class UnconstrainedEvaluation,
            class ConstrainedSetUp,
            class ConstrainedEvaluation,
            typename std::enable_if<models<Concept::LocalView<typename
-                                std::decay_t<LocalIndexSet>::GlobalBasis>,
-                          std::decay_t<LocalIndexSet>>()>::type* = nullptr>
+                                std::decay_t<LocalView>::GlobalBasis>,
+                          std::decay_t<LocalView>>()>::type* = nullptr>
   void iterateOverLocalIndices_impl(
-      LocalIndexSet&& localIndexSet,
+      LocalView&& localView,
       UnconstrainedEvaluation&& unconstrainedEvaluation,
       ConstrainedSetUp&&,
       ConstrainedEvaluation&&) {
-    using size_type = typename std::decay_t<LocalIndexSet>::size_type;
-    for(size_type i=0, i_max=localIndexSet.size(); i<i_max; i++) {
-      unconstrainedEvaluation(i, localIndexSet.index(i));
+    using size_type = typename std::decay_t<LocalView>::size_type;
+    for(size_type i=0, i_max=localView.size(); i<i_max; i++) {
+      unconstrainedEvaluation(i, localView.index(i));
     }
   }
 
-  template<class LocalIndexSet,
+  template<class LocalView,
            class UnconstrainedEvaluation,
            class ConstrainedSetUp,
            class ConstrainedEvaluation,
            typename std::enable_if<models<Concept::ConstrainedLocalView<
-                          typename std::decay_t<LocalIndexSet>::GlobalBasis>,
-                        std::decay_t<LocalIndexSet>>()>::type* = nullptr>
+                          typename std::decay_t<LocalView>::GlobalBasis>,
+                        std::decay_t<LocalView>>()>::type* = nullptr>
   void iterateOverLocalIndices_impl(
-      LocalIndexSet&& localIndexSet,
+      LocalView&& localView,
       UnconstrainedEvaluation&& unconstrainedEvaluation,
       ConstrainedSetUp&& constrainedSetUp,
       ConstrainedEvaluation&& constrainedEvaluation) {
-    using size_type = typename std::decay_t<LocalIndexSet>::size_type;
-    auto globalIndex = localIndexSet.indicesLocalGlobal().begin();
-    assert(!localIndexSet.indicesLocalGlobal().empty());
-    const size_type numConstraints = localIndexSet.constraintsSize();
+    using size_type = typename std::decay_t<LocalView>::size_type;
+    auto globalIndex = localView.indicesLocalGlobal().begin();
+    assert(!localView.indicesLocalGlobal().empty());
+    const size_type numConstraints = localView.constraintsSize();
     size_type i = 0;
     for(size_type c = 0; c < numConstraints; c++) {
-      const size_type nextConstraint = i + localIndexSet.constraintOffset(c);
+      const size_type nextConstraint = i + localView.constraintOffset(c);
       for (; i < nextConstraint; ++i) {
         unconstrainedEvaluation(i, *(globalIndex++));
       }
       constrainedSetUp(i);
-      for(auto w : localIndexSet.constraintWeights(c)) {
+      for(auto w : localView.constraintWeights(c)) {
         constrainedEvaluation(i, *(globalIndex++), w);
       }
       ++i;
     }
-    for (; i < localIndexSet.size(); ++i)
+    for (; i < localView.size(); ++i)
       unconstrainedEvaluation(i, *(globalIndex++));
-    assert(globalIndex == localIndexSet.indicesLocalGlobal().end());
+    assert(globalIndex == localView.indicesLocalGlobal().end());
   }
 }
 
-template<class LocalIndexSet,
+template<class LocalView,
          class UnconstrainedEvaluation,
          class ConstrainedSetUp,
          class ConstrainedEvaluation>
 void iterateOverLocalIndices(
-    LocalIndexSet&& localIndexSet,
+    LocalView&& localView,
     UnconstrainedEvaluation&& unconstrainedEvaluation,
     ConstrainedSetUp&& constrainedSetUp,
     ConstrainedEvaluation&& constrainedEvaluation) {
   detail::iterateOverLocalIndices_impl(
-      std::forward<LocalIndexSet>(localIndexSet),
+      std::forward<LocalView>(localView),
       std::forward<UnconstrainedEvaluation>(unconstrainedEvaluation),
       std::forward<ConstrainedSetUp>(constrainedSetUp),
       std::forward<ConstrainedEvaluation>(constrainedEvaluation));
 }
 
-template<class TestLocalIndexSet,
-         class SolutionLocalIndexSet,
+template<class TestLocalView,
+         class SolutionLocalView,
          class GetLocalMatrixEntry,
          class GetGlobalMatrixEntry>
 void addToGlobalMatrix(
-    TestLocalIndexSet&& testLocalIndexSet,
-    SolutionLocalIndexSet&& solutionLocalIndexSet,
+    TestLocalView&& testLocalView,
+    SolutionLocalView&& solutionLocalView,
     GetLocalMatrixEntry&& getLocalMatrixEntry,
     GetGlobalMatrixEntry&& getGlobalMatrixEntry) {
-  using TestMultiIndex = typename std::decay_t<TestLocalIndexSet>::MultiIndex;
+  using TestMultiIndex = typename std::decay_t<TestLocalView>::MultiIndex;
   using SolutionMultiIndex
-      = typename std::decay_t<SolutionLocalIndexSet>::MultiIndex;
+      = typename std::decay_t<SolutionLocalView>::MultiIndex;
   iterateOverLocalIndices(
-    std::forward<TestLocalIndexSet>(testLocalIndexSet),
+    std::forward<TestLocalView>(testLocalView),
     [&](size_t i, TestMultiIndex gi)
     {
       iterateOverLocalIndices(
-        solutionLocalIndexSet,
+        solutionLocalView,
         [&](size_t j, SolutionMultiIndex gj)
         {
           getGlobalMatrixEntry(gi, gj) += getLocalMatrixEntry(i, j);
@@ -114,7 +114,7 @@ void addToGlobalMatrix(
     [&](size_t i, TestMultiIndex gi, double wi)
     {
       iterateOverLocalIndices(
-        solutionLocalIndexSet,
+        solutionLocalView,
         [&](size_t j, SolutionMultiIndex gj)
         {
           getGlobalMatrixEntry(gi, gj) += wi * getLocalMatrixEntry(i, j);

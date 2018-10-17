@@ -22,7 +22,6 @@ attachDataToGrid(
 
   auto gridView = globalBasis.gridView();
   auto localView = globalBasis.localView();
-  auto localIndexSet = globalBasis.localIndexSet();
 
   size_t maxEntityDoFs = localView.maxSize();
 
@@ -35,12 +34,11 @@ attachDataToGrid(
   for(const auto& e : elements(gridView))
   {
     localView.bind(e);
-    localIndexSet.bind(localView);
 
     *(localEntitySeed++) = e.seed();
 
     iterateOverLocalIndices(
-      localIndexSet,
+      localView,
       [&](size_t i, auto gi)
       {
         localData[i] = data[gi[0]];
@@ -122,7 +120,6 @@ restoreDataToRefinedGrid(
   auto gridView = globalBasis.gridView();
   auto& grid = gridView.grid();
   auto localView = globalBasis.localView();
-  auto localIndexSet = globalBasis.localIndexSet();
 
   size_t maxEntityDoFs = localView.maxSize();
 
@@ -130,15 +127,14 @@ restoreDataToRefinedGrid(
 
   for(size_t eIdx = 0, eMax = storedData.first.size(); eIdx < eMax; eIdx++)
   {
-    auto e = grid.entity(storedData.first[eIdx]);
+    const auto e = grid.entity(storedData.first[eIdx]);
     localView.bind(e);
-    localIndexSet.bind(localView);
 
     const auto localData = storedData.second.cbegin() + eIdx * maxEntityDoFs;
     if(e.isLeaf()) {
       // directly copy cell data
       iterateOverLocalIndices(
-        localIndexSet,
+        localView,
         [&](size_t i, auto gi)
         {
           data[gi[0]] = localData[i];
@@ -152,7 +148,6 @@ restoreDataToRefinedGrid(
       for (const auto& child : descendantElements(e, grid.maxLevel()))
       {
         localView.bind(child);
-        localIndexSet.bind(localView);
 
         // This assumes that e and child share the same finite element
         // and thus the same entity type.
@@ -167,7 +162,7 @@ restoreDataToRefinedGrid(
             childLocalData);
 
         iterateOverLocalIndices(
-          localIndexSet,
+          localView,
           [&](size_t i, auto gi)
           {
             data[gi[0]] = childLocalData[i];

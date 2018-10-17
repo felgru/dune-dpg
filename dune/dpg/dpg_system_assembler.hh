@@ -978,24 +978,24 @@ defineCharacteristicFaces_impl(
 
 
 namespace detail {
-  template<class ConstrainedLocalIndexSet>
-  typename ConstrainedLocalIndexSet::MultiIndex
-  getUnconstrainedIndex(const ConstrainedLocalIndexSet& localIndexSet,
+  template<class ConstrainedLocalView>
+  typename ConstrainedLocalView::MultiIndex
+  getUnconstrainedIndex(const ConstrainedLocalView& localView,
       size_t localIndex)
   {
     using size_type
-        = typename std::decay_t<ConstrainedLocalIndexSet>::size_type;
-    auto globalIndex = localIndexSet.indicesLocalGlobal().begin();
-    const size_type numConstraints = localIndexSet.constraintsSize();
+        = typename std::decay_t<ConstrainedLocalView>::size_type;
+    auto globalIndex = localView.indicesLocalGlobal().begin();
+    const size_type numConstraints = localView.constraintsSize();
     size_type i = 0;
     for(size_type c = 0; c < numConstraints; c++) {
-      const size_type nextConstraint = i + localIndexSet.constraintOffset(c);
+      const size_type nextConstraint = i + localView.constraintOffset(c);
       if(localIndex < nextConstraint) {
         return globalIndex[localIndex - i];
       } else {
         assert(localIndex != nextConstraint);
-        std::advance(globalIndex, localIndexSet.constraintOffset(c)
-            + localIndexSet.constraintWeights(c).size());
+        std::advance(globalIndex, localView.constraintOffset(c)
+            + localView.constraintWeights(c).size());
         i = nextConstraint + 1;
       }
     }
