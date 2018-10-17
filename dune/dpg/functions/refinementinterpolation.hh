@@ -128,7 +128,7 @@ restoreDataToRefinedGrid(
   for(auto entitySeed = storedData.first.cbegin(),
            entitySeedEnd = storedData.first.cend();
       entitySeed != entitySeedEnd;
-      ++entitySeed, localDataIterator += maxEntityDoFs)
+      ++entitySeed, localData += maxEntityDoFs)
   {
     const auto e = grid.entity(*entitySeed);
     localView.bind(e);
