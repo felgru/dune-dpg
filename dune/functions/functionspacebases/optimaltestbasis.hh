@@ -333,13 +333,13 @@ class OptimalTestBasisNodeIndexSet
   using GV = typename TestspaceCoefficientMatrix::GridView;
   enum {dim = GV::dimension};
 
-  template<typename It, typename LIS>
-  static It computeIndices(It it, const LIS& localIndexSet,
+  template<typename It, typename LocalView>
+  static It computeIndices(It it, const LocalView& localView,
                            size_t globalOffset)
   {
-    for (size_type i = 0, end = localIndexSet.size(); i < end; ++it, ++i)
+    for (size_type i = 0, end = localView.size(); i < end; ++it, ++i)
     {
-      *it = {{ globalOffset + (localIndexSet.index(i))[0] }};
+      *it = {{ globalOffset + (localView.index(i))[0] }};
     }
     return it;
   }

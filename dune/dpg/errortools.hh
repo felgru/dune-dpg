@@ -30,21 +30,21 @@ namespace Dune {
 
   namespace detail {
     template<class GlobalVectorType, class LocalVectorType,
-            class LocalIndexSets,
+            class LocalViews,
             class Offsets>
     inline void getLocalCoefficients(
         const GlobalVectorType& solution,
         LocalVectorType& solutionElement,
-        const LocalIndexSets& localIndexSets,
+        const LocalViews& localViews,
         const Offsets& localOffsets,
         const Offsets& globalOffsets) {
       Hybrid::forEach(
           Std::make_index_sequence<
-              std::tuple_size<LocalIndexSets>::value>{},
+              std::tuple_size<LocalViews>::value>{},
           [&](auto i) {
-            auto const & localIndexSet = std::get<i>(localIndexSets);
+            auto const & localView = std::get<i>(localViews);
             iterateOverLocalIndices(
-              localIndexSet,
+              localView,
               [&](size_t j, auto gj) {
                 solutionElement[j + localOffsets[i]]
                     = solution[globalOffsets[i] + gj[0]];
@@ -555,8 +555,6 @@ namespace Dune {
  * \param innerProduct        the inner product
  * \param testLocalViews
  * \param solutionLocalViews
- * \param testLocalIndexSets
- * \param solutionLocalIndexSets
  * \param solution            the computed solution
  * \param rhs                 the right-hand side
  */
