@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
+## 0.5 (Unreleased)
+
 ## 0.4 - 2018-10-18
 ### Added
 * A simpler interface to create (bi)linear forms and inner products
