@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
-## 0.4 (Unreleased)
+## 0.4 - 2018-10-18
 ### Added
 * A simpler interface to create (bi)linear forms and inner products
   has been added. This tries to be less verbose than the old interface
@@ -13,8 +13,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   interfaces in our example programs and in the commit notes of
   commit [a7104b565f35c735336fda764e95d68a97258b8d](https://gitlab.dune-project.org/felix.gruber/dune-dpg/commit/a7104b565f35c735336fda764e95d68a97258b8d).
 * The radiative transfer code described in Felix’ thesis has been
-  merged. You can use the example programs asti_checkerboard and
-  asti_peaky to recreate the results in his thesis.
+  merged. You can use the example program asti_checkerboard_normalized
+  to recreate the results in his thesis. See doc/experiments.md for
+  more details.
 * You can now normalize the basis functions in a GlobalBasis with
   respect to a given inner product by using `NormalizedBasis`
   or `NormalizedRefinedBasis`.
@@ -50,8 +51,6 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   accordance with a rename in dune-functions 2.6.
   (Since we never use the members of this namespace, this rename will
    probably not affect you.)
-
-### Fixed
 
 ### Deprecated
 * The `localIndexSet()` method of `ConstrainedGlobalBasis` has been
