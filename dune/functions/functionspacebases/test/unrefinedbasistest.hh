@@ -5,6 +5,7 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/typetraits.hh>
+#include <dune/common/unused.hh>
 #include <dune/common/version.hh>
 
 #include <dune/localfunctions/test/test-localfe.hh>
@@ -96,7 +97,7 @@ void checkConsistencyOfLocalViewAndIndexSet(const Basis& feBasis)
       assert(localView.index(i) == localView2.index(i));
 
     typedef typename Basis::LocalView::Tree Tree;
-    const Tree& tree = localView.tree();
+    DUNE_UNUSED const Tree& tree = localView.tree();
 
     // we have a flat tree...
     assert(localView.size() == tree.size());
