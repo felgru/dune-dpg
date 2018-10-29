@@ -1203,18 +1203,7 @@ compute_transport_solution(
     .create();
   auto bilinearFormEnriched =
       replaceTestSpaces(bilinearForm, spaces.enrichedTestSpacePtr());
-  auto innerProduct =
-#if ASTI_NORMALIZED_SPACES
-    replaceTestSpaces(spaces.testSpace().preBasis().innerProduct(),
-                      spaces.testSpacePtr());
-#else
-    innerProductWithSpace(spaces.testSpacePtr())
-    .template addIntegralTerm<0,0, IntegrationType::gradGrad,
-                                   DomainOfIntegration::interior>(1., s)
-    .template addIntegralTerm<0,0, IntegrationType::travelDistanceWeighted,
-                                   DomainOfIntegration::face>(1., s)
-    .create();
-#endif
+  auto innerProduct = spaces.testInnerProduct(s);
   auto innerProductEnriched =
       replaceTestSpaces(innerProduct, spaces.enrichedTestSpacePtr());
 

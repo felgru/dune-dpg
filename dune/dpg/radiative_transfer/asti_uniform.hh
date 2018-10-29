@@ -800,13 +800,7 @@ compute_transport_solution(
       .create();
   auto bilinearFormEnriched =
       replaceTestSpaces(bilinearForm, spaces.enrichedTestSpacePtr());
-  auto innerProduct
-    = innerProductWithSpace(spaces.testSpacePtr())
-      .template addIntegralTerm<0,0, IntegrationType::gradGrad,
-                                     DomainOfIntegration::interior>(1., s)
-      .template addIntegralTerm<0,0, IntegrationType::travelDistanceWeighted,
-                                     DomainOfIntegration::face>(1., s)
-      .create();
+  auto innerProduct = spaces.testInnerProduct(s);
   auto innerProductEnriched =
       replaceTestSpaces(innerProduct, spaces.enrichedTestSpacePtr());
 

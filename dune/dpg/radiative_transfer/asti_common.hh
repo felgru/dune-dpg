@@ -61,6 +61,23 @@ class TransportSpaces {
   static_assert(std::is_same<typename TraceBasis::GridView, GV>::value,
                 "GridViews of transport spaces don't match!");
 
+  template<typename TestSpacesPtr>
+  static auto
+  make_test_inner_product(const TestSpacesPtr& testSpaces,
+                          const FieldVector<double, 2> direction)
+  {
+    auto innerProduct
+      = innerProductWithSpace(testSpaces)
+        .template addIntegralTerm<0,0,IntegrationType::gradGrad,
+                                      DomainOfIntegration::interior>
+                                 (1., direction)
+        .template addIntegralTerm<0,0,IntegrationType::valueValue,
+                                      DomainOfIntegration::interior>(1.)
+        .create();
+
+    return innerProduct;
+  }
+
 #if ASTI_NORMALIZED_SPACES
   template<typename FEBasisTest>
   static auto
@@ -69,13 +86,7 @@ class TransportSpaces {
   {
     auto unnormalizedTestSpaces = make_space_tuple<FEBasisTest>(gridView);
     auto innerProduct
-      = innerProductWithSpace(unnormalizedTestSpaces)
-        .template addIntegralTerm<0,0,IntegrationType::gradGrad,
-                                      DomainOfIntegration::interior>
-                                 (1., direction)
-        .template addIntegralTerm<0,0,IntegrationType::valueValue,
-                                      DomainOfIntegration::interior>(1.)
-        .create();
+      = make_test_inner_product(unnormalizedTestSpaces, direction);
 
     return make_normalized_space_tuple(innerProduct);
   }
@@ -191,6 +202,10 @@ class TransportSpaces {
 
   GridView gridView() const {
     return interiorSolutionSpace().gridView();
+  }
+
+  auto testInnerProduct(const FieldVector<double, 2> direction) const {
+    return make_test_inner_product(testSpace_, direction);
   }
 
   private:
