@@ -3,11 +3,10 @@
 #ifndef DUNE_DPG_RADIATIVE_TRANSFER_ASTI_COMMON_HH
 #define DUNE_DPG_RADIATIVE_TRANSFER_ASTI_COMMON_HH
 
+#include <cmath>
 #include <ostream>
 #include <stdexcept>
 #include <type_traits>
-
-#include <boost/math/special_functions/zeta.hpp>
 
 #include <dune/dpg/assemble_helper.hh>
 #if ASTI_NORMALIZED_SPACES
@@ -301,14 +300,14 @@ class TransportSpaces {
 
     //! a priori estimate for $\|u - \bar u_{n+1}\|$
     double combinedAccuracy() const {
-      // TODO: here we can replace zeta(beta) with the sum
+      // TODO: here we can replace riemann_zeta(beta) with the sum
       //       over the previous eta_j
-      return (rho*uBound + boost::math::zeta(beta)) * std::pow(rho,n);
+      return (rho*uBound + std::riemann_zeta(beta)) * std::pow(rho,n);
     }
 
     unsigned int maxOuterIterationsForTargetAccuracy(double target) const
     {
-      const double eps2 = target/(rho*uBound+boost::math::zeta(beta));
+      const double eps2 = target/(rho*uBound+std::riemann_zeta(beta));
       const int m = static_cast<int>(std::ceil(std::log(eps2) / std::log(rho)));
       return static_cast<unsigned int>(std::max(m, 0));
     }
@@ -350,10 +349,10 @@ class TransportSpaces {
     private:
 
     void updateUBound(const double uNorm) {
-      // TODO: here we can probably replace zeta(beta) with the sum
+      // TODO: here we can probably replace riemann_zeta(beta) with the sum
       //       over the previous eta_j
       const double uBoundUpdate = uNorm
-          + (rho*uBound + boost::math::zeta(beta)) * std::pow(rho,n-1);
+          + (rho*uBound + std::riemann_zeta(beta)) * std::pow(rho,n-1);
       uBound = std::min(uBound, uBoundUpdate);
     }
   };
