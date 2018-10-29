@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_RADIATIVE_TRANSFER_SUBGRIDS_HH
 #define DUNE_DPG_RADIATIVE_TRANSFER_SUBGRIDS_HH
 
+#include <algorithm>
 #include <memory>
 #include <set>
 #include <type_traits>
@@ -41,7 +42,8 @@ std::unique_ptr<SubGrid> intersectSubGrids(const SubGrid& subGrid1,
   std::unique_ptr<SubGrid> gr
       = std::make_unique<SubGrid>(subGrid1.getHostGrid());
   gr->createBegin();
-  for(int level=0; level <= subGrid1.maxLevel(); ++level)
+  const int maxLevel = std::min(subGrid1.maxLevel(), subGrid2.maxLevel());
+  for(int level=0; level <= maxLevel; ++level)
   {
     const auto levelGridView = subGrid1.levelGridView(level);
     for (auto&& e : elements(levelGridView))
