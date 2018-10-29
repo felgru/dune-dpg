@@ -1220,8 +1220,8 @@ compute_transport_solution(
                               DomainOfIntegration::interior>
                              (1., s)
     .template addIntegralTerm<0,0,
-                      IntegrationType::travelDistanceWeighted,
-                      DomainOfIntegration::face>(1., s)
+                            IntegrationType::valueValue,
+                            DomainOfIntegration::interior>(1.)
     .create();
 #endif
   auto innerProductEnriched =

@@ -804,8 +804,8 @@ compute_transport_solution(
     = innerProductWithSpace(spaces.testSpacePtr())
       .template addIntegralTerm<0,0, IntegrationType::gradGrad,
                                      DomainOfIntegration::interior>(1., s)
-      .template addIntegralTerm<0,0, IntegrationType::travelDistanceWeighted,
-                                     DomainOfIntegration::face>(1., s)
+      .template addIntegralTerm<0,0, IntegrationType::valueValue,
+                                     DomainOfIntegration::interior>(1.)
       .create();
   auto innerProductEnriched =
       replaceTestSpaces(innerProduct, spaces.enrichedTestSpacePtr());
