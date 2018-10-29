@@ -113,6 +113,9 @@ std::unique_ptr<SubGrid> copySubGrid(const SubGrid& subGrid) {
   }
   gr->createEnd();
   gr->setMaxLevelDifference(1);
+  if(gr->leafGridView().size(0) != subGrid->leafGridView().size(0)) {
+    DUNE_THROW(Dune::Exception, "copied SubGrid does not match original one!");
+  }
   return gr;
 }
 
