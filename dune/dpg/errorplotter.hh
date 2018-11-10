@@ -15,6 +15,8 @@
 
 #include <dune/istl/bvector.hh>
 
+#include <cmath>
+#include <string>
 #include <type_traits>
 
 namespace Dune {
@@ -78,7 +80,7 @@ public:
 
   template<class EntitySeed, class GridView>
   void plot(const std::string& functionname,
-            const std::vector<std::tuple<EntitySeed, double>>& errors,
+            const std::vector<std::tuple<EntitySeed, double>>& squaredErrors,
             const GridView&    gridView) const
   {
     const auto& grid = gridView.grid();
@@ -88,10 +90,10 @@ public:
     VectorType u(feBasis.size());
 
     auto localView = feBasis.localView();
-    for(const auto& cellTuple : errors) {
+    for(const auto& cellTuple : squaredErrors) {
       const auto e = grid.entity(std::get<0>(cellTuple));
       localView.bind(e);
-      u[localView.index(0)] = std::get<1>(cellTuple);
+      u[localView.index(0)] = std::sqrt(std::get<1>(cellTuple));
     }
 
     plot(functionname, u, feBasis);
