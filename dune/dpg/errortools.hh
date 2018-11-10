@@ -458,10 +458,9 @@ namespace Dune {
         0.,
         [&](double acc, const auto& quadPoint) {
           // Position of the current quadrature point in the reference element
-          const FieldVector<double,dim>& quadPos = quadPoint.position();
+          const auto& quadPos = quadPoint.position();
           // Global position of the current quadrature point
-          const FieldVector<double,dim> globalQuadPos
-              = geometry.global(quadPos);
+          const auto globalQuadPos = geometry.global(quadPos);
           const double fValue = f(globalQuadPos);
           return acc
                  + geometry.integrationElement(quadPos)
