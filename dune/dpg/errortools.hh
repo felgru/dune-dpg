@@ -195,25 +195,23 @@ namespace Dune {
     const QuadratureRule<double, dim>& quad =
         QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
 
-    double l2NormSquared = 0;
+    const double l2NormSquared = std::accumulate(cbegin(quad), cend(quad), 0.,
+        [&](const auto& quadPoint) {
+          // Position of the current quadrature point in the reference element
+          const FieldVector<double,dim>& quadPos = quadPoint.position();
 
-    for (const auto& quadPoint : quad) {
+          // The multiplicative factor in the integral transformation formula
+          const double integrationElement = geometry.integrationElement(quadPos);
 
-      // Position of the current quadrature point in the reference element
-      const FieldVector<double,dim>& quadPos = quadPoint.position();
+          std::vector<FieldVector<double,1> > shapeFunctionValues;
+          localBasis.evaluateFunction(quadPos, shapeFunctionValues);
 
-      // The multiplicative factor in the integral transformation formula
-      const double integrationElement = geometry.integrationElement(quadPos);
+          const double uQuad = std::inner_product(shapeFunctionValues.cbegin(),
+                                                  shapeFunctionValues.cend(),
+                                                  cbegin(u), 0.);
 
-      std::vector<FieldVector<double,1> > shapeFunctionValues;
-      localBasis.evaluateFunction(quadPos, shapeFunctionValues);
-
-      const double uQuad = std::inner_product(shapeFunctionValues.cbegin(),
-                                              shapeFunctionValues.cend(),
-                                              cbegin(u), 0.);
-
-      l2NormSquared += uQuad * uQuad * quadPoint.weight() * integrationElement;
-    }
+          return uQuad * uQuad * quadPoint.weight() * integrationElement;
+        });
 
     return l2NormSquared;
   }
@@ -231,28 +229,28 @@ namespace Dune {
     static_assert(!is_RefinedFiniteElement<FEBasis>::value,
         "l2norm only implemented for unrefined FE spaces!");
 
-    auto gridView = feBasis.gridView();
-
-    double l2NormSquared = 0.;
+    const auto gridView = feBasis.gridView();
 
     auto localView = feBasis.localView();
 
-    for(const auto& e : elements(gridView))
-    {
-      localView.bind(e);
+    const double l2NormSquared = std::accumulate(gridView.begin(),
+        gridView.end(), 0.,
+        [&](const auto& e)
+        {
+          localView.bind(e);
 
-      const size_t dofFEelement = localView.size();
+          const size_t dofFEelement = localView.size();
 
-      // We take the coefficients of u that correspond to the current
-      // element e and store them in uElement.
-      BlockVector<FieldVector<double,1> > uElement(dofFEelement);
-      for (size_t i=0; i<dofFEelement; i++)
-      {
-          uElement[i] = u[ localView.index(i)[0] ];
-      }
+          // We take the coefficients of u that correspond to the current
+          // element e and store them in uElement.
+          BlockVector<FieldVector<double,1> > uElement(dofFEelement);
+          for (size_t i=0; i<dofFEelement; i++)
+          {
+              uElement[i] = u[ localView.index(i)[0] ];
+          }
 
-      l2NormSquared += l2normSquaredElement(localView, uElement);
-    }
+          return l2normSquaredElement(localView, uElement);
+        });
 
     return std::sqrt(l2NormSquared);
   }
@@ -279,7 +277,6 @@ namespace Dune {
       Function&& uRef,
       const unsigned int quadOrder)
   {
-
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
     const Element& element = localView.element();
@@ -298,38 +295,34 @@ namespace Dune {
         QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
     const SubsampledQuadratureRule<double, subsamples, dim>& quad(quadSection);
 
-    // Variables employed in the loop
-    double errSquare = 0;     // we store here the square of the error
+    const double errSquare = std::accumulate(cbegin(quad), cend(quad), 0.,
+        [&](const auto& quadPoint) {
+          // Position of the current quadrature point in the reference element
+          const FieldVector<double,dim>& quadPos = quadPoint.position();
+          // Position of the current quadrature point in the current element
+          const FieldVector<double,dim> globalQuadPos = geometry.global(quadPos);
 
-    // Loop over all quadrature points
-    for (const auto& quadPoint : quad) {
+          // The multiplicative factor in the integral transformation formula
+          const double integrationElement = geometry.integrationElement(quadPos);
 
-      // Position of the current quadrature point in the reference element
-      const FieldVector<double,dim>& quadPos = quadPoint.position();
-      // Position of the current quadrature point in the current element
-      const FieldVector<double,dim> globalQuadPos = geometry.global(quadPos);
+          // Evaluate all shape function values at quadPos (which is a
+          // quadrature point in the reference element)
+          std::vector<FieldVector<double,1> > shapeFunctionValues;
+          localBasis.evaluateFunction(quadPos, shapeFunctionValues);
 
-      // The multiplicative factor in the integral transformation formula
-      const double integrationElement = geometry.integrationElement(quadPos);
+          // Evaluation of u at the point globalQuadPos, which is quadPos
+          // mapped to the physical domain
+          const double uQuad = std::inner_product(shapeFunctionValues.cbegin(),
+                                                  shapeFunctionValues.cend(),
+                                                  cbegin(u), 0.);
 
-      // Evaluate all shape function values at quadPos (which is a
-      // quadrature point in the reference element)
-      std::vector<FieldVector<double,1> > shapeFunctionValues;
-      localBasis.evaluateFunction(quadPos, shapeFunctionValues);
+          // Value of uRef at globalQuadPos
+          const double uExactQuad = uRef(globalQuadPos);
 
-      // Evaluation of u at the point globalQuadPos, which is quadPos
-      // mapped to the physical domain
-      const double uQuad = std::inner_product(shapeFunctionValues.cbegin(),
-                                              shapeFunctionValues.cend(),
-                                              cbegin(u), 0.);
-
-      // Value of uRef at globalQuadPos
-      const double uExactQuad = uRef(globalQuadPos);
-
-      // we add the squared error at the quadrature point
-      errSquare += (uQuad - uExactQuad)*(uQuad - uExactQuad)
+          // we add the squared error at the quadrature point
+          return (uQuad - uExactQuad) * (uQuad - uExactQuad)
                  * quadPoint.weight() * integrationElement;
-    }
+        });
 
     return errSquare;
   }
@@ -358,39 +351,28 @@ namespace Dune {
       Function&& uRef,
       const unsigned int quadratureOrder)
   {
-    // Get the grid view from the finite element basis
-    typedef typename FEBasis::GridView GridView;
-    GridView gridView = feBasis.gridView();
-
-    // Variables where we will store the errors
-    double errSquare = 0.;
+    const auto gridView = feBasis.gridView();
 
     // A view on the FE basis on a single element
     auto localView = feBasis.localView();
 
-    // A loop over all elements of the grid
-    for(const auto& e : elements(gridView))
-    {
-      // Bind the local FE basis view to the current element
-      localView.bind(e);
+    const double errSquare = std::accumulate(gridView.begin(),
+        gridView.end(), 0.,
+        [&](const auto& e)
+        {
+          localView.bind(e);
 
-      // Now we take the coefficients of u that correspond to the
-      // current element e. They are stored in uElement.
-      // number of dofs of the finite element inside the element
-      // (remark: this value will vary if we do p-refinement)
-      size_t dofFEelement = localView.size();
+          const size_t dofFEelement = localView.size();
 
-      // We take the coefficients of u that correspond to the current
-      // element e. They are stored in uElement.
-      BlockVector<FieldVector<double,1> > uElement(dofFEelement);
-      for (size_t i=0; i<dofFEelement; i++)
-      {
-          uElement[i] = u[ localView.index(i)[0] ];
-      }
-      // Now we compute the error inside the element
-      errSquare += computeL2errorSquareElement<subsamples>
-                       (localView, uElement, uRef, quadratureOrder);
-    }
+          // coefficients of u that correspond to the current element e
+          BlockVector<FieldVector<double,1> > uElement(dofFEelement);
+          for (size_t i=0; i<dofFEelement; i++)
+          {
+              uElement[i] = u[ localView.index(i)[0] ];
+          }
+          return computeL2errorSquareElement<subsamples>
+                           (localView, uElement, uRef, quadratureOrder);
+        });
 
     return std::sqrt(errSquare);
   }
@@ -470,18 +452,19 @@ namespace Dune {
     const Dune::QuadratureRule<double, dim>& quad =
             Dune::QuadratureRules<double, dim>::rule(element.type(),
                                                      quadratureOrder);
-    double fSquareIntegral = 0;
-    for (const auto& quadPoint : quad) {
-      // Position of the current quadrature point in the reference element
-      const FieldVector<double,dim>& quadPos = quadPoint.position();
-      // Global position of the current quadrature point
-      const FieldVector<double,dim> globalQuadPos
-          = geometry.global(quadPos);
-      const double fValue = f(globalQuadPos);
-      fSquareIntegral += geometry.integrationElement(quadPos)
-                       * quadPoint.weight()
-                       * fValue * fValue;
-    }
+    const double fSquareIntegral = std::accumulate(cbegin(quad), cend(quad),
+        0.,
+        [&](const auto& quadPoint) {
+          // Position of the current quadrature point in the reference element
+          const FieldVector<double,dim>& quadPos = quadPoint.position();
+          // Global position of the current quadrature point
+          const FieldVector<double,dim> globalQuadPos
+              = geometry.global(quadPos);
+          const double fValue = f(globalQuadPos);
+          return geometry.integrationElement(quadPos)
+                 * quadPoint.weight()
+                 * fValue * fValue;
+        })
     errSquare += fSquareIntegral;
 
     return errSquare;
@@ -529,19 +512,18 @@ namespace Dune {
     SolutionLocalViews solutionLocalViews
         = getLocalViews(*innerProduct.getTestSpaces());
 
-    double squaredResidual = 0.;
+    const double squaredResidual = std::accumulate(gridView.begin(),
+        gridView.end(), 0.,
+        [&](const auto& e)
+        {
+          bindLocalViews(solutionLocalViews, e);
 
-    for(const auto& e : elements(gridView))
-    {
-      bindLocalViews(solutionLocalViews, e);
-
-      squaredResidual
-          += aPosterioriL2ErrorSquareElement(innerProduct,
-                                             linearForm,
-                                             f,
-                                             solutionLocalViews,
-                                             solution);
-    }
+          return aPosterioriL2ErrorSquareElement(innerProduct,
+                                                 linearForm,
+                                                 f,
+                                                 solutionLocalViews,
+                                                 solution);
+        });
 
     return std::sqrt(squaredResidual);
   }
@@ -671,21 +653,20 @@ namespace Dune {
     TestLocalViews testLocalViews
         = getLocalViews(*bilinearForm.getTestSpaces());
 
-    double squaredResidual = 0.;
+    const double squaredResidual = std::accumulate(gridView.begin(),
+        gridView.end(), 0.,
+        [&](const auto& e)
+        {
+          bindLocalViews(testLocalViews, e);
+          bindLocalViews(solutionLocalViews, e);
 
-    for(const auto& e : elements(gridView))
-    {
-      bindLocalViews(testLocalViews, e);
-      bindLocalViews(solutionLocalViews, e);
-
-      squaredResidual
-          += aPosterioriErrorSquareElement(bilinearForm,
-                                           innerProduct,
-                                           testLocalViews,
-                                           solutionLocalViews,
-                                           solution,
-                                           rhs);
-   }
+          return aPosterioriErrorSquareElement(bilinearForm,
+                                               innerProduct,
+                                               testLocalViews,
+                                               solutionLocalViews,
+                                               solution,
+                                               rhs);
+       });
 
    return std::sqrt(squaredResidual);
 
