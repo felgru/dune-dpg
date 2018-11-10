@@ -707,15 +707,16 @@ namespace ScatteringKernelApproximation {
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
               quadOrder, QuadratureType::GaussLegendre);
           using namespace boost::math::constants;
-          auto sIt = sVector.begin();
+          auto subrangeBegin = sVector.begin();
           for(int k = 0, kmax = (1<<level); k < kmax; ++k)
           {
-            for (const auto& quadPoint : quad) {
-              double angle = 2*pi<double>()*(k+quadPoint.position())
-                             / (1<<level) - pi<double>(); // Angle in [-pi,pi]
-              *sIt = {cos(angle),sin(angle)};
-              ++sIt;
-            }
+            subrangeBegin = std::transform(quad.cbegin(), quad.cend(),
+              subrangeBegin,
+              [&](const auto& quadPoint) {
+                double angle = 2*pi<double>()*(k+quadPoint.position())
+                               / (1<<level) - pi<double>(); // Angle in [-pi,pi]
+                return FieldVector<double,2>{cos(angle),sin(angle)};
+              });
           }
         }
 
@@ -976,15 +977,16 @@ namespace ScatteringKernelApproximation {
             Dune::QuadratureRules<double, dim>::rule(GeometryTypes::line,
               quadOrder, QuadratureType::GaussLegendre);
           using namespace boost::math::constants;
-          auto sIt = sVector.begin();
-          for(int k = 0; k < (1<<level); ++k)
+          auto subrangeBegin = sVector.begin();
+          for(int k = 0, kmax = (1<<level); k < kmax; ++k)
           {
-            for (const auto& quadPoint : quad) {
-              double angle = 2*pi<double>()*(k+quadPoint.position())
-                             / (1<<level) - pi<double>(); // Angle in [-pi,pi]
-              *sIt = {cos(angle),sin(angle)};
-              ++sIt;
-            }
+            subrangeBegin = std::transform(quad.cbegin(), quad.cend(),
+              subrangeBegin,
+              [&](const auto& quadPoint) {
+                double angle = 2*pi<double>()*(k+quadPoint.position())
+                               / (1<<level) - pi<double>(); // Angle in [-pi,pi]
+                return FieldVector<double,2>{cos(angle),sin(angle)};
+              });
           }
         }
 
