@@ -382,7 +382,7 @@ int main(int argc, char** argv)
 
     const auto starterror = std::chrono::steady_clock::now();
     const double ratio = .2;
-    auto errorEstimates = ErrorTools::squaredCellwiseResidual(
+    auto squaredErrorEstimates = ErrorTools::squaredCellwiseResidual(
                                      bilinearForm_aposteriori,
                                      innerProduct_aposteriori,
                                      x, rhs);
@@ -390,10 +390,11 @@ int main(int argc, char** argv)
       ErrorPlotter errPlotter("transport_error_"
                               + std::to_string(nelements)
                               + "_" + std::to_string(i));
-      errPlotter.plot("errors", errorEstimates, gridView);
+      errPlotter.plot("errors", squaredErrorEstimates, gridView);
     }
     err = std::sqrt(
-        ErrorTools::DoerflerMarking(*grid, ratio, std::move(errorEstimates)));
+        ErrorTools::DoerflerMarking(*grid, ratio,
+                                    std::move(squaredErrorEstimates)));
 
     // Error with respect to exact solution
     const double l2err
