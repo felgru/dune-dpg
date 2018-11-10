@@ -579,67 +579,68 @@ public:
         hostGridGlobalBasis.gridView().grid().maxLevel();
     const auto subGridView = subGridGlobalBasis.gridView();
     const auto& subGrid = subGridView.grid();
-    for(const auto& e : elements(subGridView))
-    {
-      CellData cellData;
-      const auto eHost = subGrid.template getHostEntity<0>(e);
-      if(eHost.isLeaf()) {
-        localView.bind(eHost);
-
-        std::vector<FieldVector<double, 1>>
-            hostGridLocalData(localView.size());
-        iterateOverLocalIndices(
-          localView,
-          [&](size_t i, auto gi)
-          {
-            hostGridLocalData[i] = hostGridData[gi[0]];
-          },
-          [&](size_t i){ hostGridLocalData[i] = 0; },
-          [&](size_t i, auto gi, double wi)
-          {
-            hostGridLocalData[i] += wi * hostGridData[gi[0]];
-          }
-        );
-        cellData.reserve(1);
-        // direct transfer of hostGridData
-        // Will be later interpolated in the call to
-        // projectCellDataToSubGrid if global bases on host and
-        // sub grid differ.
-        cellData.push_back(std::make_pair(eHost.seed(),
-                                          std::move(hostGridLocalData)));
-      } else { // e is not contained in the HostLeafGridView:
-        for(const auto& child : descendantElements(eHost, maxHostGridLevel))
+    std::transform(subGridView.begin(), subGridView.end(),
+        std::back_inserter(gridData),
+        [&](const auto& e)
         {
-          if(!child.isLeaf()) continue;
+          CellData cellData;
+          const auto eHost = subGrid.template getHostEntity<0>(e);
+          if(eHost.isLeaf()) {
+            localView.bind(eHost);
 
-          localView.bind(child);
+            std::vector<FieldVector<double, 1>>
+                hostGridLocalData(localView.size());
+            iterateOverLocalIndices(
+              localView,
+              [&](size_t i, auto gi)
+              {
+                hostGridLocalData[i] = hostGridData[gi[0]];
+              },
+              [&](size_t i){ hostGridLocalData[i] = 0; },
+              [&](size_t i, auto gi, double wi)
+              {
+                hostGridLocalData[i] += wi * hostGridData[gi[0]];
+              }
+            );
+            cellData.reserve(1);
+            // direct transfer of hostGridData
+            // Will be later interpolated in the call to
+            // projectCellDataToSubGrid if global bases on host and
+            // sub grid differ.
+            cellData.push_back(std::make_pair(eHost.seed(),
+                                              std::move(hostGridLocalData)));
+          } else { // e is not contained in the HostLeafGridView:
+            for(const auto& child : descendantElements(eHost, maxHostGridLevel))
+            {
+              if(!child.isLeaf()) continue;
 
-          std::vector<FieldVector<double, 1>>
-              hostGridLocalData(localView.size());
-          iterateOverLocalIndices(
-            localView,
-            [&](size_t i, auto gi)
-            {
-              hostGridLocalData[i] = hostGridData[gi[0]];
-            },
-            [&](size_t i){ hostGridLocalData[i] = 0; },
-            [&](size_t i, auto gi, double wi)
-            {
-              hostGridLocalData[i] += wi * hostGridData[gi[0]];
+              localView.bind(child);
+
+              std::vector<FieldVector<double, 1>>
+                  hostGridLocalData(localView.size());
+              iterateOverLocalIndices(
+                localView,
+                [&](size_t i, auto gi)
+                {
+                  hostGridLocalData[i] = hostGridData[gi[0]];
+                },
+                [&](size_t i){ hostGridLocalData[i] = 0; },
+                [&](size_t i, auto gi, double wi)
+                {
+                  hostGridLocalData[i] += wi * hostGridData[gi[0]];
+                }
+              );
+              cellData.push_back(std::make_pair(child.seed(),
+                                                std::move(hostGridLocalData)));
             }
-          );
-          cellData.push_back(std::make_pair(child.seed(),
-                                            std::move(hostGridLocalData)));
-        }
-      }
+          }
 
-      std::vector<FieldVector<double, 1>> cellProjection
-          = detail::projectCellDataToSubGrid(e, subGridGlobalBasis,
-                                             hostGridGlobalBasis, cellData);
-      gridData.push_back(std::make_tuple(e.seed(),
-                                         std::move(cellProjection),
-                                         cellData));
-    }
+          std::vector<FieldVector<double, 1>> cellProjection
+              = detail::projectCellDataToSubGrid(e, subGridGlobalBasis,
+                                                 hostGridGlobalBasis, cellData);
+          return std::make_tuple(e.seed(), std::move(cellProjection),
+                                           std::move(cellData));
+        });
   }
 
   /**
