@@ -196,7 +196,7 @@ namespace Dune {
         QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
 
     const double l2NormSquared = std::accumulate(cbegin(quad), cend(quad), 0.,
-        [&](const auto& quadPoint) {
+        [&](double acc, const auto& quadPoint) {
           // Position of the current quadrature point in the reference element
           const FieldVector<double,dim>& quadPos = quadPoint.position();
 
@@ -210,7 +210,8 @@ namespace Dune {
                                                   shapeFunctionValues.cend(),
                                                   cbegin(u), 0.);
 
-          return uQuad * uQuad * quadPoint.weight() * integrationElement;
+          return acc
+               + uQuad * uQuad * quadPoint.weight() * integrationElement;
         });
 
     return l2NormSquared;
@@ -233,9 +234,9 @@ namespace Dune {
 
     auto localView = feBasis.localView();
 
-    const double l2NormSquared = std::accumulate(gridView.begin(),
-        gridView.end(), 0.,
-        [&](const auto& e)
+    const double l2NormSquared = std::accumulate(
+        gridView.template begin<0>(), gridView.template end<0>(), 0.,
+        [&](double acc, const auto& e)
         {
           localView.bind(e);
 
@@ -249,7 +250,7 @@ namespace Dune {
               uElement[i] = u[ localView.index(i)[0] ];
           }
 
-          return l2normSquaredElement(localView, uElement);
+          return acc + l2normSquaredElement(localView, uElement);
         });
 
     return std::sqrt(l2NormSquared);
@@ -296,7 +297,7 @@ namespace Dune {
     const SubsampledQuadratureRule<double, subsamples, dim>& quad(quadSection);
 
     const double errSquare = std::accumulate(cbegin(quad), cend(quad), 0.,
-        [&](const auto& quadPoint) {
+        [&](double acc, const auto& quadPoint) {
           // Position of the current quadrature point in the reference element
           const FieldVector<double,dim>& quadPos = quadPoint.position();
           // Position of the current quadrature point in the current element
@@ -320,7 +321,8 @@ namespace Dune {
           const double uExactQuad = uRef(globalQuadPos);
 
           // we add the squared error at the quadrature point
-          return (uQuad - uExactQuad) * (uQuad - uExactQuad)
+          return acc
+                 + (uQuad - uExactQuad) * (uQuad - uExactQuad)
                  * quadPoint.weight() * integrationElement;
         });
 
@@ -356,9 +358,9 @@ namespace Dune {
     // A view on the FE basis on a single element
     auto localView = feBasis.localView();
 
-    const double errSquare = std::accumulate(gridView.begin(),
-        gridView.end(), 0.,
-        [&](const auto& e)
+    const double errSquare = std::accumulate(
+        gridView.template begin<0>(), gridView.template end<0>(), 0.,
+        [&](double acc, const auto& e)
         {
           localView.bind(e);
 
@@ -370,7 +372,7 @@ namespace Dune {
           {
               uElement[i] = u[ localView.index(i)[0] ];
           }
-          return computeL2errorSquareElement<subsamples>
+          return acc + computeL2errorSquareElement<subsamples>
                            (localView, uElement, uRef, quadratureOrder);
         });
 
@@ -454,17 +456,18 @@ namespace Dune {
                                                      quadratureOrder);
     const double fSquareIntegral = std::accumulate(cbegin(quad), cend(quad),
         0.,
-        [&](const auto& quadPoint) {
+        [&](double acc, const auto& quadPoint) {
           // Position of the current quadrature point in the reference element
           const FieldVector<double,dim>& quadPos = quadPoint.position();
           // Global position of the current quadrature point
           const FieldVector<double,dim> globalQuadPos
               = geometry.global(quadPos);
           const double fValue = f(globalQuadPos);
-          return geometry.integrationElement(quadPos)
+          return acc
+                 + geometry.integrationElement(quadPos)
                  * quadPoint.weight()
                  * fValue * fValue;
-        })
+        });
     errSquare += fSquareIntegral;
 
     return errSquare;
@@ -512,13 +515,14 @@ namespace Dune {
     SolutionLocalViews solutionLocalViews
         = getLocalViews(*innerProduct.getTestSpaces());
 
-    const double squaredResidual = std::accumulate(gridView.begin(),
-        gridView.end(), 0.,
-        [&](const auto& e)
+    const double squaredResidual = std::accumulate(
+        gridView.template begin<0>(), gridView.template end<0>(), 0.,
+        [&](double acc, const auto& e)
         {
           bindLocalViews(solutionLocalViews, e);
 
-          return aPosterioriL2ErrorSquareElement(innerProduct,
+          return acc +
+                 aPosterioriL2ErrorSquareElement(innerProduct,
                                                  linearForm,
                                                  f,
                                                  solutionLocalViews,
@@ -653,14 +657,15 @@ namespace Dune {
     TestLocalViews testLocalViews
         = getLocalViews(*bilinearForm.getTestSpaces());
 
-    const double squaredResidual = std::accumulate(gridView.begin(),
-        gridView.end(), 0.,
-        [&](const auto& e)
+    const double squaredResidual = std::accumulate(
+        gridView.template begin<0>(), gridView.template end<0>(), 0.,
+        [&](double acc, const auto& e)
         {
           bindLocalViews(testLocalViews, e);
           bindLocalViews(solutionLocalViews, e);
 
-          return aPosterioriErrorSquareElement(bilinearForm,
+          return acc +
+                 aPosterioriErrorSquareElement(bilinearForm,
                                                innerProduct,
                                                testLocalViews,
                                                solutionLocalViews,
