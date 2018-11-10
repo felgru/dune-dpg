@@ -579,7 +579,8 @@ public:
         hostGridGlobalBasis.gridView().grid().maxLevel();
     const auto subGridView = subGridGlobalBasis.gridView();
     const auto& subGrid = subGridView.grid();
-    std::transform(subGridView.begin(), subGridView.end(),
+    std::transform(
+        subGridView.template begin<0>(), subGridView.template end<0>(),
         std::back_inserter(gridData),
         [&](const auto& e)
         {
