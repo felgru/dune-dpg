@@ -806,6 +806,41 @@ private:
     }
   }
 
+  template<class ChildEmbeddingGeometry>
+  std::pair<typename SubGridGlobalBasis::LocalView::Tree
+            ::RefinementGridView::template Codim<0>::Entity,
+            size_t>
+  findSubElementContainingChild(
+      const ChildEmbeddingGeometry& childEmbedding,
+      typename SubGridGlobalBasis::LocalView& localView)
+  {
+    const auto referenceGridView =
+        localView.tree().refinedReferenceElementGridView();
+
+    size_t subElementOffset = 0;
+    localView.resetSubElements();
+    for(const auto subElement : elements(referenceGridView)) {
+      localView.bindSubElement(subElement);
+      auto&& localFiniteElement = localView.tree().finiteElement();
+
+      const auto subGeometryInReferenceElement = subElement.geometry();
+
+      const detail::PointInTriangleTest
+          subElementTriangle(subGeometryInReferenceElement);
+
+      // Check if child lies in subElement.
+      if(subElementTriangle.containsPoint(childEmbedding.center()))
+      {
+        return {subElement, subElementOffset};
+      }
+
+      if(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
+        subElementOffset += localFiniteElement.size();
+    }
+    DUNE_THROW(Exception,
+        "No subelement found that contains the given child element.");
+  }
+
   template<class SGGlobalBasis, typename std::enable_if_t<
     is_RefinedFiniteElement<SGGlobalBasis>{}>* = nullptr>
   void
@@ -839,49 +874,20 @@ private:
         " local refinement!");
       LocalData childLocalData(targetLocalView.size());
 
-      // We assume that the referenceGridView of
-      // source and target local view are the same.
-      const auto referenceGridView =
-          sourceLocalView.tree().refinedReferenceElementGridView();
+      const auto sourceSubElementAndOffset
+          = findSubElementContainingChild(childEmbedding, sourceLocalView);
 
-      using SubElement
-          = typename decltype(referenceGridView)
-                ::template Codim<0>::Entity;
-      using SubGeometryInReferenceElement
-          = typename SubElement::Geometry;
+      const auto sourceSubElement = sourceSubElementAndOffset.first;
+      const auto sourceLocalDataBegin = sourceLocalData.cbegin()
+                                      + sourceSubElementAndOffset.second;
 
-      auto sourceLocalDataBegin = sourceLocalData.cbegin();
-      SubElement sourceSubElement;
-      sourceLocalView.resetSubElements();
-      for(const auto& sourceSubElement_ : elements(referenceGridView)) {
-        sourceLocalView.bindSubElement(sourceSubElement_);
-        auto&& sourceLocalFiniteElement
-            = sourceLocalView.tree().finiteElement();
-
-        const SubGeometryInReferenceElement
-          sourceSubGeometryInReferenceElement
-            = sourceSubElement_.geometry();
-
-        const detail::PointInTriangleTest
-            subElementTriangle(sourceSubGeometryInReferenceElement);
-
-        // Check if child lies in sourceSubElement.
-        if(subElementTriangle.containsPoint(childEmbedding.center()))
-        {
-          sourceSubElement = sourceSubElement_;
-          break;
-        }
-
-        if(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
-          sourceLocalDataBegin += sourceLocalFiniteElement.size();
-      }
-      assert(sourceSubElement != SubElement{});
-
-      const SubGeometryInReferenceElement
-        sourceSubGeometryInReferenceElement
+      const auto sourceSubGeometryInReferenceElement
           = sourceSubElement.geometry();
       auto&& sourceLocalFiniteElement
           = sourceLocalView.tree().finiteElement();
+
+      const auto referenceGridView =
+          targetLocalView.tree().refinedReferenceElementGridView();
 
       auto childLocalDataIterator = childLocalData.begin();
       targetLocalView.resetSubElements();
