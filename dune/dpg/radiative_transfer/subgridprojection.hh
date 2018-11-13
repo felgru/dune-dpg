@@ -150,15 +150,16 @@ namespace detail {
            class HostGridLocalView,
            typename std::enable_if<!is_RefinedFiniteElement<typename
               SubGridLocalView::GlobalBasis>::value>::type* = nullptr>
-  void computeProjectionRhs(const Element& e,
+  BlockVector<FieldVector<double,1>> computeProjectionRhs(
+      const Element& e,
       const CellData& cellData,
-      SubGridLocalView& subGridLocalView,
-      const HostGridLocalView& hostGridLocalView,
-      BlockVector<FieldVector<double,1>>& projectionRhs)
+      const SubGridLocalView& subGridLocalView,
+      const HostGridLocalView& hostGridLocalView)
   {
     static_assert(!is_RefinedFiniteElement<typename
               HostGridLocalView::GlobalBasis>::value,
               "computeProjectionRhs only defined for unrefined HostGrid basis");
+    BlockVector<FieldVector<double,1>> projectionRhs(subGridLocalView.size());
     projectionRhs = 0;
     constexpr int dim = Element::mydimension;
     const auto& hostGrid = hostGridLocalView.globalBasis().gridView().grid();
@@ -216,6 +217,7 @@ namespace detail {
         }
       }
     }
+    return projectionRhs;
   }
 
   struct PointInTriangleTest
@@ -260,17 +262,18 @@ namespace detail {
            class HostGridLocalView,
            typename std::enable_if<is_RefinedFiniteElement<typename
               SubGridLocalView::GlobalBasis>::value>::type* = nullptr>
-  void computeProjectionRhs(const Element& e,
+  BlockVector<FieldVector<double,1>> computeProjectionRhs(
+      const Element& e,
       const CellData& cellData,
       SubGridLocalView& subGridLocalView,
-      const HostGridLocalView& hostGridLocalView,
-      BlockVector<FieldVector<double,1>>& projectionRhs)
+      const HostGridLocalView& hostGridLocalView)
   {
     static_assert(!is_RefinedFiniteElement<typename
               HostGridLocalView::GlobalBasis>::value,
               "computeProjectionRhs only defined for unrefined HostGrid basis");
     using SubGridSpace = typename SubGridLocalView::GlobalBasis;
 
+    BlockVector<FieldVector<double,1>> projectionRhs(subGridLocalView.size());
     projectionRhs = 0;
     constexpr int dim = Element::mydimension;
     const auto& hostGrid = hostGridLocalView.globalBasis().gridView().grid();
@@ -364,6 +367,7 @@ namespace detail {
         subElementOffset += subGridLocalFiniteElement.size();
       subElementIndex++;
     }
+    return projectionRhs;
   }
 
   template<class SubGridGlobalBasis, class HostGridGlobalBasis,
@@ -525,21 +529,20 @@ namespace detail {
         integralTerm.getLocalMatrix(subGridLocalView, subGridLocalView,
             projectionMatrix, 0, 0);
       }
-      BlockVector<FieldVector<double,1>>
-          projectionRhs(subGridLocalView.size());
-      computeProjectionRhs(e, cellData, subGridLocalView, hostGridLocalView,
-          projectionRhs);
+      BlockVector<FieldVector<double,1>> projection
+          = computeProjectionRhs(e, cellData, subGridLocalView,
+                                 hostGridLocalView);
 #if DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY
-      solveLeastSquares(projectionMatrix, projectionRhs);
+      solveLeastSquares(projectionMatrix, projection);
 #else
       {
         Cholesky<Matrix<FieldMatrix<double,1,1>>> cholesky(projectionMatrix);
-        cholesky.apply(projectionRhs);
+        cholesky.apply(projection);
       }
 #endif
       std::vector<FieldVector<double, 1>>
-          projection(projectionRhs.begin(), projectionRhs.end());
-      return projection;
+          projectionStdVector(projection.begin(), projection.end());
+      return projectionStdVector;
     } else {
       DUNE_THROW(InvalidStateException,
                  "cellData is expected to be non-empty.");
