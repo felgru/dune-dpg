@@ -426,22 +426,25 @@ namespace Dune {
 
     double errSquare = 0;
 
-    // We grab the inner product matrix in the innerProductMatrix variable (IP)
-    Matrix<FieldMatrix<double,1,1> > innerProductMatrix;
-    innerProduct.bind(solutionLocalViews);
-    innerProduct.getLocalMatrix(innerProductMatrix);
+    // We compute the norm of solutionElement, w.r.t. the inner product, i.e.
+    // solutionElement^T * InnerProductGramian * solutionElement
+    {
+      Matrix<FieldMatrix<double,1,1>> innerProductMatrix;
+      innerProduct.bind(solutionLocalViews);
+      innerProduct.getLocalMatrix(innerProductMatrix);
 
-    // We compute solutionElement^T * IP * solutionElement
-    BlockVector<FieldVector<double,1> > tmpVector(solutionElement);
-    tmpVector = 0;
-    innerProductMatrix.mv(solutionElement, tmpVector);
-    errSquare += tmpVector * solutionElement;
+      BlockVector<FieldVector<double,1>> product(solutionElement.N());
+      innerProductMatrix.mv(solutionElement, product);
+      errSquare += product * solutionElement;
+    }
 
     // We grab the linear term depending on B and on the rhs f
-    BlockVector<FieldVector<double,1> > linearFormVector;
-    linearForm.bind(solutionLocalViews);
-    linearForm.getLocalVector(linearFormVector);
-    errSquare += linearFormVector * solutionElement;
+    {
+      BlockVector<FieldVector<double,1>> linearFormVector;
+      linearForm.bind(solutionLocalViews);
+      linearForm.getLocalVector(linearFormVector);
+      errSquare += linearFormVector * solutionElement;
+    }
 
     // We grab the term depending only on the rhs f
     // TODO Not tested for non-constant f !!!!!!!!
