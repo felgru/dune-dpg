@@ -641,7 +641,7 @@ public:
                                              hostGridGlobalBasis, cellData);
       gridData.push_back(std::make_tuple(e.seed(),
                                          std::move(cellProjection),
-                                         cellData));
+                                         std::move(cellData)));
     }
   }
 
@@ -748,7 +748,7 @@ private:
                                                  childData);
             gridData.insert(currentData,
                 std::make_tuple(child.seed(),
-                  std::move(childProjection), childData));
+                  std::move(childProjection), std::move(childData)));
           }
         }
         currentData = gridData.erase(currentData);
