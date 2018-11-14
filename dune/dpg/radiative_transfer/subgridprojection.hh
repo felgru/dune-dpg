@@ -806,13 +806,13 @@ private:
     }
   }
 
-  template<class ChildEmbeddingGeometry>
-  std::pair<typename SubGridGlobalBasis::LocalView::Tree
+  template<class LocalView, class ChildEmbeddingGeometry>
+  std::pair<typename LocalView::Tree
             ::RefinementGridView::template Codim<0>::Entity,
             size_t>
   findSubElementContainingChild(
       const ChildEmbeddingGeometry& childEmbedding,
-      typename SubGridGlobalBasis::LocalView& localView)
+      LocalView& localView)
   {
     const auto referenceGridView =
         localView.tree().refinedReferenceElementGridView();
