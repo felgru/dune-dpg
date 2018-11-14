@@ -706,7 +706,7 @@ namespace Dune {
         typename Entity::EntitySeed>::value,
         "EntitySeed type does not fit the Grid type.");
 
-    std::sort(errorEstimates.begin(), errorEstimates.end(),
+    std::stable_sort(errorEstimates.begin(), errorEstimates.end(),
         [](const auto& a, const auto& b) {
             return std::get<1>(a) > std::get<1>(b);
         });
