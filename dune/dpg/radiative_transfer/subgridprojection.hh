@@ -608,8 +608,7 @@ public:
         // Will be later interpolated in the call to
         // projectCellDataToSubGrid if global bases on host and
         // sub grid differ.
-        cellData.push_back(std::make_pair(eHost.seed(),
-                                          std::move(hostGridLocalData)));
+        cellData.emplace_back(eHost.seed(), std::move(hostGridLocalData));
       } else { // e is not contained in the HostLeafGridView:
         for(const auto& child : descendantElements(eHost, maxHostGridLevel))
         {
@@ -631,17 +630,16 @@ public:
               hostGridLocalData[i] += wi * hostGridData[gi[0]];
             }
           );
-          cellData.push_back(std::make_pair(child.seed(),
-                                            std::move(hostGridLocalData)));
+          cellData.emplace_back(child.seed(), std::move(hostGridLocalData));
         }
       }
 
       std::vector<FieldVector<double, 1>> cellProjection
           = detail::projectCellDataToSubGrid(e, subGridGlobalBasis,
                                              hostGridGlobalBasis, cellData);
-      gridData.push_back(std::make_tuple(e.seed(),
-                                         std::move(cellProjection),
-                                         std::move(cellData)));
+      gridData.emplace_back(e.seed(),
+                            std::move(cellProjection),
+                            std::move(cellData));
     }
   }
 

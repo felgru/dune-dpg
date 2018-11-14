@@ -219,7 +219,7 @@ public:
             gridIndexSet.subIndex(e, localKey.subEntity(), dofCodim);
         if(dofCodim == 2) { // dof is vertex
           if(vertexConstraints[subIndex]) {
-            constraintOffsets.push_back({preceedingUnconstrainedIndices, 2});
+            constraintOffsets.emplace_back(preceedingUnconstrainedIndices, 2);
             preceedingUnconstrainedIndices = 0;
             for(size_type idx : *vertexConstraints[subIndex])
             {
@@ -231,7 +231,7 @@ public:
           }
         } else { // dofCodim == 1, i.e. edge, since P2 does not have inner dofs
           if(edgeConstraints[subIndex]) {
-            constraintOffsets.push_back({preceedingUnconstrainedIndices, 1});
+            constraintOffsets.emplace_back(preceedingUnconstrainedIndices, 1);
             preceedingUnconstrainedIndices = 0;
             for(size_type idx : *edgeConstraints[subIndex])
             {
