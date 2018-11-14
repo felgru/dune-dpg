@@ -872,7 +872,6 @@ private:
       static_assert(levelOfFE<SubGridGlobalBasis>::value <= 1,
         "Interpolation only implemented for up to one level of"
         " local refinement!");
-      LocalData childLocalData(targetLocalView.size());
 
       const auto sourceSubElementAndOffset
           = findSubElementContainingChild(childEmbedding, sourceLocalView);
@@ -889,6 +888,7 @@ private:
       const auto referenceGridView =
           targetLocalView.tree().refinedReferenceElementGridView();
 
+      LocalData childLocalData(targetLocalView.size());
       auto childLocalDataIterator = childLocalData.begin();
       targetLocalView.resetSubElements();
       for(const auto& targetSubElement : elements(referenceGridView)) {
