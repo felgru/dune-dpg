@@ -167,20 +167,8 @@ faceImpl(LhsLocalView& lhsLocalView,
     using SubElement = std::decay_t<decltype(subElement)>;
     const auto subGeometryInReferenceElement = subElement.geometry();
 
-    unsigned int nOutflowFaces = 0;
-    for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
-    {
-      const auto face = subElement.template subEntity<1>(f);
-      /* This won't work for curvilinear elements, but they don't seem
-       * to be supported by UG anyway. */
-      const FieldVector<double,dim> unitOuterNormal
-          = RefinedFaceComputations<SubElement>(face, subElement, element)
-              .unitOuterNormal();
-
-      const double prod = direction * unitOuterNormal;
-      if(prod > 0)
-        ++nOutflowFaces;
-    }
+    const unsigned int nOutflowFaces
+        = outflowFacesOfSubElement(subElement, element, direction);
 
     FieldVector<double,dim> referenceBeta
         = detail::referenceBeta(geometry,

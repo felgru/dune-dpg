@@ -125,6 +125,29 @@ private:
   const GeometryInElement geometryInElement_;
 };
 
+template<class SubElement, class Element>
+unsigned int outflowFacesOfSubElement
+    (SubElement subElement,
+     Element element,
+     typename Element::Geometry::GlobalCoordinate direction)
+{
+  unsigned int nOutflowFaces = 0;
+  for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
+  {
+    const auto face = subElement.template subEntity<1>(f);
+    /* This won't work for curvilinear elements, but they don't seem
+     * to be supported by UG anyway. */
+    const auto unitOuterNormal
+        = RefinedFaceComputations<SubElement>(face, subElement, element)
+            .unitOuterNormal();
+
+    const double prod = direction * unitOuterNormal;
+    if(prod > 0)
+      ++nOutflowFaces;
+  }
+  return nOutflowFaces;
+}
+
 } // end namespace Dune
 
 #endif // DUNE_DPG_REFINEDFACES_HH

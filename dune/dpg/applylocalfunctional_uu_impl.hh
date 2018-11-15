@@ -114,15 +114,7 @@ faceImpl(const TestLocalView& testLocalView,
                 "LocalDirection has to be constant.");
   const auto direction = localCoefficients.localDirection()({0.5,0.5});
 
-  unsigned int nOutflowFaces = 0;
-  for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
-  {
-    auto face = element.template subEntity<1>(f);
-    const double prod = direction
-        * FaceComputations<Element>(face, element).unitOuterNormal();
-    if(prod > 0)
-      ++nOutflowFaces;
-  }
+  const unsigned int nOutflowFaces = outflowFacesOfElement(element, direction);
 
   const auto geometry = element.geometry();
 

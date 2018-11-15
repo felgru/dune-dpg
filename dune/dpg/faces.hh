@@ -120,6 +120,23 @@ private:
   const GeometryInElement geometryInElement_;
 };
 
+template<class Element>
+unsigned int outflowFacesOfElement
+    (Element element,
+     typename Element::Geometry::GlobalCoordinate direction)
+{
+  unsigned int nOutflowFaces = 0;
+  for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
+  {
+    const auto face = element.template subEntity<1>(f);
+    const double prod = direction
+      * FaceComputations<Element>(face, element).unitOuterNormal();
+    if(prod > 0)
+      ++nOutflowFaces;
+  }
+  return nOutflowFaces;
+}
+
 } // end namespace Dune
 
 #endif // DUNE_DPG_FACES_HH
