@@ -149,22 +149,18 @@ faceImpl(const TestLocalView& testLocalView,
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
   {
     auto face = element.template subEntity<1>(f);
-    auto faceComputations = FaceComputations<Element>(face, element);
-    if(type == IntegrationType::travelDistanceWeighted &&
-       direction * faceComputations.unitOuterNormal() >= 0) {
-      /* Only integrate over inflow boundaries. */
-      continue;
-    }
+    const auto faceComputations = FaceComputations<Element>(face, element);
+    if(faceComputations.template skipFace<type>(direction)) continue;
 
-      static_assert(hasRequiredQuadratureOrder
-                    <typename LocalCoefficients::LocalFactor>::value,
-                    "There is no requiredQuadratureOrder specialization"
-                    " for the LocalFactor.");
-      const unsigned int quadratureOrder
-          = solutionLocalFiniteElement.localBasis().order()
-            + testLocalFiniteElement.localBasis().order()
-            + requiredQuadratureOrder
-                <typename LocalCoefficients::LocalFactor>::value;
+    static_assert(hasRequiredQuadratureOrder
+                  <typename LocalCoefficients::LocalFactor>::value,
+                  "There is no requiredQuadratureOrder specialization"
+                  " for the LocalFactor.");
+    const unsigned int quadratureOrder
+        = solutionLocalFiniteElement.localBasis().order()
+          + testLocalFiniteElement.localBasis().order()
+          + requiredQuadratureOrder
+              <typename LocalCoefficients::LocalFactor>::value;
 
     using Face = std::decay_t<decltype(face)>;
     QuadratureRule<double, 1> quadFace

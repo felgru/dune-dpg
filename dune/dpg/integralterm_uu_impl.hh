@@ -126,12 +126,8 @@ faceImpl(const LhsLocalView& lhsLocalView,
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
   {
     auto face = element.template subEntity<1>(f);
-    auto faceComputations = FaceComputations<Element>(face, element);
-    if(type == IntegrationType::travelDistanceWeighted &&
-       direction * faceComputations.unitOuterNormal() >= 0) {
-      /* Only integrate over inflow boundaries. */
-      continue;
-    }
+    const auto faceComputations = FaceComputations<Element>(face, element);
+    if(faceComputations.template skipFace<type>(direction)) continue;
 
     using Face = std::decay_t<decltype(face)>;
     QuadratureRule<double, 1> quadFace

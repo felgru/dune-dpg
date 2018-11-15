@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_REFINEDFACES_HH
 #define DUNE_DPG_REFINEDFACES_HH
 
+#include <dune/dpg/assemble_types.hh>
 #include <dune/dpg/type_traits.hh>
 #include <dune/geometry/affinegeometry.hh>
 #include <dune/geometry/referenceelements.hh>
@@ -70,6 +71,15 @@ struct RefinedFaceComputations {
 
   const GeometryInElement& geometryInElement() const {
     return geometryInElement_;
+  }
+
+  template<IntegrationType type>
+  bool skipFace(const FieldVector<double, cdim>& direction) const
+  {
+    if(type == IntegrationType::travelDistanceWeighted)
+      /* Only integrate over inflow boundaries. */
+      return direction * unitOuterNormal() >= 0;
+    else return false;
   }
 
 private:

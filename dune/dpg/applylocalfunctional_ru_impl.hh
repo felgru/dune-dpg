@@ -180,8 +180,10 @@ faceImpl(TestLocalView& testLocalView,
     for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
     {
       const auto face = subElement.template subEntity<1>(f);
-      auto faceComputations
+      const auto faceComputations
           = RefinedFaceComputations<SubElement>(face, subElement, element);
+
+      if(faceComputations.template skipFace<type>(direction)) continue;
 
       using Face = std::decay_t<decltype(face)>;
 
@@ -189,12 +191,6 @@ faceImpl(TestLocalView& testLocalView,
 
       const FieldVector<double,dim> unitOuterNormal
           = faceComputations.unitOuterNormal();
-
-      if(type == IntegrationType::travelDistanceWeighted &&
-         direction * unitOuterNormal >= 0) {
-        /* Only integrate over inflow boundaries. */
-        continue;
-      }
 
       static_assert(hasRequiredQuadratureOrder
                     <typename LocalCoefficients::LocalFactor>::value,
