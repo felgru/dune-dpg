@@ -63,7 +63,7 @@ namespace Dune
     typedef FE FiniteElementType;
 
     /** \brief Default constructor */
-    BernsteinLocalFiniteElementCache() {}
+    BernsteinLocalFiniteElementCache() = default;
 
     /** \brief Copy constructor */
     BernsteinLocalFiniteElementCache(const BernsteinLocalFiniteElementCache& other)

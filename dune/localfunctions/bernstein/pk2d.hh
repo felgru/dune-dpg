@@ -23,10 +23,9 @@ namespace Dune
         BernsteinPk2DLocalCoefficients<k>,
         BernsteinPk2DLocalInterpolation<BernsteinPk2DLocalBasis<D,R,k>>> Traits;
 
-    BernsteinPk2DLocalFiniteElement ()
-    {}
+    BernsteinPk2DLocalFiniteElement() = default;
 
-    BernsteinPk2DLocalFiniteElement (int variant) :
+    BernsteinPk2DLocalFiniteElement(int variant) :
       coefficients(variant)
     {}
 

@@ -20,8 +20,7 @@ namespace Dune
   class BernsteinPkLocalFiniteElement
   {
   public:
-    BernsteinPkLocalFiniteElement()
-    {}
+    BernsteinPkLocalFiniteElement() = default;
 
     /** Constructor for variants with permuted vertices.
 
@@ -44,8 +43,7 @@ namespace Dune
     : public BernsteinPk2DLocalFiniteElement<D, R, k>
   {
   public:
-    BernsteinPkLocalFiniteElement()
-    {}
+    BernsteinPkLocalFiniteElement() = default;
 
     BernsteinPkLocalFiniteElement(const unsigned int vertexmap[3]) :
       BernsteinPk2DLocalFiniteElement<D, R, k>(vertexmap)
