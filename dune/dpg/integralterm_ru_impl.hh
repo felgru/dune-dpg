@@ -205,8 +205,7 @@ faceImpl(LhsLocalView& lhsLocalView,
         const FieldVector<double,dim> elementQuadPos =
                 subGeometryInReferenceElement.global(elementQuadPosSubCell);
 
-        // The multiplicative factor in the integral transformation formula -
-
+        // The multiplicative factor in the integral transformation formula
         double integrationWeight;
         if(type == IntegrationType::normalVector ||
            type == IntegrationType::travelDistanceWeighted) {
@@ -215,9 +214,9 @@ faceImpl(LhsLocalView& lhsLocalView,
                             * integrationElement;
           // TODO: scale direction to length 1
           if(type == IntegrationType::travelDistanceWeighted)
-            integrationWeight *= fabs(direction*unitOuterNormal);
+            integrationWeight *= std::fabs(direction * unitOuterNormal);
           else
-            integrationWeight *= (direction*unitOuterNormal);
+            integrationWeight *= direction * unitOuterNormal;
         } else if(type == IntegrationType::normalSign) {
           int sign = 1;
           for (const auto& component : unitOuterNormal)

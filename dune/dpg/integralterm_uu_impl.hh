@@ -167,12 +167,9 @@ faceImpl(const LhsLocalView& lhsLocalView,
         integrationWeight = localCoefficients.localFactor()(elementQuadPos)
                           * quadPoint.weight();
         if(type == IntegrationType::travelDistanceWeighted)
-        {
-          // |beta * n|*integrationweight
-          integrationWeight *= fabs(direction*integrationOuterNormal);
-        }
+          integrationWeight *= std::fabs(direction * integrationOuterNormal);
         else
-          integrationWeight *= (direction*integrationOuterNormal);
+          integrationWeight *= direction * integrationOuterNormal;
       } else if(type == IntegrationType::normalSign) {
         const double integrationElement =
             face.geometry().integrationElement(quadFacePos);

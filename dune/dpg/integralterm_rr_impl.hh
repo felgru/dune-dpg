@@ -61,8 +61,8 @@ inline static void interiorImpl(LhsLocalView& lhsLocalView,
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quadPoint.position();
-     // Global position of the current quadrature point
-     const FieldVector<double,dim> elementQuadPos
+      // Global position of the current quadrature point
+      const FieldVector<double,dim> elementQuadPos
           = subGeometryInReferenceElement.global(quadPos);
 
       // The multiplicative factor in the integral transformation formula
@@ -238,9 +238,9 @@ faceImpl(LhsLocalView& lhsLocalView,
                             * integrationElement;
           // TODO: scale direction to length 1
           if(type == IntegrationType::travelDistanceWeighted)
-            integrationWeight *= fabs(direction*unitOuterNormal);
+            integrationWeight *= std::fabs(direction * unitOuterNormal);
           else
-            integrationWeight *= (direction*unitOuterNormal);
+            integrationWeight *= direction * unitOuterNormal;
         } else if(type == IntegrationType::normalSign) {
           int sign = 1;
           for (const auto& component : unitOuterNormal)
