@@ -174,23 +174,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
         const double integrationElement =
             face.geometry().integrationElement(quadFacePos);
 
-        const FieldVector<double,dim>& centerOuterNormal =
-               faceComputations.unitOuterNormal();
-
-        int sign = 1;
-        for (const auto& component : centerOuterNormal)
-        {
-          if (component < -1e-10)
-          {
-            sign = -1;
-            break;
-          }
-          else if (component > 1e-10)
-          {
-            sign = 1;
-            break;
-          }
-        }
+        const int sign = faceComputations.unitOuterNormalSign();
 
         integrationWeight = sign
                           * localCoefficients.localFactor()(elementQuadPos)

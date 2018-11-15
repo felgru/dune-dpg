@@ -49,6 +49,21 @@ struct RefinedFaceComputations {
     return res;
   }
 
+  int unitOuterNormalSign() const {
+    for (const auto& component : unitOuterNormal_)
+    {
+      if (component < -1e-10)
+      {
+        return -1;
+      }
+      else if (component > 1e-10)
+      {
+        return 1;
+      }
+    }
+    return 1;
+  }
+
   ElementCoordinate faceToElementPosition(const FaceCoordinate& fc) const {
     return geometryInElement_.global(fc);
   }

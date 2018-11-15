@@ -218,20 +218,7 @@ faceImpl(LhsLocalView& lhsLocalView,
           else
             integrationWeight *= direction * unitOuterNormal;
         } else if(type == IntegrationType::normalSign) {
-          int sign = 1;
-          for (const auto& component : unitOuterNormal)
-          {
-            if (component < -1e-10)
-            {
-              sign = -1;
-              break;
-            }
-            else if (component > 1e-10)
-            {
-              sign = 1;
-              break;
-            }
-          }
+          const int sign = faceComputations.unitOuterNormalSign();
 
           integrationWeight = sign
                             * localCoefficients.localFactor()(elementQuadPos)
