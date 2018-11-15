@@ -86,7 +86,7 @@ namespace Dune
       {
         FiniteElementType* fe
             = BernsteinLocalFiniteElementFactory<D,R,dim,k>::create(gt);
-        if (fe==0)
+        if (fe==nullptr)
           DUNE_THROW(NotImplemented,
               "No Pk/Qk like local finite element available for geometry type "
               << gt << " and order " << k);
