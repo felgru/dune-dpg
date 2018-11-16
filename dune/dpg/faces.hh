@@ -114,12 +114,6 @@ struct FaceComputations {
     return unitOuterNormal_;
   }
 
-  GlobalCoordinate integrationOuterNormal() const noexcept {
-    GlobalCoordinate res = unitOuterNormal_;
-    res *= integrationElement_;
-    return res;
-  }
-
   int unitOuterNormalSign() const noexcept {
     for (const auto& component : unitOuterNormal_)
     {
