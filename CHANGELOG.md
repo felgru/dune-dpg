@@ -5,6 +5,27 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
 ## 0.5 (Unreleased)
+### Changed
+* The `DoerflerMarking` function now uses `std::stable_sort` instead
+  of `std::sort` to remove a source of potential non-determinism
+  when there are elements with the same error estimates and only one
+  of them gets marked.
+* Fix last remaining compilation warnings gvien by GCC 8.
+* Small optimization of `intersectSubGrids`: If the maxLevel of both
+  subgrids is different, we only need to iterate until the smaller
+  maxLevel.
+* ASTI: we now have one canonical definition of the test space inner
+  product. Previously we used different definitions depending on
+  whether we used normalized or unnormalized spaces.
+* Large parts of our code have been refactored for readability and
+  to better adhere to modern C++ practices.
+
+### Fixed
+* ErrorPlotter: actually plot the error and not its square.
+
+### Removed
+* `bindLocalIndexSets` and `getLocalIndexSets` have been removed,
+  as IndexSets have been deprecated in dune-functions 2.6.
 
 ## 0.4 - 2018-10-18
 ### Added
