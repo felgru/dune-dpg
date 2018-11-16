@@ -48,3 +48,17 @@ The output consists of:
 Make sure that you run the program on a machine with sufficient amounts
 of memory. It will need almost 44 GB of RAM and will take several hours
 to finish.
+
+### Condition Number of Discrete Trial to Test Space Operator
+
+If $SOURCEDIR is the path to dune-dpg's source directory and $BUILDDIR
+is the path to the build directory, you can create a plot of the
+condition number of the trial to test space operator in dependence of
+the element size h by running
+
+```
+$BUILDDIR/src/trial-to-test-condition \
+    | $SOURCEDIR/scripts/plot_condition.py
+```
+
+This creates a new file `conditions.pdf` that contains the plot.
