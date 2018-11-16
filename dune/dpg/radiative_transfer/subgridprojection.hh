@@ -728,10 +728,11 @@ private:
                       hostCellInSubGrid, hostCell,
                       subGridGlobalBasis, hostGridGlobalBasis, localData);
               auto dataToInterpolate =
-                  gridData.insert(currentData,
-                      std::make_tuple(hostCellInSubGrid.seed(),
-                                      std::move(localData),
-                                      CellData{}));
+                  gridData.emplace(currentData,
+                      // inserts a tuple composed of the following data
+                      hostCellInSubGrid.seed(),
+                      std::move(localData),
+                      CellData{});
               interpolateToRefinementDescendants(dataToInterpolate,
                                                  hostCellInSubGrid,
                                                  subGridGlobalBasis);
@@ -744,9 +745,10 @@ private:
                                                  subGridGlobalBasis,
                                                  hostGridGlobalBasis,
                                                  childData);
-            gridData.insert(currentData,
-                std::make_tuple(child.seed(),
-                  std::move(childProjection), std::move(childData)));
+            gridData.emplace(currentData,
+                // inserts a tuple composed of the following data
+                child.seed(),
+                std::move(childProjection), std::move(childData));
           }
         }
         currentData = gridData.erase(currentData);
@@ -798,9 +800,9 @@ private:
           oldGridFunction,
           childLocalData);
 
-      gridData.insert(currentData,
-          std::make_tuple(child.seed(), std::move(childLocalData),
-                          CellData{}));
+      gridData.emplace(currentData,
+          // inserts a tuple composed of the following data
+          child.seed(), std::move(childLocalData), CellData{});
     }
   }
 
@@ -936,9 +938,9 @@ private:
                       childLocalDataIterator);
       }
 
-      gridData.insert(currentData,
-          std::make_tuple(child.seed(), std::move(childLocalData),
-                          CellData{}));
+      gridData.emplace(currentData,
+          // inserts a tuple composed of the following data
+          child.seed(), std::move(childLocalData), CellData{});
     }
   }
 

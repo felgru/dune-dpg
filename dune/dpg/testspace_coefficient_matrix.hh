@@ -268,7 +268,7 @@ public:
   std::pair<CoefMatrices&, bool>
   operator()(const GeometryComparable<Geometry>& geometry)
   {
-    auto insert = bufferMap.insert({geometry, CoefMatrices()});
+    auto insert = bufferMap.emplace(geometry, CoefMatrices{});
     return {insert.first->second, !(insert.second)};
   }
 
