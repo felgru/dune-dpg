@@ -15,7 +15,7 @@ namespace detail {
   template<class ReferenceCellCoordinate, class ReferenceCellDirection>
   double travelDistance(
       const ReferenceCellCoordinate& x,
-      const ReferenceCellDirection& beta)
+      const ReferenceCellDirection& beta) noexcept
   {
     if(x[0]) { /* x[0] != 0 */
       if(x[1]) { /* x[1] != 0 */
@@ -44,7 +44,7 @@ namespace detail {
   template<class FaceGeometryInElement, class ReferenceCellDirection>
   double splitPointOfInflowFaceInTriangle(
       const FaceGeometryInElement& faceGeometryInElement,
-      ReferenceCellDirection& referenceBeta)
+      ReferenceCellDirection& referenceBeta) noexcept
   {
     // This gets a bit ugly as we have to check the orientation of the face
     double splitPoint;
@@ -89,7 +89,7 @@ namespace detail {
   }
 
   template <class Geometry, class SubGeometry, int dim>
-  FieldVector<double,dim> referenceBeta(
+  FieldVector<double,dim> referenceSubElementBeta(
       const Geometry& geometry,
       const SubGeometry& subGeometryInReferenceElement,
       const FieldVector<double, dim>& beta)
@@ -106,6 +106,19 @@ namespace detail {
     jacobianSubInverse.mtv(referenceBeta, referenceBetaSub);
 
     return referenceBetaSub;
+  }
+
+  template <class Geometry, int dim>
+  FieldVector<double,dim> referenceElementBeta(
+      const Geometry& geometry,
+      const FieldVector<double, dim>& beta)
+  {
+    static_assert(dim==2, "Computation of transport direction on reference"
+                          " cell only implemented in 2d!");
+    FieldVector<double,dim> referenceBeta;
+    const auto& jacobianInverse = geometry.jacobianInverseTransposed({0., 0.});
+    jacobianInverse.mtv(beta, referenceBeta);
+    return referenceBeta;
   }
 } // end namespace detail
 

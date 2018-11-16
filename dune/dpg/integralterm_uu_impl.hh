@@ -109,11 +109,7 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
   const auto geometry = element.geometry();
 
-  FieldVector<double,dim> referenceBeta;
-  {
-    const auto& jacobianInverse = geometry.jacobianInverseTransposed({0., 0.});
-    jacobianInverse.mtv(direction, referenceBeta);
-  }
+  FaceIntegrationData<type> integrationData(geometry, direction);
 
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
   {
@@ -121,60 +117,19 @@ faceImpl(const LhsLocalView& lhsLocalView,
     const auto faceComputations = FaceComputations<Element>(face, element);
     if(faceComputations.template skipFace<type>(direction)) continue;
 
-    using Face = std::decay_t<decltype(face)>;
-    QuadratureRule<double, 1> quadFace
-      = detail::ChooseQuadrature<LhsSpace, RhsSpace, Face>
-        ::Quadrature(face, quadratureOrder);
-    if (type == IntegrationType::travelDistanceWeighted &&
-        nOutflowFaces > 1) {
-      quadFace = SplitQuadratureRule<double>(
-          quadFace,
-          detail::splitPointOfInflowFaceInTriangle(
-              faceComputations.geometryInElement(), referenceBeta));
-    }
-
+    const QuadratureRule<double, 1> quadFace
+      = faceComputations.template quadratureRule<type, LhsSpace, RhsSpace>
+            (face, quadratureOrder, nOutflowFaces, integrationData);
     for (const auto& quadPoint : quadFace) {
-
-      // Position of the current quadrature point in the reference element
-      // (face!)
-      const FieldVector<double,dim-1>& quadFacePos = quadPoint.position();
-
       // position of the quadrature point within the element
       const FieldVector<double,dim> elementQuadPos =
-              faceComputations.faceToElementPosition(quadFacePos);
-
-      // The multiplicative factor in the integral transformation
-      // formula multiplied with outer normal
-      const FieldVector<double,dim> integrationOuterNormal =
-              faceComputations.integrationOuterNormal();
+              faceComputations.faceToElementPosition(quadPoint.position());
 
       // The multiplicative factor in the integral transformation formula
-      double integrationWeight;
-      if(type == IntegrationType::normalVector ||
-         type == IntegrationType::travelDistanceWeighted) {
-        integrationWeight = localCoefficients.localFactor()(elementQuadPos)
-                          * quadPoint.weight();
-        if(type == IntegrationType::travelDistanceWeighted)
-          integrationWeight *= std::fabs(direction * integrationOuterNormal);
-        else
-          integrationWeight *= direction * integrationOuterNormal;
-      } else if(type == IntegrationType::normalSign) {
-        const double integrationElement =
-            face.geometry().integrationElement(quadFacePos);
-
-        const int sign = faceComputations.unitOuterNormalSign();
-
-        integrationWeight = sign
-                          * localCoefficients.localFactor()(elementQuadPos)
-                          * quadPoint.weight() * integrationElement;
-      }
-
-      if(type == IntegrationType::travelDistanceWeighted) {
-        // factor r_K(s)/|beta|
-        integrationWeight *= detail::travelDistance(
-            elementQuadPos,
-            referenceBeta);
-      }
+      const double integrationWeight
+          = faceComputations.template integrationWeight<type>(
+              localCoefficients, elementQuadPos, direction, quadPoint,
+              integrationData, face);
 
       //////////////////////////////
       // Left Hand Side Functions //

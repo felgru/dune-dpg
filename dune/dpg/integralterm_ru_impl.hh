@@ -136,85 +136,42 @@ faceImpl(LhsLocalView& lhsLocalView,
   lhsLocalView.resetSubElements();
   for(const auto& subElement : elements(referenceGridView))
   {
-    using SubElement = std::decay_t<decltype(subElement)>;
-
     lhsLocalView.bindSubElement(subElement);
     const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
     const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
 
-    const auto subGeometryInReferenceElement = subElement.geometry();
-
     const unsigned int nOutflowFaces
         = outflowFacesOfSubElement(subElement, element, direction);
 
-    FieldVector<double,dim> referenceBeta
-        = detail::referenceBeta(geometry,
-            subGeometryInReferenceElement, direction);
+    const auto subGeometryInReferenceElement = subElement.geometry();
+    RefinedFaceIntegrationData<type> integrationData(
+        geometry, subGeometryInReferenceElement, direction);
 
     for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
     {
+      using SubElement = std::decay_t<decltype(subElement)>;
       const auto face = subElement.template subEntity<1>(f);
       const auto faceComputations
           = RefinedFaceComputations<SubElement>(face, subElement, element);
       if(faceComputations.template skipFace<type>(direction)) continue;
 
-      using Face = std::decay_t<decltype(face)>;
-
-      const double integrationElement = faceComputations.integrationElement();
-
-      const FieldVector<double,dim> unitOuterNormal
-          = faceComputations.unitOuterNormal();
-
-      QuadratureRule<double, 1> quadFace
-        = detail::ChooseQuadrature<LhsSpace, RhsSpace, Face>
-          ::Quadrature(face, quadratureOrder);
-      if (type == IntegrationType::travelDistanceWeighted &&
-          nOutflowFaces > 1) {
-        quadFace = SplitQuadratureRule<double>(
-            quadFace,
-            detail::splitPointOfInflowFaceInTriangle(
-                faceComputations.geometryInElement(), referenceBeta));
-      }
-
+      const QuadratureRule<double, 1> quadFace
+        = faceComputations.template quadratureRule<type, LhsSpace, RhsSpace>
+              (face, quadratureOrder, nOutflowFaces, integrationData);
       for (const auto& quadPoint : quadFace) {
-
-        // Position of the current quadrature point in the reference element
-        // (face!)
-        const FieldVector<double,dim-1>& quadFacePos = quadPoint.position();
-
         // position of the quadrature point within the subelement
         const FieldVector<double,dim> elementQuadPosSubCell =
-                faceComputations.faceToElementPosition(quadFacePos);
+                faceComputations.faceToElementPosition(quadPoint.position());
 
         // position of the quadrature point within the reference element
         const FieldVector<double,dim> elementQuadPos =
                 subGeometryInReferenceElement.global(elementQuadPosSubCell);
 
         // The multiplicative factor in the integral transformation formula
-        double integrationWeight;
-        if(type == IntegrationType::normalVector ||
-           type == IntegrationType::travelDistanceWeighted) {
-          integrationWeight = localCoefficients.localFactor()(elementQuadPos)
-                            * quadPoint.weight()
-                            * integrationElement;
-          // TODO: scale direction to length 1
-          if(type == IntegrationType::travelDistanceWeighted)
-            integrationWeight *= std::fabs(direction * unitOuterNormal);
-          else
-            integrationWeight *= direction * unitOuterNormal;
-        } else if(type == IntegrationType::normalSign) {
-          const int sign = faceComputations.unitOuterNormalSign();
-
-          integrationWeight = sign
-                            * localCoefficients.localFactor()(elementQuadPos)
-                            * quadPoint.weight() * integrationElement;
-        }
-
-        if(type == IntegrationType::travelDistanceWeighted) {
-          integrationWeight *= detail::travelDistance(
-              elementQuadPosSubCell,
-              referenceBeta);
-        }
+        const double integrationWeight
+            = faceComputations.template integrationWeight<type>(
+                  localCoefficients, elementQuadPos, elementQuadPosSubCell,
+                  direction, quadPoint.weight(), integrationData);
 
         //////////////////////////////
         // Left Hand Side Functions //

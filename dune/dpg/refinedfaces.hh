@@ -4,11 +4,87 @@
 #define DUNE_DPG_REFINEDFACES_HH
 
 #include <dune/dpg/assemble_types.hh>
+#include <dune/dpg/traveldistancenorm.hh>
 #include <dune/dpg/type_traits.hh>
 #include <dune/geometry/affinegeometry.hh>
 #include <dune/geometry/referenceelements.hh>
 
 namespace Dune {
+
+template<IntegrationType type>
+struct RefinedFaceIntegrationData {
+  constexpr static int dim = 2;
+
+  template <class Geometry, class SubGeometry>
+  RefinedFaceIntegrationData(
+      const Geometry&,
+      const SubGeometry&,
+      const FieldVector<double, dim>&) {}
+
+  template<class LhsSpace, class RhsSpace, class Face, class GeometryInElement>
+  QuadratureRule<double, 1> quadratureRule(
+      const Face& face,
+      unsigned int quadratureOrder,
+      unsigned int,
+      const GeometryInElement&) const
+  {
+    QuadratureRule<double, 1> quadFace
+      = detail::ChooseQuadrature<LhsSpace, RhsSpace, Face>
+        ::Quadrature(face, quadratureOrder);
+    return quadFace;
+  }
+
+  template<class ElementCoordinate>
+  double extraIntegrationWeight(const ElementCoordinate&) const noexcept
+  {
+    return 1.;
+  }
+};
+
+template<>
+struct RefinedFaceIntegrationData<IntegrationType::travelDistanceWeighted>
+{
+  constexpr static int dim = 2;
+
+  template <class Geometry, class SubGeometry>
+  RefinedFaceIntegrationData(
+      const Geometry& geometry,
+      const SubGeometry& subGeometryInReferenceElement,
+      const FieldVector<double, dim>& direction)
+    : referenceBeta(detail::referenceSubElementBeta(geometry,
+                    subGeometryInReferenceElement, direction))
+  {}
+
+  template<class LhsSpace, class RhsSpace, class Face, class GeometryInElement>
+  QuadratureRule<double, 1> quadratureRule(
+      const Face& face,
+      unsigned int quadratureOrder,
+      unsigned int nOutflowFaces,
+      const GeometryInElement& geometryInElement)
+  {
+    QuadratureRule<double, 1> quadFace
+      = detail::ChooseQuadrature<LhsSpace, RhsSpace, Face>
+        ::Quadrature(face, quadratureOrder);
+    if (nOutflowFaces > 1) {
+      quadFace = SplitQuadratureRule<double>(
+          quadFace,
+          detail::splitPointOfInflowFaceInTriangle(
+              geometryInElement, referenceBeta));
+    }
+    return quadFace;
+  }
+
+  template<class ElementCoordinate>
+  double extraIntegrationWeight(const ElementCoordinate& elementQuadPosSubCell)
+  noexcept
+  {
+    // factor r_K(s)/|beta|
+    return detail::travelDistance(elementQuadPosSubCell, referenceBeta);
+  }
+
+  private:
+    FieldVector<double,dim> referenceBeta;
+};
 
 template<class Element>
 struct RefinedFaceComputations {
@@ -73,6 +149,17 @@ struct RefinedFaceComputations {
     return geometryInElement_;
   }
 
+  template<IntegrationType type, class LhsSpace, class RhsSpace>
+  QuadratureRule<double, 1> quadratureRule(
+      const Face& face,
+      unsigned int quadratureOrder,
+      unsigned int nOutflowFaces,
+      RefinedFaceIntegrationData<type>& integrationData) const
+  {
+    return integrationData.template quadratureRule<LhsSpace, RhsSpace>
+        (face, quadratureOrder, nOutflowFaces, geometryInElement());
+  }
+
   template<IntegrationType type>
   bool skipFace(const FieldVector<double, cdim>& direction) const
   {
@@ -80,6 +167,39 @@ struct RefinedFaceComputations {
       /* Only integrate over inflow boundaries. */
       return direction * unitOuterNormal() >= 0;
     else return false;
+  }
+
+  template<IntegrationType type, class LocalCoefficients>
+  double integrationWeight(
+      const LocalCoefficients& localCoefficients,
+      const ElementCoordinate elementQuadPos,
+      const ElementCoordinate elementQuadPosSubCell,
+      const FieldVector<double, cdim> direction,
+      const double quadWeight,
+      RefinedFaceIntegrationData<type>& integrationData) const
+  {
+    double integrationWeight;
+    if(type == IntegrationType::normalVector ||
+       type == IntegrationType::travelDistanceWeighted) {
+      integrationWeight = localCoefficients.localFactor()(elementQuadPos)
+                        * quadWeight
+                        * integrationElement_;
+      // TODO: scale direction to length 1
+      if(type == IntegrationType::travelDistanceWeighted)
+        integrationWeight *= std::fabs(direction * unitOuterNormal_);
+      else
+        integrationWeight *= direction * unitOuterNormal_;
+    } else if(type == IntegrationType::normalSign) {
+      const int sign = unitOuterNormalSign();
+
+      integrationWeight = sign
+                        * localCoefficients.localFactor()(elementQuadPos)
+                        * quadWeight * integrationElement_;
+    }
+    integrationWeight *=
+        integrationData.extraIntegrationWeight(elementQuadPosSubCell);
+
+    return integrationWeight;
   }
 
 private:
