@@ -114,23 +114,11 @@ faceImpl(const TestLocalView& testLocalView,
                 "LocalDirection has to be constant.");
   const auto direction = localCoefficients.localDirection()({0.5,0.5});
 
-  unsigned int nOutflowFaces = 0;
-  for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
-  {
-    auto face = element.template subEntity<1>(f);
-    const double prod = direction
-        * FaceComputations<Element>(face, element).unitOuterNormal();
-    if(prod > 0)
-      ++nOutflowFaces;
-  }
+  const unsigned int nOutflowFaces = outflowFacesOfElement(element, direction);
 
   const auto geometry = element.geometry();
 
-  FieldVector<double,dim> referenceBeta;
-  {
-    const auto& jacobianInverse = geometry.jacobianInverseTransposed({0., 0.});
-    jacobianInverse.mtv(direction, referenceBeta);
-  }
+  FaceIntegrationData<type> integrationData(geometry, direction);
 
   BlockVector<FieldVector<double,1>>
       localFunctionalVector(solutionLocalView.size());
@@ -149,97 +137,32 @@ faceImpl(const TestLocalView& testLocalView,
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
   {
     auto face = element.template subEntity<1>(f);
-    auto faceComputations = FaceComputations<Element>(face, element);
-    if(type == IntegrationType::travelDistanceWeighted &&
-       direction * faceComputations.unitOuterNormal() >= 0) {
-      /* Only integrate over inflow boundaries. */
-      continue;
-    }
+    const auto faceComputations = FaceComputations<Element>(face, element);
+    if(faceComputations.template skipFace<type>(direction)) continue;
 
-      static_assert(hasRequiredQuadratureOrder
-                    <typename LocalCoefficients::LocalFactor>::value,
-                    "There is no requiredQuadratureOrder specialization"
-                    " for the LocalFactor.");
-      const unsigned int quadratureOrder
-          = solutionLocalFiniteElement.localBasis().order()
-            + testLocalFiniteElement.localBasis().order()
-            + requiredQuadratureOrder
-                <typename LocalCoefficients::LocalFactor>::value;
+    static_assert(hasRequiredQuadratureOrder
+                  <typename LocalCoefficients::LocalFactor>::value,
+                  "There is no requiredQuadratureOrder specialization"
+                  " for the LocalFactor.");
+    const unsigned int quadratureOrder
+        = solutionLocalFiniteElement.localBasis().order()
+          + testLocalFiniteElement.localBasis().order()
+          + requiredQuadratureOrder
+              <typename LocalCoefficients::LocalFactor>::value;
 
-    using Face = std::decay_t<decltype(face)>;
-    QuadratureRule<double, 1> quadFace
-      = detail::ChooseQuadrature<TestSpace, SolutionSpace, Face>
-        ::Quadrature(face, quadratureOrder);
-    if (type == IntegrationType::travelDistanceWeighted &&
-        nOutflowFaces > 1) {
-      quadFace = SplitQuadratureRule<double>(
-          quadFace,
-          detail::splitPointOfInflowFaceInTriangle(
-              faceComputations.geometryInElement(), referenceBeta));
-    }
-
+    const QuadratureRule<double, 1> quadFace = faceComputations
+        .template quadratureRule<type, TestSpace, SolutionSpace>
+            (face, quadratureOrder, nOutflowFaces, integrationData);
     for (const auto& quadPoint : quadFace) {
-
-      // Position of the current quadrature point in the reference element
-      // (face!)
-      const FieldVector<double,dim-1>& quadFacePos = quadPoint.position();
-
       // position of the quadrature point within the element
       const FieldVector<double,dim> elementQuadPos =
-              faceComputations.faceToElementPosition(quadFacePos);
+              faceComputations.faceToElementPosition(quadPoint.position());
 
-      // The multiplicative factor in the integral transformation
-      // formula multiplied with outer normal
-      const FieldVector<double,dim> integrationOuterNormal =
-              faceComputations.integrationOuterNormal();
-
-      // The multiplicative factor in the integral transformation formula -
-
-      double integrationWeight;
-      if(type == IntegrationType::normalVector ||
-         type == IntegrationType::travelDistanceWeighted) {
-        integrationWeight = localCoefficients.localFactor()(elementQuadPos)
-                          * quadPoint.weight();
-        if(type == IntegrationType::travelDistanceWeighted)
-        {
-          // |direction * n|*integrationweight
-          integrationWeight *= std::fabs(direction * integrationOuterNormal);
-        }
-        else
-          integrationWeight *= direction * integrationOuterNormal;
-      } else if(type == IntegrationType::normalSign) {
-        const double integrationElement =
-            face.geometry().integrationElement(quadFacePos);
-
-        const FieldVector<double,dim>& centerOuterNormal =
-               faceComputations.unitOuterNormal();
-
-        int sign = 1;
-        for (const auto& component : centerOuterNormal)
-        {
-          if (component < -1e-10)
-          {
-            sign = -1;
-            break;
-          }
-          else if (component > 1e-10)
-          {
-            sign = 1;
-            break;
-          }
-        }
-
-        integrationWeight = sign
-                          * localCoefficients.localFactor()(elementQuadPos)
-                          * quadPoint.weight() * integrationElement;
-      }
-
-      if(type == IntegrationType::travelDistanceWeighted) {
-        // factor r_K(s)/|direction|
-        integrationWeight *= detail::travelDistance(
-            elementQuadPos,
-            referenceBeta);
-      }
+      // The multiplicative factor in the integral transformation formula
+      const double integrationWeight
+          = faceComputations.template integrationWeight<type>(
+              localCoefficients, elementQuadPos, direction, quadPoint,
+              integrationData, face);
 
       ////////////////////////////////////
       // Left Hand Side Shape Functions //

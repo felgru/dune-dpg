@@ -3,11 +3,88 @@
 #ifndef DUNE_DPG_REFINEDFACES_HH
 #define DUNE_DPG_REFINEDFACES_HH
 
+#include <dune/dpg/assemble_types.hh>
+#include <dune/dpg/traveldistancenorm.hh>
 #include <dune/dpg/type_traits.hh>
 #include <dune/geometry/affinegeometry.hh>
 #include <dune/geometry/referenceelements.hh>
 
 namespace Dune {
+
+template<IntegrationType type>
+struct RefinedFaceIntegrationData {
+  constexpr static int dim = 2;
+
+  template <class Geometry, class SubGeometry>
+  RefinedFaceIntegrationData(
+      const Geometry&,
+      const SubGeometry&,
+      const FieldVector<double, dim>&) {}
+
+  template<class LhsSpace, class RhsSpace, class Face, class GeometryInElement>
+  QuadratureRule<double, 1> quadratureRule(
+      const Face& face,
+      unsigned int quadratureOrder,
+      unsigned int,
+      const GeometryInElement&) const
+  {
+    QuadratureRule<double, 1> quadFace
+      = detail::ChooseQuadrature<LhsSpace, RhsSpace, Face>
+        ::Quadrature(face, quadratureOrder);
+    return quadFace;
+  }
+
+  template<class ElementCoordinate>
+  double extraIntegrationWeight(const ElementCoordinate&) const noexcept
+  {
+    return 1.;
+  }
+};
+
+template<>
+struct RefinedFaceIntegrationData<IntegrationType::travelDistanceWeighted>
+{
+  constexpr static int dim = 2;
+
+  template <class Geometry, class SubGeometry>
+  RefinedFaceIntegrationData(
+      const Geometry& geometry,
+      const SubGeometry& subGeometryInReferenceElement,
+      const FieldVector<double, dim>& direction)
+    : referenceBeta(detail::referenceSubElementBeta(geometry,
+                    subGeometryInReferenceElement, direction))
+  {}
+
+  template<class LhsSpace, class RhsSpace, class Face, class GeometryInElement>
+  QuadratureRule<double, 1> quadratureRule(
+      const Face& face,
+      unsigned int quadratureOrder,
+      unsigned int nOutflowFaces,
+      const GeometryInElement& geometryInElement)
+  {
+    QuadratureRule<double, 1> quadFace
+      = detail::ChooseQuadrature<LhsSpace, RhsSpace, Face>
+        ::Quadrature(face, quadratureOrder);
+    if (nOutflowFaces > 1) {
+      quadFace = SplitQuadratureRule<double>(
+          quadFace,
+          detail::splitPointOfInflowFaceInTriangle(
+              geometryInElement, referenceBeta));
+    }
+    return quadFace;
+  }
+
+  template<class ElementCoordinate>
+  double extraIntegrationWeight(const ElementCoordinate& elementQuadPosSubCell)
+  noexcept
+  {
+    // factor r_K(s)/|beta|
+    return detail::travelDistance(elementQuadPosSubCell, referenceBeta);
+  }
+
+  private:
+    FieldVector<double,dim> referenceBeta;
+};
 
 template<class Element>
 struct RefinedFaceComputations {
@@ -35,27 +112,91 @@ struct RefinedFaceComputations {
                            " only implemented in 2d!");
   }
 
-  ctype integrationElement() const {
+  ctype integrationElement() const noexcept {
     return integrationElement_;
   }
 
-  const GlobalCoordinate& unitOuterNormal() const {
+  const GlobalCoordinate& unitOuterNormal() const noexcept {
     return unitOuterNormal_;
   }
 
-  GlobalCoordinate integrationOuterNormal() const {
-    GlobalCoordinate res = unitOuterNormal_;
-    res *= integrationElement_;
-    return res;
+  int unitOuterNormalSign() const noexcept {
+    for (const auto& component : unitOuterNormal_)
+    {
+      if (component < -1e-10)
+      {
+        return -1;
+      }
+      else if (component > 1e-10)
+      {
+        return 1;
+      }
+    }
+    return 1;
   }
 
-  ElementCoordinate faceToElementPosition(const FaceCoordinate& fc) const {
+  ElementCoordinate
+  faceToElementPosition(const FaceCoordinate& fc) const noexcept {
     return geometryInElement_.global(fc);
   }
 
-  const GeometryInElement& geometryInElement() const {
+  const GeometryInElement& geometryInElement() const noexcept {
     return geometryInElement_;
   }
+
+  template<IntegrationType type, class LhsSpace, class RhsSpace>
+  QuadratureRule<double, 1> quadratureRule(
+      const Face& face,
+      unsigned int quadratureOrder,
+      unsigned int nOutflowFaces,
+      RefinedFaceIntegrationData<type>& integrationData) const
+  {
+    return integrationData.template quadratureRule<LhsSpace, RhsSpace>
+        (face, quadratureOrder, nOutflowFaces, geometryInElement());
+  }
+
+  template<IntegrationType type>
+  bool skipFace(const FieldVector<double, cdim>& direction) const noexcept
+  {
+    if(type == IntegrationType::travelDistanceWeighted)
+      /* Only integrate over inflow boundaries. */
+      return direction * unitOuterNormal() >= 0;
+    else return false;
+  }
+
+  template<IntegrationType type, class LocalCoefficients>
+  double integrationWeight(
+      const LocalCoefficients& localCoefficients,
+      const ElementCoordinate elementQuadPos,
+      const ElementCoordinate elementQuadPosSubCell,
+      const FieldVector<double, cdim> direction,
+      const double quadWeight,
+      RefinedFaceIntegrationData<type>& integrationData) const
+  {
+    double integrationWeight;
+    if(type == IntegrationType::normalVector ||
+       type == IntegrationType::travelDistanceWeighted) {
+      integrationWeight = localCoefficients.localFactor()(elementQuadPos)
+                        * quadWeight
+                        * integrationElement_;
+      // TODO: scale direction to length 1
+      if(type == IntegrationType::travelDistanceWeighted)
+        integrationWeight *= std::fabs(direction * unitOuterNormal_);
+      else
+        integrationWeight *= direction * unitOuterNormal_;
+    } else if(type == IntegrationType::normalSign) {
+      const int sign = unitOuterNormalSign();
+
+      integrationWeight = sign
+                        * localCoefficients.localFactor()(elementQuadPos)
+                        * quadWeight * integrationElement_;
+    }
+    integrationWeight *=
+        integrationData.extraIntegrationWeight(elementQuadPosSubCell);
+
+    return integrationWeight;
+  }
+
 
 private:
   static GeometryInElement
@@ -99,6 +240,29 @@ private:
   GlobalCoordinate unitOuterNormal_;
   const GeometryInElement geometryInElement_;
 };
+
+template<class SubElement, class Element>
+unsigned int outflowFacesOfSubElement
+    (SubElement subElement,
+     Element element,
+     typename Element::Geometry::GlobalCoordinate direction)
+{
+  unsigned int nOutflowFaces = 0;
+  for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
+  {
+    const auto face = subElement.template subEntity<1>(f);
+    /* This won't work for curvilinear elements, but they don't seem
+     * to be supported by UG anyway. */
+    const auto unitOuterNormal
+        = RefinedFaceComputations<SubElement>(face, subElement, element)
+            .unitOuterNormal();
+
+    const double prod = direction * unitOuterNormal;
+    if(prod > 0)
+      ++nOutflowFaces;
+  }
+  return nOutflowFaces;
+}
 
 } // end namespace Dune
 

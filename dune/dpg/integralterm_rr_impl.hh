@@ -61,8 +61,8 @@ inline static void interiorImpl(LhsLocalView& lhsLocalView,
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double,dim>& quadPos = quadPoint.position();
-     // Global position of the current quadrature point
-     const FieldVector<double,dim> elementQuadPos
+      // Global position of the current quadrature point
+      const FieldVector<double,dim> elementQuadPos
           = subGeometryInReferenceElement.global(quadPos);
 
       // The multiplicative factor in the integral transformation formula
@@ -164,109 +164,37 @@ faceImpl(LhsLocalView& lhsLocalView,
     const unsigned int nLhs(lhsLocalFiniteElement.localBasis().size());
     const unsigned int nRhs(rhsLocalFiniteElement.localBasis().size());
 
-    using SubElement = std::decay_t<decltype(subElement)>;
+    const unsigned int nOutflowFaces
+        = outflowFacesOfSubElement(subElement, element, direction);
+
     const auto subGeometryInReferenceElement = subElement.geometry();
-
-    unsigned int nOutflowFaces = 0;
-    for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
-    {
-      const auto face = subElement.template subEntity<1>(f);
-      /* This won't work for curvilinear elements, but they don't seem
-       * to be supported by UG anyway. */
-      const FieldVector<double,dim> unitOuterNormal
-          = RefinedFaceComputations<SubElement>(face, subElement, element)
-              .unitOuterNormal();
-
-      const double prod = direction * unitOuterNormal;
-      if(prod > 0)
-        ++nOutflowFaces;
-    }
-
-    FieldVector<double,dim> referenceBeta
-        = detail::referenceBeta(geometry,
-            subGeometryInReferenceElement, direction);
+    RefinedFaceIntegrationData<type> integrationData(
+        geometry, subGeometryInReferenceElement, direction);
 
     for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
     {
+      using SubElement = std::decay_t<decltype(subElement)>;
       const auto face = subElement.template subEntity<1>(f);
-      auto faceComputations
+      const auto faceComputations
           = RefinedFaceComputations<SubElement>(face, subElement, element);
+      if(faceComputations.template skipFace<type>(direction)) continue;
 
-      using Face = std::decay_t<decltype(face)>;
-
-      const double integrationElement = faceComputations.integrationElement();
-
-      const FieldVector<double,dim> unitOuterNormal
-          = faceComputations.unitOuterNormal();
-
-      if(type == IntegrationType::travelDistanceWeighted &&
-         direction * unitOuterNormal >= 0) {
-        /* Only integrate over inflow boundaries. */
-        continue;
-      }
-
-      QuadratureRule<double, 1> quadFace
-        = detail::ChooseQuadrature<LhsSpace, RhsSpace, Face>
-          ::Quadrature(face, quadratureOrder);
-      if (type == IntegrationType::travelDistanceWeighted &&
-          nOutflowFaces > 1) {
-        quadFace = SplitQuadratureRule<double>(
-            quadFace,
-            detail::splitPointOfInflowFaceInTriangle(
-                faceComputations.geometryInElement(), referenceBeta));
-      }
-
+      const QuadratureRule<double, 1> quadFace
+        = faceComputations.template quadratureRule<type, LhsSpace, RhsSpace>
+              (face, quadratureOrder, nOutflowFaces, integrationData);
       for (const auto& quadPoint : quadFace) {
-
-        // Position of the current quadrature point in the reference element
-        // (face!)
-        const FieldVector<double,dim-1>& quadFacePos = quadPoint.position();
-
         // position of the quadrature point within the subelement
         const FieldVector<double,dim> elementQuadPosSubCell =
-                faceComputations.faceToElementPosition(quadFacePos);
+                faceComputations.faceToElementPosition(quadPoint.position());
 
         const FieldVector<double,dim> elementQuadPos =
                 subGeometryInReferenceElement.global(elementQuadPosSubCell);
 
         // The multiplicative factor in the integral transformation formula
-        double integrationWeight;
-        if(type == IntegrationType::normalVector ||
-           type == IntegrationType::travelDistanceWeighted) {
-          integrationWeight = localCoefficients.localFactor()(elementQuadPos)
-                            * quadPoint.weight()
-                            * integrationElement;
-          // TODO: scale direction to length 1
-          if(type == IntegrationType::travelDistanceWeighted)
-            integrationWeight *= fabs(direction*unitOuterNormal);
-          else
-            integrationWeight *= (direction*unitOuterNormal);
-        } else if(type == IntegrationType::normalSign) {
-          int sign = 1;
-          for (const auto& component : unitOuterNormal)
-          {
-            if (component < -1e-10)
-            {
-              sign = -1;
-              break;
-            }
-            else if (component > 1e-10)
-            {
-              sign = 1;
-              break;
-            }
-          }
-
-          integrationWeight = sign
-                            * localCoefficients.localFactor()(elementQuadPos)
-                            * quadPoint.weight() * integrationElement;
-        }
-
-        if(type == IntegrationType::travelDistanceWeighted) {
-          integrationWeight *= detail::travelDistance(
-              elementQuadPosSubCell,
-              referenceBeta);
-        }
+        const double integrationWeight
+            = faceComputations.template integrationWeight<type>(
+                  localCoefficients, elementQuadPos, elementQuadPosSubCell,
+                  direction, quadPoint.weight(), integrationData);
 
         //////////////////////////////
         // Left Hand Side Functions //
