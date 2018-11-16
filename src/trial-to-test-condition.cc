@@ -49,16 +49,14 @@ double conditionOnFirstElement(InnerProduct& innerProduct)
   auto testSpaces = innerProduct.getTestSpaces();
   auto testLocalViews = Dune::detail::getLocalViews(*testSpaces);
   const auto gridView = std::get<0>(*testSpaces).gridView();
-  for(const auto& e : elements(gridView)) {
-    Eigen::MatrixXd ip
-        = stiffnessMatrix(innerProduct, testLocalViews, e);
-    Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner>
-        svd(ip);
+  const auto e = *elements(gridView).begin();
+  Eigen::MatrixXd ip
+      = stiffnessMatrix(innerProduct, testLocalViews, e);
+  Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::NoQRPreconditioner>
+      svd(ip);
 
-    // only visit first element
-    return svd.singularValues()(0)
-         / svd.singularValues()(ip.rows()-1);
-  }
+  return svd.singularValues()(0)
+       / svd.singularValues()(ip.rows()-1);
 }
 
 void printHelp(const char* name) {
