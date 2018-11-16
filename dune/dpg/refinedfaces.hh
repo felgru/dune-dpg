@@ -112,21 +112,21 @@ struct RefinedFaceComputations {
                            " only implemented in 2d!");
   }
 
-  ctype integrationElement() const {
+  ctype integrationElement() const noexcept {
     return integrationElement_;
   }
 
-  const GlobalCoordinate& unitOuterNormal() const {
+  const GlobalCoordinate& unitOuterNormal() const noexcept {
     return unitOuterNormal_;
   }
 
-  GlobalCoordinate integrationOuterNormal() const {
+  GlobalCoordinate integrationOuterNormal() const noexcept {
     GlobalCoordinate res = unitOuterNormal_;
     res *= integrationElement_;
     return res;
   }
 
-  int unitOuterNormalSign() const {
+  int unitOuterNormalSign() const noexcept {
     for (const auto& component : unitOuterNormal_)
     {
       if (component < -1e-10)
@@ -141,11 +141,12 @@ struct RefinedFaceComputations {
     return 1;
   }
 
-  ElementCoordinate faceToElementPosition(const FaceCoordinate& fc) const {
+  ElementCoordinate
+  faceToElementPosition(const FaceCoordinate& fc) const noexcept {
     return geometryInElement_.global(fc);
   }
 
-  const GeometryInElement& geometryInElement() const {
+  const GeometryInElement& geometryInElement() const noexcept {
     return geometryInElement_;
   }
 
@@ -161,7 +162,7 @@ struct RefinedFaceComputations {
   }
 
   template<IntegrationType type>
-  bool skipFace(const FieldVector<double, cdim>& direction) const
+  bool skipFace(const FieldVector<double, cdim>& direction) const noexcept
   {
     if(type == IntegrationType::travelDistanceWeighted)
       /* Only integrate over inflow boundaries. */
@@ -201,6 +202,7 @@ struct RefinedFaceComputations {
 
     return integrationWeight;
   }
+
 
 private:
   static GeometryInElement
