@@ -236,5 +236,6 @@ if(args.plot_title):
 plt.xlabel(r"$\theta$")
 # plt.show()
 
+plt.tight_layout()
 titleSave="phi"+"-gamma_"+str(g)+".pdf"
 plt.savefig(titleSave)

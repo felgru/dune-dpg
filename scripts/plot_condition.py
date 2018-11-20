@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 import re
 import sys
 
+# to fix cut-off x label
+mpl.rcParams.update({'figure.autolayout': True})
+
 aparser = argparse.ArgumentParser(description='Plot condition of trial-to-test matrix')
 aparser.add_argument('-o', dest='outfile', default='conditions.pdf')
 aparser.add_argument('--presentation', dest='presentation',
