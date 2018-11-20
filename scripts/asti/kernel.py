@@ -8,7 +8,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import sys
 
-# Scaling function $\phi_{0,0}$ on the interval [-r,r[
+# Scaling function $k_{0,0}$ on the interval [-r,r[
 def sf(x,r):
     normfactor=1./(np.sqrt(2*r))
     return np.array([normfactor*(val>=-r and val<r) for val in x])
@@ -178,8 +178,8 @@ if args.plot_matrices:
     cbar = plt.colorbar(MS)
     if(args.plot_title):
         titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
-            + r"$\phi(\theta,\theta')=(1-\gamma^2)/" \
-            + r"(1+\gamma^2-2\gamma\cos(\theta-\theta'))$" \
+            + r"$k(\varphi)=(1-\gamma^2)/" \
+            + r"(1+\gamma^2-2\gamma\cos(\varphi))$" \
             + r'$,\ \gamma=' + str(g) + '$'
         plt.title(titleStr)
     plt.xlabel('$(j,k)$')
@@ -199,8 +199,8 @@ if args.plot_matrices:
     cbar = plt.colorbar(MS)
     if(args.plot_title):
         titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
-            + r"$\phi(\theta,\theta')=(1-\gamma^2)/" \
-            + r"(1+\gamma^2-2\gamma\cos(\theta-\theta'))$" \
+            + r"$k(\varphi)=(1-\gamma^2)/" \
+            + r"(1+\gamma^2-2\gamma\cos(\varphi))$" \
             + r'$,\ \gamma='+str(g) + '$'
         plt.title(titleStr)
     plt.xlabel('$(j,k)$')
@@ -228,12 +228,12 @@ else:
     plt.xlim(-r, r)
 
 if(args.plot_title):
-    titleStr=r"$\phi(\theta,0)=(1-\gamma^2)/" \
-        + r"(1+\gamma^2-2\gamma\cos(\theta))$" \
+    titleStr=r"$k(\varphi)=(1-\gamma^2)/" \
+        + r"(1+\gamma^2-2\gamma\cos(\varphi))$" \
         + r'$,\ \gamma=' + str(g) + '$'
     plt.title(titleStr)
-    plt.ylabel(r"$\phi(\theta,0)$")
-plt.xlabel(r"$\theta$")
+    plt.ylabel(r"$k(\varphi)$")
+plt.xlabel(r"$\varphi$")
 # plt.show()
 
 plt.tight_layout()
