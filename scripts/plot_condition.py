@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 from __future__ import (absolute_import, print_function)
+import argparse
 import fileinput
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -31,4 +32,4 @@ else:
 plt.yscale('log')
 plt.ylabel('condition of trial-to-test matrix')
 plt.xlabel('level $\ell$, $h = 2^{-\ell}$')
-plt.savefig(outfile)
+plt.savefig(args.outfile)
