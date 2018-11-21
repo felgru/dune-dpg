@@ -20,12 +20,21 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * Large parts of our code have been refactored for readability and
   to better adhere to modern C++ practices.
 
-### Fixed
-* ErrorPlotter: actually plot the error and not its square.
-
 ### Removed
 * `bindLocalIndexSets` and `getLocalIndexSets` have been removed,
   as IndexSets have been deprecated in dune-functions 2.6.
+
+## 0.4.2 - 2018-11-21
+### Added
+* Added description of how to plot the condition number of the
+  discrete trial to test space mapping to
+  [experiments.md](doc/experiments.md).
+
+### Fixed
+* ASTI: use the same test inner product independent of whether we
+  are using unnormalized or normalized spaces.
+* ErrorPlotter: actually plot the error and not its square.
+* Fixed plots that had the x label cut off at the bottom.
 
 ## 0.4 - 2018-10-18
 ### Added
