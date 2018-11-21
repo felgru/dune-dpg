@@ -6,7 +6,7 @@ Reproducing published Experiments
 We describe here how to reproduce the results given in Felix’ dissertation.
 First make sure to compile dune-dpg as described in INSTALL.md. The exact
 version numbers of dependencies used for the results are given in
-Appendix A of the disseration. Especially, dune-dpg 0.4 was used, so later
+Appendix A of the disseration. Especially, dune-dpg 0.4.2 was used, so later
 versions of dune-dpg might give slightly different results as I expect
 the Adaptive Source Term Iteration to further improve in the future.
 

@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
+## 0.4.2 - 2018-11-21
+### Added
+* Added description of how to plot the condition number of the
+  discrete trial to test space mapping to
+  [experiments.md](doc/experiments.md).
+
+### Fixed
+* ASTI: use the same test inner product independent of whether we
+  are using unnormalized or normalized spaces.
+* ErrorPlotter: actually plot the error and not its square.
+* Fixed plots that had the x label cut off at the bottom.
+
 ## 0.4 - 2018-10-18
 ### Added
 * A simpler interface to create (bi)linear forms and inner products
