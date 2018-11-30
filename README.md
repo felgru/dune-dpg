@@ -259,6 +259,22 @@ Here's the BibTeX data for the paper:
 If you are using other Dune modules, you might find the corresponding
 papers [here](https://dune-project.org/about/publications/).
 
+If you are using our ASTI implementation for radiative transfer problems,
+please also consider citing
+[Felix’ thesis](https://publications.rwth-aachen.de/record/750850)
+([PDF](https://publications.rwth-aachen.de/record/750850/files/750850.pdf)).
+The BibTeX entry for this thesis is:
+
+```bibtex
+@PhdThesis{Gruber2018,
+  author    = {Felix Gruber},
+  title     = {Adaptive Source Term Iteration: A Stable Formulation for Radiative Transfer},
+  school    = {RWTH Aachen University},
+  year      = {2018},
+  url       = {https://publications.rwth-aachen.de/record/750850},
+}
+```
+
 License
 =======
 
