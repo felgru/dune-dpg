@@ -13,6 +13,7 @@
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
+#include <algorithm>
 #include <string>
 #include <type_traits>
 
@@ -78,8 +79,7 @@ public:
   {
     VectorType u(feBasis.size());
     assert(x.size() >= feBasis.size()+spaceOffset);
-    std::copy(x.begin()+spaceOffset, x.begin()+spaceOffset+feBasis.size(),
-              u.begin());
+    std::copy_n(x.begin()+spaceOffset, feBasis.size(), u.begin());
 
     plot(functionname, u, feBasis, subsampling);
   }
