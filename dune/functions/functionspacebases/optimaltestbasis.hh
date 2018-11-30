@@ -9,6 +9,7 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/hybridutilities.hh>
+#include <dune/common/reservedvector.hh>
 
 #include <dune/localfunctions/optimaltestfunctions/optimaltest.hh>
 #include <dune/localfunctions/optimaltestfunctions/refinedoptimaltest.hh>
@@ -433,7 +434,7 @@ protected:
  * \tparam testIndex  index of the optimal test space in the test space tuple
  */
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex = 0>
-using OptimalTestBasis = std::conditional
+using OptimalTestBasis = typename std::conditional
            < Dune::is_RefinedFiniteElement<
                typename std::tuple_element<testIndex,
                      typename TestspaceCoefficientMatrix::TestSpaces
