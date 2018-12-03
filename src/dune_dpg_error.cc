@@ -5,6 +5,7 @@
 
 #include <cmath>
 
+#include <algorithm>
 #include <array>
 #include <memory>
 #include <tuple>
@@ -260,22 +261,14 @@ int main()
 
     const size_t nFace = std::get<1>(*solutionSpaces).size();
     const size_t nInner = std::get<0>(*solutionSpaces).size();
-    VectorType u(nInner);
-    VectorType theta(nFace);
-    u=0;
-    theta=0;
 
     // We extract the solution vector u
-    for (size_t i=0; i<nInner; i++)
-    {
-      u[i] = x[i];
-    }
+    VectorType u(nInner);
+    std::copy_n(x.begin(), nInner, u.begin());
 
     // We extract the solution vector theta of the faces
-    for (size_t i=0; i<nFace; i++)
-    {
-      theta[i] = x[nInner+i];
-    }
+    VectorType theta(nFace);
+    std::copy_n(x.begin() + nInner, nFace, theta.begin());
 
     auto innerSpace = std::get<0>(*solutionSpaces);
     auto feBasisTrace = std::get<1>(*solutionSpaces);
