@@ -3,7 +3,7 @@
 #ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_TEST_UNREFINEDBASISTEST_HH
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_TEST_UNREFINEDBASISTEST_HH
 
-#include <dune/common/exceptions.hh>
+#include <dune/common/test/testsuite.hh>
 #include <dune/common/typetraits.hh>
 #include <dune/common/unused.hh>
 #include <dune/common/version.hh>
@@ -13,8 +13,9 @@
 namespace Dune {
 
 template <typename Basis>
-void testLocalFeForEachElement(const Basis& feBasis)
+TestSuite testLocalFeForEachElement(const Basis& feBasis)
 {
+  TestSuite t;
   typedef typename Basis::GridView GridView;
   const GridView gridView = feBasis.gridView();
 
@@ -29,21 +30,22 @@ void testLocalFeForEachElement(const Basis& feBasis)
     // The general LocalFiniteElement unit test from
     // dune/localfunctions/test/test-localfe.hh
     const auto& lFE = localView.tree().finiteElement();
-    testFE(lFE);
+    t.check(testFE(lFE));
 
-    if (lFE.size() != localView.size())
-      DUNE_THROW(Exception,
-          "Size of leaf node and finite element do not coincide");
+    t.require(lFE.size() == localView.size())
+      << "Size of leaf node and finite element do not coincide";
   }
+  return t;
 }
 
 template <typename Basis>
-void checkRangeOfGlobalIndices(const Basis& feBasis)
+TestSuite checkRangeOfGlobalIndices(const Basis& feBasis)
 {
   /////////////////////////////////////////////////////////////////////
   //  Check whether the global indices are in the correct range,
   //  and whether each global index appears at least once.
   /////////////////////////////////////////////////////////////////////
+  TestSuite t;
 
   const auto gridView = feBasis.gridView();
 
@@ -58,28 +60,29 @@ void checkRangeOfGlobalIndices(const Basis& feBasis)
 
     for (size_t i=0; i<localView.tree().size(); i++)
     {
-      if (localView.index(i)[0] < 0)
-        DUNE_THROW(Exception, "Index is negative, which is not allowed");
+      t.check(localView.index(i)[0] >= 0);
 
-      if (localView.index(i)[0] >= seen.size())
-        DUNE_THROW(Exception, "Local index " << i
-                           << " is mapped to global index "
-                           << localView.index(i)
-                           << ", which is larger than allowed");
+      t.check(localView.index(i)[0] < seen.size())
+        << "Local index " << i
+        << " is mapped to global index "
+        << localView.index(i)
+        << ", which is larger than allowed";
 
       seen[localView.index(i)[0]] = true;
     }
   }
 
   for (size_t i=0; i<seen.size(); i++)
-    if (! seen[i])
-      DUNE_THROW(Exception,
-          "Index [" << i << "] does not exist as global basis vector");
+    t.check(seen[i])
+      << "Index [" << i << "] does not exist as global basis vector";
+
+  return t;
 }
 
 template <typename Basis>
-void checkConsistencyOfLocalViewAndIndexSet(const Basis& feBasis)
+TestSuite checkConsistencyOfLocalViewAndIndexSet(const Basis& feBasis)
 {
+  TestSuite t;
   const auto gridView = feBasis.gridView();
   typename Basis::LocalView localView(feBasis);
   auto localView2 = feBasis.localView();
@@ -90,27 +93,29 @@ void checkConsistencyOfLocalViewAndIndexSet(const Basis& feBasis)
     localView2.bind(element);
 
     // paranoia checks
-    assert(&(localView.globalBasis()) == &(feBasis));
+    t.require(&(localView.globalBasis()) == &(feBasis));
 
-    assert(localView.size() == localView2.size());
+    t.require(localView.size() == localView2.size());
     for (size_t i=0; i<localView.size(); i++)
-      assert(localView.index(i) == localView2.index(i));
+      t.check(localView.index(i) == localView2.index(i));
 
     typedef typename Basis::LocalView::Tree Tree;
     DUNE_UNUSED const Tree& tree = localView.tree();
 
     // we have a flat tree...
-    assert(localView.size() == tree.size());
-    assert(localView.size() == tree.finiteElement().localBasis().size());
+    t.require(localView.size() == tree.size());
+    t.require(localView.size() == tree.finiteElement().localBasis().size());
 
     localView.unbind();
   }
+  return t;
 }
 
 template <typename Basis>
-void testScalarBasis(const Basis& feBasis)
+TestSuite testScalarBasis(const Basis& feBasis)
 {
-  testLocalFeForEachElement(feBasis);
+  TestSuite t;
+  t.subTest(testLocalFeForEachElement(feBasis));
 
   // Check whether the basis exports a type 'MultiIndex'
   typedef typename Basis::MultiIndex MultiIndex;
@@ -124,8 +129,9 @@ void testScalarBasis(const Basis& feBasis)
       "MultiIndex must support operator[]");
 #endif
 
-  checkRangeOfGlobalIndices(feBasis);
-  checkConsistencyOfLocalViewAndIndexSet(feBasis);
+  t.subTest(checkRangeOfGlobalIndices(feBasis));
+  t.subTest(checkConsistencyOfLocalViewAndIndexSet(feBasis));
+  return t;
 }
 
 }

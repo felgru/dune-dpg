@@ -6,6 +6,7 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/parallel/mpihelper.hh>
+#include <dune/common/test/testsuite.hh>
 
 #include <dune/grid/yaspgrid.hh>
 
@@ -16,7 +17,7 @@
 using namespace Dune;
 using namespace Dune::Functions;
 
-int main (int argc, char* argv[]) try
+int main(int argc, char* argv[])
 {
   Dune::MPIHelper::instance(argc, argv);
 
@@ -31,17 +32,7 @@ int main (int argc, char* argv[]) try
   const GridView gridView = grid.leafGridView();
 
   Functions::PQkDGRefinedDGBasis<GridView, 1, 2> dgrefinedbasis(gridView);
-  testRefinedScalarBasis(dgrefinedbasis);
+  TestSuite t = testRefinedScalarBasis(dgrefinedbasis);
 
-  return 0;
-
-} catch ( Dune::Exception &e )
-{
-  std::cerr << "Dune reported error: " << e << std::endl;
-  return 1;
-}
-catch(...)
-{
-  std::cerr << "Unknown exception thrown!" << std::endl;
-  return 1;
+  return t.exit();
 }
