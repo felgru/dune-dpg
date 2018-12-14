@@ -711,13 +711,12 @@ class ASTIPlotter {
   void plotScatteringOnHostGrid(
       const ScatteringBasis& hostGridGlobalBasis,
       const std::vector<VectorType>& scattering,
-      const unsigned int n,
-      const size_t numS) const
+      const unsigned int n) const
   {
     if(flagIsSet(plotFlags, ASTIPlotFlags::plotScattering)) {
       std::cout << "Plot scattering:\n";
 
-      for(unsigned int i = 0; i < numS; ++i)
+      for(size_t i = 0, numS = scattering.size(); i < numS; ++i)
       {
         std::cout << "Direction " << i << '\n';
 
@@ -1031,7 +1030,7 @@ computeScatteringData(
 
   plotter.plotScatteringOnHostGrid(hostGridGlobalBasis,
                                    scatteringFunctional,
-                                   n, numS);
+                                   n);
 
   for(size_t i = 0; i < numS; i++) {
     // TODO: subGridGlobalBasis should be normalized in L2!?
