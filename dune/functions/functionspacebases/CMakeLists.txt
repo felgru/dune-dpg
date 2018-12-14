@@ -6,7 +6,6 @@ install(FILES
         bernsteindgbasis.hh
         bernsteindgrefineddgnodalbasis.hh
         constrainedglobalbasis.hh
-        constrainedlocalindexset.hh
         constrainedlocalview.hh
         hangingnodebernsteinp2basis.hh
         hangingnodelagrangep2basis.hh
