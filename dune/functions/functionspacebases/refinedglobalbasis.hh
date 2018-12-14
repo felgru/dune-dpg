@@ -3,12 +3,15 @@
 #ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_REFINEDGLOBALBASIS_HH
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_REFINEDGLOBALBASIS_HH
 
+#include <dune/common/concept.hh>
 #include <dune/common/reservedvector.hh>
 #include <dune/common/typeutilities.hh>
-#include <dune/common/concept.hh>
+#include <dune/common/version.hh>
 
 #include <dune/functions/common/type_traits.hh>
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
 #include <dune/functions/functionspacebases/defaultlocalindexset.hh>
+#endif
 #include <dune/functions/functionspacebases/refinedlocalview.hh>
 #include <dune/functions/functionspacebases/concepts.hh>
 
@@ -67,8 +70,10 @@ public:
   //! Type used for prefixes handed to the size() method
   using SizePrefix = typename PreBasis::SizePrefix;
 
-  //! Type of local indixes set exported by localIndexSet()
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
+  //! Type of local index set exported by localIndexSet()
   using LocalIndexSet = DefaultLocalIndexSet<LocalView, NodeIndexSet>;
+#endif
 
 
   /**
@@ -138,11 +143,13 @@ public:
     return LocalView(*this);
   }
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
   //! Return local index set for basis
   LocalIndexSet localIndexSet() const
   {
     return LocalIndexSet(preBasis_.template indexSet<PrefixPath>());
   }
+#endif
 
   //! Return *this because we are not embedded in a larger basis
   const RefinedGlobalBasis& rootBasis() const
