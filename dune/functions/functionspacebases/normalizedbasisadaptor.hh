@@ -294,6 +294,8 @@ public:
 
 #if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using Node = typename PreBasis::Node;
+#else
+  using Node = typename PreBasis::template Node<TP>;
 #endif
 
   NormalizedNodeIndexSet(const PreBasis& preBasis) :
