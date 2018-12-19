@@ -49,11 +49,6 @@ public:
   //! Prebasis providing the implementation details
   using PreBasis = PB;
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  //! The empty prefix path that identifies the root in the local ansatz tree
-  using PrefixPath = TypeTree::HybridTreePath<>;
-#endif
-
   //! The grid view that the FE space is defined on
   using GridView = typename PreBasis::GridView;
 
@@ -67,11 +62,7 @@ public:
   using LocalView = RefinedLocalView<RefinedGlobalBasis<PreBasis>>;
 
   //! Node index set provided by PreBasis
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using NodeIndexSet = typename PreBasis::IndexSet;
-#else
-  using NodeIndexSet = typename PreBasis::template IndexSet<PrefixPath>;
-#endif
 
   //! Type used for prefixes handed to the size() method
   using SizePrefix = typename PreBasis::SizePrefix;
@@ -95,9 +86,6 @@ public:
     enableIfConstructible<PreBasis, T...> = 0>
   RefinedGlobalBasis(T&&... t) :
     preBasis_(std::forward<T>(t)...)
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-    , prefixPath_()
-#endif
   {
     static_assert(models<Concept::PreBasis<GridView>, PreBasis>(), "Type passed to RefinedGlobalBasis does not model the PreBasis concept.");
     preBasis_.initializeIndices();
@@ -165,19 +153,8 @@ public:
     return *this;
   }
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  //! Return empty path, because this is the root in the local ansatz tree
-  const PrefixPath& prefixPath() const
-  {
-    return prefixPath_;
-  }
-#endif
-
 protected:
   PreBasis preBasis_;
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  PrefixPath prefixPath_;
-#endif
 };
 
 

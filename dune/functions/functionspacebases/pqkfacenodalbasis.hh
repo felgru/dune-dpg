@@ -24,19 +24,11 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename GV, int k>
 using PQkFaceNode = LagrangeFaceNode<GV, k>;
 
 template<typename GV, int k, class MI>
 using PQkFaceNodeIndexSet = LagrangeFaceNodeIndexSet<GV, k, MI>;
-#else
-template<typename GV, int k, typename TP>
-using PQkFaceNode = LagrangeFaceNode<GV, k, TP>;
-
-template<typename GV, int k, class MI, class TP>
-using PQkFaceNodeIndexSet = LagrangeFaceNodeIndexSet<GV, k, MI, TP>;
-#endif
 
 template<typename GV, int k, class MI>
 using PQkFacePreBasis = LagrangeFacePreBasis<GV, k, MI>;

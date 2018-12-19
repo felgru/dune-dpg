@@ -6,7 +6,6 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
-#include <dune/common/version.hh>
 
 #include <dune/localfunctions/bernstein/pqkfactory.hh>
 
@@ -34,19 +33,11 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename GV, int k>
 class BernsteinNode;
 
 template<typename GV, int k, class MI>
 class BernsteinNodeIndexSet;
-#else
-template<typename GV, int k, typename TP>
-class BernsteinNode;
-
-template<typename GV, int k, class MI, class TP>
-class BernsteinNodeIndexSet;
-#endif
 
 template<typename GV, int k, class MI>
 class BernsteinPreBasis;
@@ -79,11 +70,7 @@ public:
 
 private:
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   template<typename, int, class>
-#else
-  template<typename, int, class, class>
-#endif
   friend class BernsteinNodeIndexSet;
 
   // Precompute the number of dofs per entity type
@@ -106,19 +93,9 @@ private:
 
 public:
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using Node = BernsteinNode<GV, k>;
 
   using IndexSet = BernsteinNodeIndexSet<GV, k, MI>;
-#else
-  //! Template mapping root tree path to type of created tree node
-  template<class TP>
-  using Node = BernsteinNode<GV, k, TP>;
-
-  //! Template mapping root tree path to type of created tree node index set
-  template<class TP>
-  using IndexSet = BernsteinNodeIndexSet<GV, k, MI, TP>;
-#endif
 
   //! Type used for global numbering of the basis vectors
   using MultiIndex = MI;
@@ -163,7 +140,6 @@ public:
     gridView_ = gv;
   }
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   /**
    * \brief Create tree node
    */
@@ -182,38 +158,6 @@ public:
   {
     return IndexSet{*this};
   }
-#else
-  /**
-   * \brief Create tree node with given root tree path
-   *
-   * \tparam TP Type of root tree path
-   * \param tp Root tree path
-   *
-   * By passing a non-trivial root tree path this can be used
-   * to create a node suitable for being placed in a tree at
-   * the position specified by the root tree path.
-   */
-  template<class TP>
-  Node<TP> node(const TP& tp) const
-  {
-    return Node<TP>{tp};
-  }
-
-  /**
-   * \brief Create tree node index set with given root tree path
-   *
-   * \tparam TP Type of root tree path
-   * \param tp Root tree path
-   *
-   * Create an index set suitable for the tree node obtained
-   * by node(tp).
-   */
-  template<class TP>
-  IndexSet<TP> indexSet() const
-  {
-    return IndexSet<TP>{*this};
-  }
-#endif
 
   //! Same as size(prefix) with empty prefix
   size_type size() const
@@ -396,39 +340,22 @@ protected:
 
 
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename GV, int k>
 class BernsteinNode :
   public LeafBasisNode
-#else
-template<typename GV, int k, typename TP>
-class BernsteinNode :
-  public LeafBasisNode<std::size_t, TP>
-#endif
 {
   static constexpr int dim = GV::dimension;
   static const int maxSize = StaticPower<(k+1),GV::dimension>::power;
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  using Base = LeafBasisNode<std::size_t,TP>;
-#endif
   using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, double, dim, k>;
 
 public:
 
   using size_type = std::size_t;
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  using TreePath = TP;
-#endif
   using Element = typename GV::template Codim<0>::Entity;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   BernsteinNode() :
-#else
-  BernsteinNode(const TreePath& treePath) :
-    Base(treePath),
-#endif
     finiteElement_(nullptr),
     element_(nullptr)
   {}
@@ -465,11 +392,7 @@ protected:
 
 
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename GV, int k, class MI>
-#else
-template<typename GV, int k, class MI, class TP>
-#endif
 class BernsteinNodeIndexSet
 {
   enum {dim = GV::dimension};
@@ -483,11 +406,7 @@ public:
 
   using PreBasis = BernsteinPreBasis<GV, k, MI>;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using Node = typename PreBasis::Node;
-#else
-  using Node = typename PreBasis::template Node<TP>;
-#endif
 
   BernsteinNodeIndexSet(const PreBasis& preBasis) :
     preBasis_(&preBasis),

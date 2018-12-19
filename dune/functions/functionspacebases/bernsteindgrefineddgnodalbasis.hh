@@ -6,7 +6,6 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
-#include <dune/common/version.hh>
 
 #include <dune/localfunctions/bernstein/pqkfactory.hh>
 
@@ -36,19 +35,11 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename GV, int level, int k>
 class BernsteinDGRefinedDGNode;
 
 template<typename GV, int level, int k, class MI>
 class BernsteinDGRefinedDGNodeIndexSet;
-#else
-template<typename GV, int level, int k, typename TP>
-class BernsteinDGRefinedDGNode;
-
-template<typename GV, int level, int k, class MI, class TP>
-class BernsteinDGRefinedDGNodeIndexSet;
-#endif
 
 
 template<typename GV, int level, int k, class MI>
@@ -77,17 +68,9 @@ public:
       * RefinementConstants::dofsPerSubQuad;
 
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using Node = BernsteinDGRefinedDGNode<GV, level, k>;
 
   using IndexSet = BernsteinDGRefinedDGNodeIndexSet<GV, level, k, MI>;
-#else
-  template<class TP>
-  using Node = BernsteinDGRefinedDGNode<GV, level, k, TP>;
-
-  template<class TP>
-  using IndexSet = BernsteinDGRefinedDGNodeIndexSet<GV, level, k, MI, TP>;
-#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -125,7 +108,6 @@ public:
     gridView_ = gv;
   }
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   Node makeNode() const
   {
     return Node{};
@@ -135,19 +117,6 @@ public:
   {
     return IndexSet{*this};
   }
-#else
-  template<class TP>
-  Node<TP> node(const TP& tp) const
-  {
-    return Node<TP>{tp};
-  }
-
-  template<class TP>
-  IndexSet<TP> indexSet() const
-  {
-    return IndexSet<TP>{*this};
-  }
-#endif
 
   size_type size() const
   {
@@ -188,23 +157,14 @@ public:
 
 
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename GV, int level, int k>
 class BernsteinDGRefinedDGNode :
   public LeafBasisNode,
-#else
-template<typename GV, int level, int k, typename TP>
-class BernsteinDGRefinedDGNode :
-  public LeafBasisNode<std::size_t, TP>,
-#endif
   public RefinedNode < typename GV::template Codim<0>::Entity
                      , typename GV::ctype, GV::dimension, level>
 {
   static constexpr int dim = GV::dimension;
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  using Base = LeafBasisNode<std::size_t, TP>;
-#endif
   using RefinedNodeBase =
           RefinedNode < typename GV::template Codim<0>::Entity
                       , typename GV::ctype, dim, level>;
@@ -213,19 +173,11 @@ class BernsteinDGRefinedDGNode :
 public:
 
   using size_type = std::size_t;
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  using TreePath = TP;
-#endif
   using Element = typename GV::template Codim<0>::Entity;
   using SubElement = typename RefinedNodeBase::SubElement;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   BernsteinDGRefinedDGNode() :
-#else
-  BernsteinDGRefinedDGNode(const TreePath& treePath) :
-    Base(treePath),
-#endif
     RefinedNodeBase(),
     finiteElement_(nullptr)
   {}
@@ -272,11 +224,7 @@ protected:
 
 
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename GV, int level, int k, class MI>
-#else
-template<typename GV, int level, int k, class MI, class TP>
-#endif
 class BernsteinDGRefinedDGNodeIndexSet
 {
   static constexpr int dim = GV::dimension;
@@ -290,11 +238,7 @@ public:
 
   using PreBasis = BernsteinDGRefinedDGPreBasis<GV, level, k, MI>;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using Node = typename PreBasis::Node;
-#else
-  using Node = typename PreBasis::template Node<TP>;
-#endif
 
   BernsteinDGRefinedDGNodeIndexSet(const PreBasis& preBasis) :
     preBasis_(&preBasis)

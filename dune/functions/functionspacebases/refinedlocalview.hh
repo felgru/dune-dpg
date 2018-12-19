@@ -7,7 +7,6 @@
 #include <tuple>
 
 #include <dune/common/concept.hh>
-#include <dune/common/version.hh>
 #include <dune/common/std/type_traits.hh>
 
 #include <dune/functions/functionspacebases/concepts.hh>
@@ -25,15 +24,8 @@ namespace Functions {
 template<class GB>
 class RefinedLocalView
 {
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   // Node index set provided by PreBasis
   using NodeIndexSet = typename GB::PreBasis::IndexSet;
-#else
-  using PrefixPath = TypeTree::HybridTreePath<>;
-
-  // Node index set provided by PreBasis
-  using NodeIndexSet = typename GB::PreBasis::template IndexSet<PrefixPath>;
-#endif
 
 public:
 
@@ -46,22 +38,13 @@ public:
   //! Type of the grid element we are bound to
   using Element = typename GridView::template Codim<0>::Entity;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using SubElement = typename GB::PreBasis::Node::SubElement;
-#else
-  using SubElement = typename GB::PreBasis::
-                      template Node<typename GB::PrefixPath>::SubElement;
-#endif
 
   //! The type used for sizes
   using size_type = std::size_t;
 
   //! Tree of local finite elements / local shape function sets
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using Tree = typename GlobalBasis::PreBasis::Node;
-#else
-  using Tree = typename GlobalBasis::PreBasis::template Node<PrefixPath>;
-#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = typename NodeIndexSet::MultiIndex;
@@ -77,13 +60,8 @@ public:
   /** \brief Construct local view for a given global finite element basis */
   RefinedLocalView(const GlobalBasis& globalBasis) :
     globalBasis_(&globalBasis),
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
     tree_(globalBasis_->preBasis().makeNode()),
     nodeIndexSet_(globalBasis_->preBasis().makeIndexSet())
-#else
-    tree_(globalBasis_->preBasis().node(PrefixPath())),
-    nodeIndexSet_(globalBasis_->preBasis().template indexSet<PrefixPath>())
-#endif
   {
     static_assert(models<Concept::BasisTree<GridView>, Tree>(), "Tree type passed to RefinedLocalView does not model the BasisNode concept.");
     initializeTree(tree_);
