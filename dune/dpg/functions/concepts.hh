@@ -5,6 +5,7 @@
 
 
 #include <dune/common/concept.hh>
+#include <dune/common/version.hh>
 
 #include <dune/functions/common/utility.hh>
 
@@ -46,7 +47,9 @@ struct ConstrainedNodeIndexSet
 template<class GridView>
 struct ConstrainedPreBasis
 {
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
   using RootTreePath = decltype(TypeTree::hybridTreePath());
+#endif
 
   template<class F>
   auto require(const F& factory) -> decltype(
@@ -54,19 +57,34 @@ struct ConstrainedPreBasis
     requireType<typename F::size_type>(),
     requireType<typename F::MultiIndex>(),
     requireType<typename F::SizePrefix>(),
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+    requireType<typename F::Node>(),
+    requireType<typename F::IndexSet>(),
+#else
     requireType<typename F::template Node<RootTreePath>>(),
     requireType<typename F::template IndexSet<RootTreePath>>(),
+#endif
     requireSameType<typename F::GridView, GridView>(),
     const_cast<F&>(factory).initializeIndices(),
     requireConvertible<typename F::GridView>(factory.gridView()),
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+    requireConvertible<typename F::Node>(factory.makeNode()),
+    requireConvertible<typename F::IndexSet>(factory.makeIndexSet()),
+#else
     requireConvertible<typename F::template Node<RootTreePath>>(factory.node(RootTreePath())),
     requireConvertible<typename F::template IndexSet<RootTreePath>>(factory.template indexSet<RootTreePath>()),
+#endif
     requireConvertible<typename F::size_type>(factory.size()),
     requireConvertible<typename F::size_type>(factory.size(std::declval<typename F::SizePrefix>())),
     requireConvertible<typename F::size_type>(factory.dimension()),
     requireConvertible<typename F::size_type>(factory.maxNodeSize()),
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+    requireConcept<BasisTree<typename F::GridView>>(factory.makeNode()),
+    requireConcept<ConstrainedNodeIndexSet<F>>(factory.makeIndexSet())
+#else
     requireConcept<BasisTree<typename F::GridView>>(factory.node(RootTreePath())),
     requireConcept<ConstrainedNodeIndexSet<F>>(factory.template indexSet<RootTreePath>())
+#endif
   );
 };
 

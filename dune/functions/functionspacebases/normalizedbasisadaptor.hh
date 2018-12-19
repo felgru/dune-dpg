@@ -6,6 +6,8 @@
 #include <array>
 #include <cmath>
 
+#include <dune/common/version.hh>
+
 #include <dune/dpg/assemble_helper.hh>
 
 #include <dune/functions/functionspacebases/nodes.hh>
@@ -36,11 +38,19 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename InnerProduct>
+class NormalizedNode;
+
+template<typename Basis>
+class NormalizedNodeIndexSet;
+#else
 template<typename InnerProduct, typename TP>
 class NormalizedNode;
 
 template<typename Basis, class TP>
 class NormalizedNodeIndexSet;
+#endif
 
 
 template<typename InnerProduct>
@@ -57,12 +67,18 @@ public:
 
   using WrappedBasis = Basis;
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using Node = NormalizedNode<InnerProduct>;
+
+  using IndexSet = NormalizedNodeIndexSet<NormalizedPreBasis<InnerProduct>>;
+#else
   template<class TP>
   using Node = NormalizedNode<InnerProduct, TP>;
 
   template<class TP>
   using IndexSet = NormalizedNodeIndexSet<
                       NormalizedPreBasis<InnerProduct>, TP>;
+#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = typename Basis::MultiIndex;
@@ -94,6 +110,17 @@ public:
     Dune::detail::updateSpaces(*innerProduct_.getTestSpaces(), gv);
   }
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  Node makeNode() const
+  {
+    return Node{innerProduct_};
+  }
+
+  IndexSet makeIndexSet() const
+  {
+    return IndexSet{*this};
+  }
+#else
   template<class TP>
   Node<TP> node(const TP& tp) const
   {
@@ -105,6 +132,7 @@ public:
   {
     return IndexSet<TP>{*this};
   }
+#endif
 
   size_type size() const
   {
@@ -145,30 +173,49 @@ protected:
 
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename InnerProduct>
+class NormalizedNode :
+  public LeafBasisNode
+#else
 template<typename InnerProduct, typename TP>
 class NormalizedNode :
   public LeafBasisNode<std::size_t, TP>
+#endif
 {
   using Basis = std::tuple_element_t<0, typename InnerProduct::TestSpaces>;
   using LocalViews
       = Dune::detail::getLocalViews_t<typename InnerProduct::TestSpaces>;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
   using Base = LeafBasisNode<std::size_t, TP>;
+#endif
   using WrappedPreBasis = typename Basis::PreBasis;
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using WrappedNode = typename WrappedPreBasis::Node;
+#else
   using WrappedNode = typename WrappedPreBasis::template Node<TP>;
+#endif
   using PreBasis = NormalizedPreBasis<InnerProduct>;
 
 public:
 
   using size_type = std::size_t;
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
   using TreePath = TP;
+#endif
   using Element = typename WrappedNode::Element;
   using FiniteElement
       = ScaledLocalFiniteElement<typename WrappedNode::FiniteElement>;
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  NormalizedNode(const PreBasis& preBasis) :
+    wrappedNode_(),
+#else
   NormalizedNode(const PreBasis& preBasis,
                  const TreePath& treePath) :
     wrappedNode_(treePath),
+#endif
     innerProduct_(preBasis.innerProduct()),
     localViews_(Dune::detail::getLocalViews(*innerProduct_.getTestSpaces())),
     scalingWeights_(),
@@ -221,12 +268,20 @@ protected:
 
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename PB>
+#else
 template<typename PB, class TP>
+#endif
 class NormalizedNodeIndexSet
 {
   using Basis = typename PB::WrappedBasis;
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using WrappedIndexSet = typename Basis::PreBasis::IndexSet;
+#else
   using WrappedIndexSet = typename Basis::PreBasis::template IndexSet<TP>;
+#endif
 
 public:
 
@@ -237,7 +292,9 @@ public:
 
   using PreBasis = PB;
 
-  using Node = typename PreBasis::template Node<TP>;
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using Node = typename PreBasis::Node;
+#endif
 
   NormalizedNodeIndexSet(const PreBasis& preBasis) :
     wrappedIndexSet_(preBasis.wrappedPreBasis())

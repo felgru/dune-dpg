@@ -10,6 +10,7 @@
 #include <dune/common/exceptions.hh>
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/reservedvector.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/optimaltestfunctions/optimaltest.hh>
 #include <dune/localfunctions/optimaltestfunctions/refinedoptimaltest.hh>
@@ -74,11 +75,19 @@ struct EmptyPreBasisConstants {};
 // set and can be used without a global basis.
 // *****************************************************************************
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
+class OptimalTestBasisNode;
+
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
+class OptimalTestBasisNodeIndexSet;
+#else
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, typename TP>
 class OptimalTestBasisNode;
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, class TP>
 class OptimalTestBasisNodeIndexSet;
+#endif
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
 class OptimalTestBasisPreBasis;
@@ -112,11 +121,18 @@ public:
   using size_type = std::size_t;
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using Node = OptimalTestBasisNode<TestspaceCoefficientMatrix, testIndex>;
+
+  using IndexSet = OptimalTestBasisNodeIndexSet<TestspaceCoefficientMatrix,
+                                                testIndex, MI>;
+#else
   template<class TP>
   using Node = OptimalTestBasisNode<TestspaceCoefficientMatrix, testIndex, TP>;
 
   template<class TP>
   using IndexSet = OptimalTestBasisNodeIndexSet<TestspaceCoefficientMatrix, testIndex, MI, TP>;
+#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -154,6 +170,17 @@ public:
   void update (const GridView&)
   {}
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  Node makeNode() const
+  {
+    return Node{testspaceCoefficientMatrix_};
+  }
+
+  IndexSet makeIndexSet() const
+  {
+    return IndexSet{*this};
+  }
+#else
   template<class TP>
   Node<TP> node(const TP& tp) const
   {
@@ -165,6 +192,7 @@ public:
   {
     return IndexSet<TP>{*this};
   }
+#endif
 
   size_type size() const
   {
@@ -207,9 +235,15 @@ public:
 
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
+class OptimalTestBasisNode :
+  public LeafBasisNode,
+#else
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, typename TP>
 class OptimalTestBasisNode :
   public LeafBasisNode<std::size_t, TP>,
+#endif
   public std::conditional
            < Dune::is_RefinedFiniteElement<
                typename std::tuple_element<testIndex,
@@ -238,7 +272,9 @@ private:
   using GV = typename TestspaceCoefficientMatrix::GridView;
   static constexpr int dim = GV::dimension;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
   using Base = LeafBasisNode<std::size_t, TP>;
+#endif
   using TestSearchFiniteElement
       = typename TestSearchSpace::LocalView::Tree::FiniteElement;
 
@@ -251,7 +287,9 @@ private:
 public:
 
   using size_type = std::size_t;
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
   using TreePath = TP;
+#endif
   using Element = typename GV::template Codim<0>::Entity;
   using FiniteElement = typename std::conditional
                           < testSearchSpaceIsRefined
@@ -269,9 +307,13 @@ public:
                                    TestSearchFiniteElement>
                           >::type;
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  OptimalTestBasisNode(TestspaceCoefficientMatrix& testCoeffMat) :
+#else
   OptimalTestBasisNode(const TreePath& treePath,
                        TestspaceCoefficientMatrix& testCoeffMat) :
     Base(treePath),
+#endif
     testspaceCoefficientMatrix(testCoeffMat),
     finiteElement_(nullptr),
     testSearchSpace_(nullptr),
@@ -327,7 +369,11 @@ protected:
 
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
+#else
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, class TP>
+#endif
 class OptimalTestBasisNodeIndexSet
 {
   using GV = typename TestspaceCoefficientMatrix::GridView;
@@ -353,7 +399,11 @@ public:
 
   using PreBasis = OptimalTestBasisPreBasis<TestspaceCoefficientMatrix, testIndex, MI>;
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using Node = typename PreBasis::Node;
+#else
   using Node = typename PreBasis::template Node<TP>;
+#endif
 
   typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
   typedef Dune::detail::getLocalViews_t<SolutionSpaces>

@@ -6,6 +6,7 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
+#include <dune/common/version.hh>
 
 #include <dune/functions/functionspacebases/nodes.hh>
 #include <dune/functions/functionspacebases/defaultglobalbasis.hh>
@@ -32,11 +33,19 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename GV, int k>
+using BernsteinDGNode = BernsteinNode<GV, k>;
+
+template<typename GV, int k, class MI>
+class BernsteinDGNodeIndexSet;
+#else
 template<typename GV, int k, typename TP>
 using BernsteinDGNode = BernsteinNode<GV, k, TP>;
 
 template<typename GV, int k, class MI, class TP>
 class BernsteinDGNodeIndexSet;
+#endif
 
 
 template<typename GV, int k, class MI>
@@ -61,11 +70,17 @@ public:
   constexpr static int dofsPerPyramid     = (k+1)*(k+2)*(2*k+3)/6;
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using Node = BernsteinDGNode<GV, k>;
+
+  using IndexSet = BernsteinDGNodeIndexSet<GV, k, MI>;
+#else
   template<class TP>
   using Node = BernsteinDGNode<GV, k, TP>;
 
   template<class TP>
   using IndexSet = BernsteinDGNodeIndexSet<GV, k, MI, TP>;
+#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -115,6 +130,17 @@ public:
     gridView_ = gv;
   }
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  Node makeNode() const
+  {
+    return Node{};
+  }
+
+  IndexSet makeIndexSet() const
+  {
+    return IndexSet{*this};
+  }
+#else
   template<class TP>
   Node<TP> node(const TP& tp) const
   {
@@ -126,6 +152,7 @@ public:
   {
     return IndexSet<TP>{*this};
   }
+#endif
 
   size_type size() const
   {
@@ -177,7 +204,11 @@ public:
 
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename GV, int k, class MI>
+#else
 template<typename GV, int k, class MI, class TP>
+#endif
 class BernsteinDGNodeIndexSet
 {
   // Cannot be an enum -- otherwise the switch statement below produces compiler warnings
@@ -192,7 +223,11 @@ public:
 
   using PreBasis = BernsteinDGPreBasis<GV, k, MI>;
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using Node = typename PreBasis::Node;
+#else
   using Node = typename PreBasis::template Node<TP>;
+#endif
 
   BernsteinDGNodeIndexSet(const PreBasis& preBasis) :
     preBasis_(&preBasis)
