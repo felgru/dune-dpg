@@ -6,6 +6,7 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqksubsampledfactory.hh>
 
@@ -33,11 +34,19 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename GV, int s, int k>
+class PQkSubsampledDGNode;
+
+template<typename GV, int s, int k, class MI>
+class PQkSubsampledDGNodeIndexSet;
+#else
 template<typename GV, int s, int k, typename TP>
 class PQkSubsampledDGNode;
 
 template<typename GV, int s, int k, class MI, class TP>
 class PQkSubsampledDGNodeIndexSet;
+#endif
 
 template<typename GV, int s, int k, class MI>
 class PQkSubsampledDGPreBasis;
@@ -66,11 +75,17 @@ public:
   static constexpr int dofsPerPyramid     = ((s*k+1)*(s*k+2)*(2*s*k+3))/6;
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using Node = PQkSubsampledDGNode<GV, s, k>;
+
+  using IndexSet = PQkSubsampledDGNodeIndexSet<GV, s, k, MI>;
+#else
   template<class TP>
   using Node = PQkSubsampledDGNode<GV, s, k, TP>;
 
   template<class TP>
   using IndexSet = PQkSubsampledDGNodeIndexSet<GV, s, k, MI, TP>;
+#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -126,6 +141,17 @@ public:
     gridView_ = gv;
   }
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  Node makeNode() const
+  {
+    return Node{};
+  }
+
+  IndexSet makeIndexSet() const
+  {
+    return IndexSet{*this};
+  }
+#else
   template<class TP>
   Node<TP> node(const TP& tp) const
   {
@@ -137,6 +163,7 @@ public:
   {
     return IndexSet<TP>{*this};
   }
+#endif
 
   size_type size() const
   {
@@ -193,13 +220,21 @@ public:
 
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename GV, int s, int k>
+class PQkSubsampledDGNode :
+  public LeafBasisNode
+#else
 template<typename GV, int s, int k, typename TP>
 class PQkSubsampledDGNode :
   public LeafBasisNode<std::size_t, TP>
+#endif
 {
   static constexpr int dim = GV::dimension;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
   using Base = LeafBasisNode<std::size_t, TP>;
+#endif
   using FiniteElementCache
       = typename Dune::PQkSubsampledLocalFiniteElementCache
                         <typename GV::ctype, double, dim, s, k>;
@@ -207,12 +242,18 @@ class PQkSubsampledDGNode :
 public:
 
   using size_type = std::size_t;
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
   using TreePath = TP;
+#endif
   using Element = typename GV::template Codim<0>::Entity;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  PQkSubsampledDGNode() :
+#else
   PQkSubsampledDGNode(const TreePath& treePath) :
     Base(treePath),
+#endif
     finiteElement_(nullptr),
     element_(nullptr)
   {}
@@ -249,7 +290,11 @@ protected:
 
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename GV, int s, int k, class MI>
+#else
 template<typename GV, int s, int k, class MI, class TP>
+#endif
 class PQkSubsampledDGNodeIndexSet
 {
   enum {dim = GV::dimension};
@@ -263,7 +308,11 @@ public:
 
   using PreBasis = PQkSubsampledDGPreBasis<GV, s, k, MI>;
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using Node = typename PreBasis::Node;
+#else
   using Node = typename PreBasis::template Node<TP>;
+#endif
 
   PQkSubsampledDGNodeIndexSet(const PreBasis& preBasis) :
     preBasis_(&preBasis)

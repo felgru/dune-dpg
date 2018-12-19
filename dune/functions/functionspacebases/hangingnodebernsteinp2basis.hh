@@ -9,6 +9,7 @@
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
 #include <dune/common/std/optional.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/bernstein/pqkfactory.hh>
 
@@ -36,11 +37,19 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename GV>
+class HangingNodeBernsteinP2Node;
+
+template<typename GV, class MI>
+class HangingNodeBernsteinP2NodeIndexSet;
+#else
 template<typename GV, typename TP>
 class HangingNodeBernsteinP2Node;
 
 template<typename GV, class MI, class TP>
 class HangingNodeBernsteinP2NodeIndexSet;
+#endif
 
 template<typename GV, class MI>
 class HangingNodeBernsteinP2PreBasis;
@@ -72,13 +81,22 @@ public:
 
 private:
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  template<typename, class>
+#else
   template<typename, class, class>
+#endif
   friend class HangingNodeBernsteinP2NodeIndexSet;
 
   using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;
 
 public:
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using Node = HangingNodeBernsteinP2Node<GV>;
+
+  using IndexSet = HangingNodeBernsteinP2NodeIndexSet<GV, MI>;
+#else
   //! Template mapping root tree path to type of created tree node
   template<class TP>
   using Node = HangingNodeBernsteinP2Node<GV, TP>;
@@ -86,6 +104,7 @@ public:
   //! Template mapping root tree path to type of created tree node index set
   template<class TP>
   using IndexSet = HangingNodeBernsteinP2NodeIndexSet<GV, MI, TP>;
+#endif
 
   //! Type used for global numbering of the basis vectors
   using MultiIndex = MI;
@@ -264,6 +283,26 @@ public:
     gridView_ = gv;
   }
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  /**
+   * \brief Create tree node
+   */
+  Node makeNode() const
+  {
+    return Node{};
+  }
+
+  /**
+   * \brief Create tree node index set
+   *
+   * Create an index set suitable for the tree node obtained
+   * by makeNode().
+   */
+  IndexSet makeIndexSet() const
+  {
+    return IndexSet{*this};
+  }
+#else
   /**
    * \brief Create tree node with given root tree path
    *
@@ -294,6 +333,7 @@ public:
   {
     return IndexSet<TP>{*this};
   }
+#endif
 
   //! Same as size(prefix) with empty prefix
   size_type size() const
@@ -334,25 +374,39 @@ protected:
 
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename GV>
+class HangingNodeBernsteinP2Node :
+  public LeafBasisNode
+#else
 template<typename GV, typename TP>
 class HangingNodeBernsteinP2Node :
   public LeafBasisNode<std::size_t, TP>
+#endif
 {
   static constexpr int dim = GV::dimension;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
   using Base = LeafBasisNode<std::size_t,TP>;
+#endif
   using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;
 
 public:
 
   using size_type = std::size_t;
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
   using TreePath = TP;
+#endif
   using Element = typename GV::template Codim<0>::Entity;
   using ElementSeed = typename Element::EntitySeed;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  HangingNodeBernsteinP2Node() :
+#else
   HangingNodeBernsteinP2Node(const TreePath& treePath) :
     Base(treePath),
+#endif
     finiteElement_(nullptr),
     element_(nullptr)
   {}
@@ -388,7 +442,11 @@ protected:
 };
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename GV, class MI>
+#else
 template<typename GV, class MI, class TP>
+#endif
 class HangingNodeBernsteinP2NodeIndexSet
 {
   enum {dim = GV::dimension};
@@ -402,7 +460,11 @@ public:
 
   using PreBasis = HangingNodeBernsteinP2PreBasis<GV, MI>;
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using Node = typename PreBasis::Node;
+#else
   using Node = typename PreBasis::template Node<TP>;
+#endif
 
   using ConstraintWeights = std::array<double, 3>;
 

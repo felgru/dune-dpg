@@ -6,6 +6,7 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqktracefactory.hh>
 
@@ -33,11 +34,19 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename GV, int k>
+class PQkTraceNode;
+
+template<typename GV, int k, class MI>
+class PQkTraceNodeIndexSet;
+#else
 template<typename GV, int k, typename TP>
 class PQkTraceNode;
 
 template<typename GV, int k, class MI, class TP>
 class PQkTraceNodeIndexSet;
+#endif
 
 template<typename GV, int k, class MI>
 class PQkTracePreBasis;
@@ -62,11 +71,17 @@ public:
   static constexpr int dofsPerQuad     = (k-1)*(k-1);
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using Node = PQkTraceNode<GV, k>;
+
+  using IndexSet = PQkTraceNodeIndexSet<GV, k, MI>;
+#else
   template<class TP>
   using Node = PQkTraceNode<GV, k, TP>;
 
   template<class TP>
   using IndexSet = PQkTraceNodeIndexSet<GV, k, MI, TP>;
+#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -106,6 +121,17 @@ public:
     gridView_ = gv;
   }
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  Node makeNode() const
+  {
+    return Node{};
+  }
+
+  IndexSet makeIndexSet() const
+  {
+    return IndexSet{*this};
+  }
+#else
   template<class TP>
   Node<TP> node(const TP& tp) const
   {
@@ -117,6 +143,7 @@ public:
   {
     return IndexSet<TP>{*this};
   }
+#endif
 
   size_type size() const
   {
@@ -168,25 +195,39 @@ public:
 
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename GV, int k>
+class PQkTraceNode :
+  public LeafBasisNode
+#else
 template<typename GV, int k, typename TP>
 class PQkTraceNode :
   public LeafBasisNode<std::size_t, TP>
+#endif
 {
   static constexpr int dim = GV::dimension;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
   using Base = LeafBasisNode<std::size_t, TP>;
+#endif
   using FiniteElementCache = typename Dune::PQkTraceLocalFiniteElementCache
                                         <typename GV::ctype, double, dim, k>;
 
 public:
 
   using size_type = std::size_t;
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
   using TreePath = TP;
+#endif
   using Element = typename GV::template Codim<0>::Entity;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  PQkTraceNode() :
+#else
   PQkTraceNode(const TreePath& treePath) :
     Base(treePath),
+#endif
     finiteElement_(nullptr),
     element_(nullptr)
   {}
@@ -223,7 +264,11 @@ protected:
 
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+template<typename GV, int k, class MI>
+#else
 template<typename GV, int k, class MI, class TP>
+#endif
 class PQkTraceNodeIndexSet
 {
   enum {dim = GV::dimension};
@@ -237,7 +282,9 @@ public:
 
   using PreBasis = PQkTracePreBasis<GV, k, MI>;
 
-  using Node = typename PreBasis::template Node<TP>;
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
+  using Node = typename PreBasis::Node;
+#endif
 
   PQkTraceNodeIndexSet(const PreBasis& preBasis) :
     preBasis_(&preBasis)
