@@ -25,7 +25,6 @@
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 #include <dune/functions/functionspacebases/lagrangebasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
 
 #include <dune/dpg/boundarytools.hh>
 #include <dune/dpg/dpg_system_assembler.hh>

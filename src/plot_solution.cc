@@ -28,7 +28,7 @@
 
 #include <dune/functions/functionspacebases/hangingnodebernsteinp2basis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangedgrefineddgbasis.hh>
 
 #include <dune/dpg/bilinearformfactory.hh>
 #include <dune/dpg/innerproductfactory.hh>
@@ -113,16 +113,16 @@ int main(int argc, char** argv)
       = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
     // v search space
-    using FEBasisTest = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
+    using FEBasisTest = Functions::LagrangeDGRefinedDGBasis<GridView, 1, 3>;
     auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
-        = Functions::PQkDGRefinedDGBasis<GridView, 1, 4>;
+        = Functions::LagrangeDGRefinedDGBasis<GridView, 1, 4>;
     auto testSpaces_aposteriori
         = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
-    FieldVector<double, dim> beta
+    const FieldVector<double, dim> beta
                = {std::cos(boost::math::constants::pi<double>()/8),
                   std::sin(boost::math::constants::pi<double>()/8)};
     const double c = 0;

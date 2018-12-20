@@ -25,7 +25,7 @@
 
 #include <dune/functions/functionspacebases/hangingnodelagrangep2basis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangedgrefineddgbasis.hh>
 #include <dune/dpg/functions/analyticgridviewfunction.hh>
 
 #include <dune/dpg/boundarytools.hh>
@@ -122,12 +122,12 @@ int main()
     auto solutionSpaces
       = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
-    using FEBasisTest = Functions::PQkDGRefinedDGBasis<GridView, 1, 3>;
+    using FEBasisTest = Functions::LagrangeDGRefinedDGBasis<GridView, 1, 3>;
     auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 
     // enriched test space for error estimation
     using FEBasisTest_aposteriori
-        = Functions::PQkDGRefinedDGBasis<GridView, 1, 4>;
+        = Functions::LagrangeDGRefinedDGBasis<GridView, 1, 4>;
     auto testSpaces_aposteriori
         = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 

@@ -30,7 +30,7 @@
 #include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
 #include <dune/functions/functionspacebases/pqkfacenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangedgrefineddgbasis.hh>
 
 #include <dune/dpg/bilinearformfactory.hh>
 #include <dune/dpg/innerproductfactory.hh>
@@ -103,7 +103,7 @@ int main(int argc, char** argv)
   // v search space
 #if LEVEL_SEARCH>0
   using FEBasisTest
-      = Functions::PQkDGRefinedDGBasis<GridView, LEVEL_SEARCH, K_SEARCH>;
+      = Functions::LagrangeDGRefinedDGBasis<GridView, LEVEL_SEARCH, K_SEARCH>;
 #else
   using FEBasisTest
       = Functions::LagrangeDGBasis<GridView, K_SEARCH>;
@@ -112,8 +112,8 @@ int main(int argc, char** argv)
 
   // enriched test space for error estimation
   using FEBasisTest_aposteriori
-      = Functions::PQkDGRefinedDGBasis<GridView, LEVEL_APOSTERIORI,
-                                                 K_APOSTERIORI>;
+      = Functions::LagrangeDGRefinedDGBasis<GridView, LEVEL_APOSTERIORI,
+                                                      K_APOSTERIORI>;
   auto testSpaces_aposteriori
       = make_space_tuple<FEBasisTest_aposteriori>(gridView);
 
