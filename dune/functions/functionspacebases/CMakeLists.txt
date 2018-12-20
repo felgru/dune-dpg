@@ -10,6 +10,7 @@ install(FILES
         constrainedlocalview.hh
         hangingnodebernsteinp2basis.hh
         hangingnodelagrangep2basis.hh
+        lagrangedgrefineddgbasis.hh
         normalizedbasisadaptor.hh
         normalizedrefinedbasisadaptor.hh
         optimaltestbasis.hh

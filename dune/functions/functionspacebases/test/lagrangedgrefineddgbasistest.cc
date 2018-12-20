@@ -10,7 +10,7 @@
 
 #include <dune/grid/yaspgrid.hh>
 
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangedgrefineddgbasis.hh>
 
 #include "refinedbasistest.hh"
 
@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
   typedef GridType::LeafGridView GridView;
   const GridView gridView = grid.leafGridView();
 
-  Functions::PQkDGRefinedDGBasis<GridView, 1, 2> dgrefinedbasis(gridView);
+  Functions::LagrangeDGRefinedDGBasis<GridView, 1, 2> dgrefinedbasis(gridView);
   TestSuite t = testRefinedScalarBasis(dgrefinedbasis);
 
   return t.exit();

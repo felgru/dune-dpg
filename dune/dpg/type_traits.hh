@@ -38,7 +38,7 @@ namespace Functions {
   class LagrangeDGPreBasis;
 
   template<typename GV, int level, int k, class MI>
-  class PQkDGRefinedDGPreBasis;
+  class LagrangeDGRefinedDGPreBasis;
 
   template<typename GV, int k, class MI>
   class BernsteinPreBasis;
@@ -144,7 +144,7 @@ struct is_DGRefinedFiniteElement : std::false_type {};
 #ifndef DOXYGEN
 template<typename GV, int level, int k>
 struct is_DGRefinedFiniteElement<Functions::RefinedGlobalBasis<
-               Functions::PQkDGRefinedDGPreBasis
+               Functions::LagrangeDGRefinedDGPreBasis
                    <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
 
@@ -186,7 +186,7 @@ struct levelOfFE : std::integral_constant<int, 0> {};
 #ifndef DOXYGEN
 template<class GV, int level, int k>
 struct levelOfFE<Functions::RefinedGlobalBasis<
-             Functions::PQkDGRefinedDGPreBasis
+             Functions::LagrangeDGRefinedDGPreBasis
                  <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::integral_constant<int, level> {};
 
@@ -311,10 +311,10 @@ struct changeGridView<Functions::LagrangeDGPreBasis<GV, k, MI>, GridView>
 };
 
 template<typename GV, int level, int k, class MI, class GridView>
-struct changeGridView<Functions::PQkDGRefinedDGPreBasis<GV, level, k, MI>,
+struct changeGridView<Functions::LagrangeDGRefinedDGPreBasis<GV, level, k, MI>,
                       GridView>
 {
-  typedef Functions::PQkDGRefinedDGPreBasis<GridView, level, k, MI> type;
+  typedef Functions::LagrangeDGRefinedDGPreBasis<GridView, level, k, MI> type;
 };
 
 template<typename GV, int k, class MI, class GridView>

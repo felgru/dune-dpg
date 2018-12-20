@@ -16,7 +16,7 @@
 #include <dune/grid/yaspgrid.hh>
 
 #include <dune/functions/functionspacebases/normalizedrefinedbasisadaptor.hh>
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangedgrefineddgbasis.hh>
 
 #include "refinedbasistest.hh"
 
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
   const GridView gridView = grid.leafGridView();
 
   TestSuite t
-    = testNormedAdaptorOn<PQkDGRefinedDGBasis<GridView, 1, 2>>(gridView);
+    = testNormedAdaptorOn<LagrangeDGRefinedDGBasis<GridView, 1, 2>>(gridView);
 
   return t.exit();
 }
