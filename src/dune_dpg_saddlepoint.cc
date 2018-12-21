@@ -19,7 +19,7 @@
 #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangetracebasis.hh>
 
 #include <dune/dpg/bilinearformfactory.hh>
 #include <dune/dpg/innerproductfactory.hh>
@@ -54,7 +54,7 @@ int main()
   //   Choose finite element spaces
   /////////////////////////////////////////////////////////
 
-  typedef Functions::PQkTraceNodalBasis<GridView, 2> FEBasisTrace; // u^
+  typedef Functions::LagrangeTraceBasis<GridView, 2> FEBasisTrace; // u^
   typedef Functions::LagrangeDGBasis<GridView, 1> FEBasisInterior; // u
 
   typedef Functions::LagrangeDGBasis<GridView, 4> FEBasisTest;     // v
