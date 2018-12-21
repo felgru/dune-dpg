@@ -14,6 +14,7 @@ install(FILES
         lagrangedgsubsampleddgbasis.hh
         lagrangefacebasis.hh
         lagrangesubsampleddgbasis.hh
+        lagrangetracebasis.hh
         normalizedbasisadaptor.hh
         normalizedrefinedbasisadaptor.hh
         optimaltestbasis.hh

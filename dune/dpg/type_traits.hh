@@ -56,7 +56,7 @@ namespace Functions {
   class LagrangeSubsampledDGPreBasis;
 
   template<typename GV, int k, class MI>
-  class PQkTracePreBasis;
+  class LagrangeTracePreBasis;
 
   template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
            class MI>
@@ -353,10 +353,10 @@ struct changeGridView<Functions::LagrangeSubsampledDGPreBasis<GV, s, k, MI>,
 };
 
 template<typename GV, int k, class MI, class GridView>
-struct changeGridView<Functions::PQkTracePreBasis<GV, k, MI>,
+struct changeGridView<Functions::LagrangeTracePreBasis<GV, k, MI>,
                       GridView>
 {
-  typedef Functions::PQkTracePreBasis<GridView, k, MI> type;
+  typedef Functions::LagrangeTracePreBasis<GridView, k, MI> type;
 };
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
