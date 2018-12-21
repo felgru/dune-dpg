@@ -10,11 +10,16 @@ install(FILES
         constrainedlocalview.hh
         hangingnodebernsteinp2basis.hh
         hangingnodelagrangep2basis.hh
+        lagrangedgrefineddgbasis.hh
+        lagrangedgsubsampleddgbasis.hh
+        lagrangefacebasis.hh
+        lagrangesubsampleddgbasis.hh
+        lagrangetracebasis.hh
         normalizedbasisadaptor.hh
         normalizedrefinedbasisadaptor.hh
         optimaltestbasis.hh
         pqkdgrefineddgnodalbasis.hh
-        pqksubsampleddgbasis.hh
+        pqkdgsubsampleddgbasis.hh
         pqkfacenodalbasis.hh
         pqksubsampleddgbasis.hh
         pqktracenodalbasis.hh

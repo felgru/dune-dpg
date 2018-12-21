@@ -27,7 +27,7 @@
 
 #include <dune/functions/functionspacebases/lagrangebasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangedgrefineddgbasis.hh>
 
 #include <dune/dpg/bilinearformfactory.hh>
 #include <dune/dpg/innerproductfactory.hh>
@@ -119,7 +119,7 @@ int main(int argc, char** argv)
 
 #if LEVEL_SEARCH>0
   using FEBasisTest
-      = Functions::PQkDGRefinedDGBasis<GridView, LEVEL_SEARCH, K_SEARCH>;
+      = Functions::LagrangeDGRefinedDGBasis<GridView, LEVEL_SEARCH, K_SEARCH>;
 #else
   using FEBasisTest
       = Functions::LagrangeDGBasis<GridView, K_SEARCH>;

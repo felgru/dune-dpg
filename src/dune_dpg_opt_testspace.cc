@@ -24,10 +24,8 @@
 #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/functionspacebases/lagrangebasis.hh>
-#include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
-#include <dune/functions/functionspacebases/pqkfacenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/functionspacebases/pqkdgrefineddgnodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangedgrefineddgbasis.hh>
 
 #include <dune/dpg/bilinearformfactory.hh>
 #include <dune/dpg/innerproductfactory.hh>
@@ -87,7 +85,7 @@ int main(int argc, char** argv)
     = make_space_tuple<FEBasisInterior, FEBasisTrace>(gridView);
 
   // v search space
-  typedef Functions::PQkDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
+  typedef Functions::LagrangeDGRefinedDGBasis<GridView, 1, 3> FEBasisTest;
   //typedef Functions::LagrangeDGBasis<GridView, 3> FEBasisTest;
   auto testSpaces = make_space_tuple<FEBasisTest>(gridView);
 

@@ -10,7 +10,7 @@
 
 #include <dune/grid/yaspgrid.hh>
 
-#include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangetracebasis.hh>
 
 #include "unrefinedbasistest.hh"
 
@@ -33,16 +33,16 @@ int main(int argc, char* argv[])
 
   TestSuite t;
 
-  PQkTraceNodalBasis<GridView, 1> pq1Basis(gridView);
+  LagrangeTraceBasis<GridView, 1> pq1Basis(gridView);
   t.subTest(testScalarBasis(pq1Basis));
 
-  PQkTraceNodalBasis<GridView, 2> pq2Basis(gridView);
+  LagrangeTraceBasis<GridView, 2> pq2Basis(gridView);
   t.subTest(testScalarBasis(pq2Basis));
 
-  PQkTraceNodalBasis<GridView, 3> pq3Basis(gridView);
+  LagrangeTraceBasis<GridView, 3> pq3Basis(gridView);
   t.subTest(testScalarBasis(pq3Basis));
 
-  PQkTraceNodalBasis<GridView, 4> pq4Basis(gridView);
+  LagrangeTraceBasis<GridView, 4> pq4Basis(gridView);
   t.subTest(testScalarBasis(pq4Basis));
 
   return t.exit();

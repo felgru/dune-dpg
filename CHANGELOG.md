@@ -17,8 +17,19 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * ASTI: we now have one canonical definition of the test space inner
   product. Previously we used different definitions depending on
   whether we used normalized or unnormalized spaces.
+* Rename all PQk... spaces to Lagrange... .
+  This adds the new spaces `LagrangeDGRefinedDGBasis`,
+  `LagrangeSubsampledDGBasis`, `LagrangeDGSubsampledDGBasis`,
+  `LagrangeFaceBasis` and `LagrangeTraceBasis`.
+  The old PQk... names of these spaces remain as deprecated typedefs.
 * Large parts of our code have been refactored for readability and
   to better adhere to modern C++ practices.
+
+### Deprecated
+* The spaces `PQkDGRefinedDGBasis`, `PQkSubsampledDGNodalBasis`,
+  `PQkDGSubsampledDGNodalBasis`, `PQkFaceNodalBasis` and
+  `PQkTraceNodalBasis` have been deprecated. All those spaces are
+  now available under a name starting with Lagrange... .
 
 ### Removed
 * `bindLocalIndexSets` and `getLocalIndexSets` have been removed,

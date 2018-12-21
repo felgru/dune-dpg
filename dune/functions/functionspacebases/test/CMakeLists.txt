@@ -15,9 +15,9 @@ dune_add_test(SOURCES normalizedbasistest.cc
 dune_add_test(SOURCES normalizedrefinedbasistest.cc
               LINK_LIBRARIES ${DUNE_LIBS})
 
-dune_add_test(SOURCES pqkdgrefineddgbasistest.cc
+dune_add_test(SOURCES lagrangedgrefineddgbasistest.cc
               LINK_LIBRARIES ${DUNE_LIBS})
 
-dune_add_test(SOURCES pqktracenodalbasistest.cc
+dune_add_test(SOURCES lagrangetracebasistest.cc
               LINK_LIBRARIES dunecommon dunegeometry
               LABELS nompi)

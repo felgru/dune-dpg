@@ -100,9 +100,9 @@ struct RefinementConstants : public EmptyPreBasisConstants {};
 template<class GV, int level, int k>
 struct RefinementConstants
        < DefaultGlobalBasis<
-             PQkDGRefinedDGPreBasis
+             LagrangeDGRefinedDGPreBasis
              <GV, level, k, FlatMultiIndex<std::size_t> > > >
-  : public PQkDGRefinedDGPreBasis<GV, level, k, FlatMultiIndex<std::size_t> >
+  : public LagrangeDGRefinedDGPreBasis<GV, level, k, FlatMultiIndex<std::size_t> >
            ::RefinementConstants {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
