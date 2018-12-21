@@ -27,8 +27,6 @@
 #include <dune/istl/umfpack.hh>
 
 #include <dune/functions/functionspacebases/lagrangebasis.hh>
-#include <dune/functions/functionspacebases/pqktracenodalbasis.hh>
-#include <dune/functions/functionspacebases/pqkfacenodalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 #include <dune/functions/functionspacebases/lagrangedgrefineddgbasis.hh>
 
