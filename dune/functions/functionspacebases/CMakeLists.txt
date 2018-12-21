@@ -12,6 +12,7 @@ install(FILES
         hangingnodelagrangep2basis.hh
         lagrangedgrefineddgbasis.hh
         lagrangedgsubsampleddgbasis.hh
+        lagrangefacebasis.hh
         lagrangesubsampleddgbasis.hh
         normalizedbasisadaptor.hh
         normalizedrefinedbasisadaptor.hh
