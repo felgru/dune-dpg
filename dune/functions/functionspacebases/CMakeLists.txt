@@ -11,6 +11,7 @@ install(FILES
         hangingnodebernsteinp2basis.hh
         hangingnodelagrangep2basis.hh
         lagrangedgrefineddgbasis.hh
+        lagrangesubsampleddgbasis.hh
         normalizedbasisadaptor.hh
         normalizedrefinedbasisadaptor.hh
         optimaltestbasis.hh

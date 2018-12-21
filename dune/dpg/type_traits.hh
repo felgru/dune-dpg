@@ -53,7 +53,7 @@ namespace Functions {
   class PQkDGSubsampledDGPreBasis;
 
   template<typename GV, int s, int k, class MI>
-  class PQkSubsampledDGPreBasis;
+  class LagrangeSubsampledDGPreBasis;
 
   template<typename GV, int k, class MI>
   class PQkTracePreBasis;
@@ -224,7 +224,7 @@ struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
 
 template<class GV, int s, int k>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
-             Functions::PQkSubsampledDGPreBasis
+             Functions::LagrangeSubsampledDGPreBasis
                  <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::true_type {};
 
@@ -250,7 +250,7 @@ struct numberOfSamples<Functions::DefaultGlobalBasis<
 
 template<class GV, int s, int k>
 struct numberOfSamples<Functions::DefaultGlobalBasis<
-             Functions::PQkSubsampledDGPreBasis
+             Functions::LagrangeSubsampledDGPreBasis
                  <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
        : std::integral_constant<int, s> {};
 
@@ -346,10 +346,10 @@ struct changeGridView<Functions::PQkDGSubsampledDGPreBasis<GV, s, k, MI>,
 };
 
 template<typename GV, int s, int k, class MI, class GridView>
-struct changeGridView<Functions::PQkSubsampledDGPreBasis<GV, s, k, MI>,
+struct changeGridView<Functions::LagrangeSubsampledDGPreBasis<GV, s, k, MI>,
                       GridView>
 {
-  typedef Functions::PQkSubsampledDGPreBasis<GridView, s, k, MI> type;
+  typedef Functions::LagrangeSubsampledDGPreBasis<GridView, s, k, MI> type;
 };
 
 template<typename GV, int k, class MI, class GridView>
