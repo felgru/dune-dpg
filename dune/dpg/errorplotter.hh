@@ -55,23 +55,6 @@ public:
 
   ErrorPlotter(std::string filename) : filename(filename) {}
 
-  template<class FEBasis>
-  void plot(const std::string& functionname,
-            const CoefficientVector& elementErrors,
-            const FEBasis& feBasis) const
-  {
-    auto errorFunction = discreteGlobalBasisFunction(feBasis, elementErrors);
-    auto localErrorFunction = localFunction(errorFunction);
-
-    VTKWriter<typename FEBasis::GridView>
-        vtkWriter(feBasis.gridView(), VTK::nonconforming);
-    vtkWriter.addCellData(localErrorFunction,
-                          VTK::FieldInfo(functionname,
-                                         VTK::FieldInfo::Type::scalar,
-                                         1));
-    vtkWriter.write(filename);
-  }
-
   template<class EntitySeed, class GridView>
   void plot(const std::string& functionname,
             const std::vector<std::tuple<EntitySeed, double>>& squaredErrors,
@@ -93,6 +76,23 @@ public:
   }
 
 private:
+  template<class FEBasis>
+  void plot(const std::string& functionname,
+            const CoefficientVector& elementErrors,
+            const FEBasis& feBasis) const
+  {
+    auto errorFunction = discreteGlobalBasisFunction(feBasis, elementErrors);
+    auto localErrorFunction = localFunction(errorFunction);
+
+    VTKWriter<typename FEBasis::GridView>
+        vtkWriter(feBasis.gridView(), VTK::nonconforming);
+    vtkWriter.addCellData(localErrorFunction,
+                          VTK::FieldInfo(functionname,
+                                         VTK::FieldInfo::Type::scalar,
+                                         1));
+    vtkWriter.write(filename);
+  }
+
   const std::string filename;
 };
 
