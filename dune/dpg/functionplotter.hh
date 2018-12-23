@@ -26,13 +26,13 @@ public:
 
   FunctionPlotter(std::string filename) : filename(filename) {}
 
-  template<class VectorType, class FEBasis,
+  template<class CoefficientVector, class FEBasis,
       typename std::enable_if<!is_RefinedFiniteElement<FEBasis>::value
                              >::type* = nullptr>
-  void plot(const std::string& functionname,
-            const VectorType&  coefficientVector,
-            const FEBasis&     feBasis,
-            unsigned int       subsampling) const
+  void plot(const std::string&       functionname,
+            const CoefficientVector& coefficientVector,
+            const FEBasis&           feBasis,
+            unsigned int             subsampling) const
   {
     auto discreteFunction
         = discreteGlobalBasisFunction(feBasis, coefficientVector);
@@ -51,13 +51,13 @@ public:
     vtkWriter.write(filename);
   }
 
-  template<class VectorType, class FEBasis,
+  template<class CoefficientVector, class FEBasis,
       typename std::enable_if<is_RefinedFiniteElement<FEBasis>::value
                              >::type* = nullptr>
-  void plot(const std::string& functionname,
-            const VectorType&  coefficientVector,
-            const FEBasis&     feBasis,
-            unsigned int       subsampling) const
+  void plot(const std::string&       functionname,
+            const CoefficientVector& coefficientVector,
+            const FEBasis&           feBasis,
+            unsigned int             subsampling) const
   {
     // TODO: currently subsampling is ignored for refined finite elements
     std::ofstream file(filename+".vtu");
@@ -65,14 +65,14 @@ public:
     writer.writeFunction(feBasis, coefficientVector, functionname);
   }
 
-  template<class VectorType, class FEBasis>
-  void plot(const std::string& functionname,
-            const VectorType&  x,
-            const FEBasis&     feBasis,
-            unsigned int       subsampling,
-            size_t             spaceOffset) const
+  template<class CoefficientVector, class FEBasis>
+  void plot(const std::string&       functionname,
+            const CoefficientVector& x,
+            const FEBasis&           feBasis,
+            unsigned int             subsampling,
+            size_t                   spaceOffset) const
   {
-    VectorType coefficientVector(feBasis.size());
+    CoefficientVector coefficientVector(feBasis.size());
     assert(x.size() >= feBasis.size()+spaceOffset);
     std::copy_n(x.begin()+spaceOffset, feBasis.size(),
                 coefficientVector.begin());

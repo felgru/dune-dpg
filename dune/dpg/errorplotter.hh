@@ -23,24 +23,28 @@ namespace Dune {
 
 class ErrorPlotter
 {
-  template<class FEBasis, class Vector,
+  using CoefficientVector = BlockVector<FieldVector<double,1>>;
+
+  template<class FEBasis,
       typename std::enable_if<models<Functions::Concept
                               ::GlobalBasis<typename FEBasis::GridView>,
                             FEBasis>()>::type* = nullptr>
   static auto
-  discreteGlobalBasisFunction(const FEBasis& feBasis, const Vector& u) {
+  discreteGlobalBasisFunction(const FEBasis& feBasis,
+                              const CoefficientVector& u) {
     auto uFunction
         = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
               (feBasis, Dune::TypeTree::hybridTreePath(), u);
     return uFunction;
   }
 
-  template<class FEBasis, class Vector,
+  template<class FEBasis,
       typename std::enable_if<models<Functions::Concept::
             ConstrainedGlobalBasis<typename FEBasis::GridView>,
           FEBasis>()>::type* = nullptr>
   static auto
-  discreteGlobalBasisFunction(const FEBasis& feBasis, const Vector& u) {
+  discreteGlobalBasisFunction(const FEBasis& feBasis,
+                              const CoefficientVector& u) {
     auto uFunction = Dune::Functions
         ::makeConstrainedDiscreteGlobalBasisFunction<double>(feBasis, u);
     return uFunction;
@@ -51,10 +55,10 @@ public:
 
   ErrorPlotter(std::string filename) : filename(filename) {}
 
-  template<class VectorType, class FEBasis>
+  template<class FEBasis>
   void plot(const std::string& functionname,
-            const VectorType&  elementErrors,
-            const FEBasis&     feBasis) const
+            const CoefficientVector& elementErrors,
+            const FEBasis& feBasis) const
   {
     auto errorFunction = discreteGlobalBasisFunction(feBasis, elementErrors);
     auto localErrorFunction = localFunction(errorFunction);
@@ -76,8 +80,7 @@ public:
     const auto& grid = gridView.grid();
     const Functions::LagrangeDGBasis<GridView, 0> feBasis(gridView);
 
-    typedef BlockVector<FieldVector<double,1>> VectorType;
-    VectorType elementErrors(feBasis.size());
+    CoefficientVector elementErrors(feBasis.size());
 
     auto localView = feBasis.localView();
     for(const auto& cellTuple : squaredErrors) {
