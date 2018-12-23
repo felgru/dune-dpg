@@ -30,26 +30,21 @@ public:
       typename std::enable_if<!is_RefinedFiniteElement<FEBasis>::value
                              >::type* = nullptr>
   void plot(const std::string& functionname,
-            const VectorType&  u,
+            const VectorType&  coefficientVector,
             const FEBasis&     feBasis,
             unsigned int       subsampling) const
   {
-    //////////////////////////////////////////////////////////////////////////
-    //  Make a discrete function from the FE basis and the coefficient vector
-    //////////////////////////////////////////////////////////////////////////
+    auto discreteFunction
+        = discreteGlobalBasisFunction(feBasis, coefficientVector);
+    auto localDiscreteFunction = localFunction(discreteFunction);
 
-    auto uFunction = discreteGlobalBasisFunction(feBasis, u);
-    auto localUFunction = localFunction(uFunction);
-
-    //////////////////////////////////////////////////////////////////////////
-    //  Write result to VTK file
-    //  We need to subsample, because VTK cannot natively display real
-    //  second-order functions
-    //////////////////////////////////////////////////////////////////////////
-
+    // We need to subsample the grid for plotting, because VTK can only
+    // display piecewise polynomials of order 1. Thus we approximate the
+    // given discrete function by first order piecewise polynomials
+    // living on a finer grid.
     SubsamplingVTKWriter<typename FEBasis::GridView>
         vtkWriter(feBasis.gridView(), Dune::refinementLevels(subsampling));
-    vtkWriter.addVertexData(localUFunction,
+    vtkWriter.addVertexData(localDiscreteFunction,
                             VTK::FieldInfo(functionname,
                                            VTK::FieldInfo::Type::scalar,
                                            1));
@@ -60,14 +55,14 @@ public:
       typename std::enable_if<is_RefinedFiniteElement<FEBasis>::value
                              >::type* = nullptr>
   void plot(const std::string& functionname,
-            const VectorType&  u,
+            const VectorType&  coefficientVector,
             const FEBasis&     feBasis,
             unsigned int       subsampling) const
   {
     // TODO: currently subsampling is ignored for refined finite elements
     std::ofstream file(filename+".vtu");
     VTKRefinedFunctionWriter writer(file);
-    writer.writeFunction(feBasis, u, functionname);
+    writer.writeFunction(feBasis, coefficientVector, functionname);
   }
 
   template<class VectorType, class FEBasis>
@@ -77,11 +72,12 @@ public:
             unsigned int       subsampling,
             size_t             spaceOffset) const
   {
-    VectorType u(feBasis.size());
+    VectorType coefficientVector(feBasis.size());
     assert(x.size() >= feBasis.size()+spaceOffset);
-    std::copy_n(x.begin()+spaceOffset, feBasis.size(), u.begin());
+    std::copy_n(x.begin()+spaceOffset, feBasis.size(),
+                coefficientVector.begin());
 
-    plot(functionname, u, feBasis, subsampling);
+    plot(functionname, coefficientVector, feBasis, subsampling);
   }
 
 private:

@@ -53,25 +53,15 @@ public:
 
   template<class VectorType, class FEBasis>
   void plot(const std::string& functionname,
-            const VectorType&  u,
+            const VectorType&  elementErrors,
             const FEBasis&     feBasis) const
   {
-    //////////////////////////////////////////////////////////////////////////
-    //  Make a discrete function from the FE basis and the coefficient vector
-    //////////////////////////////////////////////////////////////////////////
-
-    auto uFunction = discreteGlobalBasisFunction(feBasis, u);
-    auto localUFunction = localFunction(uFunction);
-
-    //////////////////////////////////////////////////////////////////////////
-    //  Write result to VTK file
-    //  We need to subsample, because VTK cannot natively display real
-    //  second-order functions
-    //////////////////////////////////////////////////////////////////////////
+    auto errorFunction = discreteGlobalBasisFunction(feBasis, elementErrors);
+    auto localErrorFunction = localFunction(errorFunction);
 
     VTKWriter<typename FEBasis::GridView>
         vtkWriter(feBasis.gridView(), VTK::nonconforming);
-    vtkWriter.addCellData(localUFunction,
+    vtkWriter.addCellData(localErrorFunction,
                           VTK::FieldInfo(functionname,
                                          VTK::FieldInfo::Type::scalar,
                                          1));
@@ -87,16 +77,16 @@ public:
     const Functions::LagrangeDGBasis<GridView, 0> feBasis(gridView);
 
     typedef BlockVector<FieldVector<double,1>> VectorType;
-    VectorType u(feBasis.size());
+    VectorType elementErrors(feBasis.size());
 
     auto localView = feBasis.localView();
     for(const auto& cellTuple : squaredErrors) {
       const auto e = grid.entity(std::get<0>(cellTuple));
       localView.bind(e);
-      u[localView.index(0)] = std::sqrt(std::get<1>(cellTuple));
+      elementErrors[localView.index(0)] = std::sqrt(std::get<1>(cellTuple));
     }
 
-    plot(functionname, u, feBasis);
+    plot(functionname, elementErrors, feBasis);
   }
 
 private:
