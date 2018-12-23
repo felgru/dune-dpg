@@ -23,24 +23,28 @@ namespace Dune {
 
 class ErrorPlotter
 {
-  template<class FEBasis, class Vector,
+  using CoefficientVector = BlockVector<FieldVector<double,1>>;
+
+  template<class FEBasis,
       typename std::enable_if<models<Functions::Concept
                               ::GlobalBasis<typename FEBasis::GridView>,
                             FEBasis>()>::type* = nullptr>
   static auto
-  discreteGlobalBasisFunction(const FEBasis& feBasis, const Vector& u) {
+  discreteGlobalBasisFunction(const FEBasis& feBasis,
+                              const CoefficientVector& u) {
     auto uFunction
         = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
               (feBasis, Dune::TypeTree::hybridTreePath(), u);
     return uFunction;
   }
 
-  template<class FEBasis, class Vector,
+  template<class FEBasis,
       typename std::enable_if<models<Functions::Concept::
             ConstrainedGlobalBasis<typename FEBasis::GridView>,
           FEBasis>()>::type* = nullptr>
   static auto
-  discreteGlobalBasisFunction(const FEBasis& feBasis, const Vector& u) {
+  discreteGlobalBasisFunction(const FEBasis& feBasis,
+                              const CoefficientVector& u) {
     auto uFunction = Dune::Functions
         ::makeConstrainedDiscreteGlobalBasisFunction<double>(feBasis, u);
     return uFunction;
@@ -51,33 +55,6 @@ public:
 
   ErrorPlotter(std::string filename) : filename(filename) {}
 
-  template<class VectorType, class FEBasis>
-  void plot(const std::string& functionname,
-            const VectorType&  u,
-            const FEBasis&     feBasis) const
-  {
-    //////////////////////////////////////////////////////////////////////////
-    //  Make a discrete function from the FE basis and the coefficient vector
-    //////////////////////////////////////////////////////////////////////////
-
-    auto uFunction = discreteGlobalBasisFunction(feBasis, u);
-    auto localUFunction = localFunction(uFunction);
-
-    //////////////////////////////////////////////////////////////////////////
-    //  Write result to VTK file
-    //  We need to subsample, because VTK cannot natively display real
-    //  second-order functions
-    //////////////////////////////////////////////////////////////////////////
-
-    VTKWriter<typename FEBasis::GridView>
-        vtkWriter(feBasis.gridView(), VTK::nonconforming);
-    vtkWriter.addCellData(localUFunction,
-                          VTK::FieldInfo(functionname,
-                                         VTK::FieldInfo::Type::scalar,
-                                         1));
-    vtkWriter.write(filename);
-  }
-
   template<class EntitySeed, class GridView>
   void plot(const std::string& functionname,
             const std::vector<std::tuple<EntitySeed, double>>& squaredErrors,
@@ -86,20 +63,36 @@ public:
     const auto& grid = gridView.grid();
     const Functions::LagrangeDGBasis<GridView, 0> feBasis(gridView);
 
-    typedef BlockVector<FieldVector<double,1>> VectorType;
-    VectorType u(feBasis.size());
+    CoefficientVector elementErrors(feBasis.size());
 
     auto localView = feBasis.localView();
     for(const auto& cellTuple : squaredErrors) {
       const auto e = grid.entity(std::get<0>(cellTuple));
       localView.bind(e);
-      u[localView.index(0)] = std::sqrt(std::get<1>(cellTuple));
+      elementErrors[localView.index(0)] = std::sqrt(std::get<1>(cellTuple));
     }
 
-    plot(functionname, u, feBasis);
+    plot(functionname, elementErrors, feBasis);
   }
 
 private:
+  template<class FEBasis>
+  void plot(const std::string& functionname,
+            const CoefficientVector& elementErrors,
+            const FEBasis& feBasis) const
+  {
+    auto errorFunction = discreteGlobalBasisFunction(feBasis, elementErrors);
+    auto localErrorFunction = localFunction(errorFunction);
+
+    VTKWriter<typename FEBasis::GridView>
+        vtkWriter(feBasis.gridView(), VTK::nonconforming);
+    vtkWriter.addCellData(localErrorFunction,
+                          VTK::FieldInfo(functionname,
+                                         VTK::FieldInfo::Type::scalar,
+                                         1));
+    vtkWriter.write(filename);
+  }
+
   const std::string filename;
 };
 
