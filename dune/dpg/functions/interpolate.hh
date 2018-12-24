@@ -36,6 +36,14 @@ VectorType interpolateToUniformlyRefinedGrid(
 
   VectorType v_fine(fineBasis.size()); v_fine = 0;
 
+  using CoarseFiniteElement
+      = std::decay_t<decltype(coarseLocalView.tree().finiteElement())>;
+  using CoarseLocalBasis = typename CoarseFiniteElement::Traits::LocalBasisType;
+  using FiniteElementRange = typename CoarseLocalBasis::Traits::RangeType;
+
+  std::vector<FiniteElementRange> shapeValues;
+  shapeValues.reserve(coarseLocalView.maxSize());
+
   for(const auto& e : elements(coarseGridView)) {
     coarseLocalView.bind(e);
 
@@ -48,9 +56,6 @@ VectorType interpolateToUniformlyRefinedGrid(
     }
 
     auto& coarseLocalBasis = coarseLocalView.tree().finiteElement().localBasis();
-    using CoarseFiniteElement = std::decay_t<decltype(coarseLocalView.tree().finiteElement())>;
-    using CoarseLocalBasis = typename CoarseFiniteElement::Traits::LocalBasisType;
-    using FiniteElementRange = typename CoarseLocalBasis::Traits::RangeType;
     using LocalDomain = typename CoarseLocalBasis::Traits::DomainType;
     constexpr unsigned int dim = CoarseLocalBasis::Traits::dimDomain;
 
@@ -71,11 +76,9 @@ VectorType interpolateToUniformlyRefinedGrid(
                (subE.type()).position(0,dim))),
            globalSubGeometry.jacobianTransposed({})
              .leftmultiply(globalGeometry.jacobianTransposed({})));
-      auto localF = [&subGeometry, &coarseLocalBasis, &local_v_coarse]
-                    (const LocalDomain& x) {
+      auto localF = [&](const LocalDomain& x) {
         auto xCoarse = subGeometry.global(x);
 
-        std::vector<FiniteElementRange> shapeValues;
         coarseLocalBasis.evaluateFunction(xCoarse, shapeValues);
         FiniteElementRange y
           = std::inner_product(shapeValues.cbegin(), shapeValues.cend(),

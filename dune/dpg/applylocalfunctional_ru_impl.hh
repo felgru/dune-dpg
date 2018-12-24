@@ -38,6 +38,11 @@ inline static void interiorImpl(
   copyToLocalVector(functionalVector, localFunctionalVector,
                     solutionLocalView);
 
+  std::vector<FieldVector<double,1>> testShapeFunctionValues;
+  testShapeFunctionValues.reserve(testLocalView.maxSize());
+  std::vector<FieldVector<double,1>> shapeFunctionValues;
+  shapeFunctionValues.reserve(solutionLocalView.maxSize());
+
   const auto referenceGridView =
       testLocalView.tree().refinedReferenceElementGridView();
 
@@ -70,19 +75,18 @@ inline static void interiorImpl(
         * quadPoint.weight();
 
       // Evaluate all shape function values at this quadrature point
-      const std::vector<FieldVector<double,1>> testShapeFunctionValues =
-        detail::LocalRefinedFunctionEvaluationHelper
-          <is_ContinuouslyRefinedFiniteElement<TestSpace>::value>::
-            evaluateValue(testLocalFiniteElement, subElementIndex,
-                          quadPos);
-      std::vector<FieldVector<double,1>> shapeFunctionValues;
+      detail::LocalRefinedFunctionEvaluationHelper
+        <is_ContinuouslyRefinedFiniteElement<TestSpace>::value>::
+          evaluateValue(testShapeFunctionValues,
+                        testLocalFiniteElement, subElementIndex,
+                        quadPos);
       solutionLocalFiniteElement.localBasis().
           evaluateFunction(quadPosInReferenceElement, shapeFunctionValues);
 
       const double functionalValue =
           std::inner_product(
             localFunctionalVector.begin(), localFunctionalVector.end(),
-            shapeFunctionValues.begin(), 0.)
+            shapeFunctionValues.cbegin(), 0.)
           * integrationWeight;
       auto entry = elementVector.begin() + spaceOffset + subElementOffset;
       for (const auto& shapeFunctionValue : testShapeFunctionValues) {
@@ -121,6 +125,11 @@ faceImpl(TestLocalView& testLocalView,
       localFunctionalVector(solutionLocalView.size());
   copyToLocalVector(functionalVector, localFunctionalVector,
                     solutionLocalView);
+
+  std::vector<FieldVector<double,1>> testValues;
+  testValues.reserve(testLocalView.maxSize());
+  std::vector<FieldVector<double,1>> solutionValues;
+  solutionValues.reserve(solutionLocalView.maxSize());
 
   const auto referenceGridView =
       testLocalView.tree().refinedReferenceElementGridView();
@@ -182,26 +191,21 @@ faceImpl(TestLocalView& testLocalView,
                   localCoefficients, elementQuadPos, elementQuadPosSubCell,
                   direction, quadPoint.weight(), integrationData);
 
-        ////////////////////////////////////
-        // Left Hand Side Shape Functions //
-        ////////////////////////////////////
-        const std::vector<FieldVector<double,1> > testValues =
-          detail::LocalRefinedFunctionEvaluationHelper
-            <is_ContinuouslyRefinedFiniteElement<TestSpace>::value>::
-              evaluateValue(testLocalFiniteElement, subElementIndex,
-                            elementQuadPosSubCell);
+        // Left Hand Side Shape Functions
+        detail::LocalRefinedFunctionEvaluationHelper
+          <is_ContinuouslyRefinedFiniteElement<TestSpace>::value>::
+            evaluateValue(testValues,
+                          testLocalFiniteElement, subElementIndex,
+                          elementQuadPosSubCell);
 
-        /////////////////////////////////////
-        // Right Hand Side Shape Functions //
-        /////////////////////////////////////
-        std::vector<FieldVector<double,1> > solutionValues;
+        // Right Hand Side Shape Functions
         solutionLocalFiniteElement.localBasis()
             .evaluateFunction(elementQuadPos, solutionValues);
 
         const double functionalValue =
             std::inner_product(
               localFunctionalVector.begin(), localFunctionalVector.end(),
-              solutionValues.begin(), 0.)
+              solutionValues.cbegin(), 0.)
             * integrationWeight;
         auto entry = elementVector.begin()
                       + testSpaceOffset + subElementOffset;

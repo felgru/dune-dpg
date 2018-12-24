@@ -30,12 +30,12 @@
 namespace Dune {
 
   namespace detail {
-    template<class GlobalVectorType, class LocalVectorType,
+    template<class GlobalVector, class LocalVector,
             class LocalViews,
             class Offsets>
     inline void getLocalCoefficients(
-        const GlobalVectorType& solution,
-        LocalVectorType& solutionElement,
+        const GlobalVector& solution,
+        LocalVector& solutionElement,
         const LocalViews& localViews,
         const Offsets& localOffsets,
         const Offsets& globalOffsets) {
@@ -196,9 +196,12 @@ namespace Dune {
     const QuadratureRule<double, dim>& quad =
         QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
 
-    const double l2NormSquared = std::transform_reduce(
-        quad.cbegin(), quad.cend(), 0., std::plus<>(),
-        [&](const auto& quadPoint) {
+    std::vector<FieldVector<double,1>> shapeFunctionValues;
+    shapeFunctionValues.reserve(localView.maxSize());
+
+    const double l2NormSquared = std::accumulate(
+        quad.cbegin(), quad.cend(), 0.,
+        [&](double acc, const auto& quadPoint) {
           // Position of the current quadrature point in the reference element
           const FieldVector<double,dim>& quadPos = quadPoint.position();
 
@@ -206,14 +209,14 @@ namespace Dune {
           const double integrationElement
               = geometry.integrationElement(quadPos);
 
-          std::vector<FieldVector<double,1> > shapeFunctionValues;
           localBasis.evaluateFunction(quadPos, shapeFunctionValues);
 
           const double uQuad = std::inner_product(shapeFunctionValues.cbegin(),
                                                   shapeFunctionValues.cend(),
                                                   cbegin(u), 0.);
 
-          return uQuad * uQuad * quadPoint.weight() * integrationElement;
+          return acc
+               + uQuad * uQuad * quadPoint.weight() * integrationElement;
         });
 
     return l2NormSquared;
@@ -227,7 +230,7 @@ namespace Dune {
  */
   template <class FEBasis>
   double ErrorTools::l2norm(const FEBasis& feBasis,
-                            const BlockVector<FieldVector<double,1> >& u)
+                            const BlockVector<FieldVector<double,1>>& u)
   {
     static_assert(!is_RefinedFiniteElement<FEBasis>::value,
         "l2norm only implemented for unrefined FE spaces!");
@@ -235,6 +238,8 @@ namespace Dune {
     const auto gridView = feBasis.gridView();
 
     auto localView = feBasis.localView();
+    BlockVector<FieldVector<double,1>> uElement;
+    uElement.reserve(localView.maxSize());
 
     const double l2NormSquared = std::accumulate(
         gridView.template begin<0>(), gridView.template end<0>(), 0.,
@@ -243,10 +248,7 @@ namespace Dune {
           localView.bind(e);
 
           const size_t dofFEelement = localView.size();
-
-          // We take the coefficients of u that correspond to the current
-          // element e and store them in uElement.
-          BlockVector<FieldVector<double,1> > uElement(dofFEelement);
+          uElement.resize(dofFEelement);
           for (size_t i=0; i<dofFEelement; i++)
           {
               uElement[i] = u[ localView.index(i)[0] ];
@@ -298,9 +300,11 @@ namespace Dune {
         QuadratureRules<double, dim>::rule(element.type(), quadratureOrder);
     const SubsampledQuadratureRule<double, subsamples, dim>& quad(quadSection);
 
-    const double errSquare = std::transform_reduce(cbegin(quad), cend(quad),
-        0., std::plus<>(),
-        [&](const auto& quadPoint) {
+    std::vector<FieldVector<double,1>> shapeFunctionValues;
+    shapeFunctionValues.reserve(localView.maxSize());
+
+    const double errSquare = std::accumulate(cbegin(quad), cend(quad), 0.,
+        [&](double acc, const auto& quadPoint) {
           // Position of the current quadrature point in the reference element
           const FieldVector<double,dim>& quadPos = quadPoint.position();
           // Position of the current quadrature point in the current element
@@ -313,7 +317,6 @@ namespace Dune {
 
           // Evaluate all shape function values at quadPos (which is a
           // quadrature point in the reference element)
-          std::vector<FieldVector<double,1> > shapeFunctionValues;
           localBasis.evaluateFunction(quadPos, shapeFunctionValues);
 
           // Evaluation of u at the point globalQuadPos, which is quadPos
@@ -324,8 +327,9 @@ namespace Dune {
 
           const double uExactQuad = uRef(globalQuadPos);
 
-          // squared error at the quadrature point
-          return (uQuad - uExactQuad) * (uQuad - uExactQuad)
+          // we add the squared error at the quadrature point
+          return acc
+                 + (uQuad - uExactQuad) * (uQuad - uExactQuad)
                  * quadPoint.weight() * integrationElement;
         });
 
@@ -352,14 +356,15 @@ namespace Dune {
   template <unsigned int subsamples, class FEBasis, class Function>
   double ErrorTools::computeL2error(
       const FEBasis& feBasis,
-      const BlockVector<FieldVector<double,1> >& u,
+      const BlockVector<FieldVector<double,1>>& u,
       const Function& uRef,
       const unsigned int quadratureOrder)
   {
     const auto gridView = feBasis.gridView();
 
-    // A view on the FE basis on a single element
     auto localView = feBasis.localView();
+    BlockVector<FieldVector<double,1>> uElement;
+    uElement.reserve(localView.maxSize());
 
     const double errSquare = std::accumulate(
         gridView.template begin<0>(), gridView.template end<0>(), 0.,
@@ -368,9 +373,7 @@ namespace Dune {
           localView.bind(e);
 
           const size_t dofFEelement = localView.size();
-
-          // coefficients of u that correspond to the current element e
-          BlockVector<FieldVector<double,1> > uElement(dofFEelement);
+          uElement.resize(dofFEelement);
           for (size_t i=0; i<dofFEelement; i++)
           {
               uElement[i] = u[ localView.index(i)[0] ];

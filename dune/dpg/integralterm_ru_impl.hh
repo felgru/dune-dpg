@@ -26,6 +26,11 @@ inline static void interiorImpl(LhsLocalView& lhsLocalView,
   constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
+  std::vector<FieldVector<double,1>> lhsValues;
+  lhsValues.reserve(lhsLocalView.maxSize());
+  std::vector<FieldVector<double,1>> rhsValues;
+  rhsValues.reserve(rhsLocalView.maxSize());
+
   // Get set of shape functions for this element
   const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
 
@@ -68,24 +73,24 @@ inline static void interiorImpl(LhsLocalView& lhsLocalView,
       using LhsFunctionEvaluator
         = detail::LocalRefinedFunctionEvaluation<dim, type>;
 
-      const std::vector<FieldVector<double,1> > lhsValues =
-          LhsFunctionEvaluator::template evaluateLhs
-                  <is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>
-                        (lhsLocalFiniteElement,
-                         subElementIndex,
-                         quadPos,
-                         geometry,
-                         subGeometryInReferenceElement,
-                         localCoefficients);
+      LhsFunctionEvaluator::template evaluateLhs
+              <is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>
+                    (lhsValues,
+                     lhsLocalFiniteElement,
+                     subElementIndex,
+                     quadPos,
+                     geometry,
+                     subGeometryInReferenceElement,
+                     localCoefficients);
 
       using RhsFunctionEvaluator = detail::LocalFunctionEvaluation<dim, type>;
 
-      const std::vector<FieldVector<double,1> > rhsValues =
-          RhsFunctionEvaluator::evaluateRhs
-                        (rhsLocalFiniteElement,
-                         elementQuadPos,
-                         geometry,
-                         localCoefficients);
+      RhsFunctionEvaluator::evaluateRhs
+                    (rhsValues,
+                     rhsLocalFiniteElement,
+                     elementQuadPos,
+                     geometry,
+                     localCoefficients);
 
       // Compute the actual matrix entries
       for (unsigned int i=0; i<nLhs; i++)
@@ -120,6 +125,11 @@ faceImpl(LhsLocalView& lhsLocalView,
 {
   constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
+
+  std::vector<FieldVector<double,1>> lhsValues;
+  lhsValues.reserve(lhsLocalView.maxSize());
+  std::vector<FieldVector<double,1>> rhsValues;
+  rhsValues.reserve(rhsLocalView.maxSize());
 
   // Get set of shape functions for this element
   const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
@@ -173,19 +183,13 @@ faceImpl(LhsLocalView& lhsLocalView,
                   localCoefficients, elementQuadPos, elementQuadPosSubCell,
                   direction, quadPoint.weight(), integrationData);
 
-        //////////////////////////////
-        // Left Hand Side Functions //
-        //////////////////////////////
-        const std::vector<FieldVector<double,1> > lhsValues =
-          detail::LocalRefinedFunctionEvaluationHelper
-            <is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>::
-              evaluateValue(lhsLocalFiniteElement, subElementIndex,
-                            elementQuadPosSubCell);
+        // Left Hand Side Functions
+        detail::LocalRefinedFunctionEvaluationHelper
+          <is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>::
+            evaluateValue(lhsValues, lhsLocalFiniteElement, subElementIndex,
+                          elementQuadPosSubCell);
 
-        ///////////////////////////////
-        // Right Hand Side Functions //
-        ///////////////////////////////
-        std::vector<FieldVector<double,1> > rhsValues;
+        // Right Hand Side Functions
         rhsLocalFiniteElement.localBasis()
             .evaluateFunction(elementQuadPos, rhsValues);
 
