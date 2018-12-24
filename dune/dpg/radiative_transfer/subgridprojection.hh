@@ -591,18 +591,7 @@ public:
 
         std::vector<FieldVector<double, 1>>
             hostGridLocalData(localView.size());
-        iterateOverLocalIndices(
-          localView,
-          [&](size_t i, auto gi)
-          {
-            hostGridLocalData[i] = hostGridData[gi[0]];
-          },
-          [&](size_t i){ hostGridLocalData[i] = 0; },
-          [&](size_t i, auto gi, double wi)
-          {
-            hostGridLocalData[i] += wi * hostGridData[gi[0]];
-          }
-        );
+        copyToLocalVector(hostGridData, hostGridLocalData, localView);
         cellData.reserve(1);
         // direct transfer of hostGridData
         // Will be later interpolated in the call to
@@ -618,18 +607,7 @@ public:
 
           std::vector<FieldVector<double, 1>>
               hostGridLocalData(localView.size());
-          iterateOverLocalIndices(
-            localView,
-            [&](size_t i, auto gi)
-            {
-              hostGridLocalData[i] = hostGridData[gi[0]];
-            },
-            [&](size_t i){ hostGridLocalData[i] = 0; },
-            [&](size_t i, auto gi, double wi)
-            {
-              hostGridLocalData[i] += wi * hostGridData[gi[0]];
-            }
-          );
+          copyToLocalVector(hostGridData, hostGridLocalData, localView);
           cellData.emplace_back(child.seed(), std::move(hostGridLocalData));
         }
       }

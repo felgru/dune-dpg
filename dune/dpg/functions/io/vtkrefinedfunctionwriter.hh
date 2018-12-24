@@ -59,17 +59,7 @@ namespace Dune
     getLocalDataVector(const LocalView& localView, const VectorType& data)
     {
       VectorType localVector(localView.size());
-
-      iterateOverLocalIndices(
-        localView,
-        [&](size_t j, auto gj) {
-          localVector[j] = data[gj[0]];
-        },
-        [&](size_t j) { localVector[j] = 0; },
-        [&](size_t j, auto gj, double wj) {
-          localVector[j] += wj * data[gj[0]];
-        }
-      );
+      copyToLocalVector(data, localVector, localView);
       return localVector;
     }
 
@@ -94,7 +84,8 @@ namespace Dune
         using ctype = typename GridView::Grid::ctype;
         constexpr static int dim = GridView::dimension;
         const GridView gridView = feBasis.gridView();
-        std::vector<FieldVector<double,1> > feValues;
+        std::vector<FieldVector<double,1>> feValues;
+        feValues.reserve(localView.maxSize());
         for(const auto& e : elements(gridView)) {
           localView.bind(e);
           const VectorType localData = getLocalDataVector(localView, data);

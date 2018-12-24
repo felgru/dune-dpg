@@ -37,18 +37,7 @@ attachDataToGrid(
 
     *(localEntitySeed++) = e.seed();
 
-    iterateOverLocalIndices(
-      localView,
-      [&](size_t i, auto gi)
-      {
-        localData[i] = data[gi[0]];
-      },
-      [&](size_t i){ localData[i] = 0; },
-      [&](size_t i, auto gi, double wi)
-      {
-        localData[i] += wi * data[gi[0]];
-      }
-    );
+    copyToLocalVector(data, localData, localView);
     localData += maxEntityDoFs;
   }
   assert(localData == entityData.end());

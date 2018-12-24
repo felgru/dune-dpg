@@ -81,6 +81,26 @@ void iterateOverLocalIndices(
       std::forward<ConstrainedEvaluation>(constrainedEvaluation));
 }
 
+template<class LocalView,
+         class GlobalVector,
+         class LocalVector>
+void copyToLocalVector(const GlobalVector& globalVector,
+                       LocalVector& localVector,
+                       LocalView&& localView) {
+  localVector.resize(localView.size());
+
+  iterateOverLocalIndices(
+    localView,
+    [&](size_t j, auto gj) {
+      localVector[j] = globalVector[gj[0]];
+    },
+    [&](size_t j) { localVector[j] = 0; },
+    [&](size_t j, auto gj, double wj) {
+      localVector[j] += wj * globalVector[gj[0]];
+    }
+  );
+}
+
 template<class TestLocalView,
          class SolutionLocalView,
          class GetLocalMatrixEntry,

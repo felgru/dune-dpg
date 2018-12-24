@@ -87,20 +87,7 @@ public:
     void bind(const Element& element)
     {
       localBasisView_.bind(element);
-
-      localDoFs_.resize(localBasisView_.size());
-      iterateOverLocalIndices(
-        localBasisView_,
-        [&](size_type i, auto gi) {
-          localDoFs_[i] = globalFunction_.dofs()[gi];
-        },
-        [&](size_type i) {
-          localDoFs_[i] = 0;
-        },
-        [&](size_type i, auto gi, double wi) {
-          localDoFs_[i] += wi * globalFunction_.dofs()[gi];
-        }
-      );
+      copyToLocalVector(globalFunction_.dofs(), localDoFs_, localBasisView_);
     }
 
     void unbind()

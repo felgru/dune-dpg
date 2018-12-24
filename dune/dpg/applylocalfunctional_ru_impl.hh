@@ -35,17 +35,8 @@ inline static void interiorImpl(
 
   BlockVector<FieldVector<double,1>>
       localFunctionalVector(solutionLocalView.size());
-
-  iterateOverLocalIndices(
-    solutionLocalView,
-    [&](size_t j, auto gj) {
-      localFunctionalVector[j] = functionalVector[gj[0]];
-    },
-    [&](size_t j) { localFunctionalVector[j] = 0; },
-    [&](size_t j, auto gj, double wj) {
-      localFunctionalVector[j] += wj * functionalVector[gj[0]];
-    }
-  );
+  copyToLocalVector(functionalVector, localFunctionalVector,
+                    solutionLocalView);
 
   const auto referenceGridView =
       testLocalView.tree().refinedReferenceElementGridView();
@@ -128,17 +119,8 @@ faceImpl(TestLocalView& testLocalView,
 
   BlockVector<FieldVector<double,1>>
       localFunctionalVector(solutionLocalView.size());
-
-  iterateOverLocalIndices(
-    solutionLocalView,
-    [&](size_t j, auto gj) {
-      localFunctionalVector[j] = functionalVector[gj[0]];
-    },
-    [&](size_t j) { localFunctionalVector[j] = 0; },
-    [&](size_t j, auto gj, double wj) {
-      localFunctionalVector[j] += wj * functionalVector[gj[0]];
-    }
-  );
+  copyToLocalVector(functionalVector, localFunctionalVector,
+                    solutionLocalView);
 
   const auto referenceGridView =
       testLocalView.tree().refinedReferenceElementGridView();
