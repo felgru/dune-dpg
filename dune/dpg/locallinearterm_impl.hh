@@ -57,6 +57,9 @@ struct GetLocalLinearTermVector<integrationType, Space, false>
     // Get set of shape functions for this element
     const auto& localFiniteElementTest = localViewTest.tree().finiteElement();
 
+    std::vector<FieldVector<double,1>> shapeFunctionValues;
+    shapeFunctionValues.reserve(localFiniteElementTest.size());
+
     typename detail::ChooseQuadrature<TestSpace, TestSpace, Element>::type quad
       = detail::ChooseQuadrature<TestSpace, TestSpace, Element>
         ::Quadrature(element, quadratureOrder);
@@ -74,12 +77,12 @@ struct GetLocalLinearTermVector<integrationType, Space, false>
       using FunctionEvaluator
         = detail::LocalLinearTermFunctionEvaluation<dim, integrationType>;
 
-      const std::vector<FieldVector<double,1> > shapeFunctionValues =
-        FunctionEvaluator::evaluate
-                      (localFiniteElementTest,
-                       quadPos,
-                       geometry,
-                       localCoefficients);
+      FunctionEvaluator::evaluate
+                    (shapeFunctionValues,
+                     localFiniteElementTest,
+                     quadPos,
+                     geometry,
+                     localCoefficients);
 
       auto entry = elementVector.begin() + spaceOffset;
       for (const auto& shapeFunctionValue : shapeFunctionValues)
@@ -115,6 +118,9 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
     constexpr int dim = Element::mydimension;
     const auto geometry = element.geometry();
 
+    std::vector<FieldVector<double,1>> shapeFunctionValues;
+    shapeFunctionValues.reserve(localViewTest.maxSize());
+
     typename detail::ChooseQuadrature<TestSpace, TestSpace, Element>::type quad
       = detail::ChooseQuadrature<TestSpace, TestSpace, Element>
         ::Quadrature(element, quadratureOrder);
@@ -146,22 +152,19 @@ struct GetLocalLinearTermVector<integrationType, Space, true>
           * subGeometryInReferenceElement.integrationElement(quadPos)
           * quadPoint.weight();
 
-        ////////////////////
-        // Test Functions //
-        ////////////////////
         using FunctionEvaluator
           = detail::LocalRefinedLinearTermFunctionEvaluation
                 <dim, integrationType>;
 
-        const std::vector<FieldVector<double,1> > shapeFunctionValues =
-            FunctionEvaluator::template evaluate
-                    <is_ContinuouslyRefinedFiniteElement<TestSpace>::value>
-                          (localFiniteElementTest,
-                           subElementIndex,
-                           quadPos,
-                           geometry,
-                           subGeometryInReferenceElement,
-                           localCoefficients);
+        FunctionEvaluator::template evaluate
+                <is_ContinuouslyRefinedFiniteElement<TestSpace>::value>
+                      (shapeFunctionValues,
+                       localFiniteElementTest,
+                       subElementIndex,
+                       quadPos,
+                       geometry,
+                       subGeometryInReferenceElement,
+                       localCoefficients);
 
         auto entry = elementVector.begin() + spaceOffset + subElementOffset;
         for(const auto& shapeFunctionValue : shapeFunctionValues) {

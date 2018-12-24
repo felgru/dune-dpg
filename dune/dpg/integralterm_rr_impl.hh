@@ -26,6 +26,11 @@ inline static void interiorImpl(LhsLocalView& lhsLocalView,
   constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
+  std::vector<FieldVector<double,1>> lhsValues;
+  lhsValues.reserve(lhsLocalView.maxSize());
+  std::vector<FieldVector<double,1>> rhsValues;
+  rhsValues.reserve(rhsLocalView.maxSize());
+
   typename detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>::type quad
     = detail::ChooseQuadrature<LhsSpace, RhsSpace, Element>
       ::Quadrature(element, quadratureOrder);
@@ -78,25 +83,25 @@ inline static void interiorImpl(LhsLocalView& lhsLocalView,
       using FunctionEvaluator
         = detail::LocalRefinedFunctionEvaluation<dim, type>;
 
-      const std::vector<FieldVector<double,1> > lhsValues =
-          FunctionEvaluator::template evaluateLhs
-                  <is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>
-                        (lhsLocalFiniteElement,
-                         subElementIndex,
-                         quadPos,
-                         geometry,
-                         subGeometryInReferenceElement,
-                         localCoefficients);
+      FunctionEvaluator::template evaluateLhs
+              <is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>
+                    (lhsValues,
+                     lhsLocalFiniteElement,
+                     subElementIndex,
+                     quadPos,
+                     geometry,
+                     subGeometryInReferenceElement,
+                     localCoefficients);
 
-      const std::vector<FieldVector<double,1> > rhsValues =
-          FunctionEvaluator::template evaluateRhs
-                  <is_ContinuouslyRefinedFiniteElement<RhsSpace>::value>
-                        (rhsLocalFiniteElement,
-                         subElementIndex,
-                         quadPos,
-                         geometry,
-                         subGeometryInReferenceElement,
-                         localCoefficients);
+      FunctionEvaluator::template evaluateRhs
+              <is_ContinuouslyRefinedFiniteElement<RhsSpace>::value>
+                    (rhsValues,
+                     rhsLocalFiniteElement,
+                     subElementIndex,
+                     quadPos,
+                     geometry,
+                     subGeometryInReferenceElement,
+                     localCoefficients);
 
       // Compute the actual matrix entries
       for (unsigned int i=0; i<nLhs; i++)
@@ -134,6 +139,11 @@ faceImpl(LhsLocalView& lhsLocalView,
 {
   constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
+
+  std::vector<FieldVector<double,1>> lhsValues;
+  lhsValues.reserve(lhsLocalView.maxSize());
+  std::vector<FieldVector<double,1>> rhsValues;
+  rhsValues.reserve(rhsLocalView.maxSize());
 
   const auto referenceGridView =
       lhsLocalView.tree().refinedReferenceElementGridView();
@@ -196,23 +206,17 @@ faceImpl(LhsLocalView& lhsLocalView,
                   localCoefficients, elementQuadPos, elementQuadPosSubCell,
                   direction, quadPoint.weight(), integrationData);
 
-        //////////////////////////////
-        // Left Hand Side Functions //
-        //////////////////////////////
-        const std::vector<FieldVector<double,1> > lhsValues =
-          detail::LocalRefinedFunctionEvaluationHelper
-            <is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>::
-              evaluateValue(lhsLocalFiniteElement, subElementIndex,
-                            elementQuadPosSubCell);
+        // Left Hand Side Functions
+        detail::LocalRefinedFunctionEvaluationHelper
+          <is_ContinuouslyRefinedFiniteElement<LhsSpace>::value>::
+            evaluateValue(lhsValues, lhsLocalFiniteElement, subElementIndex,
+                          elementQuadPosSubCell);
 
-        ///////////////////////////////
-        // Right Hand Side Functions //
-        ///////////////////////////////
-        const std::vector<FieldVector<double,1> > rhsValues =
-          detail::LocalRefinedFunctionEvaluationHelper
-            <is_ContinuouslyRefinedFiniteElement<RhsSpace>::value>::
-              evaluateValue(rhsLocalFiniteElement, subElementIndex,
-                            elementQuadPosSubCell);
+        // Right Hand Side Functions
+        detail::LocalRefinedFunctionEvaluationHelper
+          <is_ContinuouslyRefinedFiniteElement<RhsSpace>::value>::
+            evaluateValue(rhsValues, rhsLocalFiniteElement, subElementIndex,
+                          elementQuadPosSubCell);
 
         // Compute the actual matrix entries
         for (size_t i=0; i<nLhs; i++)

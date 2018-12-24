@@ -39,6 +39,11 @@ inline static void interiorImpl(
   copyToLocalVector(functionalVector, localFunctionalVector,
                     solutionLocalView);
 
+  std::vector<FieldVector<double,1>> testShapeFunctionValues;
+  testShapeFunctionValues.reserve(testLocalView.maxSize());
+  std::vector<FieldVector<double,1>> shapeFunctionValues;
+  shapeFunctionValues.reserve(solutionLocalView.maxSize());
+
   const unsigned int quadratureOrder
       = solutionLocalFiniteElement.localBasis().order()
         + testLocalFiniteElement.localBasis().order();
@@ -47,7 +52,6 @@ inline static void interiorImpl(
     = detail::ChooseQuadrature<TestSpace, SolutionSpace, Element>
       ::Quadrature(element, quadratureOrder);
 
-  // Loop over all quadrature points
   for (const auto& quadPoint : quad) {
 
     // Position of the current quadrature point in the reference element
@@ -57,18 +61,15 @@ inline static void interiorImpl(
     const double integrationWeight
         = quadPoint.weight() * geometry.integrationElement(quadPos);
 
-    // Evaluate all shape function values at this quadrature point
-    std::vector<FieldVector<double,1>> testShapeFunctionValues;
     testLocalFiniteElement.localBasis()
         .evaluateFunction(quadPos, testShapeFunctionValues);
-    std::vector<FieldVector<double,1>> shapeFunctionValues;
     solutionLocalFiniteElement.localBasis().
         evaluateFunction(quadPos, shapeFunctionValues);
 
     const double functionalValue =
         std::inner_product(
           localFunctionalVector.begin(), localFunctionalVector.end(),
-          shapeFunctionValues.begin(), 0.)
+          shapeFunctionValues.cbegin(), 0.)
         * integrationWeight;
 
     auto entry = elementVector.begin() + spaceOffset;
@@ -116,6 +117,13 @@ faceImpl(const TestLocalView& testLocalView,
   copyToLocalVector(functionalVector, localFunctionalVector,
                     solutionLocalView);
 
+  // Left Hand Side Shape Functions
+  std::vector<FieldVector<double,1> > testValues;
+  testValues.resize(testLocalView.maxSize());
+  // Right Hand Side Shape Functions
+  std::vector<FieldVector<double,1> > solutionValues;
+  solutionValues.resize(solutionLocalView.maxSize());
+
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
   {
     auto face = element.template subEntity<1>(f);
@@ -146,17 +154,9 @@ faceImpl(const TestLocalView& testLocalView,
               localCoefficients, elementQuadPos, direction, quadPoint,
               integrationData, face);
 
-      ////////////////////////////////////
-      // Left Hand Side Shape Functions //
-      ////////////////////////////////////
-      std::vector<FieldVector<double,1> > testValues;
       testLocalFiniteElement.localBasis()
           .evaluateFunction(elementQuadPos, testValues);
 
-      /////////////////////////////////////
-      // Right Hand Side Shape Functions //
-      /////////////////////////////////////
-      std::vector<FieldVector<double,1> > solutionValues;
       solutionLocalFiniteElement.localBasis()
           .evaluateFunction(elementQuadPos, solutionValues);
 

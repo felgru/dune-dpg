@@ -67,14 +67,15 @@ namespace detail {
       : finiteElement(finiteElement),
         childInElementGeometry(childInElementGeometry),
         elementData(elementData)
-    {}
+    {
+      shapeFunctionValues.reserve(finiteElement.size());
+    }
 
     Range operator()(const Domain& x) const {
       const Domain xElement = childInElementGeometry.global(x);
 
       auto&& localBasis = finiteElement.localBasis();
 
-      shapeFunctionValues.resize(localBasis.size());
       localBasis.evaluateFunction(xElement, shapeFunctionValues);
 
       return std::inner_product(shapeFunctionValues.cbegin(),
@@ -85,6 +86,8 @@ namespace detail {
     const FiniteElement& finiteElement;
     const Geometry childInElementGeometry;
     const Iterator elementData;
+    // TODO: Maybe keep shapeFunctionValues as a reference to reduce
+    //       the number of memory allocations.
     mutable std::vector<Range> shapeFunctionValues;
   };
 }

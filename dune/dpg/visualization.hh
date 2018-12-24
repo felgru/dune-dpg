@@ -35,10 +35,12 @@ void evaluateBasisFunctions(
         v = 0;
     }
 
+    std::vector<FieldVector<double,1>> evaluation;
+    evaluation.reserve(localFiniteElement.size());
+
     for(const auto& v : vertices(fineGridView)) {
         // The shape functions on the reference element evaluated on the
         // finer grid
-        std::vector<FieldVector<double,1> > evaluation;
         const FieldVector<double,dim> vPos = v.geometry().corner(0);
         localFiniteElement.localBasis().evaluateFunction(vPos, evaluation);
 

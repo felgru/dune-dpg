@@ -26,6 +26,11 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
   constexpr int dim = Element::mydimension;
   const auto geometry = element.geometry();
 
+  std::vector<FieldVector<double,1>> lhsValues;
+  lhsValues.reserve(lhsLocalView.maxSize());
+  std::vector<FieldVector<double,1>> rhsValues;
+  rhsValues.reserve(rhsLocalView.maxSize());
+
   // Get set of shape functions for this element
   const auto& lhsLocalFiniteElement = lhsLocalView.tree().finiteElement();
   const auto& rhsLocalFiniteElement = rhsLocalView.tree().finiteElement();
@@ -54,19 +59,19 @@ inline static void interiorImpl(const LhsLocalView& lhsLocalView,
 
     using FunctionEvaluator = detail::LocalFunctionEvaluation<dim, type>;
 
-    const std::vector<FieldVector<double,1> > lhsValues =
-        FunctionEvaluator::evaluateLhs
-                      (lhsLocalFiniteElement,
-                       quadPos,
-                       geometry,
-                       localCoefficients);
+    FunctionEvaluator::evaluateLhs
+                  (lhsValues,
+                   lhsLocalFiniteElement,
+                   quadPos,
+                   geometry,
+                   localCoefficients);
 
-    const std::vector<FieldVector<double,1> > rhsValues =
-        FunctionEvaluator::evaluateRhs
-                      (rhsLocalFiniteElement,
-                       quadPos,
-                       geometry,
-                       localCoefficients);
+    FunctionEvaluator::evaluateRhs
+                  (rhsValues,
+                   rhsLocalFiniteElement,
+                   quadPos,
+                   geometry,
+                   localCoefficients);
 
     // Compute the actual matrix entries
     for (unsigned int i=0; i<nLhs; i++)
@@ -109,6 +114,11 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
   const auto geometry = element.geometry();
 
+  std::vector<FieldVector<double,1>> lhsValues;
+  lhsValues.reserve(lhsLocalView.maxSize());
+  std::vector<FieldVector<double,1>> rhsValues;
+  rhsValues.reserve(rhsLocalView.maxSize());
+
   FaceIntegrationData<type> integrationData(geometry, direction);
 
   for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
@@ -131,17 +141,11 @@ faceImpl(const LhsLocalView& lhsLocalView,
               localCoefficients, elementQuadPos, direction, quadPoint,
               integrationData, face);
 
-      //////////////////////////////
-      // Left Hand Side Functions //
-      //////////////////////////////
-      std::vector<FieldVector<double,1> > lhsValues;
+      // Left Hand Side Functions
       lhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
                                                           lhsValues);
 
-      ///////////////////////////////
-      // Right Hand Side Functions //
-      ///////////////////////////////
-      std::vector<FieldVector<double,1> > rhsValues;
+      // Right Hand Side Functions
       rhsLocalFiniteElement.localBasis().evaluateFunction(elementQuadPos,
                                                           rhsValues);
 

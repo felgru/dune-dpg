@@ -49,7 +49,9 @@ namespace detail {
         const std::vector<Range>& elementData)
       : finiteElement(finiteElement),
         elementData(elementData)
-    {}
+    {
+      shapeFunctionValues.reserve(finiteElement.size());
+    }
 
     Range operator()(const Domain& x) const {
       auto&& localBasis = finiteElement.localBasis();
@@ -65,6 +67,8 @@ namespace detail {
 
     const FiniteElement& finiteElement;
     const std::vector<Range>& elementData;
+    // TODO: Maybe keep shapeFunctionValues as a reference to reduce
+    //       the number of memory allocations.
     mutable std::vector<Range> shapeFunctionValues;
   };
 
@@ -94,7 +98,9 @@ namespace detail {
       : finiteElement(finiteElement),
         subGeometryInReferenceElement(subGeometryInReferenceElement),
         elementData(elementData)
-    {}
+    {
+      shapeFunctionValues.reserve(finiteElement.size());
+    }
 
     Range operator()(const Domain& x) const {
       auto&& localBasis = finiteElement.localBasis();
@@ -112,6 +118,8 @@ namespace detail {
     const FiniteElement& finiteElement;
     const SubGeometryInReferenceElement& subGeometryInReferenceElement;
     const std::vector<Range>& elementData;
+    // TODO: Maybe keep shapeFunctionValues as a reference to reduce
+    //       the number of memory allocations.
     mutable std::vector<Range> shapeFunctionValues;
   };
 
@@ -159,6 +167,12 @@ namespace detail {
               "computeProjectionRhs only defined for unrefined HostGrid basis");
     BlockVector<FieldVector<double,1>> projectionRhs(subGridLocalView.size());
     projectionRhs = 0;
+
+    std::vector<FieldVector<double, 1>> subGridValues;
+    subGridValues.reserve(subGridLocalView.maxSize());
+    std::vector<FieldVector<double, 1>> hostValues;
+    hostValues.reserve(hostGridLocalView.maxSize());
+
     constexpr int dim = Element::mydimension;
     const auto& hostGrid = hostGridLocalView.globalBasis().gridView().grid();
 
@@ -193,13 +207,11 @@ namespace detail {
 
         const auto& subGridLocalFiniteElement
             = subGridLocalView.tree().finiteElement();
-        std::vector<FieldVector<double, 1> > subGridValues;
         subGridLocalFiniteElement.localBasis().evaluateFunction(subGridQuadPos,
                                                                 subGridValues);
 
         const auto& hostLocalFiniteElement
             = hostGridLocalView.tree().finiteElement();
-        std::vector<FieldVector<double, 1> > hostValues;
         hostLocalFiniteElement.localBasis().evaluateFunction(quadPos,
                                                              hostValues);
         const FieldVector<double, 1> hostValue
@@ -276,6 +288,11 @@ namespace detail {
     constexpr int dim = Element::mydimension;
     const auto& hostGrid = hostGridLocalView.globalBasis().gridView().grid();
 
+    std::vector<FieldVector<double, 1>> subGridValues;
+    subGridValues.reserve(subGridLocalView.maxSize());
+    std::vector<FieldVector<double, 1>> hostValues;
+    hostValues.reserve(hostGridLocalView.maxSize());
+
     const auto referenceGridView =
         subGridLocalView.tree().refinedReferenceElementGridView();
 
@@ -326,7 +343,6 @@ namespace detail {
               = eHostGeometry.integrationElement(quadPos)
               * quadPoint.weight();
 
-          std::vector<FieldVector<double, 1> > subGridValues;
           if constexpr (is_ContinuouslyRefinedFiniteElement<SubGridSpace>{}) {
             subGridLocalFiniteElement.localBasis()
                 .evaluateFunction(subElementIndex,
@@ -339,7 +355,6 @@ namespace detail {
 
           const auto& hostLocalFiniteElement
               = hostGridLocalView.tree().finiteElement();
-          std::vector<FieldVector<double, 1> > hostValues;
           hostLocalFiniteElement.localBasis().evaluateFunction(quadPos,
                                                                hostValues);
           const FieldVector<double, 1> hostValue
