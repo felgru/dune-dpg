@@ -87,6 +87,7 @@ public:
     void bind(const Element& element)
     {
       localBasisView_.bind(element);
+      localDoFs_.resize(localBasisView_.size());
       copyToLocalVector(globalFunction_.dofs(), localDoFs_, localBasisView_);
     }
 

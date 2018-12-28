@@ -87,8 +87,6 @@ template<class LocalView,
 void copyToLocalVector(const GlobalVector& globalVector,
                        LocalVector& localVector,
                        LocalView&& localView) {
-  localVector.resize(localView.size());
-
   iterateOverLocalIndices(
     localView,
     [&](size_t j, auto gj) {
