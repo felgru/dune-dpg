@@ -29,7 +29,7 @@ namespace Dune
     //! create finite element for given GeometryType
     static LocalFiniteElementVirtualInterface<T>* create(const GeometryType& gt)
     {
-      return 0;
+      return nullptr;
     }
   };
 
@@ -47,7 +47,7 @@ namespace Dune
     static LocalFiniteElementVirtualInterface<T>* create(const GeometryType& gt)
     {
       DUNE_THROW(Dune::NotImplemented, "pqktrace not implemented for 3d");
-      return 0;
+      return nullptr;
     }
   };
 
@@ -70,7 +70,7 @@ namespace Dune
         return new LocalFiniteElementVirtualImp<Pk>(Pk());
       if (gt.isCube())
         return new LocalFiniteElementVirtualImp<Qk>(Qk());
-      return 0;
+      return nullptr;
     }
   };
 
@@ -146,7 +146,7 @@ namespace Dune
       if (it==cache_.end())
       {
         FiniteElementType* fe = PQkTraceLocalFiniteElementFactory<D,R,dim,k>::create(gt);
-        if (fe==0)
+        if (fe == nullptr)
           DUNE_THROW(Dune::NotImplemented,"No Pk/Qk like local finite element available for geometry type " << gt << " and order " << k);
 
         cache_[gt] = fe;

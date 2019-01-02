@@ -92,7 +92,7 @@ namespace Dune
       {
         FiniteElementType* fe =
             PQkSubsampledLocalFiniteElementFactory<D,R,dim,s,k>::create(gt);
-        if (fe==0)
+        if (fe == nullptr)
           DUNE_THROW(Dune::NotImplemented,"No Pk/Qk like local finite element available for geometry type " << gt << " and order " << k);
 
         cache_[gt] = fe;
