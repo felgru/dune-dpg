@@ -1,9 +1,12 @@
-Description: increase UMFPack memory limitations
+Description: increase UMFPack memory limitations for dune-istl 2.6
  Currently, UMFPack throws an out of memory exception when the memory
  consumption becomes larger than 2GB.
  .
  This can be fixed by using the umfpack_dl_* functions which use long
  integers for indices instead of the umfpack_di_* functions.
+ .
+ This patch has been integrated into dune-istl 2.7 and is thus only
+ necessary if you are using dune-istl 2.6.
 Author: Kilian Weishaupt
 Origin: other, https://gitlab.dune-project.org/core/dune-istl/issues/33
 Bug: https://gitlab.dune-project.org/core/dune-istl/issues/33
