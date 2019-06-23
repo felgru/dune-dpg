@@ -112,13 +112,15 @@ Installation of Dune on other Linux distributions and MacOS
     of dune-subgrid:
     https://git.imp.fu-berlin.de/agnumpde/dune-subgrid
 
-Careful: If you want to use the UMFPack wrapper from dune-istl
+Careful: If you want to use the UMFPack wrapper from dune-istl 2.6
          to solve large linear systems (with matrices > 2GB) you
          need to apply the patch from
          [this bugreport](https://gitlab.dune-project.org/core/dune-istl/issues/33)
          to dune-istl before compiling it in step 5).
-         For your convenience this patch is distributed with dune-dpg
-         under `contrib/umfpack_dl.diff`.
+         Beginning with dune-istl 2.7, this patch has been integrated
+         into dune-istl and doesn't need to be applied manually anymore.
+         But if you are using dune-istl 2.6, we distribute this patch
+         with dune-dpg under `contrib/umfpack_dl.diff` for your convenience.
          Apply it with `patch -p1 < ../dune-dpg/contrib/umfpack_dl.diff`
          in the dune-istl directory.
 
