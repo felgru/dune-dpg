@@ -7,17 +7,12 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/power.hh>
-#include <dune/common/version.hh>
 
 #include <dune/geometry/type.hh>
 
 #include <dune/localfunctions/common/localbasis.hh>
 #include <dune/localfunctions/common/localfiniteelementtraits.hh>
-#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,7)
 #include <dune/localfunctions/lagrange/lagrangesimplex.hh>
-#else
-#include <dune/localfunctions/lagrange/pk2d/pk2dlocalbasis.hh>
-#endif
 
 #include <numeric>
 
@@ -42,12 +37,8 @@ namespace Dune
     enum { n = (k+1)*(k+2)/2*StaticPower<s,2>::power };
     enum { d = 2 };
 
-#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,7)
     using SubBasis = typename LagrangeSimplexLocalFiniteElement<D, R, 2, k>
                                                     ::Traits::LocalBasisType;
-#else
-    using SubBasis = Pk2DLocalBasis<D, R, k>;
-#endif
 
   public:
     typedef LocalBasisTraits<D,2,Dune::FieldVector<D,2>,R,1,
