@@ -7,7 +7,6 @@
 #include <utility>
 #include <tuple>
 #include <dune/common/hybridutilities.hh>
-#include <dune/common/std/memory.hh>
 #include <dune/common/tupleutility.hh>
 #include <dune/dpg/assemble_types.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>

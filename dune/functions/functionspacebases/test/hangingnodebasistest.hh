@@ -4,6 +4,7 @@
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_TEST_HANGINGNODEBASISTEST_HH
 
 #include <iostream>
+#include <memory>
 
 #include <dune/common/exceptions.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
