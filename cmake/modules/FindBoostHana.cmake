@@ -19,12 +19,15 @@ if(HAVE_DUNE_BOOST)
     endif()
   endif()
   message(STATUS "Checking whether the Boost::Hana library is available.")
+  set(OLD_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
+  set(CMAKE_REQUIRED_INCLUDES ${BOOST_INCLUDEDIR})
   check_cxx_source_compiles("
 \#include <boost/hana.hpp>
 int main(){
   boost::hana::tuple<int,char,double> v;
   return 0;
 }" HAVE_BOOST_HANA)
+  set(CMAKE_REQUIRED_INCLUDES OLD_CMAKE_REQUIRED_INCLUDES)
   if(HAVE_BOOST_HANA)
     message(STATUS "Boost::Hana is available")
     set(BoostHana_FOUND true)
