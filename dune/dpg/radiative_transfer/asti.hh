@@ -225,12 +225,12 @@ class ASTI {
    * \param subGridSpaces
    * \param accuracy
    */
-  template<class SubGridView, class HostGrid, class Grid, class GridIdSet>
+  template<class SubGridView, class HostGridBasis, class Grid, class GridIdSet>
   static std::vector<VectorType> apply_scattering(
       ScatteringKernelApproximation& kernelApproximation,
       const std::vector<VectorType>& x,
       SubGridSpaces<SubGridView>& subGridSpaces,
-      const HostGrid& hostGrid,
+      const HostGridBasis& hostGridBasis,
       std::vector<Direction>& sVector,
       std::vector<std::unique_ptr<Grid>>& grids,
       std::vector<GridIdSet>& gridIdSets,
