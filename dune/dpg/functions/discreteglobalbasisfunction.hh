@@ -10,9 +10,9 @@
 namespace Dune {
 
   namespace Functions {
-    template<typename R, typename B, typename TP, typename V>
+    template<typename R, typename B, typename V>
     auto
-    makeDiscreteGlobalBasisFunction(B&& basis, const TP& treePath, V&& vector);
+    makeDiscreteGlobalBasisFunction(B&& basis, V&& vector);
 
     template<typename R, typename B, typename V>
     auto
@@ -27,7 +27,7 @@ namespace Dune {
   discreteGlobalBasisFunction(const FEBasis& feBasis, const Vector& u) {
     auto uFunction
         = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-              (feBasis, Dune::TypeTree::hybridTreePath(), u);
+              (feBasis, u);
     return uFunction;
   }
 

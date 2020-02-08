@@ -34,7 +34,7 @@ class ErrorPlotter
                               const CoefficientVector& u) {
     auto uFunction
         = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-              (feBasis, Dune::TypeTree::hybridTreePath(), u);
+              (feBasis, u);
     return uFunction;
   }
 
