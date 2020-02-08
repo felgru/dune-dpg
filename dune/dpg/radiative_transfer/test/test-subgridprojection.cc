@@ -73,7 +73,7 @@ bool finite_element_data_matches_function
 {
   auto feFunction
       = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-            (feBasis, Dune::TypeTree::hybridTreePath(), feData);
+            (feBasis, feData);
   auto analyticFunction = Functions::makeAnalyticGridViewFunction(
                                 function, feBasis.gridView());
   return functions_are_identical(feFunction, analyticFunction, tolerance);
