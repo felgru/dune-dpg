@@ -31,7 +31,7 @@ class ErrorPlotter
   discreteGlobalBasisFunction(const FEBasis& feBasis, const Vector& u) {
     auto uFunction
         = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-              (feBasis, Dune::TypeTree::hybridTreePath(), u);
+              (feBasis, u);
     return uFunction;
   }
 
