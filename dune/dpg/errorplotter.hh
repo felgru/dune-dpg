@@ -6,12 +6,9 @@
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 #include <dune/grid/io/file/vtk.hh>
 
-#include <dune/dpg/functions/concepts.hh>
-#include <dune/dpg/functions/constraineddiscreteglobalbasisfunction.hh>
+#include <dune/dpg/functions/discreteglobalbasisfunction.hh>
 
-#include <dune/functions/functionspacebases/concepts.hh>
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
 #include <dune/istl/bvector.hh>
 
@@ -24,31 +21,6 @@ namespace Dune {
 class ErrorPlotter
 {
   using CoefficientVector = BlockVector<FieldVector<double,1>>;
-
-  template<class FEBasis,
-      typename std::enable_if<models<Functions::Concept
-                              ::GlobalBasis<typename FEBasis::GridView>,
-                            FEBasis>()>::type* = nullptr>
-  static auto
-  discreteGlobalBasisFunction(const FEBasis& feBasis,
-                              const CoefficientVector& u) {
-    auto uFunction
-        = Dune::Functions::makeDiscreteGlobalBasisFunction<double>
-              (feBasis, u);
-    return uFunction;
-  }
-
-  template<class FEBasis,
-      typename std::enable_if<models<Functions::Concept::
-            ConstrainedGlobalBasis<typename FEBasis::GridView>,
-          FEBasis>()>::type* = nullptr>
-  static auto
-  discreteGlobalBasisFunction(const FEBasis& feBasis,
-                              const CoefficientVector& u) {
-    auto uFunction = Dune::Functions
-        ::makeConstrainedDiscreteGlobalBasisFunction<double>(feBasis, u);
-    return uFunction;
-  }
 
 public:
   ErrorPlotter() = delete;
