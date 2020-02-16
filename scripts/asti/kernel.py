@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf8 -*-
 from __future__ import (absolute_import, print_function)
 import argparse
@@ -177,37 +177,37 @@ if args.plot_matrices:
     MS = plt.matshow(result, cmap=plt.cm.autumn)
     cbar = plt.colorbar(MS)
     if(args.plot_title):
-        titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
+        titleStr='Wlt analysis with $0\leq j\leq {}$ for \n'.format(J) \
             + r"$k(\varphi)=(1-\gamma^2)/" \
             + r"(1+\gamma^2-2\gamma\cos(\varphi))$" \
-            + r'$,\ \gamma=' + str(g) + '$'
+            + r'$,\ \gamma={}$'.format(g)
         plt.title(titleStr)
     plt.xlabel('$(j,k)$')
     plt.ylabel('$(j\',k\')$')
     # plt.show()
 
-    titleSave="wlt_analysis-J_"+str(J)+"-gamma_"+str(g)+".pdf"
+    titleSave="wlt_analysis-J_{}-gamma_{}.pdf".format(J, g)
     plt.savefig(titleSave, bbox_inches="tight")
     plt.clf()
 
     # plot logarithmic wavelet representation
     log_result = []
     for row in result:
-        log_row = map(abs, row)
+        log_row = [abs(x) for x in row]
         log_result.append(log_row)
     MS = plt.matshow(log_result, norm=mpl.colors.LogNorm(), cmap=plt.cm.autumn)
     cbar = plt.colorbar(MS)
     if(args.plot_title):
-        titleStr='Wlt analysis with $0\leq j\leq '+str(J)+'$ for \n' \
+        titleStr='Wlt analysis with $0\leq j\leq {}$ for \n'.format(J) \
             + r"$k(\varphi)=(1-\gamma^2)/" \
             + r"(1+\gamma^2-2\gamma\cos(\varphi))$" \
-            + r'$,\ \gamma='+str(g) + '$'
+            + r'$,\ \gamma={}$'.format(g)
         plt.title(titleStr)
     plt.xlabel('$(j,k)$')
     plt.ylabel('$(j\',k\')$')
     # plt.show()
 
-    titleSave="wlt_analysis-J_"+str(J)+"-gamma_"+str(g)+"-log.pdf"
+    titleSave="wlt_analysis-J_{}-gamma_{}-log.pdf".format(J, g)
     plt.savefig(titleSave, bbox_inches="tight")
     plt.clf()
 
@@ -230,12 +230,12 @@ else:
 if(args.plot_title):
     titleStr=r"$k(\varphi)=(1-\gamma^2)/" \
         + r"(1+\gamma^2-2\gamma\cos(\varphi))$" \
-        + r'$,\ \gamma=' + str(g) + '$'
+        + r'$,\ \gamma={}$'.format(g)
     plt.title(titleStr)
     plt.ylabel(r"$k(\varphi)$")
 plt.xlabel(r"$\varphi$")
 # plt.show()
 
 plt.tight_layout()
-titleSave="phi"+"-gamma_"+str(g)+".pdf"
+titleSave="phi-gamma_{}.pdf".format(g)
 plt.savefig(titleSave)
