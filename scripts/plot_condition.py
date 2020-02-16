@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf8 -*-
 from __future__ import (absolute_import, print_function)
 import argparse
@@ -28,10 +28,10 @@ if args.presentation:
     mpl.rc('font',**{'family':'serif','size':20})
     mpl.rc('text', usetex=True)
     plt.plot(levels, conditions, linewidth=2.0, color='#0054AF')
-    plt.plot(levels, map(lambda l: 2**(2*l), levels), '.r', linewidth=2.0)
+    plt.plot(levels, [2**(2*l) for l in levels], '.r', linewidth=2.0)
 else:
     plt.plot(levels, conditions)
-    plt.plot(levels, map(lambda l: 2**(2*l), levels), '.r')
+    plt.plot(levels, [2**(2*l) for l in levels], '.r')
 plt.yscale('log')
 plt.ylabel('condition of trial-to-test matrix')
 plt.xlabel('level $\ell$, $h = 2^{-\ell}$')

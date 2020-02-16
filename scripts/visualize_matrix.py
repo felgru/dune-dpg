@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # This script can be used to generate a heatmap of a matrix
 #
@@ -27,13 +27,11 @@ with open(input_name,'r') as f:
     for line in lines[1:]:
         line = line.split()
         row = int(line[1])
-        col = 0
-        for entry in line[2:]:
+        for col, entry in enumerate(line[2:]):
             if entry != '.':
                 m[row,col] = np.float64(entry)
             else:
                 m[row,col] = np.float64(0.)
-            col += 1
     print('condition of matrix: ', np.linalg.cond(m))
     fig = plt.figure()
     ax = fig.add_subplot(111)
