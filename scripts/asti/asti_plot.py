@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf8 -*-
 from __future__ import (absolute_import, division, print_function)
 import argparse
@@ -37,7 +37,7 @@ def plot_convergence(data,
     rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(data['globalAccIteratesDiff']))]
     errIdealIteration = []
     for n in range(len(rhoN)):
-        t = ((np.asarray(map(float, data['eta'])))[0:n+1])[::-1]
+        t = np.asarray(data['eta'])[0:n+1][::-1]
         errIdealIteration.append(np.sum(rhoN[0:n+1]*t))
 
     iterationIndices = data['iterationIndices']
@@ -394,7 +394,7 @@ def plot_inner_iterations(data,
             '#33cc33', '#99e699',  # green
             '#cc0000', '#ff5c33',  # red
             '#b800e6', '#e580ff',  # purple
-            '#cc9900', '#ffd24d'  # yellow
+            '#cc9900', '#ffd24d',  # yellow
             ],
          simple_plot=False):
     fig, ax = plt.subplots()
@@ -407,7 +407,7 @@ def plot_inner_iterations(data,
     rhoN = [ (float(data['params']['rho']))**k for k in np.arange(len(data['globalAccIteratesDiff']))]
     errIdealIteration = []
     for n in range(len(rhoN)):
-        t = ((np.asarray(map(float, data['eta'])))[0:n+1])[::-1]
+        t = np.asarray(data['eta'])[0:n+1][::-1]
         errIdealIteration.append(np.sum(rhoN[0:n+1]*t))
 
     iterationIndices = data['iterationIndices']
@@ -416,7 +416,7 @@ def plot_inner_iterations(data,
     maxNumInnerIterations = []
     avgNumInnerIterations = []
     for oi in iterationIndices:
-        minNum = sys.maxint
+        minNum = sys.maxsize
         maxNum = 0
         sum = 0
         for direction in innerIterationStats[oi]:
@@ -432,7 +432,7 @@ def plot_inner_iterations(data,
     maxLevel = []
     avgLevel = []
     for oi in iterationIndices:
-        minNum = sys.maxint
+        minNum = sys.maxsize
         maxNum = 0
         sum = 0
         for direction in innerIterationStats[oi]:
@@ -521,7 +521,7 @@ def _plot_Dofs_per_direction(data,
     violinPos = []
     violinVal = []
     for i, num_Dofs in zip(iterationIndices, num_Dofs_per_iteration):
-        minNum = sys.maxint
+        minNum = sys.maxsize
         maxNum = 0
         for num in num_Dofs:
             minNum = min(minNum, num)
@@ -602,7 +602,7 @@ def _plot_num_directions(data,
     num_Dofs_per_iteration = [ num_Dofs_per_direction(innerIterationsStats[oi])
                                 for oi in iterationIndices ]
 
-    directions = ax.plot(iterationIndices, map(len, num_Dofs_per_iteration))
+    directions = ax.plot(iterationIndices, [len(nd) for nd in num_Dofs_per_iteration])
     # plot in RWTH red
     plt.setp(directions, linewidth=2.0,
              marker='x', markersize=4.0,
@@ -734,7 +734,7 @@ def plot_a_posteriori_err_VS_dofs(data,
 def parse_ylim(ylim_string):
     if not ylim_string:
         return None
-    return map(float,ylim_string.split(','))
+    return [float(y) for y in ylim_string.split(',')]
 
 def parse_ylims(ylim_string):
     if not ylim_string:

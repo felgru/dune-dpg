@@ -74,21 +74,21 @@ def readData(datafile):
         if(parameters['kernelApproxType']=='SVD'):
             svPat = re.compile(r'([0-9]+\.?[0-9]*e?-?[0-9]*)\n', re.MULTILINE)
             singularValues = svPat.findall(singularValuesPattern.search(errors).group())[1:]
-        iterationIndices = map(int, iterationIndicesPattern.findall(errors))[1:]
-        etas = map(float, etaPattern.findall(errors))[1:]
-        wltLevel = map(int, wltLevelPattern.findall(errors))[1:]
-        numS = map(int, numSPattern.findall(errors))[1:]
-        svdRank = map(int, svdRankPattern.findall(errors))[1:]
-        matrixTH = matrixTHpattern.findall(errors)[1:]
-        timeEvalKernel = map(float, timeEvalKernelPattern.findall(errors))[1:]
-        aPost = map(float, aPostPattern.findall(errors))[1:]
-        accKernel = map(float, accKernelPattern.findall(errors))[1:]
-        globalAccIteratesDiff = map(float,
-                globalAccIteratesDiffPattern.findall(errors))[1:]
-        globalAccApriori = map(float, globalAccAprioriPattern.findall(errors))[1:]
-        globalAccAposteriori = map(float,
-                globalAccAposterioriPattern.findall(errors))[1:]
-        dofs = map(int, dofsPattern.findall(errors))[1:]
+        iterationIndices = [int(i) for i in iterationIndicesPattern.findall(errors)][1:]
+        etas = [float(eta) for eta in etaPattern.findall(errors)][1:]
+        wltLevel = [int(l) for l in wltLevelPattern.findall(errors)][1:]
+        numS = [int(n) for n in numSPattern.findall(errors)][1:]
+        svdRank = [int(r) for r in svdRankPattern.findall(errors)][1:]
+        matrixTH = list(matrixTHpattern.findall(errors))[1:]
+        timeEvalKernel = [float(t) for t in timeEvalKernelPattern.findall(errors)][1:]
+        aPost = [float(a) for a in aPostPattern.findall(errors)][1:]
+        accKernel = [float(a) for a in accKernelPattern.findall(errors)][1:]
+        globalAccIteratesDiff = [float(d)
+                for d in globalAccIteratesDiffPattern.findall(errors)][1:]
+        globalAccApriori = [float(a) for a in globalAccAprioriPattern.findall(errors)][1:]
+        globalAccAposteriori = [float(a) for a in
+                globalAccAposterioriPattern.findall(errors)][1:]
+        dofs = [int(d) for d in dofsPattern.findall(errors)][1:]
         innerIterationsStats = defaultdict(list)
         for m in innerIterationsPattern.finditer(errors):
             innerIterationsStats[int(m.group(1))].append(

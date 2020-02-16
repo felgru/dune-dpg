@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import os
 import re
 import numpy as np
@@ -65,7 +65,7 @@ def plot(data,
             for la in sorted(data[ls][ks]):
                 for ka in sorted(data[ls][ks][la]):
                     d = data[ls][ks][la][ka]
-                    mesh = map(lambda x: 1./x, d['n'])
+                    mesh = [1./x for x in d['n']]
 
                     line = plt.plot(mesh, dataselect(d))
                     if isinstance(labelmaker, str) or labelmaker==None:
