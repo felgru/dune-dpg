@@ -31,8 +31,8 @@ $BUILDDIR/src/asti_checkerboard_normalized \
     $FINAL_ACCURACY $GAMMA $MAX_OUTER_ITERATIONS $GRID_RESOLUTION
 ```
 
-This creates a subdirectory that is named after the current date and
-time in $OUTPUTDIR and stores all output there.
+This creates the directory $OUTPUTDIR if it doesn't exist yet and
+stores all output there.
 
 The output consists of:
 

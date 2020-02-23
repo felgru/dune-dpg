@@ -55,7 +55,7 @@ void printHelp(const char* name) {
             << " -i: plot integrated solution\n"
             << " -n <n>: set maximal number of inner iterations to <n>\n"
             << " -o <dir>: set output directory to <dir>, default is "
-               "\"../results/\"\n"
+               "\"./results/<current date and time>\"\n"
             << " -k <k>: set ratio between kernel and transport accuracy"
                " to <k>\n"
             << " -l <l>: set wavelet level of truth matrix for the scattering"
@@ -90,7 +90,7 @@ int main(int argc, char** argv)
   ///////////////////////////////////
 
   ASTIPlotFlags plotFlags = ASTIPlotFlags::doNotPlot;
-  std::string basedir = "../results/";
+  std::string outdir = "";
   unsigned int maxNumberOfInnerIterations = 64;
   double accuracyRatio = 0.5;
   size_t scatteringTruthLevel = 6;
@@ -105,7 +105,7 @@ int main(int argc, char** argv)
         case 'r': plotFlags |= ASTIPlotFlags::plotRhs; break;
         case 'i': plotFlags |= ASTIPlotFlags::plotIntegratedSolution; break;
         case 'n': maxNumberOfInnerIterations = std::atoi(optarg); break;
-        case 'o': basedir = optarg; break;
+        case 'o': outdir = optarg; break;
         case 'k': accuracyRatio = std::atof(optarg); break;
         case 'l': scatteringTruthLevel = std::atoi(optarg); break;
         default:
@@ -130,17 +130,16 @@ int main(int argc, char** argv)
   checkSizeGrid(sizeGrid, 7);
 #endif
 
-  std::string foldername;
-  {
+  if (outdir == "") {
     const auto now = std::chrono::system_clock::now();
     const std::time_t cnow = std::chrono::system_clock::to_time_t(now);
     std::stringstream folderstream;
-    folderstream << basedir
+    folderstream << "results/"
                  << std::put_time(std::localtime(&cnow), "%F-time%H%M%S");
-    foldername = folderstream.str();
+    outdir = folderstream.str();
   }
-  std::system(("mkdir -p "+foldername).data());
-  std::cout << "output path: " << foldername << "\n\n";
+  std::system(("mkdir -p "+outdir).data());
+  std::cout << "output path: " << outdir << "\n\n";
 
   ///////////////////////////////////
   //   Generate the grid
@@ -290,7 +289,7 @@ int main(int argc, char** argv)
       .solve(*grid, f, g, homogeneous_inflow_boundary, sigma,
              HenyeyGreensteinScattering(gamma),
              approximationParameters, targetAccuracy, N,
-             maxNumberOfInnerIterations, foldername, plotFlags);
+             maxNumberOfInnerIterations, outdir, plotFlags);
 
   return 0;
 }
