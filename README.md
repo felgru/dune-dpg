@@ -255,6 +255,34 @@ Here's the BibTeX data for the paper:
 }
 ```
 
+If you are using our ASTI implementation for radiative transfer problems,
+please also consider citing
+[Felix’ thesis](http://dx.doi.org/10.18154/RWTH-2018-230893)
+([PDF](https://publications.rwth-aachen.de/record/750850/files/750850.pdf))
+and our [Math. Comp. paper](http://dx.doi.org/10.1090/mcom/3505)
+([arXiv preprint](https://arxiv.org/abs/1810.07035v2)).
+The BibTeX entries for these are:
+
+```bibtex
+@PhdThesis{Gruber2018,
+  author    = {Felix Gruber},
+  title     = {Adaptive Source Term Iteration: A Stable Formulation for Radiative Transfer},
+  school    = {RWTH Aachen University},
+  year      = {2018},
+  doi       = {10.18154/RWTH-2018-230893},
+  keywords  = {DPG transport solver; fast application of scattering operator; iteration in function space},
+}
+
+@Article{DGM2020,
+  author     = {Wolfgang Dahmen and Felix Gruber and Olga Mula},
+  title      = {An Adaptive Nested Source Term Iteration for Radiative Transfer Equations},
+  journal    = {Mathematics of Computation},
+  year       = {2020},
+  doi        = {10.1090/mcom/3505},
+  keywords   = {DPG transport solver, iteration in function space, fast application of scattering operator, Hilbert–Schmidt decomposition, matrix compression},
+}
+```
+
 If you are using other Dune modules, you might find the corresponding
 papers [here](https://dune-project.org/about/publications/).
 
