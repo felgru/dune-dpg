@@ -89,8 +89,10 @@ three example programs:
 plot_solution.cc computes the solution with Discontinuous Petrov-Galerkin
 finite elements of the pure transport problem
 ```math
-  \beta \cdot \phi +c \phi = 1 in [0,1]x[0,1]
-                      \phi = 0 on the boundary
+\begin{cases}
+  \beta \cdot \varphi +c \varphi = 1 & \text{in $[0,1]\times[0,1]$} \\
+                         \varphi = 0 & \text{on the boundary}
+\end{cases}
 ```
 We refer to the paper for notations and also
 for indications on how to solve other Partial Differential Equations.
@@ -111,10 +113,10 @@ The program will write two .vtu files to the current working directory,
   - transport_solution.vtu
   - transport_solution_trace.vtu
 
-They contain the numerical solution of the interior variable $`\phi`$
+They contain the numerical solution of the interior variable $`\varphi`$
 and the lifting $`w`$ of the trace variable (cf. paper).
-The files allow to visualize $`\phi`$ and $`w`$ in ParaView. If you have
-the pvpython interpreter shipped with ParaView, you can also run
+The files allow to visualize $`\varphi`$ and $`w`$ in ParaView. If you
+have the pvpython interpreter shipped with ParaView, you can also run
 `scripts/plot_solution.py` to regenerate the solution plot given in the paper.
 (This script was run with ParaView 4.2.0. As the Python interface of ParaView
 seems to be highly unstable we cannot guarantee that the script will run
@@ -141,8 +143,10 @@ They can be run in `$DUNEDIR/dune-dpg/build-cmake/src/` by e.g.
 
 to compute the numerical example of the paper,
 ```math
-  \beta \cdot \phi = 1 in [0,1]x[0,1]
-              \phi = 0 on the boundary
+\begin{cases}
+  \beta \cdot \varphi = 1 & \text{in $[0,1]\times[0,1]$} \\
+              \varphi = 0 & \text{on the boundary}
+\end{cases}
 ```
 for $`\beta=(\cos(\pi/8),\sin(\pi/8))`$. The additional feature that is
 given in this example is the computation of the exact L2 error and its a
@@ -205,8 +209,10 @@ They can be run in `$DUNEDIR/dune-dpg/build-cmake/src/` by e.g.
 
 to measure the time to compute the numerical example of the paper,
 ```math
-  \beta \cdot \phi = 1 in [0,1]x[0,1]
-              \phi = 0 on the boundary
+\begin{cases}
+  \beta \cdot \varphi = 1 & \text{in $[0,1]\times[0,1]$} \\
+              \varphi = 0 & \text{on the boundary}
+\end{cases}
 ```
 for $`\beta=(\cos(\pi/8),\sin(\pi/8))`$.
 
