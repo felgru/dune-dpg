@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
 ## 0.4.3 (Unreleased)
+### Added
+* Added references to Felix’ thesis and our ASTI Math. Comp. paper
+  to the README.
+
 ### Changed
 * dune-dpg has been made compatible with the 2.7.0 release of the
   Dune core modules.
@@ -13,6 +17,8 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   should contain all the commits required by dune-dpg.
 * When setting a custom output directory for the asti_* example
   programs, we don't append a timestamp to this directory anymore.
+* The descriptions of example programs and how to run them have all
+  been moved to doc/experiments.md.
 
 ### Fixed
 * FindBoostHana.cmake now correctly uses the `BOOST_INCLUDEDIR`
