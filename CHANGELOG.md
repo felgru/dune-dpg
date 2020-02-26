@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
-## 0.4.3 (Unreleased)
+## 0.4.3 - 2020-02-26
 ### Added
 * Added references to Felix’ thesis and our ASTI Math. Comp. paper
   to the README.
