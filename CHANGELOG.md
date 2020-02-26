@@ -35,6 +35,31 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 * `bindLocalIndexSets` and `getLocalIndexSets` have been removed,
   as IndexSets have been deprecated in dune-functions 2.6.
 
+## 0.4.3 - 2020-02-26
+### Added
+* Added references to Felix’ thesis and our ASTI Math. Comp. paper
+  to the README.
+
+### Changed
+* dune-dpg has been made compatible with the 2.7.0 release of the
+  Dune core modules.
+* All plotting scripts have been made compatible with Python 3.
+* The dependency for dune-subgrid has been lowered to version 2.6 which
+  should contain all the commits required by dune-dpg.
+* When setting a custom output directory for the asti_* example
+  programs, we don't append a timestamp to this directory anymore.
+* The descriptions of example programs and how to run them have all
+  been moved to doc/experiments.md.
+
+### Fixed
+* FindBoostHana.cmake now correctly uses the `BOOST_INCLUDEDIR`
+  variable. It can thus find Boost::Hana now if you have a non-standard
+  Boost include path, provided that you specify it with
+  `-DBOOST_INCLUDEDIR=…` when invoking cmake.
+* The `OptimalTestBasis` class has been fixed. It went unnoticed for
+  a long time, that this class didn't compile as none of our test
+  programs is using it anymore.
+
 ## 0.4.2 - 2018-11-21
 ### Added
 * Added description of how to plot the condition number of the
