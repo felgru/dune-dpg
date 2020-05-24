@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <vector>
 
+#include <dune/common/version.hh>
 #include <dune/dpg/functions/constraineddiscreteglobalbasisfunction.hh>
 #include <dune/dpg/functions/discreteglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
@@ -62,11 +63,20 @@ private:
       subGridLocalFunction.bind(element);
     }
 
-    Range operator()(const HostDomain& x) const {
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,7)
+    Range operator()(const HostDomain& x) const
+#else
+    void evaluate(const HostDomain& x, Range& y) const
+#endif
+    {
       const SubGridDomain xsg
         = subGridLocalFunction.localContext().geometry()
           .local(hostElement->geometry().global(x));
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,7)
       return subGridLocalFunction(xsg);
+#else
+      y = subGridLocalFunction(xsg);
+#endif
     }
 
     DiscreteGlobalBasisFunction subGridFunction;

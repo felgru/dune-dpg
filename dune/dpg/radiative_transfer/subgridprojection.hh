@@ -12,6 +12,7 @@
 
 #include <boost/hana.hpp>
 
+#include <dune/common/version.hh>
 #include <dune/common/exceptions.hh>
 #include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
@@ -53,13 +54,23 @@ namespace detail {
         elementData(elementData)
     {}
 
-    Range operator()(const Domain& x) const {
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,7)
+    Range operator()(const Domain& x) const
+#else
+    void evaluate(const Domain& x, Range& y) const
+#endif
+    {
       auto&& localBasis = finiteElement.localBasis();
 
       shapeFunctionValues.resize(localBasis.size());
       localBasis.evaluateFunction(x, shapeFunctionValues);
 
-      return std::inner_product(shapeFunctionValues.cbegin(),
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,7)
+      return
+#else
+      y =
+#endif
+             std::inner_product(shapeFunctionValues.cbegin(),
                                 shapeFunctionValues.cend(),
                                 elementData.cbegin(),
                                 Range(0));
@@ -98,14 +109,24 @@ namespace detail {
         elementData(elementData)
     {}
 
-    Range operator()(const Domain& x) const {
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,7)
+    Range operator()(const Domain& x) const
+#else
+    void evaluate(const Domain& x, Range& y) const
+#endif
+    {
       auto&& localBasis = finiteElement.localBasis();
 
       shapeFunctionValues.resize(localBasis.size());
       localBasis.evaluateFunction(subGeometryInReferenceElement.global(x),
                                   shapeFunctionValues);
 
-      return std::inner_product(shapeFunctionValues.cbegin(),
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,7)
+      return
+#else
+      y =
+#endif
+             std::inner_product(shapeFunctionValues.cbegin(),
                                 shapeFunctionValues.cend(),
                                 elementData.cbegin(),
                                 Range(0));

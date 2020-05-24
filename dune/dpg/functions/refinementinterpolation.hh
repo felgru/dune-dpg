@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include <dune/common/version.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
 
 namespace Dune {
@@ -69,7 +70,12 @@ namespace detail {
         elementData(elementData)
     {}
 
-    Range operator()(const Domain& x) const {
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,7)
+    Range operator()(const Domain& x) const
+#else
+    void evaluate(const Domain& x, Range& y) const
+#endif
+    {
       const Domain xElement = childInElementGeometry.global(x);
 
       auto&& localBasis = finiteElement.localBasis();
@@ -77,7 +83,12 @@ namespace detail {
       shapeFunctionValues.resize(localBasis.size());
       localBasis.evaluateFunction(xElement, shapeFunctionValues);
 
-      return std::inner_product(shapeFunctionValues.cbegin(),
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,7)
+      return
+#else
+      y =
+#endif
+             std::inner_product(shapeFunctionValues.cbegin(),
                                 shapeFunctionValues.cend(),
                                 elementData, Range(0));
     }
