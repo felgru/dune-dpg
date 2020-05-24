@@ -8,6 +8,7 @@
 #include <numeric>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <dune/common/hybridutilities.hh>
@@ -39,7 +40,7 @@ namespace Dune {
         const Offsets& localOffsets,
         const Offsets& globalOffsets) {
       Hybrid::forEach(
-          Std::make_index_sequence<
+          std::make_index_sequence<
               std::tuple_size<LocalViews>::value>{},
           [&](auto i) {
             auto const & localView = std::get<i>(localViews);

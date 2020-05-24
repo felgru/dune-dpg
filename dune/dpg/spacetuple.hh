@@ -207,7 +207,7 @@ namespace Dune {
 #ifndef DOXYGEN
   template<class Tuple, class Functor, std::size_t... I>
   inline auto genericTransformSpaceTupleBackendImpl(
-      Tuple& t, Functor& f, const Std::index_sequence<I...>& )
+      Tuple& t, Functor& f, const std::index_sequence<I...>& )
     -> std::tuple<decltype(f(std::get<I>(t)))...>
   {
     return std::tuple<decltype(f(std::get<I>(t)))...>(f(std::get<I>(t))...);
@@ -237,16 +237,16 @@ namespace Dune {
 
   template<class... Args, class Functor>
   auto genericTransformSpaceTupleBackend(std::tuple<Args...>& t, Functor& f) ->
-    decltype(genericTransformSpaceTupleBackendImpl(t, f,Std::index_sequence_for<Args...>{}))
+    decltype(genericTransformSpaceTupleBackendImpl(t, f, std::index_sequence_for<Args...>{}))
   {
-    return genericTransformSpaceTupleBackendImpl(t, f,Std::index_sequence_for<Args...>{});
+    return genericTransformSpaceTupleBackendImpl(t, f, std::index_sequence_for<Args...>{});
   }
 
   template<class... Args, class Functor>
   auto genericTransformSpaceTupleBackend(const std::tuple<Args...>& t, Functor& f) ->
-    decltype(genericTransformSpaceTupleBackendImpl(t, f, Std::index_sequence_for<Args...>{}))
+    decltype(genericTransformSpaceTupleBackendImpl(t, f, std::index_sequence_for<Args...>{}))
   {
-    return genericTransformSpaceTupleBackendImpl(t, f, Std::index_sequence_for<Args...>{});
+    return genericTransformSpaceTupleBackendImpl(t, f, std::index_sequence_for<Args...>{});
   }
 #endif
 

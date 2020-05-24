@@ -506,7 +506,7 @@ inline size_t computeOffsets(Offsets& offsets, const SpacesOrLocalViews& s,
   size_t numDofs = start;
 
   Hybrid::forEach(
-      Std::make_index_sequence<
+      std::make_index_sequence<
           std::tuple_size<SpacesOrLocalViews>::value>{},
       [&](auto i) {
         offsets[i] = numDofs;
@@ -523,7 +523,7 @@ inline size_t computeOffset(const SpacesOrLocalViews& s,
   size_t numDofs = start;
 
   Hybrid::forEach(
-      Std::make_index_sequence<spaceIndex>{},
+      std::make_index_sequence<spaceIndex>{},
       [&](auto i) {
         numDofs += std::get<i>(s).size();
       });
