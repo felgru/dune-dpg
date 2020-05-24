@@ -6,11 +6,13 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
 ## 0.5 (Unreleased)
 ### Changed
+* dune-dpg has been made compatible with the 2.8 development version
+  of the Dune core modules.
 * The `DoerflerMarking` function now uses `std::stable_sort` instead
   of `std::sort` to remove a source of potential non-determinism
   when there are elements with the same error estimates and only one
   of them gets marked.
-* Fix last remaining compilation warnings gvien by GCC 8.
+* Fix last remaining compilation warnings given by GCC 8.
 * Small optimization of `intersectSubGrids`: If the maxLevel of both
   subgrids is different, we only need to iterate until the smaller
   maxLevel.

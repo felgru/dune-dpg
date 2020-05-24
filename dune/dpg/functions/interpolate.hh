@@ -4,7 +4,6 @@
 #define DUNE_DPG_FUNCTIONS_INTERPOLATE_HH
 
 #include <algorithm>
-#include <dune/functions/common/functionfromcallable.hh>
 #include <dune/functions/functionspacebases/interpolate.hh>
 #include <dune/geometry/affinegeometry.hh>
 #include <dune/geometry/referenceelements.hh>
@@ -52,7 +51,6 @@ VectorType interpolateToUniformlyRefinedGrid(
     using CoarseFiniteElement = std::decay_t<decltype(coarseLocalView.tree().finiteElement())>;
     using CoarseLocalBasis = typename CoarseFiniteElement::Traits::LocalBasisType;
     using FiniteElementRange = typename CoarseLocalBasis::Traits::RangeType;
-    using FunctionBaseClass = typename Dune::LocalFiniteElementFunctionBase<CoarseFiniteElement>::type;
     using LocalDomain = typename CoarseLocalBasis::Traits::DomainType;
     constexpr unsigned int dim = CoarseLocalBasis::Traits::dimDomain;
 
@@ -85,11 +83,9 @@ VectorType interpolateToUniformlyRefinedGrid(
         return y;
       };
 
-      using FunctionFromCallable = typename Dune::Functions::FunctionFromCallable<FiniteElementRange(LocalDomain), decltype(localF), FunctionBaseClass>;
-
       auto interpolationValues = std::vector<FiniteElementRange>();
       fineLocalView.tree().finiteElement().localInterpolation()
-          .interpolate(FunctionFromCallable(localF), interpolationValues);
+          .interpolate(localF, interpolationValues);
 
       for (size_t i=0, nFine=fineLocalView.size(); i<nFine; i++)
       {

@@ -62,11 +62,11 @@ private:
       subGridLocalFunction.bind(element);
     }
 
-    void evaluate(const HostDomain& x, Range& y) const {
+    Range operator()(const HostDomain& x) const {
       const SubGridDomain xsg
         = subGridLocalFunction.localContext().geometry()
           .local(hostElement->geometry().global(x));
-      y = subGridLocalFunction(xsg);
+      return subGridLocalFunction(xsg);
     }
 
     DiscreteGlobalBasisFunction subGridFunction;

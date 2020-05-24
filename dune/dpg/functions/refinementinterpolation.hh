@@ -69,7 +69,7 @@ namespace detail {
         elementData(elementData)
     {}
 
-    void evaluate(const Domain& x, Range& y) const {
+    Range operator()(const Domain& x) const {
       const Domain xElement = childInElementGeometry.global(x);
 
       auto&& localBasis = finiteElement.localBasis();
@@ -77,9 +77,9 @@ namespace detail {
       shapeFunctionValues.resize(localBasis.size());
       localBasis.evaluateFunction(xElement, shapeFunctionValues);
 
-      y = std::inner_product(shapeFunctionValues.cbegin(),
-                             shapeFunctionValues.cend(),
-                             elementData, Range(0));
+      return std::inner_product(shapeFunctionValues.cbegin(),
+                                shapeFunctionValues.cend(),
+                                elementData, Range(0));
     }
 
     const FiniteElement& finiteElement;

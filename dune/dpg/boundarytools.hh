@@ -40,18 +40,13 @@ namespace Dune {
       using DomainType = FieldVector<double, 2>;
       using RangeType  = FieldVector<double, 1>;
 
-      struct Traits
-      {
-        using DomainType = FieldVector<double, 2>;
-        using RangeType  = FieldVector<double, 1>;
-      };
-
       BoundaryCondition(const Function& g) : g_(g) {};
 
       // Remark: this signature assumes that we have a 2D scalar problem
-      void evaluate(
-        const DomainType& x,
-        RangeType& y) const;
+      RangeType operator()(const DomainType& x) const
+      {
+        return g_(x);
+      }
     };
 
   public:
@@ -90,15 +85,6 @@ namespace Dune {
                         GeometryType
                         );
   };
-
-  template<class Function>
-  void BoundaryTools::BoundaryCondition<Function>::evaluate(
-                                            const DomainType& x,
-                                            RangeType& y
-                                            ) const
-  {
-    y = g_(x);
-  }
 
   /**
    * \brief Writes in the vector dirichletNodes whether a degree of freedom is in the boundary (value 1) or not (value 0).
