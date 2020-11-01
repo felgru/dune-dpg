@@ -10,8 +10,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/hana.hpp>
-
 #include <dune/common/version.hh>
 #include <dune/common/exceptions.hh>
 #include <dune/dpg/functions/gridviewfunctions.hh>
@@ -350,20 +348,15 @@ namespace detail {
               * quadPoint.weight();
 
           std::vector<FieldVector<double, 1> > subGridValues;
-          boost::hana::eval_if(
-              is_ContinuouslyRefinedFiniteElement<SubGridSpace>{},
-              [&](auto id)
-              {
-                id(subGridLocalFiniteElement).localBasis()
-                    .evaluateFunction(subElementIndex,
-                                      subGridQuadPos,
-                                      subGridValues);
-              },
-              [&](auto id)
-              {
-                id(subGridLocalFiniteElement).localBasis()
-                    .evaluateFunction(subGridQuadPos, subGridValues);
-              });
+          if constexpr (is_ContinuouslyRefinedFiniteElement<SubGridSpace>{}) {
+            subGridLocalFiniteElement.localBasis()
+                .evaluateFunction(subElementIndex,
+                                  subGridQuadPos,
+                                  subGridValues);
+          } else {
+            subGridLocalFiniteElement.localBasis()
+                .evaluateFunction(subGridQuadPos, subGridValues);
+          }
 
           const auto& hostLocalFiniteElement
               = hostGridLocalView.tree().finiteElement();
@@ -384,7 +377,7 @@ namespace detail {
           }
         }
       }
-      if(is_DGRefinedFiniteElement<SubGridSpace>::value)
+      if constexpr (is_DGRefinedFiniteElement<SubGridSpace>::value)
         subElementOffset += subGridLocalFiniteElement.size();
       subElementIndex++;
     }
@@ -833,7 +826,7 @@ private:
         return {subElement, subElementOffset};
       }
 
-      if(is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
+      if constexpr (is_DGRefinedFiniteElement<SubGridGlobalBasis>::value)
         subElementOffset += localFiniteElement.size();
     }
     DUNE_THROW(Exception,
@@ -872,12 +865,11 @@ private:
         "Interpolation only implemented for up to one level of"
         " local refinement!");
 
-      const auto sourceSubElementAndOffset
+      const auto [sourceSubElement, sourceSubElementOffset]
           = findSubElementContainingChild(childEmbedding, sourceLocalView);
 
-      const auto sourceSubElement = sourceSubElementAndOffset.first;
       const auto sourceLocalDataBegin = sourceLocalData.cbegin()
-                                      + sourceSubElementAndOffset.second;
+                                      + sourceSubElementOffset;
 
       const auto sourceSubGeometryInReferenceElement
           = sourceSubElement.geometry();

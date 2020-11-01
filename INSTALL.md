@@ -136,7 +136,7 @@ Building and compiling dune and dune-dpg
 the C and C++ compiler in it. In our case, we have used gcc and g++ so
 the file reads
 ```
-CMAKE_FLAGS="-DCMAKE_C_COMPILER='gcc-6' -DCMAKE_CXX_COMPILER='g++-6'"
+CMAKE_FLAGS="-DCMAKE_C_COMPILER='gcc-7' -DCMAKE_CXX_COMPILER='g++-7'"
 CMAKE_FLAGS+=" -DCMAKE_CXX_FLAGS='-pedantic -Wall'"
 ```
 
@@ -144,7 +144,7 @@ Remarks:
  - On MacOS, the C compiler is set to clang by default so the previous
    configuration option cannot be omitted.
    Additionally g++ is a symlink to clang on MacOS, so one has to use
-   the versioned compiler name g++-6. The same goes for gcc.
+   the versioned compiler name g++-7. The same goes for gcc.
  - The use of clang and clang++ is in principle also possible here although
    this compiler has not been tested.
  - The second line adds some compile flags to give more warnings.

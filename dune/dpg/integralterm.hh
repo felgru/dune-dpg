@@ -264,12 +264,7 @@ void IntegralTerm<type, domain_of_integration, LocalCoefficients>
     + requiredQuadratureOrder<typename LocalCoefficients::LocalFactor>::value;
 
 
-  using namespace Dune::Hybrid;
-  ifElse(equals(std::integral_constant<DomainOfIntegration,
-                                       domain_of_integration>(),
-                std::integral_constant<DomainOfIntegration,
-                                       DomainOfIntegration::interior>()),
-  [&](auto id) {
+  if constexpr (domain_of_integration == DomainOfIntegration::interior) {
     detail::GetLocalMatrix<type, LhsSpace, RhsSpace>
                          ::interiorImpl(lhsLocalView,
                                         rhsLocalView,
@@ -279,7 +274,7 @@ void IntegralTerm<type, domain_of_integration, LocalCoefficients>
                                         quadratureOrder,
                                         element,
                                         localCoefficients_);
-  }, [&](auto id) {
+  } else {
     detail::GetLocalMatrix<type, LhsSpace, RhsSpace>
                          ::faceImpl(lhsLocalView,
                                     rhsLocalView,
@@ -289,8 +284,7 @@ void IntegralTerm<type, domain_of_integration, LocalCoefficients>
                                     quadratureOrder,
                                     element,
                                     localCoefficients_);
-
-  });
+  }
 }
 
 } // end namespace Dune

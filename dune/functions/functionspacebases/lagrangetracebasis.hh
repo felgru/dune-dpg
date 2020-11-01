@@ -98,7 +98,7 @@ public:
   {
     vertexOffset_        = 0;
     edgeOffset_          = vertexOffset_ + gridView_.size(dim);
-    if (dim==3)
+    if constexpr (dim==3)
     {
       triangleOffset_      = edgeOffset_
                            + dofsPerEdge * gridView_.size(dim-1);
@@ -147,21 +147,18 @@ public:
 
   size_type size() const
   {
-    switch (dim)
-    {
-      case 1:
-        return gridView_.size(dim);
-      case 2:
-        return gridView_.size(dim) + dofsPerEdge * gridView_.size(1);
-      case 3:
-      {
-        return gridView_.size(dim) + dofsPerEdge * gridView_.size(2)
-             + dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
-             + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
-      }
+    if constexpr (dim == 1) {
+      return gridView_.size(dim);
+    } else if constexpr (dim == 2) {
+      return gridView_.size(dim) + dofsPerEdge * gridView_.size(1);
+    } else if constexpr (dim == 3) {
+      return gridView_.size(dim) + dofsPerEdge * gridView_.size(2)
+           + dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
+           + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
+    } else {
+      static_assert(dim >= 1 && dim <= 3,
+                    "No size method implemented for this dimension!");
     }
-    DUNE_THROW(Dune::NotImplemented,
-               "No size method for " << dim << "d grids available yet!");
   }
 
   //! Return number possible values for next position in multi index
@@ -338,7 +335,7 @@ public:
 
       if (dofDim==1)
       {  // edge dof
-        if (dim==1)   // element dof -- any local numbering is fine
+        if constexpr (dim==1)   // element dof -- any local numbering is fine
         {
           DUNE_THROW(Dune::NotImplemented,
               "traces have no elements of codimension 0");
@@ -366,7 +363,7 @@ public:
 
       if (dofDim==2)
       {
-        if (dim==2)   // element dof -- any local numbering is fine
+        if constexpr (dim==2)   // element dof -- any local numbering is fine
         {
           DUNE_THROW(Dune::NotImplemented,
               "traces have no elements of codimension 0");

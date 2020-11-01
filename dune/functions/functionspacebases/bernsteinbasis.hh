@@ -140,7 +140,7 @@ public:
 
     quadrilateralOffset_ = triangleOffset_        + dofsPerTriangle * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::triangle));
 
-    if (dim==3) {
+    if constexpr (dim==3) {
       tetrahedronOffset_   = quadrilateralOffset_ + dofsPerQuad * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::quadrilateral));
 
       prismOffset_         = tetrahedronOffset_   +   dofsPerTetrahedron * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::tetrahedron));
@@ -218,31 +218,27 @@ public:
   //! Same as size(prefix) with empty prefix
   size_type size() const
   {
-    switch (dim)
-    {
-      case 1:
-        return dofsPerVertex * static_cast<size_type>(gridView_.size(dim))
-          + dofsPerEdge*static_cast<size_type>(gridView_.size(dim-1));
-      case 2:
-      {
-        return dofsPerVertex * static_cast<size_type>(gridView_.size(dim))
-          + dofsPerEdge * static_cast<size_type>(gridView_.size(dim-1))
-          + dofsPerTriangle * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::triangle))
-          + dofsPerQuad * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::quadrilateral));
-      }
-      case 3:
-      {
-        return dofsPerVertex * static_cast<size_type>(gridView_.size(dim))
-          + dofsPerEdge * static_cast<size_type>(gridView_.size(dim-1))
-          + dofsPerTriangle * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::triangle))
-          + dofsPerQuad * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::quadrilateral))
-          + dofsPerTetrahedron * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::tetrahedron))
-          + dofsPerPyramid * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::pyramid))
-          + dofsPerPrism * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::prism))
-          + dofsPerHexahedron * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::hexahedron));
-      }
+    if constexpr (dim == 1) {
+      return dofsPerVertex * static_cast<size_type>(gridView_.size(dim))
+        + dofsPerEdge * static_cast<size_type>(gridView_.size(dim-1));
+    } else if constexpr (dim == 2) {
+      return dofsPerVertex * static_cast<size_type>(gridView_.size(dim))
+        + dofsPerEdge * static_cast<size_type>(gridView_.size(dim-1))
+        + dofsPerTriangle * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::triangle))
+        + dofsPerQuad * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::quadrilateral));
+    } else if constexpr (dim == 3) {
+      return dofsPerVertex * static_cast<size_type>(gridView_.size(dim))
+        + dofsPerEdge * static_cast<size_type>(gridView_.size(dim-1))
+        + dofsPerTriangle * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::triangle))
+        + dofsPerQuad * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::quadrilateral))
+        + dofsPerTetrahedron * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::tetrahedron))
+        + dofsPerPyramid * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::pyramid))
+        + dofsPerPrism * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::prism))
+        + dofsPerHexahedron * static_cast<size_type>(gridView_.size(Dune::GeometryTypes::hexahedron));
+    } else {
+      static_assert(dim >= 1 && dim <= 3,
+                    "No size method implemented for this dimension!");
     }
-    DUNE_THROW(Dune::NotImplemented, "No size method for " << dim << "d grids available yet!");
   }
 
   //! Return number of possible values for next position in multi index

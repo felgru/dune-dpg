@@ -159,7 +159,7 @@ void LinearIntegralTerm<integrationType,
   const auto quadratureOrder
     = localView.tree().finiteElement().localBasis().order()
     + requiredQuadratureOrder<typename LocalCoefficients::LocalFactor>::value;
-  if(domainOfIntegration == DomainOfIntegration::interior) {
+  if constexpr (domainOfIntegration == DomainOfIntegration::interior) {
     detail::GetLocalLinearTermVector<integrationType, Space>
                ::getLocalVector(localView,
                                 elementVector,
@@ -168,7 +168,10 @@ void LinearIntegralTerm<integrationType,
                                 localCoefficients_
                                 );
   } else {
-  //TODO
+    static_assert(domainOfIntegration == DomainOfIntegration::interior,
+        "LinearIntegralTerm::getLocalVector only implemented for interior "
+        "domain of integration.");
+    //TODO
   }
 
 }

@@ -96,7 +96,7 @@ public:
   void initializeIndices()
   {
     edgeOffset_          = 0;
-    if (dim==3)
+    if constexpr (dim==3)
     {
       DUNE_THROW(Dune::NotImplemented, "LagrangeFaceNodalBasis for 3D grids is not implemented");
       triangleOffset_      = 0;
@@ -144,24 +144,21 @@ public:
 
   size_type size() const
   {
-    switch (dim)
-    {
-      case 1:
-        DUNE_THROW(Dune::NotImplemented,
-                   "LagrangeFaceNodalBasis for 1D grids is not implemented");
-        return 2*gridView_.size(dim)-2;
-      case 2:
-        return dofsPerEdge*gridView_.size(1);
-      case 3:
-      {
-        DUNE_THROW(Dune::NotImplemented,
-                   "LagrangeFaceNodalBasis for 3D grids is not implemented");
-        return dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
-             + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
-      }
+    if constexpr (dim == 1) {
+      static_assert(dim == 2,
+          "LagrangeFaceNodalBasis for 1D grids is not implemented");
+      return 2*gridView_.size(dim)-2;
+    } else if constexpr (dim == 2) {
+      return dofsPerEdge*gridView_.size(1);
+    } else if constexpr (dim == 3) {
+      static_assert(dim == 2,
+          "LagrangeFaceNodalBasis for 3D grids is not implemented");
+      return dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
+           + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
+    } else {
+      static_assert(dim >= 1 && dim <= 3,
+          "No size method implemented for this dimension!");
     }
-    DUNE_THROW(Dune::NotImplemented,
-               "No size method for " << dim << "d grids available yet!");
   }
 
   //! Return number possible values for next position in multi index
@@ -336,7 +333,7 @@ public:
 
       if (dofDim==1)
       {  // edge dof
-        if (dim==1)   // element dof -- any local numbering is fine
+        if constexpr (dim==1)   // element dof -- any local numbering is fine
         {
           DUNE_THROW(Dune::NotImplemented,
               "faces have no elements of codimension 0");
@@ -364,7 +361,7 @@ public:
 
       if (dofDim==2)
       {
-        if (dim==2)   // element dof -- any local numbering is fine
+        if constexpr (dim==2)   // element dof -- any local numbering is fine
         {
           DUNE_THROW(Dune::NotImplemented,
                      "faces have no elements of codimension 0");

@@ -5,6 +5,7 @@
 
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/power.hh>
+#include <dune/common/std/type_traits.hh>
 #include <dune/functions/functionspacebases/referencerefinementfactory.hh>
 #include <dune/typetree/traversal.hh>
 #include <dune/typetree/visitor.hh>
@@ -91,11 +92,8 @@ public:
   template<typename Node, typename TreePath>
   void leaf(Node& node, TreePath treePath)
   {
-    Hybrid::ifElse(
-      Std::is_detected<hasResetSubElements,Node>{},
-      [&](auto id) {
-        id(node).resetSubElements();
-      });
+    if constexpr (Std::is_detected<hasResetSubElements, Node>{})
+      node.resetSubElements();
   }
 };
 

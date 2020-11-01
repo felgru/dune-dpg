@@ -10,11 +10,10 @@
 #include <functional>
 #include <iomanip>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
-
-#include <dune/common/std/optional.hh>
 
 #include <dune/istl/matrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -178,7 +177,7 @@ class ASTI {
       const FieldVector<double, 2>& s,
       const Sigma sigma,
       RHSVector& rhsVector,
-      const Std::optional<VectorType>& bvExtension);
+      const std::optional<VectorType>& bvExtension);
 
   /**
    * Adaptively compute transport solution
@@ -201,7 +200,7 @@ class ASTI {
       const Sigma sigma,
       RHSData& rhsData,
       ScatteringData& scatteringData,
-      Std::optional<BVData>& bvData,
+      std::optional<BVData>& bvData,
       TransportLogger transportLogger,
       TransportPlotter transportPlotter,
       double transportAccuracy,
@@ -1155,7 +1154,7 @@ computeBvData(
             std::declval<typename Spaces::FEBasisTest>(),
             std::declval<FEBasisHostTrace>(),
             std::declval<VectorType>()))>;
-  std::vector<Std::optional<BVData>> bvData;
+  std::vector<std::optional<BVData>> bvData;
 
   const VectorType boundaryExtension
       = harmonic_extension_of_boundary_values(g, hostGridGlobalBasis);
@@ -1188,7 +1187,7 @@ compute_transport_solution(
     const FieldVector<double, 2>& s,
     const Sigma sigma,
     RHSVector& rhsFunctional,
-    const Std::optional<VectorType>& bvExtension)
+    const std::optional<VectorType>& bvExtension)
 {
   auto bilinearForm =
     bilinearFormWithSpaces(spaces.testSpacePtr(), spaces.solutionSpacePtr())
@@ -1341,7 +1340,7 @@ compute_adaptive_transport_solution(
     const Sigma sigma,
     RHSData& rhsData,
     ScatteringData& scatteringData,
-    Std::optional<BVData>& bvData,
+    std::optional<BVData>& bvData,
     TransportLogger transportLogger,
     TransportPlotter transportPlotter,
     const double transportAccuracy,
@@ -1355,7 +1354,7 @@ compute_adaptive_transport_solution(
     // or ++nRefinement >= maxNumberOfInnerIterations
     // thus the inner loop terminates eventually.
   {
-    Std::optional<VectorType> bvExtension;
+    std::optional<VectorType> bvExtension;
     if(bvData) {
       // TODO: subGridGlobalBasis should be normalized in L2!
       const auto& subGridGlobalBasis = spaces.testSpace();

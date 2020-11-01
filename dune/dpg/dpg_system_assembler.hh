@@ -948,27 +948,23 @@ defineCharacteristicFaces_impl(
                  << e.type().id());
     }
 
-    for (auto&& faceAndDOFs: characteristicDOFs)
+    for (auto&& [face, dofs] : characteristicDOFs)
     {
-      size_t face;
-      std::list<std::pair<size_t,size_t>> dofs;
-      std::tie(face, dofs) = faceAndDOFs;
-      size_t left, right;
-      std::tie(left, right) = endpoints[face];
-      for(auto&& dof: dofs)
+      const auto [left, right] = endpoints[face];
+      const size_t k = dofs.size()+1;
+      for(auto&& [i, localIndex] : dofs)
       {
-        const auto row = solutionLocalView.index(dof.first)[0] + globalOffset;
+        const auto row = solutionLocalView.index(i)[0] + globalOffset;
         auto col = row;
-        const size_t k = dofs.size()+1;
 
         /* replace the row of dof on characteristic face
          * by an interpolation of the two endpoints of the
          * characteristic face. */
         matrix[row][col] = -1;
         col = solutionLocalView.index(left)[0] + globalOffset;
-        matrix[row][col] = static_cast<double>(k-dof.second-1)/k;
+        matrix[row][col] = static_cast<double>(k-localIndex-1)/k;
         col = solutionLocalView.index(right)[0] + globalOffset;
-        matrix[row][col] = static_cast<double>(dof.second+1)/k;
+        matrix[row][col] = static_cast<double>(localIndex+1)/k;
 
         rhs[row] = 0;
       }
@@ -1089,20 +1085,15 @@ defineCharacteristicFaces_impl(
                  << e.type().id());
     }
 
-    for (auto&& faceAndDOFs: characteristicDOFs)
+    for (auto&& [face, dofs] : characteristicDOFs)
     {
-      size_t face;
-      std::list<std::pair<size_t,size_t>> dofs;
-      std::tie(face, dofs) = faceAndDOFs;
-      size_t left, right;
-      std::tie(left, right) = endpoints[face];
-      for(auto&& dof: dofs)
+      const auto [left, right] = endpoints[face];
+      const size_t k = dofs.size()+1;
+      for(auto&& [i, localIndex]: dofs)
       {
-        const auto row = detail::getUnconstrainedIndex(solutionLocalView,
-                                                       dof.first)[0]
+        const auto row = detail::getUnconstrainedIndex(solutionLocalView, i)[0]
                                             + globalOffset;
         auto col = row;
-        const size_t k = dofs.size()+1;
 
         /* replace the row of dof on characteristic face
          * by an interpolation of the two endpoints of the
@@ -1110,10 +1101,10 @@ defineCharacteristicFaces_impl(
         matrix[row][col] = -1;
         col = detail::getUnconstrainedIndex(solutionLocalView, left)[0]
             + globalOffset;
-        matrix[row][col] = static_cast<double>(k-dof.second-1)/k;
+        matrix[row][col] = static_cast<double>(k-localIndex-1)/k;
         col = detail::getUnconstrainedIndex(solutionLocalView, right)[0]
             + globalOffset;
-        matrix[row][col] = static_cast<double>(dof.second+1)/k;
+        matrix[row][col] = static_cast<double>(localIndex+1)/k;
 
         rhs[row] = 0;
       }

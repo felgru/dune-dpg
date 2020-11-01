@@ -218,7 +218,7 @@ struct getOccupationPatternHelper
                 // Add a nonzero entry to the matrix
                 nb.add(gi[0]+globalTestSpaceOffset,
                        gj[0]+globalSolutionSpaceOffset);
-                if(mirror) {
+                if constexpr (mirror) {
                     nb.add(gj[0]+globalSolutionSpaceOffset,
                            gi[0]+globalTestSpaceOffset);
                 }
@@ -335,7 +335,7 @@ struct localToGlobalCopier
           return matrix[row][col];
         }
     );
-    if(mirror) {
+    if constexpr (mirror) {
       addToGlobalMatrix(
           testLocalView,
           solutionLocalView,

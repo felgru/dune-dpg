@@ -99,7 +99,7 @@ namespace Dune {
             >::value;
 
       /* set up local offsets */
-      if(!usesOptimalTestBasis) {
+      if constexpr (!usesOptimalTestBasis) {
         localTotalSpaceSize = detail::computeOffsets(localSpaceOffsets, lv);
       } else { /* DPG formulation */
         localSpaceOffsets.fill(0);

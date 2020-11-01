@@ -5,7 +5,6 @@
 
 #include <type_traits>
 #include <dune/common/keywords.hh>
-#include <dune/common/std/type_traits.hh>
 #include <dune/common/tupleutility.hh>
 #include <dune/common/version.hh>
 
@@ -466,7 +465,7 @@ struct uses_only_constant_coefficients : std::false_type {};
 
 template<class... Terms>
 struct uses_only_constant_coefficients<std::tuple<Terms...>>
-  : Std::conjunction<
+  : std::conjunction<
       uses_only_constant_coefficients<typename Terms::Term>...> {};
 
 template<class Term>

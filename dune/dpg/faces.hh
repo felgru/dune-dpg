@@ -152,7 +152,7 @@ struct FaceComputations {
   template<IntegrationType type>
   bool skipFace(const FieldVector<double, cdim>& direction) const noexcept
   {
-    if(type == IntegrationType::travelDistanceWeighted)
+    if constexpr (type == IntegrationType::travelDistanceWeighted)
       /* Only integrate over inflow boundaries. */
       return direction * unitOuterNormal() >= 0;
     else return false;
@@ -169,17 +169,17 @@ struct FaceComputations {
       const Face& face) const
   {
     double integrationWeight;
-    if(type == IntegrationType::normalVector ||
-       type == IntegrationType::travelDistanceWeighted) {
+    if constexpr (type == IntegrationType::normalVector ||
+                  type == IntegrationType::travelDistanceWeighted) {
       integrationWeight = localCoefficients.localFactor()(elementQuadPos)
                         * quadPoint.weight()
                         * integrationElement_;
       // TODO: scale direction to length 1
-      if(type == IntegrationType::travelDistanceWeighted)
+      if constexpr (type == IntegrationType::travelDistanceWeighted)
         integrationWeight *= std::fabs(direction * unitOuterNormal_);
       else
         integrationWeight *= direction * unitOuterNormal_;
-    } else if(type == IntegrationType::normalSign) {
+    } else if constexpr (type == IntegrationType::normalSign) {
       const double integrationElement =
           face.geometry().integrationElement(quadPoint.position());
 

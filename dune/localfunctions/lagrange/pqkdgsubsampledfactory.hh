@@ -97,14 +97,14 @@ namespace Dune
     PQkDGSubsampledLocalFiniteElementCache
         (const PQkDGSubsampledLocalFiniteElementCache& other)
     {
-      for(const auto& entry : other.cache_)
-        cache_[entry.first] = (entry.second)->clone();
+      for(const auto& [gt, fe] : other.cache_)
+        cache_[gt] = fe->clone();
     }
 
     ~PQkDGSubsampledLocalFiniteElementCache()
     {
-      for(auto&& entry : cache_)
-        delete entry.second;
+      for(auto&& [gt, fe] : cache_)
+        delete fe;
     }
 
     //! Get local finite element for given GeometryType

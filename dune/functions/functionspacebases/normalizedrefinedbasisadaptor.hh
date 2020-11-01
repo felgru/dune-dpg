@@ -6,8 +6,8 @@
 #include <array>
 #include <cmath>
 
-#include <dune/common/hybridutilities.hh>
 #include <dune/common/version.hh>
+#include <dune/common/std/type_traits.hh>
 
 #include <dune/dpg/assemble_helper.hh>
 
@@ -281,11 +281,8 @@ public:
   void resetSubElements()
   {
     nextScalingWeightsOffset_ = 0;
-    Hybrid::ifElse(
-      Std::is_detected<hasResetSubElements,WrappedNode>{},
-      [&](auto id) {
-        id(wrappedNode_).resetSubElements();
-      });
+    if constexpr (Std::is_detected<hasResetSubElements, WrappedNode>{})
+        wrappedNode_.resetSubElements();
   }
 
   /**
