@@ -13,7 +13,8 @@
 namespace Dune {
 
 template <typename Basis>
-TestSuite testLocalFeForEachElement(const Basis& feBasis)
+TestSuite testLocalFeForEachElement(const Basis& feBasis,
+                                    char disabledTests = DisableNone)
 {
   TestSuite t;
   typedef typename Basis::GridView GridView;
@@ -30,7 +31,7 @@ TestSuite testLocalFeForEachElement(const Basis& feBasis)
     // The general LocalFiniteElement unit test from
     // dune/localfunctions/test/test-localfe.hh
     const auto& lFE = localView.tree().finiteElement();
-    t.check(testFE(lFE));
+    t.check(testFE(lFE, disabledTests));
 
     t.require(lFE.size() == localView.size())
       << "Size of leaf node and finite element do not coincide";
@@ -112,10 +113,11 @@ TestSuite checkConsistencyOfLocalViewAndIndexSet(const Basis& feBasis)
 }
 
 template <typename Basis>
-TestSuite testScalarBasis(const Basis& feBasis)
+TestSuite testScalarBasis(const Basis& feBasis,
+                          char disabledTests = DisableNone)
 {
   TestSuite t;
-  t.subTest(testLocalFeForEachElement(feBasis));
+  t.subTest(testLocalFeForEachElement(feBasis, disabledTests));
 
   // Check whether the basis exports a type 'MultiIndex'
   typedef typename Basis::MultiIndex MultiIndex;
