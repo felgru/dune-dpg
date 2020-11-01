@@ -33,9 +33,9 @@ libraries installed on your system:
     - Eigen >= 3.2
       (http://eigen.tuxfamily.org)
     - UMFPACK (which is part of Suitesparse, www.suitesparse.com)
-    - DUNE core libraries 2.7.1
+    - DUNE core libraries 2.8
       including the staging modules dune-typetree and dune-functions
-      (https://dune-project.org/releases/2.7.1/)
+      (https://dune-project.org/releases/2.8.0/)
     - A grid manager. Our examples use dune-uggrid
       (https://www.dune-project.org/modules/dune-uggrid/)
       but one could also use other managers, e.g., ALBERTA or YASPgrid.

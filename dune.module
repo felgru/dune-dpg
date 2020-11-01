@@ -7,6 +7,6 @@ Module: dune-dpg
 Version: 0.6-git
 Maintainer: felgru@posteo.net
 #depending on
-Depends: dune-geometry dune-grid dune-localfunctions dune-istl dune-functions (>= 2.7.1)
+Depends: dune-geometry dune-grid dune-localfunctions dune-istl dune-functions (>= 2.8)
 Suggests: dune-uggrid dune-subgrid (>= 2.7)
 Whitespace-Hook: Yes
