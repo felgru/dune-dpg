@@ -102,23 +102,14 @@ public:
 
   void initializeIndices()
   {
-    switch (dim)
-    {
-      case 1:
-      {
-        break;
-      }
-      case 2:
-      {
-        quadrilateralOffset_ = dofsPerTriangle
-                               * gridView_.size(GeometryTypes::triangle);
-        break;
-      }
-      case 3:
-      {
-        DUNE_THROW(Dune::NotImplemented,
-                   "BernsteinDGRefinedDGPreBasis not implmented in 3d.");
-      }
+    if constexpr (dim == 1) {
+      return;
+    } else if constexpr (dim == 2) {
+      quadrilateralOffset_ = dofsPerTriangle
+                             * gridView_.size(GeometryTypes::triangle);
+    } else {
+      static_assert(dim >= 1 && dim <= 2,
+                    "BernsteinDGRefinedDGPreBasis not implmented grids of this dimension!");
     }
   }
 
@@ -160,18 +151,15 @@ public:
 
   size_type size() const
   {
-    switch (dim)
-    {
-      case 1:
-        return dofsPerEdge * gridView_.size(0);
-      case 2:
-      {
-        return dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
-             + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
-      }
+    if constexpr (dim == 1) {
+      return dofsPerEdge * gridView_.size(0);
+    } else if constexpr (dim == 2) {
+      return dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
+           + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
+    } else {
+      static_assert(dim >= 1 && dim <= 2,
+                    "No size method implemented for this dimension!");
     }
-    DUNE_THROW(Dune::NotImplemented, "No size method for " << dim
-                                     << "d grids available yet!");
   }
 
   //! Return number possible values for next position in multi index
@@ -291,7 +279,6 @@ template<typename GV, int level, int k, class MI, class TP>
 #endif
 class BernsteinDGRefinedDGNodeIndexSet
 {
-  // Cannot be an enum -- otherwise the switch statement below produces compiler warnings
   static constexpr int dim = GV::dimension;
 
 public:
@@ -348,35 +335,31 @@ public:
 
     for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
     {
-      switch (dim)
-      {
-        case 1:
+      if constexpr (dim == 1) {
+        *it = {{ preBasis_->dofsPerEdge
+                 * gridIndexSet.subIndex(element,0,0) + i }};
+        continue;
+      } else if constexpr (dim == 2) {
+        if (element.type().isTriangle())
         {
-          *it = {{ preBasis_->dofsPerEdge
+          *it = {{ preBasis_->dofsPerTriangle
                    * gridIndexSet.subIndex(element,0,0) + i }};
           continue;
         }
-        case 2:
+        else if (element.type().isQuadrilateral())
         {
-          if (element.type().isTriangle())
-          {
-            *it = {{ preBasis_->dofsPerTriangle
+          *it = {{ preBasis_->quadrilateralOffset_
+                   + preBasis_->dofsPerQuad
                      * gridIndexSet.subIndex(element,0,0) + i }};
-            continue;
-          }
-          else if (element.type().isQuadrilateral())
-          {
-            *it = {{ preBasis_->quadrilateralOffset_
-                     + preBasis_->dofsPerQuad
-                       * gridIndexSet.subIndex(element,0,0) + i }};
-            continue;
-          }
-          else
-            DUNE_THROW(Dune::NotImplemented,
-                "2d elements have to be triangles or quadrilaterals");
+          continue;
         }
+        else
+          DUNE_THROW(Dune::NotImplemented,
+              "2d elements have to be triangles or quadrilaterals");
+      } else {
+        static_assert(dim >= 1 && dim <= 2,
+                      "The index method is not yet implemented for grids of this dimension!");
       }
-      DUNE_THROW(Dune::NotImplemented, "No index method for " << dim << "d grids available yet!");
     }
     return it;
   }

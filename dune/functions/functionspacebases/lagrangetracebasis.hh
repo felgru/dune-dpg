@@ -147,21 +147,18 @@ public:
 
   size_type size() const
   {
-    switch (dim)
-    {
-      case 1:
-        return gridView_.size(dim);
-      case 2:
-        return gridView_.size(dim) + dofsPerEdge * gridView_.size(1);
-      case 3:
-      {
-        return gridView_.size(dim) + dofsPerEdge * gridView_.size(2)
-             + dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
-             + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
-      }
+    if constexpr (dim == 1) {
+      return gridView_.size(dim);
+    } else if constexpr (dim == 2) {
+      return gridView_.size(dim) + dofsPerEdge * gridView_.size(1);
+    } else if constexpr (dim == 3) {
+      return gridView_.size(dim) + dofsPerEdge * gridView_.size(2)
+           + dofsPerTriangle * gridView_.size(GeometryTypes::triangle)
+           + dofsPerQuad * gridView_.size(GeometryTypes::quadrilateral);
+    } else {
+      static_assert(dim >= 1 && dim <= 3,
+                    "No size method implemented for this dimension!");
     }
-    DUNE_THROW(Dune::NotImplemented,
-               "No size method for " << dim << "d grids available yet!");
   }
 
   //! Return number possible values for next position in multi index
