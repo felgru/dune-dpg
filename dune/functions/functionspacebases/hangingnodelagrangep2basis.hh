@@ -4,9 +4,10 @@
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODELAGRANGEP2BASIS_HH
 
 #include <array>
+#include <optional>
+
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
-#include <dune/common/std/optional.hh>
 #include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqkfactory.hh>
@@ -123,7 +124,7 @@ public:
   {
     const auto& gridIndexSet = gridView_.indexSet();
     std::vector<size_t> edgeDofs(gridView_.size(1), SIZE_MAX);
-    std::vector<Dune::Std::optional<std::array<size_t,3>>>
+    std::vector<std::optional<std::array<size_t,3>>>
         edgeConstraints(edgeDofs.size());
     size_t nextEdgeDof = gridView_.size(dim); // edges start after vertices
     for(const auto& e : elements(gridView_)) {

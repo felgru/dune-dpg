@@ -4,11 +4,11 @@
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_HANGINGNODEBERNSTEINP2BASIS_HH
 
 #include <array>
+#include <optional>
 #include <utility>
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
-#include <dune/common/std/optional.hh>
 #include <dune/common/version.hh>
 
 #include <dune/localfunctions/bernstein/pqkfactory.hh>
@@ -128,9 +128,9 @@ public:
   {
     const auto& gridIndexSet = gridView_.indexSet();
     std::vector<size_t> edgeDofs(gridView_.size(1), SIZE_MAX);
-    std::vector<Dune::Std::optional<std::array<size_t,3>>>
+    std::vector<std::optional<std::array<size_t,3>>>
         edgeConstraints(edgeDofs.size());
-    std::vector<Dune::Std::optional<std::array<size_t,3>>>
+    std::vector<std::optional<std::array<size_t,3>>>
         vertexConstraints(gridView_.size(2));
     size_t nextEdgeDof = gridView_.size(dim); // edges start after vertices
     for(const auto& e : elements(gridView_)) {
