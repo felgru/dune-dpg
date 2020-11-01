@@ -14,8 +14,6 @@
 
 #include "unrefinedbasistest.hh"
 
-#include <dune/common/version.hh>
-
 using namespace Dune;
 using namespace Dune::Functions;
 
@@ -38,7 +36,6 @@ int main(int argc, char* argv[])
   LagrangeTraceBasis<GridView, 1> pq1Basis(gridView);
   t.subTest(testScalarBasis(pq1Basis));
 
-#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,8)
   LagrangeTraceBasis<GridView, 2> pq2Basis(gridView);
   t.subTest(testScalarBasis(pq2Basis, DisableRepresentConstants));
 
@@ -47,16 +44,6 @@ int main(int argc, char* argv[])
 
   LagrangeTraceBasis<GridView, 4> pq4Basis(gridView);
   t.subTest(testScalarBasis(pq4Basis, DisableRepresentConstants));
-#else
-  LagrangeTraceBasis<GridView, 2> pq2Basis(gridView);
-  t.subTest(testScalarBasis(pq2Basis));
-
-  LagrangeTraceBasis<GridView, 3> pq3Basis(gridView);
-  t.subTest(testScalarBasis(pq3Basis));
-
-  LagrangeTraceBasis<GridView, 4> pq4Basis(gridView);
-  t.subTest(testScalarBasis(pq4Basis));
-#endif
 
   return t.exit();
 }

@@ -9,8 +9,6 @@
 #include "../lagrange/pkdgsubsampled2d.hh"
 #include <dune/localfunctions/test/test-localfe.hh>
 
-#include <dune/common/version.hh>
-
 template<unsigned int order, unsigned int samples>
 bool testDGSubsampled2D()
 {
@@ -20,20 +18,12 @@ bool testDGSubsampled2D()
             << ", samples : " << samples << std::endl;
   Dune::PkDGSubsampled2DLocalFiniteElement<double,double,samples,order>
       lagrangeSubsampledTria;
-#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,8)
   TEST_FE2(lagrangeSubsampledTria,
            // Disable all tests that assume a standard Lagrange FE
            DisableLocalInterpolation
            | DisableEvaluate
            | DisableRepresentConstants
            );
-#else
-  TEST_FE2(lagrangeSubsampledTria,
-           // Disable all tests that assume a standard Lagrange FE
-           DisableLocalInterpolation
-           | DisableEvaluate
-           );
-#endif
   return success;
 }
 
