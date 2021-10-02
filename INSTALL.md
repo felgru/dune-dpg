@@ -163,7 +163,7 @@ executables are built. As a consequence, the user should cd into
 `$DUNEDIR/dune-dpg/build_cmake` to run the examples of the paper.
 
 Remark: If there were any problems with the build system it might be
-        helpful to remove all build_cmake directories by running
+        helpful to remove all build-cmake directories by running
         `rm -rf */build-cmake`
         in `$DUNEDIR`. This removes all build products and old CMake
         configuration files that might cause conflicts.
