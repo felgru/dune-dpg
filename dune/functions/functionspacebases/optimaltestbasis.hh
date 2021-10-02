@@ -115,6 +115,20 @@ class OptimalTestBasisPreBasis
   static constexpr int dim =
       TestspaceCoefficientMatrix::GridView::dimension;
 
+  using SolutionSpaces = typename TestspaceCoefficientMatrix::SolutionSpaces;
+  using SolutionLocalViews = Dune::detail::getLocalViews_t<SolutionSpaces>;
+
+  template<typename It, typename LocalView>
+  static It computeIndices(It it, const LocalView& localView,
+                           size_t globalOffset)
+  {
+    for (size_type i = 0, end = localView.size(); i < end; ++it, ++i)
+    {
+      *it = {{ globalOffset + (localView.index(i))[0] }};
+    }
+    return it;
+  }
+
 public:
 
   /** \brief The grid view that the FE space is defined on */
@@ -224,6 +238,22 @@ public:
                               [&](size_type acc, const auto& s) {
                                 return acc + s.preBasis().maxNodeSize();
                               });
+  }
+
+  //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
+  template<typename It>
+  It indices(const Node& node, It it) const
+  {
+    using namespace boost::hana;
+    return fold_left(
+              make_range(int_c<0>,
+                int_c<std::tuple_size<SolutionLocalViews>::value>),
+              it,
+              [&](It it, auto i) {
+                return computeIndices(it,
+                  std::get<i>(node.localViewsSolution()),
+                  globalOffsets[i]);
+              });
   }
 
 //protected:
@@ -377,20 +407,6 @@ template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI, c
 #endif
 class OptimalTestBasisNodeIndexSet
 {
-  using GV = typename TestspaceCoefficientMatrix::GridView;
-  enum {dim = GV::dimension};
-
-  template<typename It, typename LocalView>
-  static It computeIndices(It it, const LocalView& localView,
-                           size_t globalOffset)
-  {
-    for (size_type i = 0, end = localView.size(); i < end; ++it, ++i)
-    {
-      *it = {{ globalOffset + (localView.index(i))[0] }};
-    }
-    return it;
-  }
-
 public:
 
   using size_type = std::size_t;
@@ -405,10 +421,6 @@ public:
 #else
   using Node = typename PreBasis::template Node<TP>;
 #endif
-
-  typedef typename TestspaceCoefficientMatrix::SolutionSpaces SolutionSpaces;
-  typedef Dune::detail::getLocalViews_t<SolutionSpaces>
-      SolutionLocalViews;
 
   OptimalTestBasisNodeIndexSet(const PreBasis& preBasis) :
     preBasis_(&preBasis)
@@ -450,16 +462,7 @@ public:
   It indices(It it) const
   {
     assert(node_ != nullptr);
-    using namespace boost::hana;
-    return fold_left(
-              make_range(int_c<0>,
-                int_c<std::tuple_size<SolutionLocalViews>::value>),
-              it,
-              [&](It it, auto i) {
-                return computeIndices(it,
-                  std::get<i>(node_.localViewsSolution()),
-                  preBasis_->globalOffsets[i]);
-              });
+    return preBasis_->indices(*node_, it);
   }
 
 protected:

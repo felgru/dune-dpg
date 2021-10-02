@@ -260,6 +260,126 @@ public:
     return StaticPower<(k+1),GV::dimension>::power;
   }
 
+  //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
+  template<typename It>
+  It indices(const Node& node, It it) const
+  {
+    for (size_type i = 0, end = node.finiteElement().size() ; i < end ; ++it, ++i)
+      {
+        Dune::LocalKey localKey = node.finiteElement().localCoefficients().localKey(i);
+        const auto& gridIndexSet = gridView().indexSet();
+        const auto& element = node.element();
+
+        // The dimension of the entity that the current dof is related to
+        auto dofDim = dim - localKey.codim();
+
+        // The test for k==1 is redundant, but having it here allows the
+        // compiler to conclude at compile-time that the dofDim==0 case
+        // is the only one that will ever happen.
+        // See https://gitlab.dune-project.org/staging/dune-functions/issues/30
+        if (k==1 || dofDim==0) {  // vertex dof
+          *it = {{ static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),dim)) }};
+          continue;
+        }
+
+        if (dofDim==1)
+          {  // edge dof
+            if (dim==1)  // element dof -- any local numbering is fine
+              {
+                *it = {{ edgeOffset_
+                         + dofsPerEdge * static_cast<size_type>(gridIndexSet.subIndex(element,0,0))
+                         + localKey.index() }};
+                continue;
+              }
+            else
+              {
+                const auto refElement
+                  = Dune::referenceElement<double,dim>(element.type());
+
+                // we have to reverse the numbering if the local triangle edge is
+                // not aligned with the global edge
+                const auto v0 = static_cast<size_type>(gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),0,dim),dim));
+                const auto v1 = static_cast<size_type>(gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim));
+                const bool flip = (v0 > v1);
+                *it = {{ (flip)
+                         ? edgeOffset_
+                         + dofsPerEdge*static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
+                         + (dofsPerEdge-1)-localKey.index()
+                         : edgeOffset_
+                         + dofsPerEdge*static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
+                         + localKey.index() }};
+                continue;
+              }
+          }
+
+        if (dofDim==2)
+          {
+            if (dim==2)   // element dof -- any local numbering is fine
+              {
+                if (element.type().isTriangle())
+                  {
+                    const int interiorLagrangeNodesPerTriangle = (k-1)*(k-2)/2;
+                    *it = {{ triangleOffset_ + interiorLagrangeNodesPerTriangle*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+                    continue;
+                  }
+                else if (element.type().isQuadrilateral())
+                  {
+                    const int interiorLagrangeNodesPerQuadrilateral = (k-1)*(k-1);
+                    *it = {{ quadrilateralOffset_ + interiorLagrangeNodesPerQuadrilateral*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+                    continue;
+                  }
+                else
+                  DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");
+              } else
+              {
+                const auto refElement
+                  = Dune::referenceElement<double,dim>(element.type());
+
+                if (k>3)
+                  DUNE_THROW(Dune::NotImplemented, "BernsteinBasis for 3D grids is only implemented if k<=3");
+
+                if (k==3 and !refElement.type(localKey.subEntity(), localKey.codim()).isTriangle())
+                  DUNE_THROW(Dune::NotImplemented, "BernsteinBasis for 3D grids with k==3 is only implemented if the grid is a simplex grid");
+
+                *it = {{ triangleOffset_ + static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())) }};
+                continue;
+              }
+          }
+
+        if (dofDim==3)
+          {
+            if (dim==3)   // element dof -- any local numbering is fine
+              {
+                if (element.type().isTetrahedron())
+                  {
+                    *it = {{ tetrahedronOffset_ + dofsPerTetrahedron*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+                    continue;
+                  }
+                else if (element.type().isHexahedron())
+                  {
+                    *it = {{ hexahedronOffset_ + dofsPerHexahedron*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+                    continue;
+                  }
+                else if (element.type().isPrism())
+                  {
+                    *it = {{ prismOffset_ + dofsPerPrism*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+                    continue;
+                  }
+                else if (element.type().isPyramid())
+                  {
+                    *it = {{ pyramidOffset_ + dofsPerPyramid*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
+                    continue;
+                  }
+                else
+                  DUNE_THROW(Dune::NotImplemented, "3d elements have to be tetrahedra, hexahedra, prisms, or pyramids");
+              } else
+              DUNE_THROW(Dune::NotImplemented, "Grids of dimension larger than 3 are no supported");
+          }
+        DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the BernsteinBasis");
+      }
+    return it;
+  }
+
 protected:
   GridView gridView_;
 
@@ -404,120 +524,7 @@ public:
   It indices(It it) const
   {
     assert(node_ != nullptr);
-    for (size_type i = 0, end = node_->finiteElement().size() ; i < end ; ++it, ++i)
-      {
-        Dune::LocalKey localKey = node_->finiteElement().localCoefficients().localKey(i);
-        const auto& gridIndexSet = preBasis_->gridView().indexSet();
-        const auto& element = node_->element();
-
-        // The dimension of the entity that the current dof is related to
-        auto dofDim = dim - localKey.codim();
-
-        // The test for k==1 is redundant, but having it here allows the
-        // compiler to conclude at compile-time that the dofDim==0 case
-        // is the only one that will ever happen.
-        // See https://gitlab.dune-project.org/staging/dune-functions/issues/30
-        if (k==1 || dofDim==0) {  // vertex dof
-          *it = {{ static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),dim)) }};
-          continue;
-        }
-
-        if (dofDim==1)
-          {  // edge dof
-            if (dim==1)  // element dof -- any local numbering is fine
-              {
-                *it = {{ preBasis_->edgeOffset_
-                         + preBasis_->dofsPerEdge * static_cast<size_type>(gridIndexSet.subIndex(element,0,0))
-                         + localKey.index() }};
-                continue;
-              }
-            else
-              {
-                const auto refElement
-                  = Dune::referenceElement<double,dim>(element.type());
-
-                // we have to reverse the numbering if the local triangle edge is
-                // not aligned with the global edge
-                const auto v0 = static_cast<size_type>(gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),0,dim),dim));
-                const auto v1 = static_cast<size_type>(gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim));
-                const bool flip = (v0 > v1);
-                *it = {{ (flip)
-                         ? preBasis_->edgeOffset_
-                         + preBasis_->dofsPerEdge*static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
-                         + (preBasis_->dofsPerEdge-1)-localKey.index()
-                         : preBasis_->edgeOffset_
-                         + preBasis_->dofsPerEdge*static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim()))
-                         + localKey.index() }};
-                continue;
-              }
-          }
-
-        if (dofDim==2)
-          {
-            if (dim==2)   // element dof -- any local numbering is fine
-              {
-                if (element.type().isTriangle())
-                  {
-                    const int interiorLagrangeNodesPerTriangle = (k-1)*(k-2)/2;
-                    *it = {{ preBasis_->triangleOffset_ + interiorLagrangeNodesPerTriangle*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
-                    continue;
-                  }
-                else if (element.type().isQuadrilateral())
-                  {
-                    const int interiorLagrangeNodesPerQuadrilateral = (k-1)*(k-1);
-                    *it = {{ preBasis_->quadrilateralOffset_ + interiorLagrangeNodesPerQuadrilateral*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
-                    continue;
-                  }
-                else
-                  DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");
-              } else
-              {
-                const auto refElement
-                  = Dune::referenceElement<double,dim>(element.type());
-
-                if (k>3)
-                  DUNE_THROW(Dune::NotImplemented, "BernsteinBasis for 3D grids is only implemented if k<=3");
-
-                if (k==3 and !refElement.type(localKey.subEntity(), localKey.codim()).isTriangle())
-                  DUNE_THROW(Dune::NotImplemented, "BernsteinBasis for 3D grids with k==3 is only implemented if the grid is a simplex grid");
-
-                *it = {{ preBasis_->triangleOffset_ + static_cast<size_type>(gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())) }};
-                continue;
-              }
-          }
-
-        if (dofDim==3)
-          {
-            if (dim==3)   // element dof -- any local numbering is fine
-              {
-                if (element.type().isTetrahedron())
-                  {
-                    *it = {{ preBasis_->tetrahedronOffset_ + PreBasis::dofsPerTetrahedron*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
-                    continue;
-                  }
-                else if (element.type().isHexahedron())
-                  {
-                    *it = {{ preBasis_->hexahedronOffset_ + PreBasis::dofsPerHexahedron*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
-                    continue;
-                  }
-                else if (element.type().isPrism())
-                  {
-                    *it = {{ preBasis_->prismOffset_ + PreBasis::dofsPerPrism*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
-                    continue;
-                  }
-                else if (element.type().isPyramid())
-                  {
-                    *it = {{ preBasis_->pyramidOffset_ + PreBasis::dofsPerPyramid*static_cast<size_type>(gridIndexSet.subIndex(element,0,0)) + localKey.index() }};
-                    continue;
-                  }
-                else
-                  DUNE_THROW(Dune::NotImplemented, "3d elements have to be tetrahedra, hexahedra, prisms, or pyramids");
-              } else
-              DUNE_THROW(Dune::NotImplemented, "Grids of dimension larger than 3 are no supported");
-          }
-        DUNE_THROW(Dune::NotImplemented, "Grid contains elements not supported for the BernsteinBasis");
-      }
-    return it;
+    return preBasis_->indices(*node_, it);
   }
 
 protected:

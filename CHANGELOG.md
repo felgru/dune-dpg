@@ -7,8 +7,8 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 ## 0.5 (Unreleased)
 ### Changed
 * We now require a C++17-compatible compiler, e.g. GCC 7 or later.
-* dune-dpg has been made compatible with the 2.8 development version
-  of the Dune core modules.
+* dune-dpg has been made compatible with version 2.8 of the Dune core
+  modules.
 * The `DoerflerMarking` function now uses `std::stable_sort` instead
   of `std::sort` to remove a source of potential non-determinism
   when there are elements with the same error estimates and only one

@@ -179,6 +179,70 @@ public:
     return 4*(k+1);
   }
 
+  //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
+  template<typename It>
+  It indices(const Node& node, It it) const
+  {
+    const auto& gridIndexSet = gridView().indexSet();
+    const auto& element = node.element();
+
+    for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
+    {
+      const Dune::LocalKey localKey
+          = node.finiteElement().localCoefficients().localKey(i);
+      // The dimension of the entity that the current dof is related to
+      const size_t dofDim = dim - localKey.codim();
+      if (dofDim==0) {  // vertex dof
+        *it = {{ gridIndexSet.subIndex(element,localKey.subEntity(),dim) }};
+        continue;
+      }
+
+      if (dofDim==1)
+      {  // edge dof
+        if constexpr (dim==1)   // element dof -- any local numbering is fine
+        {
+          DUNE_THROW(Dune::NotImplemented,
+              "faces have no elements of codimension 0");
+        }
+        else
+        {
+          const Dune::ReferenceElement<double,dim> refElement
+              = Dune::referenceElement<double,dim>(element.type());
+
+          // we have to reverse the numbering if the local triangle edge is
+          // not aligned with the global edge
+          size_t v0 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),0,dim),dim);
+          size_t v1 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
+          bool flip = (v0 > v1);
+          *it = {{ (flip)
+                   ? edgeOffset_
+                     + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())
+                     + k-localKey.index()
+                   : edgeOffset_
+                     + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())
+                     + localKey.index() }};
+          continue;
+        }
+      }
+
+      if (dofDim==2)
+      {
+        if constexpr (dim==2)   // element dof -- any local numbering is fine
+        {
+          DUNE_THROW(Dune::NotImplemented,
+                     "faces have no elements of codimension 0");
+        } else
+        {
+          DUNE_THROW(Dune::NotImplemented,
+                     "LagrangeFaceNodalBasis for 3D grids is not implemented");
+        }
+      }
+      DUNE_THROW(Dune::NotImplemented,
+          "Grid contains elements not supported for the LagrangeFaceNodalBasis");
+    }
+    return it;
+  }
+
 //protected:
   GridView gridView_;
 
@@ -284,7 +348,8 @@ public:
 #endif
 
   LagrangeFaceNodeIndexSet(const PreBasis& preBasis) :
-    preBasis_(&preBasis)
+    preBasis_(&preBasis),
+    node_(nullptr)
   {}
 
   /** \brief Bind the view to a grid element
@@ -317,64 +382,7 @@ public:
   It indices(It it) const
   {
     assert(node_ != nullptr);
-    const auto& gridIndexSet = preBasis_->gridView().indexSet();
-    const auto& element = node_->element();
-
-    for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
-    {
-      const Dune::LocalKey localKey
-          = node_->finiteElement().localCoefficients().localKey(i);
-      // The dimension of the entity that the current dof is related to
-      const size_t dofDim = dim - localKey.codim();
-      if (dofDim==0) {  // vertex dof
-        *it = {{ gridIndexSet.subIndex(element,localKey.subEntity(),dim) }};
-        continue;
-      }
-
-      if (dofDim==1)
-      {  // edge dof
-        if constexpr (dim==1)   // element dof -- any local numbering is fine
-        {
-          DUNE_THROW(Dune::NotImplemented,
-              "faces have no elements of codimension 0");
-        }
-        else
-        {
-          const Dune::ReferenceElement<double,dim> refElement
-              = Dune::referenceElement<double,dim>(element.type());
-
-          // we have to reverse the numbering if the local triangle edge is
-          // not aligned with the global edge
-          size_t v0 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),0,dim),dim);
-          size_t v1 = gridIndexSet.subIndex(element,refElement.subEntity(localKey.subEntity(),localKey.codim(),1,dim),dim);
-          bool flip = (v0 > v1);
-          *it = {{ (flip)
-                   ? preBasis_->edgeOffset_
-                     + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())
-                     + k-localKey.index()
-                   : preBasis_->edgeOffset_
-                     + (k+1)*gridIndexSet.subIndex(element,localKey.subEntity(),localKey.codim())
-                     + localKey.index() }};
-          continue;
-        }
-      }
-
-      if (dofDim==2)
-      {
-        if constexpr (dim==2)   // element dof -- any local numbering is fine
-        {
-          DUNE_THROW(Dune::NotImplemented,
-                     "faces have no elements of codimension 0");
-        } else
-        {
-          DUNE_THROW(Dune::NotImplemented,
-                     "LagrangeFaceNodalBasis for 3D grids is not implemented");
-        }
-      }
-      DUNE_THROW(Dune::NotImplemented,
-          "Grid contains elements not supported for the LagrangeFaceNodalBasis");
-    }
-    return it;
+    return preBasis_->indices(*node_, it);
   }
 
 protected:
