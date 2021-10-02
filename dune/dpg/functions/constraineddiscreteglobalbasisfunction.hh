@@ -11,7 +11,6 @@
 #include <dune/functions/functionspacebases/defaultnodetorangemap.hh>
 #include <dune/functions/gridfunctions/gridviewentityset.hh>
 #include <dune/functions/gridfunctions/gridfunction.hh>
-#include <dune/functions/common/treedata.hh>
 
 namespace Dune {
 namespace Functions {
