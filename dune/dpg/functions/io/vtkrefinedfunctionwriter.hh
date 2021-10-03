@@ -8,7 +8,6 @@
 #include <ostream>
 #include <string>
 
-#include <dune/common/version.hh>
 #include <dune/dpg/type_traits.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
 #include <dune/grid/io/file/vtk/vtuwriter.hh>
@@ -70,14 +69,9 @@ namespace Dune
     {
       writer.beginPointData(dataName);
       {
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,7)
         std::unique_ptr<VTK::DataArrayWriter> arraywriter
           (writer.makeArrayWriter(dataName, 1, npoints,
                                   VTK::Precision::float32));
-#else
-        std::unique_ptr<VTK::DataArrayWriter<float>> arraywriter
-          (writer.makeArrayWriter<float>(dataName, 1, npoints));
-#endif
 
         auto localView = feBasis.localView();
         using GridView = typename FEBasis::GridView;
@@ -120,14 +114,9 @@ namespace Dune
     void writePoints(const FEBasis& feBasis) {
       writer.beginPoints();
       {
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,7)
         std::unique_ptr<VTK::DataArrayWriter> arraywriter
           (writer.makeArrayWriter("Coordinates", 3, npoints,
                                   VTK::Precision::float32));
-#else
-        std::unique_ptr<VTK::DataArrayWriter<float>> arraywriter
-          (writer.makeArrayWriter<float>("Coordinates", 3, npoints));
-#endif
         auto localView = feBasis.localView();
         using GridView = typename FEBasis::GridView;
         const GridView gridView = feBasis.gridView();
@@ -158,26 +147,16 @@ namespace Dune
       using GridView = typename FEBasis::GridView;
       writer.beginCells();
       { // connectivity
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,7)
         std::unique_ptr<VTK::DataArrayWriter> arraywriter
           (writer.makeArrayWriter("connectivity", 1, ncorners,
                                   VTK::Precision::int32));
-#else
-        std::unique_ptr<VTK::DataArrayWriter<int>> arraywriter
-          (writer.makeArrayWriter<int>("connectivity", 1, ncorners));
-#endif
         for(unsigned i = 0; i < ncorners; i++)
           arraywriter->write(i);
       }
       { // connectivity
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,7)
         std::unique_ptr<VTK::DataArrayWriter> arraywriter
           (writer.makeArrayWriter("offsets", 1, ncells,
                                   VTK::Precision::int32));
-#else
-        std::unique_ptr<VTK::DataArrayWriter<int>> arraywriter
-          (writer.makeArrayWriter<int>("offsets", 1, ncells));
-#endif
         int offset = 0;
         auto localView = feBasis.localView();
         const GridView gridView = feBasis.gridView();
@@ -193,13 +172,8 @@ namespace Dune
         }
       }
       { // types
-#if DUNE_VERSION_NEWER(DUNE_GRID,2,7)
         std::unique_ptr<VTK::DataArrayWriter> arraywriter
           (writer.makeArrayWriter("types", 1, ncells, VTK::Precision::uint8));
-#else
-        std::unique_ptr<VTK::DataArrayWriter<unsigned char>> arraywriter
-          (writer.makeArrayWriter<unsigned char>("types", 1, ncells));
-#endif
         auto localView = feBasis.localView();
         const GridView gridView = feBasis.gridView();
         for(const auto& e : elements(gridView)) {

@@ -9,7 +9,6 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
 
 #include <dune/dpg/functions/gridviewfunctions.hh>
 #include <dune/dpg/functions/localindexsetiteration.hh>
@@ -41,30 +40,13 @@ namespace Dune {
       using DomainType = FieldVector<double, 2>;
       using RangeType  = FieldVector<double, 1>;
 
-#if DUNE_VERSION_LT(DUNE_LOCALFUNCTIONS,2,7)
-      struct Traits
-      {
-        using DomainType = FieldVector<double, 2>;
-        using RangeType  = FieldVector<double, 1>;
-      };
-#endif
-
       BoundaryCondition(const Function& g) : g_(g) {};
 
       // Remark: this signature assumes that we have a 2D scalar problem
-#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,7)
       RangeType operator()(const DomainType& x) const
       {
         return g_(x);
       }
-#else
-      void evaluate(
-        const DomainType& x,
-        RangeType& y) const
-      {
-        y = g_(x);
-      }
-#endif
     };
 
   public:

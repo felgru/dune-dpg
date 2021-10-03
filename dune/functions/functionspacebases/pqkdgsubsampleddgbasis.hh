@@ -24,21 +24,12 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename GV, int s, int k>
 using PQkDGSubsampledDGNode = LagrangeDGSubsampledDGNode<GV, s, k>;
 
 template<typename GV, int s, int k, class MI>
 using PQkDGSubsampledDGNodeIndexSet
     = LagrangeDGSubsampledDGNodeIndexSet<GV, s, k, MI>;
-#else
-template<typename GV, int s, int k, typename TP>
-using PQkDGSubsampledDGNode = LagrangeDGSubsampledDGNode<GV, s, k, TP>;
-
-template<typename GV, int s, int k, class MI, class TP>
-using PQkDGSubsampledDGNodeIndexSet
-    = LagrangeDGSubsampledDGNodeIndexSet<GV, s, k, MI, TP>;
-#endif
 
 template<typename GV, int s, int k, class MI>
 using PQkDGSubsampledDGPreBasis = LagrangeDGSubsampledDGPreBasis<GV, s, k, MI>;

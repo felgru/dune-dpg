@@ -8,11 +8,8 @@
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
 
-#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
 #include <dune/localfunctions/common/localinterpolation.hh>
-#endif
 
 #include "bernsteinbasisevaluation.hh"
 
@@ -39,11 +36,7 @@ namespace Dune
       typedef typename LB::Traits::RangeFieldType R;
 
       typename LB::Traits::DomainType x;
-#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
       auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
-#else
-      typename LB::Traits::RangeType y;
-#endif
       FieldMatrix<C, N, N> vandermonde;
       FieldVector<C, N> fEvaluations;
       int n=0;
@@ -53,12 +46,7 @@ namespace Dune
         {
           x[0] = static_cast<D>(i)/static_cast<D>(kdiv);
           x[1] = static_cast<D>(j)/static_cast<D>(kdiv);
-#if DUNE_VERSION_NEWER(DUNE_LOCALFUNCTIONS,2,7)
           fEvaluations[n] = f(x);
-#else
-          ff.evaluate(x,y);
-          fEvaluations[n] = y;
-#endif
           detail::Pk2DBernsteinBasis<D, R, k>
               ::fillVectorOfEvaluations(x, vandermondeRow->begin());
           ++n;

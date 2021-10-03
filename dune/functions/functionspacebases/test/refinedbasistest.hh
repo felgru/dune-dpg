@@ -5,7 +5,6 @@
 
 #include <dune/common/test/testsuite.hh>
 #include <dune/common/typetraits.hh>
-#include <dune/common/version.hh>
 
 #include <dune/localfunctions/test/test-localfe.hh>
 
@@ -122,13 +121,8 @@ TestSuite testRefinedScalarBasis(const Basis& feBasis)
   typedef typename Basis::MultiIndex MultiIndex;
 
   // And this type must be indexable
-#if DUNE_VERSION_NEWER(DUNE_COMMON,2,7)
   static_assert(IsIndexable<MultiIndex>(),
       "MultiIndex must support operator[]");
-#else
-  static_assert(is_indexable<MultiIndex>(),
-      "MultiIndex must support operator[]");
-#endif
 
   t.subTest(checkRangeOfGlobalIndices(feBasis));
   t.subTest(checkConsistencyOfLocalViewAndIndexSet(feBasis));

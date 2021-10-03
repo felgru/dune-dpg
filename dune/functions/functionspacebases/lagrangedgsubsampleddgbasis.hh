@@ -6,7 +6,6 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
-#include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqkdgsubsampledfactory.hh>
 
@@ -34,19 +33,11 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename GV, int s, int k>
 class LagrangeDGSubsampledDGNode;
 
 template<typename GV, int s, int k, class MI>
 class LagrangeDGSubsampledDGNodeIndexSet;
-#else
-template<typename GV, int s, int k, typename TP>
-class LagrangeDGSubsampledDGNode;
-
-template<typename GV, int s, int k, class MI, class TP>
-class LagrangeDGSubsampledDGNodeIndexSet;
-#endif
 
 template<typename GV, int s, int k, class MI>
 class LagrangeDGSubsampledDGPreBasis;
@@ -71,17 +62,9 @@ public:
   static constexpr int dofsPerQuad        = s*s*(k+1)*(k+1);
 
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using Node = LagrangeDGSubsampledDGNode<GV, s, k>;
 
   using IndexSet = LagrangeDGSubsampledDGNodeIndexSet<GV, s, k, MI>;
-#else
-  template<class TP>
-  using Node = LagrangeDGSubsampledDGNode<GV, s, k, TP>;
-
-  template<class TP>
-  using IndexSet = LagrangeDGSubsampledDGNodeIndexSet<GV, s, k, MI, TP>;
-#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -119,7 +102,6 @@ public:
     gridView_ = gv;
   }
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   Node makeNode() const
   {
     return Node{};
@@ -129,19 +111,6 @@ public:
   {
     return IndexSet{*this};
   }
-#else
-  template<class TP>
-  Node<TP> node(const TP& tp) const
-  {
-    return Node<TP>{tp};
-  }
-
-  template<class TP>
-  IndexSet<TP> indexSet() const
-  {
-    return IndexSet<TP>{*this};
-  }
-#endif
 
   size_type size() const
   {
@@ -184,21 +153,12 @@ public:
 
 
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename GV, int s, int k>
 class LagrangeDGSubsampledDGNode :
   public LeafBasisNode
-#else
-template<typename GV, int s, int k, typename TP>
-class LagrangeDGSubsampledDGNode :
-  public LeafBasisNode<std::size_t, TP>
-#endif
 {
   static constexpr int dim = GV::dimension;
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  using Base = LeafBasisNode<std::size_t, TP>;
-#endif
   using FiniteElementCache
       = typename Dune::PQkDGSubsampledLocalFiniteElementCache
                         <typename GV::ctype, double, dim, s, k>;
@@ -206,18 +166,10 @@ class LagrangeDGSubsampledDGNode :
 public:
 
   using size_type = std::size_t;
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  using TreePath = TP;
-#endif
   using Element = typename GV::template Codim<0>::Entity;
   using FiniteElement = typename FiniteElementCache::FiniteElementType;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   LagrangeDGSubsampledDGNode() :
-#else
-  LagrangeDGSubsampledDGNode(const TreePath& treePath) :
-    Base(treePath),
-#endif
     finiteElement_(nullptr),
     element_(nullptr)
   {}
@@ -254,11 +206,7 @@ protected:
 
 
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename GV, int s, int k, class MI>
-#else
-template<typename GV, int s, int k, class MI, class TP>
-#endif
 class LagrangeDGSubsampledDGNodeIndexSet
 {
   enum {dim = GV::dimension};
@@ -272,11 +220,7 @@ public:
 
   using PreBasis = LagrangeDGSubsampledDGPreBasis<GV, s, k, MI>;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using Node = typename PreBasis::Node;
-#else
-  using Node = typename PreBasis::template Node<TP>;
-#endif
 
   LagrangeDGSubsampledDGNodeIndexSet(const PreBasis& preBasis) :
     preBasis_(&preBasis)

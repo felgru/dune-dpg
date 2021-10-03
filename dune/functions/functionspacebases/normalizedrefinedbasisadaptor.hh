@@ -6,7 +6,6 @@
 #include <array>
 #include <cmath>
 
-#include <dune/common/version.hh>
 #include <dune/common/std/type_traits.hh>
 
 #include <dune/dpg/assemble_helper.hh>
@@ -40,19 +39,11 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename InnerProduct>
 class NormalizedRefinedNode;
 
 template<typename Basis>
 class NormalizedRefinedNodeIndexSet;
-#else
-template<typename InnerProduct, typename TP>
-class NormalizedRefinedNode;
-
-template<typename Basis, class TP>
-class NormalizedRefinedNodeIndexSet;
-#endif
 
 
 template<typename InnerProduct>
@@ -69,19 +60,10 @@ public:
 
   using WrappedBasis = Basis;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using Node = NormalizedRefinedNode<InnerProduct>;
 
   using IndexSet = NormalizedRefinedNodeIndexSet<
                       NormalizedRefinedPreBasis<InnerProduct>>;
-#else
-  template<class TP>
-  using Node = NormalizedRefinedNode<InnerProduct, TP>;
-
-  template<class TP>
-  using IndexSet = NormalizedRefinedNodeIndexSet<
-                      NormalizedRefinedPreBasis<InnerProduct>, TP>;
-#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = typename Basis::MultiIndex;
@@ -113,7 +95,6 @@ public:
     Dune::detail::updateSpaces(*innerProduct_.getTestSpaces(), gv);
   }
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   Node makeNode() const
   {
     return Node{innerProduct_};
@@ -123,19 +104,6 @@ public:
   {
     return IndexSet{*this};
   }
-#else
-  template<class TP>
-  Node<TP> node(const TP& tp) const
-  {
-    return Node<TP>{innerProduct_, tp};
-  }
-
-  template<class TP>
-  IndexSet<TP> indexSet() const
-  {
-    return IndexSet<TP>{*this};
-  }
-#endif
 
   size_type size() const
   {
@@ -176,37 +144,21 @@ protected:
 
 
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename InnerProduct>
 class NormalizedRefinedNode :
   public LeafBasisNode
-#else
-template<typename InnerProduct, typename TP>
-class NormalizedRefinedNode :
-  public LeafBasisNode<std::size_t, TP>
-#endif
 {
   using Basis = std::tuple_element_t<0, typename InnerProduct::TestSpaces>;
   using LocalViews
       = Dune::detail::getLocalViews_t<typename InnerProduct::TestSpaces>;
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  using Base = LeafBasisNode<std::size_t, TP>;
-#endif
   using WrappedPreBasis = typename Basis::PreBasis;
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using WrappedNode = typename WrappedPreBasis::Node;
-#else
-  using WrappedNode = typename WrappedPreBasis::template Node<TP>;
-#endif
   using PreBasis = NormalizedRefinedPreBasis<InnerProduct>;
 
 public:
 
   using size_type = std::size_t;
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  using TreePath = TP;
-#endif
   using Element = typename WrappedNode::Element;
   using SubElement = typename WrappedNode::SubElement;
   using FiniteElement
@@ -214,14 +166,8 @@ public:
   using RefinementGrid = typename WrappedNode::RefinementGrid;
   using RefinementGridView = typename WrappedNode::RefinementGridView;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   NormalizedRefinedNode(const PreBasis& preBasis) :
     wrappedNode_(),
-#else
-  NormalizedRefinedNode(const PreBasis& preBasis,
-                        const TreePath& treePath) :
-    wrappedNode_(treePath),
-#endif
     innerProduct_(preBasis.innerProduct()),
     localViews_(Dune::detail::getLocalViews(*innerProduct_.getTestSpaces())),
     scalingWeights_(),
@@ -313,20 +259,12 @@ protected:
 
 
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
 template<typename PB>
-#else
-template<typename PB, class TP>
-#endif
 class NormalizedRefinedNodeIndexSet
 {
   using Basis = typename PB::WrappedBasis;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using WrappedIndexSet = typename Basis::PreBasis::IndexSet;
-#else
-  using WrappedIndexSet = typename Basis::PreBasis::template IndexSet<TP>;
-#endif
 
 public:
 
@@ -337,11 +275,7 @@ public:
 
   using PreBasis = PB;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using Node = typename PreBasis::Node;
-#else
-  using Node = typename PreBasis::template Node<TP>;
-#endif
 
   NormalizedRefinedNodeIndexSet(const PreBasis& preBasis) :
     wrappedIndexSet_(preBasis.wrappedPreBasis())

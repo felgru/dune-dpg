@@ -6,12 +6,8 @@
 #include <dune/common/concept.hh>
 #include <dune/common/reservedvector.hh>
 #include <dune/common/typeutilities.hh>
-#include <dune/common/version.hh>
 
 #include <dune/functions/common/type_traits.hh>
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-#include <dune/functions/functionspacebases/defaultlocalindexset.hh>
-#endif
 #include <dune/functions/functionspacebases/refinedlocalview.hh>
 #include <dune/functions/functionspacebases/concepts.hh>
 
@@ -49,11 +45,6 @@ public:
   //! Prebasis providing the implementation details
   using PreBasis = PB;
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  //! The empty prefix path that identifies the root in the local ansatz tree
-  using PrefixPath = TypeTree::HybridTreePath<>;
-#endif
-
   //! The grid view that the FE space is defined on
   using GridView = typename PreBasis::GridView;
 
@@ -67,19 +58,10 @@ public:
   using LocalView = RefinedLocalView<RefinedGlobalBasis<PreBasis>>;
 
   //! Node index set provided by PreBasis
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,7)
   using NodeIndexSet = typename PreBasis::IndexSet;
-#else
-  using NodeIndexSet = typename PreBasis::template IndexSet<PrefixPath>;
-#endif
 
   //! Type used for prefixes handed to the size() method
   using SizePrefix = typename PreBasis::SizePrefix;
-
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  //! Type of local index set exported by localIndexSet()
-  using LocalIndexSet = DefaultLocalIndexSet<LocalView, NodeIndexSet>;
-#endif
 
 
   /**
@@ -95,9 +77,6 @@ public:
     enableIfConstructible<PreBasis, T...> = 0>
   RefinedGlobalBasis(T&&... t) :
     preBasis_(std::forward<T>(t)...)
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-    , prefixPath_()
-#endif
   {
     static_assert(models<Concept::PreBasis<GridView>, PreBasis>(), "Type passed to RefinedGlobalBasis does not model the PreBasis concept.");
     preBasis_.initializeIndices();
@@ -151,33 +130,14 @@ public:
     return LocalView(*this);
   }
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  //! Return local index set for basis
-  LocalIndexSet localIndexSet() const
-  {
-    return LocalIndexSet(preBasis_.template indexSet<PrefixPath>());
-  }
-#endif
-
   //! Return *this because we are not embedded in a larger basis
   const RefinedGlobalBasis& rootBasis() const
   {
     return *this;
   }
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  //! Return empty path, because this is the root in the local ansatz tree
-  const PrefixPath& prefixPath() const
-  {
-    return prefixPath_;
-  }
-#endif
-
 protected:
   PreBasis preBasis_;
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,7)
-  PrefixPath prefixPath_;
-#endif
 };
 
 
