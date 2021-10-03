@@ -186,11 +186,12 @@ public:
   {
     const auto& gridIndexSet = gridView().indexSet();
     const auto& element = node.element();
+    const auto& finiteElement = node.finiteElement();
 
-    for (size_type i = 0, end = this->size(); i < end; ++it, ++i)
+    for (size_type i = 0, end = finiteElement.size(); i < end; ++it, ++i)
     {
       const Dune::LocalKey localKey
-          = node.finiteElement().localCoefficients().localKey(i);
+          = finiteElement.localCoefficients().localKey(i);
       // The dimension of the entity that the current dof is related to
       const size_t dofDim = dim - localKey.codim();
       if (dofDim==0) {  // vertex dof

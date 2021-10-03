@@ -185,7 +185,7 @@ public:
     const auto& gridIndexSet = gridView().indexSet();
     const auto& element = node.element();
 
-    for (size_type i = 0, end = size(); i < end; ++i, ++it) {
+    for (size_type i = 0, end = node.finiteElement().size(); i < end; ++i, ++it) {
       if constexpr (dim == 1) {
         *it = {dofsPerEdge*gridIndexSet.subIndex(element,0,0) + i};
         continue;
