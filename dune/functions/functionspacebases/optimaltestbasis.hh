@@ -11,6 +11,7 @@
 #include <dune/common/exceptions.hh>
 #include <dune/common/hybridutilities.hh>
 #include <dune/common/reservedvector.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/optimaltestfunctions/optimaltest.hh>
 #include <dune/localfunctions/optimaltestfunctions/refinedoptimaltest.hh>
@@ -78,8 +79,10 @@ struct EmptyPreBasisConstants {};
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 class OptimalTestBasisNode;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
 class OptimalTestBasisNodeIndexSet;
+#endif
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
 class OptimalTestBasisPreBasis;
@@ -129,8 +132,10 @@ public:
 
   using Node = OptimalTestBasisNode<TestspaceCoefficientMatrix, testIndex>;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   using IndexSet = OptimalTestBasisNodeIndexSet<TestspaceCoefficientMatrix,
                                                 testIndex, MI>;
+#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -173,10 +178,12 @@ public:
     return Node{testspaceCoefficientMatrix_};
   }
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   IndexSet makeIndexSet() const
   {
     return IndexSet{*this};
   }
+#endif
 
   size_type size() const
   {
@@ -351,6 +358,7 @@ protected:
 
 
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
 class OptimalTestBasisNodeIndexSet
 {
@@ -412,6 +420,7 @@ protected:
   const PreBasis* preBasis_;
   const Node* node_;
 };
+#endif
 
 
 

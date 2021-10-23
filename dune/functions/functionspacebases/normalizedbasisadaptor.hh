@@ -6,6 +6,8 @@
 #include <array>
 #include <cmath>
 
+#include <dune/common/version.hh>
+
 #include <dune/dpg/assemble_helper.hh>
 
 #include <dune/functions/functionspacebases/nodes.hh>
@@ -39,8 +41,10 @@ namespace Functions {
 template<typename InnerProduct>
 class NormalizedNode;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
 template<typename Basis>
 class NormalizedNodeIndexSet;
+#endif
 
 
 template<typename InnerProduct>
@@ -59,7 +63,9 @@ public:
 
   using Node = NormalizedNode<InnerProduct>;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   using IndexSet = NormalizedNodeIndexSet<NormalizedPreBasis<InnerProduct>>;
+#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = typename Basis::MultiIndex;
@@ -96,10 +102,12 @@ public:
     return Node{innerProduct_};
   }
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   IndexSet makeIndexSet() const
   {
     return IndexSet{*this};
   }
+#endif
 
   size_type size() const
   {
@@ -222,6 +230,7 @@ protected:
 
 
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
 template<typename PB>
 class NormalizedNodeIndexSet
 {
@@ -278,6 +287,7 @@ public:
 protected:
   WrappedIndexSet wrappedIndexSet_;
 };
+#endif
 
 
 

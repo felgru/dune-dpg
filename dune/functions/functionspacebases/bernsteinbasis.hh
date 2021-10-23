@@ -6,6 +6,7 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/bernstein/pqkfactory.hh>
 
@@ -36,8 +37,10 @@ namespace Functions {
 template<typename GV, int k, typename R=double>
 class BernsteinNode;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
 template<typename GV, int k, class MI, typename R=double>
 class BernsteinNodeIndexSet;
+#endif
 
 template<typename GV, int k, class MI, typename R=double>
 class BernsteinPreBasis;
@@ -71,8 +74,10 @@ public:
 
 private:
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   template<typename, int, class, typename>
   friend class BernsteinNodeIndexSet;
+#endif
 
   // Precompute the number of dofs per entity type
   constexpr static size_type dofsPerVertex =
@@ -96,7 +101,9 @@ public:
 
   using Node = BernsteinNode<GV, k, R>;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   using IndexSet = BernsteinNodeIndexSet<GV, k, MI, R>;
+#endif
 
   //! Type used for global numbering of the basis vectors
   using MultiIndex = MI;
@@ -155,10 +162,12 @@ public:
    * Create an index set suitable for the tree node obtained
    * by makeNode().
    */
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   IndexSet makeIndexSet() const
   {
     return IndexSet{*this};
   }
+#endif
 
   //! Same as size(prefix) with empty prefix
   size_type size() const
@@ -393,6 +402,7 @@ protected:
 
 
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
 template<typename GV, int k, class MI, typename R>
 class BernsteinNodeIndexSet
 {
@@ -452,6 +462,7 @@ protected:
 
   const Node* node_;
 };
+#endif
 
 
 

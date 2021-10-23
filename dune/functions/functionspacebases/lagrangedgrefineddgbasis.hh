@@ -6,6 +6,7 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqkfactory.hh>
 
@@ -38,8 +39,10 @@ namespace Functions {
 template<typename GV, int level, int k, typename R=double>
 class LagrangeDGRefinedDGNode;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
 template<typename GV, int level, int k, class MI, typename R=double>
 class LagrangeDGRefinedDGNodeIndexSet;
+#endif
 
 
 template<typename GV, int level, int k, class MI, typename R=double>
@@ -70,7 +73,9 @@ public:
 
   using Node = LagrangeDGRefinedDGNode<GV, level, k, R>;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   using IndexSet = LagrangeDGRefinedDGNodeIndexSet<GV, level, k, MI, R>;
+#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -113,10 +118,12 @@ public:
     return Node{};
   }
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   IndexSet makeIndexSet() const
   {
     return IndexSet{*this};
   }
+#endif
 
   size_type size() const
   {
@@ -261,6 +268,7 @@ protected:
 
 
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
 template<typename GV, int level, int k, class MI, typename R>
 class LagrangeDGRefinedDGNodeIndexSet
 {
@@ -319,6 +327,7 @@ protected:
 
   const Node* node_;
 };
+#endif
 
 
 

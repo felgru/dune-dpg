@@ -5,6 +5,7 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqkfacefactory.hh>
 
@@ -35,8 +36,10 @@ namespace Functions {
 template<typename GV, int k, typename R=double>
 class LagrangeFaceNode;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
 template<typename GV, int k, class MI, typename R=double>
 class LagrangeFaceNodeIndexSet;
+#endif
 
 template<typename GV, int k, class MI, typename R=double>
 class LagrangeFacePreBasis;
@@ -63,7 +66,9 @@ public:
 
   using Node = LagrangeFaceNode<GV, k, R>;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   using IndexSet = LagrangeFaceNodeIndexSet<GV, k, MI, R>;
+#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -106,10 +111,12 @@ public:
     return Node{};
   }
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   IndexSet makeIndexSet() const
   {
     return IndexSet{*this};
   }
+#endif
 
   size_type size() const
   {
@@ -276,6 +283,7 @@ protected:
 
 
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
 template<typename GV, int k, class MI, typename R>
 class LagrangeFaceNodeIndexSet
 {
@@ -335,6 +343,7 @@ protected:
 
   const Node* node_;
 };
+#endif
 
 
 

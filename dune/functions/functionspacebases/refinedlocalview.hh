@@ -8,6 +8,7 @@
 
 #include <dune/common/concept.hh>
 #include <dune/common/std/type_traits.hh>
+#include <dune/common/version.hh>
 
 #include <dune/functions/functionspacebases/concepts.hh>
 
@@ -24,8 +25,10 @@ namespace Functions {
 template<class GB>
 class RefinedLocalView
 {
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   // Node index set provided by PreBasis
   using NodeIndexSet = typename GB::PreBasis::IndexSet;
+#endif
 
 public:
 
@@ -47,21 +50,25 @@ public:
   using Tree = typename GlobalBasis::PreBasis::Node;
 
   /** \brief Type used for global numbering of the basis vectors */
-  using MultiIndex = typename NodeIndexSet::MultiIndex;
+  using MultiIndex = typename GlobalBasis::MultiIndex;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
 private:
 
   template<typename NodeIndexSet_>
   using hasIndices = decltype(std::declval<NodeIndexSet_>().indices(std::declval<std::vector<typename NodeIndexSet_::MultiIndex>>().begin()));
 
 public:
+#endif
 
 
   /** \brief Construct local view for a given global finite element basis */
   RefinedLocalView(const GlobalBasis& globalBasis) :
     globalBasis_(&globalBasis),
-    tree_(globalBasis_->preBasis().makeNode()),
-    nodeIndexSet_(globalBasis_->preBasis().makeIndexSet())
+    tree_(globalBasis_->preBasis().makeNode())
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
+    , nodeIndexSet_(globalBasis_->preBasis().makeIndexSet())
+#endif
   {
     static_assert(models<Concept::BasisTree<GridView>, Tree>(), "Tree type passed to RefinedLocalView does not model the BasisNode concept.");
     initializeTree(tree_);
@@ -76,6 +83,10 @@ public:
   {
     element_ = e;
     bindTree(tree_, element_);
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,8)
+    indices_.resize(size());
+    globalBasis_->preBasis().indices(tree_, indices_.begin());
+#else
     nodeIndexSet_.bind(tree_);
     indices_.resize(size());
     if constexpr (Std::is_detected<hasIndices, NodeIndexSet>{})
@@ -84,6 +95,7 @@ public:
       for (size_type i = 0 ; i < this->size() ; ++i)
         indices_[i] = nodeIndexSet_.index(i);
     }
+#endif
   }
 
   void resetSubElements()
@@ -115,7 +127,9 @@ public:
    */
   void unbind()
   {
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
     nodeIndexSet_.unbind();
+#endif
   }
 
   /** \brief Return the local ansatz tree associated to the bound entity
@@ -168,7 +182,9 @@ protected:
   Element element_;
   SubElement subElement_;
   Tree tree_;
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   NodeIndexSet nodeIndexSet_;
+#endif
   std::vector<MultiIndex> indices_;
 };
 

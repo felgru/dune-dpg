@@ -6,6 +6,7 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/power.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqktracefactory.hh>
 
@@ -36,8 +37,10 @@ namespace Functions {
 template<typename GV, int k, typename R=double>
 class LagrangeTraceNode;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
 template<typename GV, int k, class MI, typename R=double>
 class LagrangeTraceNodeIndexSet;
+#endif
 
 template<typename GV, int k, class MI, typename R=double>
 class LagrangeTracePreBasis;
@@ -64,7 +67,9 @@ public:
 
   using Node = LagrangeTraceNode<GV, k, R>;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   using IndexSet = LagrangeTraceNodeIndexSet<GV, k, MI, R>;
+#endif
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -109,10 +114,12 @@ public:
     return Node{};
   }
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
   IndexSet makeIndexSet() const
   {
     return IndexSet{*this};
   }
+#endif
 
   size_type size() const
   {
@@ -286,6 +293,7 @@ protected:
 
 
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
 template<typename GV, int k, class MI, typename R>
 class LagrangeTraceNodeIndexSet
 {
@@ -345,6 +353,7 @@ protected:
 
   const Node* node_;
 };
+#endif
 
 
 
