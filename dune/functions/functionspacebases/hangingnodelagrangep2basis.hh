@@ -35,13 +35,13 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV>
+template<typename GV, typename R=double>
 class HangingNodeLagrangeP2Node;
 
-template<typename GV, class MI>
+template<typename GV, class MI, typename R=double>
 class HangingNodeLagrangeP2NodeIndexSet;
 
-template<typename GV, class MI>
+template<typename GV, class MI, typename R=double>
 class HangingNodeLagrangeP2PreBasis;
 
 
@@ -53,10 +53,11 @@ class HangingNodeLagrangeP2PreBasis;
  *
  * \tparam GV  The grid view that the FE basis is defined on
  * \tparam MI  Type to be used for multi-indices
+ * \tparam R   Range type used for shape function values
  *
  * \note This only works on 2d grids
  */
-template<typename GV, class MI>
+template<typename GV, class MI, typename R>
 class HangingNodeLagrangeP2PreBasis
 {
   static constexpr int dim = GV::dimension;
@@ -71,16 +72,16 @@ public:
 
 private:
 
-  template<typename, class>
+  template<typename, class, typename>
   friend class HangingNodeLagrangeP2NodeIndexSet;
 
-  using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;
+  using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, R, dim, 2>;
 
 public:
 
-  using Node = HangingNodeLagrangeP2Node<GV>;
+  using Node = HangingNodeLagrangeP2Node<GV, R>;
 
-  using IndexSet = HangingNodeLagrangeP2NodeIndexSet<GV, MI>;
+  using IndexSet = HangingNodeLagrangeP2NodeIndexSet<GV, MI, R>;
 
   //! Type used for global numbering of the basis vectors
   using MultiIndex = MI;
@@ -298,13 +299,13 @@ protected:
 
 
 
-template<typename GV>
+template<typename GV, typename R>
 class HangingNodeLagrangeP2Node :
   public LeafBasisNode
 {
   static constexpr int dim = GV::dimension;
 
-  using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;
+  using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, R, dim, 2>;
 
 public:
 
@@ -349,7 +350,7 @@ protected:
 };
 
 
-template<typename GV, class MI>
+template<typename GV, class MI, typename R>
 class HangingNodeLagrangeP2NodeIndexSet
 {
   enum {dim = GV::dimension};
@@ -361,7 +362,7 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using PreBasis = HangingNodeLagrangeP2PreBasis<GV, MI>;
+  using PreBasis = HangingNodeLagrangeP2PreBasis<GV, MI, R>;
 
   using Node = typename PreBasis::Node;
 
@@ -444,6 +445,7 @@ namespace BasisFactory {
 
 namespace Imp {
 
+template<typename R=double>
 struct HangingNodeLagrangeP2PreBasisFactory
 {
   static const std::size_t requiredMultiIndexSize = 1;
@@ -451,7 +453,7 @@ struct HangingNodeLagrangeP2PreBasisFactory
   template<class MultiIndex, class GridView>
   auto makePreBasis(const GridView& gridView) const
   {
-    return HangingNodeLagrangeP2PreBasis<GridView, MultiIndex>(gridView);
+    return HangingNodeLagrangeP2PreBasis<GridView, MultiIndex, R>(gridView);
   }
 };
 
@@ -463,10 +465,13 @@ struct HangingNodeLagrangeP2PreBasisFactory
  * \brief Create a pre-basis builder that can build a hanging node P_2 pre-basis
  *
  * \ingroup FunctionSpaceBasesImplementations
+ *
+ * \tparam R The range type of the local basis
  */
+template<typename R=double>
 auto hangingNodeP2()
 {
-  return Imp::HangingNodeLagrangeP2PreBasisFactory();
+  return Imp::HangingNodeLagrangeP2PreBasisFactory<R>();
 }
 
 } // end namespace BasisFactory
@@ -488,9 +493,10 @@ auto hangingNodeP2()
  * of HangingNodeLagrangeP2PreBasis.
  *
  * \tparam GV The GridView that the space is defined on
+ * \tparam R The range type of the local basis
  */
-template<typename GV>
-using HangingNodeLagrangeP2Basis = ConstrainedGlobalBasis<HangingNodeLagrangeP2PreBasis<GV, FlatMultiIndex<std::size_t>> >;
+template<typename GV, typename R=double>
+using HangingNodeLagrangeP2Basis = ConstrainedGlobalBasis<HangingNodeLagrangeP2PreBasis<GV, FlatMultiIndex<std::size_t>, R> >;
 
 
 

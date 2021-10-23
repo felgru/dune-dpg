@@ -24,15 +24,15 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int s, int k>
-using PQkDGSubsampledDGNode = LagrangeDGSubsampledDGNode<GV, s, k>;
+template<typename GV, int s, int k, typename R=double>
+using PQkDGSubsampledDGNode = LagrangeDGSubsampledDGNode<GV, s, k, R>;
 
-template<typename GV, int s, int k, class MI>
+template<typename GV, int s, int k, class MI, typename R=double>
 using PQkDGSubsampledDGNodeIndexSet
-    = LagrangeDGSubsampledDGNodeIndexSet<GV, s, k, MI>;
+    = LagrangeDGSubsampledDGNodeIndexSet<GV, s, k, MI, R>;
 
-template<typename GV, int s, int k, class MI>
-using PQkDGSubsampledDGPreBasis = LagrangeDGSubsampledDGPreBasis<GV, s, k, MI>;
+template<typename GV, int s, int k, class MI, typename R=double>
+using PQkDGSubsampledDGPreBasis = LagrangeDGSubsampledDGPreBasis<GV, s, k, MI, R>;
 
 
 // *****************************************************************************
@@ -49,10 +49,10 @@ using PQkDGSubsampledDGPreBasis = LagrangeDGSubsampledDGPreBasis<GV, s, k, MI>;
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
  */
-template<typename GV, int s, int k>
+template<typename GV, int s, int k, typename R=double>
 using PQkDGSubsampledDGNodalBasis
 DUNE_DEPRECATED_MSG("PQkDGSubsampledDGNodalBasis is deprecated. Use LagrangeDGSubsampledDGBasis from <dune/functions/functionspacebases/lagrangedgsubsampleddgbasis.hh> instead.")
-= LagrangeDGSubsampledDGBasis<GV, s, k>;
+= LagrangeDGSubsampledDGBasis<GV, s, k, R>;
 
 
 
