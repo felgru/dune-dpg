@@ -32,14 +32,14 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int k>
-using BernsteinDGNode = BernsteinNode<GV, k>;
+template<typename GV, int k, typename R=double>
+using BernsteinDGNode = BernsteinNode<GV, k, R>;
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R=double>
 class BernsteinDGNodeIndexSet;
 
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R=double>
 class BernsteinDGPreBasis
 {
   static constexpr int dim = GV::dimension;
@@ -61,9 +61,9 @@ public:
   constexpr static int dofsPerPyramid     = (k+1)*(k+2)*(2*k+3)/6;
 
 
-  using Node = BernsteinDGNode<GV, k>;
+  using Node = BernsteinDGNode<GV, k, R>;
 
-  using IndexSet = BernsteinDGNodeIndexSet<GV, k, MI>;
+  using IndexSet = BernsteinDGNodeIndexSet<GV, k, MI, R>;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -207,7 +207,7 @@ public:
 
 
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R>
 class BernsteinDGNodeIndexSet
 {
   static constexpr int dim = GV::dimension;
@@ -219,7 +219,7 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using PreBasis = BernsteinDGPreBasis<GV, k, MI>;
+  using PreBasis = BernsteinDGPreBasis<GV, k, MI, R>;
 
   using Node = typename PreBasis::Node;
 
@@ -278,9 +278,10 @@ protected:
  *
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
+ * \tparam R The range type of the local basis
  */
-template<typename GV, int k>
-using BernsteinDGBasis = DefaultGlobalBasis<BernsteinDGPreBasis<GV, k, FlatMultiIndex<std::size_t>> >;
+template<typename GV, int k, typename R=double>
+using BernsteinDGBasis = DefaultGlobalBasis<BernsteinDGPreBasis<GV, k, FlatMultiIndex<std::size_t>, R> >;
 
 
 

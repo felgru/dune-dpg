@@ -33,13 +33,13 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int k>
+template<typename GV, int k, typename R=double>
 class BernsteinNode;
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R=double>
 class BernsteinNodeIndexSet;
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R=double>
 class BernsteinPreBasis;
 
 
@@ -52,10 +52,11 @@ class BernsteinPreBasis;
  * \tparam GV  The grid view that the FE basis is defined on
  * \tparam k   The polynomial order of ansatz functions
  * \tparam MI  Type to be used for multi-indices
+ * \tparam R   Range type used for shape function values
  *
  * \note This only works for 2d simplex grids.
  */
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R>
 class BernsteinPreBasis
 {
   static constexpr int dim = GV::dimension;
@@ -70,7 +71,7 @@ public:
 
 private:
 
-  template<typename, int, class>
+  template<typename, int, class, typename>
   friend class BernsteinNodeIndexSet;
 
   // Precompute the number of dofs per entity type
@@ -93,9 +94,9 @@ private:
 
 public:
 
-  using Node = BernsteinNode<GV, k>;
+  using Node = BernsteinNode<GV, k, R>;
 
-  using IndexSet = BernsteinNodeIndexSet<GV, k, MI>;
+  using IndexSet = BernsteinNodeIndexSet<GV, k, MI, R>;
 
   //! Type used for global numbering of the basis vectors
   using MultiIndex = MI;
@@ -340,14 +341,14 @@ protected:
 
 
 
-template<typename GV, int k>
+template<typename GV, int k, typename R>
 class BernsteinNode :
   public LeafBasisNode
 {
   static constexpr int dim = GV::dimension;
   static const int maxSize = StaticPower<(k+1),GV::dimension>::power;
 
-  using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, double, dim, k>;
+  using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, R, dim, k>;
 
 public:
 
@@ -392,7 +393,7 @@ protected:
 
 
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R>
 class BernsteinNodeIndexSet
 {
   enum {dim = GV::dimension};
@@ -404,7 +405,7 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using PreBasis = BernsteinPreBasis<GV, k, MI>;
+  using PreBasis = BernsteinPreBasis<GV, k, MI, R>;
 
   using Node = typename PreBasis::Node;
 
@@ -458,7 +459,7 @@ namespace BasisFactory {
 
 namespace Imp {
 
-template<std::size_t k>
+template<std::size_t k, typename R=double>
 struct BernsteinPreBasisFactory
 {
   static const std::size_t requiredMultiIndexSize = 1;
@@ -466,7 +467,7 @@ struct BernsteinPreBasisFactory
   template<class MultiIndex, class GridView>
   auto makePreBasis(const GridView& gridView) const
   {
-    return BernsteinPreBasis<GridView, k, MultiIndex>(gridView);
+    return BernsteinPreBasis<GridView, k, MultiIndex, R>(gridView);
   }
 };
 
@@ -480,11 +481,12 @@ struct BernsteinPreBasisFactory
  * \ingroup FunctionSpaceBasesImplementations
  *
  * \tparam k   The polynomial order of ansatz functions
+ * \tparam R   The range type of the local basis
  */
-template<std::size_t k>
+template<std::size_t k, typename R=double>
 auto bernstein()
 {
-  return Imp::BernsteinPreBasisFactory<k>();
+  return Imp::BernsteinPreBasisFactory<k, R>();
 }
 
 } // end namespace BasisFactory
@@ -509,9 +511,10 @@ auto bernstein()
  *
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
+ * \tparam R The range type of the local basis
  */
-template<typename GV, int k>
-using BernsteinBasis = DefaultGlobalBasis<BernsteinPreBasis<GV, k, FlatMultiIndex<std::size_t>> >;
+template<typename GV, int k, typename R=double>
+using BernsteinBasis = DefaultGlobalBasis<BernsteinPreBasis<GV, k, FlatMultiIndex<std::size_t>, R> >;
 
 
 
