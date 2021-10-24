@@ -127,6 +127,15 @@ public:
     return wrappedPreBasis_.maxNodeSize();
   }
 
+  //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
+  // TODO: use enable_if to disable indices if it does not exist on the
+  // wrapped PreBasis.
+  template<typename It>
+  It indices(const Node& node, It it) const
+  {
+    return wrappedPreBasis_.indices(node.wrappedBasisNode(), it);
+  }
+
   const WrappedPreBasis& wrappedPreBasis() const
   {
     return wrappedPreBasis_;
