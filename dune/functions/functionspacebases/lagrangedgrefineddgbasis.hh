@@ -45,7 +45,11 @@ class LagrangeDGRefinedDGNodeIndexSet;
 #endif
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+template<typename GV, int level, int k, typename R=double>
+#else
 template<typename GV, int level, int k, class MI, typename R=double>
+#endif
 class LagrangeDGRefinedDGPreBasis
   : public DGRefinedPreBasisConstants<GV::dimension, level, k>
 {
@@ -77,10 +81,16 @@ public:
   using IndexSet = LagrangeDGRefinedDGNodeIndexSet<GV, level, k, MI, R>;
 #endif
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+  static constexpr size_type maxMultiIndexSize = 1;
+  static constexpr size_type minMultiIndexSize = 1;
+  static constexpr size_type multiIndexBufferSize = 1;
+#else
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
   using SizePrefix = Dune::ReservedVector<size_type, 1>;
+#endif
 
   /** \brief Constructor for a given grid view object */
   LagrangeDGRefinedDGPreBasis(const GridView& gv) :
@@ -139,7 +149,12 @@ public:
   }
 
   //! Return number possible values for next position in multi index
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+  template<class SizePrefix>
+  size_type size(const SizePrefix& prefix) const
+#else
   size_type size(const SizePrefix prefix) const
+#endif
   {
     assert(prefix.size() == 0 || prefix.size() == 1);
     return (prefix.size() == 0) ? size() : 0;
@@ -342,7 +357,11 @@ protected:
  * \tparam R The range type of the local basis
  */
 template<typename GV, int level, int k, typename R=double>
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+using LagrangeDGRefinedDGBasis = RefinedGlobalBasis<LagrangeDGRefinedDGPreBasis<GV, level, k, R>>;
+#else
 using LagrangeDGRefinedDGBasis = RefinedGlobalBasis<LagrangeDGRefinedDGPreBasis<GV, level, k, FlatMultiIndex<std::size_t>, R> >;
+#endif
 
 
 

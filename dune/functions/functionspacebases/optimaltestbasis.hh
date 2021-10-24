@@ -84,7 +84,11 @@ template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
 class OptimalTestBasisNodeIndexSet;
 #endif
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
+#else
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
+#endif
 class OptimalTestBasisPreBasis;
 
 
@@ -99,7 +103,11 @@ struct RefinementConstants
   : public LagrangeDGRefinedDGPreBasis<GV, level, k, FlatMultiIndex<std::size_t> >
            ::RefinementConstants {};
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
+#else
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex, class MI>
+#endif
 class OptimalTestBasisPreBasis
   : public RefinementConstants<
                typename std::tuple_element<testIndex,
@@ -137,10 +145,16 @@ public:
                                                 testIndex, MI>;
 #endif
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+  static constexpr size_type maxMultiIndexSize = 1;
+  static constexpr size_type minMultiIndexSize = 1;
+  static constexpr size_type multiIndexBufferSize = 1;
+#else
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
   using SizePrefix = Dune::ReservedVector<size_type, 1>;
+#endif
 
   using TestSearchSpaces = typename TestspaceCoefficientMatrix::TestSpaces;
   using SolutionSpaces = typename TestspaceCoefficientMatrix::SolutionSpaces;
@@ -195,7 +209,12 @@ public:
   }
 
   //! Return number possible values for next position in multi index
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+  template<class SizePrefix>
+  size_type size(const SizePrefix& prefix) const
+#else
   size_type size(const SizePrefix prefix) const
+#endif
   {
     assert(prefix.size() == 0 || prefix.size() == 1);
     return (prefix.size() == 0) ? size() : 0;

@@ -3,13 +3,17 @@
 #ifndef DUNE_FUNCTIONS_FUNCTIONSPACEBASES_REFINEDGLOBALBASIS_HH
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_REFINEDGLOBALBASIS_HH
 
+#include <type_traits>
+
 #include <dune/common/concept.hh>
 #include <dune/common/reservedvector.hh>
 #include <dune/common/typeutilities.hh>
+#include <dune/common/version.hh>
 
 #include <dune/functions/common/type_traits.hh>
 #include <dune/functions/functionspacebases/refinedlocalview.hh>
 #include <dune/functions/functionspacebases/concepts.hh>
+#include <dune/functions/functionspacebases/flatmultiindex.hh>
 
 
 
@@ -49,7 +53,14 @@ public:
   using GridView = typename PreBasis::GridView;
 
   //! Type used for global numbering of the basis vectors
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+  using MultiIndex = std::conditional_t<
+      (PreBasis::multiIndexBufferSize == 1),
+      FlatMultiIndex<std::size_t>,
+      Dune::ReservedVector<std::size_t, PreBasis::multiIndexBufferSize>>;
+#else
   using MultiIndex = typename PreBasis::MultiIndex;
+#endif
 
   //! Type used for indices and size information
   using size_type = std::size_t;
@@ -57,11 +68,18 @@ public:
   //! Type of the local view on the restriction of the basis to a single element
   using LocalView = RefinedLocalView<RefinedGlobalBasis<PreBasis>>;
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,9)
   //! Node index set provided by PreBasis
   using NodeIndexSet = typename PreBasis::IndexSet;
+#endif
 
   //! Type used for prefixes handed to the size() method
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+  using SizePrefix
+    = Dune::ReservedVector<std::size_t, PreBasis::multiIndexBufferSize>;
+#else
   using SizePrefix = typename PreBasis::SizePrefix;
+#endif
 
 
   /**
@@ -77,6 +95,20 @@ public:
     enableIfConstructible<PreBasis, T...> = 0>
   RefinedGlobalBasis(T&&... t) :
     preBasis_(std::forward<T>(t)...)
+  {
+    static_assert(models<Concept::PreBasis<GridView>, PreBasis>(), "Type passed to RefinedGlobalBasis does not model the PreBasis concept.");
+    preBasis_.initializeIndices();
+  }
+
+  /**
+   * \brief Constructor from a PreBasis factory
+   *
+   * \param gridView  The GridView this basis is based on
+   * \param factory  A factory functor that gets the `gridView` and returns a `PreBasis`
+   */
+  template<class PreBasisFactory>
+  RefinedGlobalBasis(const GridView& gridView, PreBasisFactory&& factory) :
+    preBasis_(factory(gridView))
   {
     static_assert(models<Concept::PreBasis<GridView>, PreBasis>(), "Type passed to RefinedGlobalBasis does not model the PreBasis concept.");
     preBasis_.initializeIndices();
@@ -139,6 +171,34 @@ public:
 protected:
   PreBasis preBasis_;
 };
+
+
+
+template<class PreBasis>
+RefinedGlobalBasis(PreBasis&&) -> RefinedGlobalBasis<std::decay_t<PreBasis>>;
+
+template<class GridView, class PreBasisFactory>
+RefinedGlobalBasis(const GridView& gv, PreBasisFactory&& f) -> RefinedGlobalBasis<std::decay_t<decltype(f(gv))>>;
+
+
+
+namespace BasisFactory {
+
+template<class GridView, class PreBasisFactory>
+auto makeRefiendBasis(const GridView& gridView,
+                      PreBasisFactory&& preBasisFactory)
+{
+  return RefinedGlobalBasis(preBasisFactory(gridView));
+}
+
+} // end namespace BasisFactory
+
+// Backward compatibility
+namespace BasisBuilder {
+
+  using namespace BasisFactory;
+
+}
 
 
 

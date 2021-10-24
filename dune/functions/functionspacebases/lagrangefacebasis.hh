@@ -41,12 +41,20 @@ template<typename GV, int k, class MI, typename R=double>
 class LagrangeFaceNodeIndexSet;
 #endif
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+template<typename GV, int k, typename R=double>
+#else
 template<typename GV, int k, class MI, typename R=double>
+#endif
 class LagrangeFacePreBasis;
 
 
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+template<typename GV, int k, typename R>
+#else
 template<typename GV, int k, class MI, typename R>
+#endif
 class LagrangeFacePreBasis
 {
   static constexpr int dim = GV::dimension;
@@ -70,10 +78,16 @@ public:
   using IndexSet = LagrangeFaceNodeIndexSet<GV, k, MI, R>;
 #endif
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+  static constexpr size_type maxMultiIndexSize = 1;
+  static constexpr size_type minMultiIndexSize = 1;
+  static constexpr size_type multiIndexBufferSize = 1;
+#else
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
   using SizePrefix = Dune::ReservedVector<size_type, 1>;
+#endif
 
   /** \brief Constructor for a given grid view object */
   LagrangeFacePreBasis(const GridView& gv) :
@@ -138,7 +152,12 @@ public:
   }
 
   //! Return number possible values for next position in multi index
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+  template<class SizePrefix>
+  size_type size(const SizePrefix& prefix) const
+#else
   size_type size(const SizePrefix prefix) const
+#endif
   {
     assert(prefix.size() == 0 || prefix.size() == 1);
     return (prefix.size() == 0) ? size() : 0;
@@ -349,6 +368,7 @@ protected:
 
 namespace BasisFactory {
 
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,9)
 namespace Imp {
 
 template<std::size_t k, typename R=double>
@@ -364,11 +384,18 @@ struct LagrangeFacePreBasisFactory
 };
 
 } // end namespace BasisFactory::Imp
+#endif
 
 template<std::size_t k, typename R=double>
 auto lagrangeFace()
 {
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+  return [](const auto& gridView) {
+    return LagrangeFacePreBasis<std::decay_t<decltype(gridView)>, k, R>(gridView);
+  };
+#else
   return Imp::LagrangeFacePreBasisFactory<k, R>();
+#endif
 }
 
 } // end namespace BasisFactory
@@ -392,7 +419,11 @@ auto lagrangeFace()
  * \tparam R The range type of the local basis
  */
 template<typename GV, int k, typename R=double>
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+using LagrangeFaceBasis = DefaultGlobalBasis<LagrangeFacePreBasis<GV, k, R>>;
+#else
 using LagrangeFaceBasis = DefaultGlobalBasis<LagrangeFacePreBasis<GV, k, FlatMultiIndex<std::size_t>, R> >;
+#endif
 
 
 
