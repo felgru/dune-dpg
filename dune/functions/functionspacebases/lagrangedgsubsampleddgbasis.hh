@@ -33,18 +33,18 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int s, int k>
+template<typename GV, int s, int k, typename R=double>
 class LagrangeDGSubsampledDGNode;
 
-template<typename GV, int s, int k, class MI>
+template<typename GV, int s, int k, class MI, typename R=double>
 class LagrangeDGSubsampledDGNodeIndexSet;
 
-template<typename GV, int s, int k, class MI>
+template<typename GV, int s, int k, class MI, typename R=double>
 class LagrangeDGSubsampledDGPreBasis;
 
 
 
-template<typename GV, int s, int k, class MI>
+template<typename GV, int s, int k, class MI, typename R>
 class LagrangeDGSubsampledDGPreBasis
 {
   static constexpr int dim = GV::dimension;
@@ -62,9 +62,9 @@ public:
   static constexpr int dofsPerQuad        = s*s*(k+1)*(k+1);
 
 
-  using Node = LagrangeDGSubsampledDGNode<GV, s, k>;
+  using Node = LagrangeDGSubsampledDGNode<GV, s, k, R>;
 
-  using IndexSet = LagrangeDGSubsampledDGNodeIndexSet<GV, s, k, MI>;
+  using IndexSet = LagrangeDGSubsampledDGNodeIndexSet<GV, s, k, MI, R>;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -153,7 +153,7 @@ public:
 
 
 
-template<typename GV, int s, int k>
+template<typename GV, int s, int k, typename R>
 class LagrangeDGSubsampledDGNode :
   public LeafBasisNode
 {
@@ -161,7 +161,7 @@ class LagrangeDGSubsampledDGNode :
 
   using FiniteElementCache
       = typename Dune::PQkDGSubsampledLocalFiniteElementCache
-                        <typename GV::ctype, double, dim, s, k>;
+                        <typename GV::ctype, R, dim, s, k>;
 
 public:
 
@@ -206,7 +206,7 @@ protected:
 
 
 
-template<typename GV, int s, int k, class MI>
+template<typename GV, int s, int k, class MI, typename R>
 class LagrangeDGSubsampledDGNodeIndexSet
 {
   enum {dim = GV::dimension};
@@ -218,7 +218,7 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using PreBasis = LagrangeDGSubsampledDGPreBasis<GV, s, k, MI>;
+  using PreBasis = LagrangeDGSubsampledDGPreBasis<GV, s, k, MI, R>;
 
   using Node = typename PreBasis::Node;
 
@@ -303,7 +303,7 @@ namespace BasisFactory {
 
 namespace Imp {
 
-template<std::size_t s, std::size_t k>
+template<std::size_t s, std::size_t k, typename R=double>
 struct LagrangeDGSubsampledDGPreBasisFactory
 {
   static const std::size_t requiredMultiIndexSize = 1;
@@ -311,16 +311,16 @@ struct LagrangeDGSubsampledDGPreBasisFactory
   template<class MultiIndex, class GridView>
   auto makePreBasis(const GridView& gridView) const
   {
-    return LagrangeDGSubsampledDGPreBasis<GridView, s, k, MultiIndex>(gridView);
+    return LagrangeDGSubsampledDGPreBasis<GridView, s, k, MultiIndex, R>(gridView);
   }
 };
 
 } // end namespace BasisFactory::Imp
 
-template<std::size_t s, std::size_t k>
+template<std::size_t s, std::size_t k, typename R=double>
 auto lagrangeDGSubsampledDG()
 {
-  return Imp::LagrangeDGSubsampledDGPreBasisFactory<s, k>();
+  return Imp::LagrangeDGSubsampledDGPreBasisFactory<s, k, R>();
 }
 
 } // end namespace BasisFactory
@@ -340,9 +340,10 @@ auto lagrangeDGSubsampledDG()
  *
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
+ * \tparam R The range type of the local basis
  */
-template<typename GV, int s, int k>
-using LagrangeDGSubsampledDGBasis = DefaultGlobalBasis<LagrangeDGSubsampledDGPreBasis<GV, s, k, FlatMultiIndex<std::size_t> > >;
+template<typename GV, int s, int k, typename R=double>
+using LagrangeDGSubsampledDGBasis = DefaultGlobalBasis<LagrangeDGSubsampledDGPreBasis<GV, s, k, FlatMultiIndex<std::size_t>, R> >;
 
 
 

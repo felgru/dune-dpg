@@ -24,14 +24,14 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int k>
-using PQkTraceNode = LagrangeTraceNode<GV, k>;
+template<typename GV, int k, typename R=double>
+using PQkTraceNode = LagrangeTraceNode<GV, k, R>;
 
-template<typename GV, int k, class MI>
-using PQkTraceNodeIndexSet = LagrangeTraceNodeIndexSet<GV, k, MI>;
+template<typename GV, int k, class MI, typename R=double>
+using PQkTraceNodeIndexSet = LagrangeTraceNodeIndexSet<GV, k, MI, R>;
 
-template<typename GV, int k, class MI>
-using PQkTracePreBasis = LagrangeTracePreBasis<GV, k, MI>;
+template<typename GV, int k, class MI, typename R=double>
+using PQkTracePreBasis = LagrangeTracePreBasis<GV, k, MI, R>;
 
 
 
@@ -50,10 +50,10 @@ using PQkTracePreBasis = LagrangeTracePreBasis<GV, k, MI>;
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
  */
-template<typename GV, int k>
+template<typename GV, int k, typename R=double>
 using PQkTraceNodalBasis
 DUNE_DEPRECATED_MSG("PQkTraceNodalBasis is deprecated. Use LagrangeTraceBasis from <dune/functions/functionspacebases/lagrangetracebasis.hh> instead.")
-    = LagrangeTraceBasis<GV, k>;
+    = LagrangeTraceBasis<GV, k, R>;
 
 
 

@@ -36,35 +36,35 @@ namespace Functions {
   template<typename GV, int k, class MI>
   class LagrangeDGPreBasis;
 
-  template<typename GV, int level, int k, class MI>
+  template<typename GV, int level, int k, class MI, typename R>
   class LagrangeDGRefinedDGPreBasis;
 
-  template<typename GV, int k, class MI>
+  template<typename GV, int k, class MI, typename R>
   class BernsteinPreBasis;
 
-  template<typename GV, int k, class MI>
+  template<typename GV, int k, class MI, typename R>
   class BernsteinDGPreBasis;
 
-  template<typename GV, int level, int k, class MI>
+  template<typename GV, int level, int k, class MI, typename R>
   class BernsteinDGRefinedDGPreBasis;
 
-  template<typename GV, int s, int k, class MI>
+  template<typename GV, int s, int k, class MI, typename R>
   class LagrangeDGSubsampledDGPreBasis;
 
-  template<typename GV, int s, int k, class MI>
+  template<typename GV, int s, int k, class MI, typename R>
   class LagrangeSubsampledDGPreBasis;
 
-  template<typename GV, int k, class MI>
+  template<typename GV, int k, class MI, typename R>
   class LagrangeTracePreBasis;
 
   template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
            class MI>
   class OptimalTestBasisPreBasis;
 
-  template<typename GV, class MI>
+  template<typename GV, class MI, typename R>
   class HangingNodeBernsteinP2PreBasis;
 
-  template<typename GV, class MI>
+  template<typename GV, class MI, typename R>
   class HangingNodeLagrangeP2PreBasis;
 
   template<typename InnerProduct>
@@ -141,16 +141,16 @@ template <typename GlobalBasis>
 struct is_DGRefinedFiniteElement : std::false_type {};
 
 #ifndef DOXYGEN
-template<typename GV, int level, int k>
+template<typename GV, int level, int k, typename R>
 struct is_DGRefinedFiniteElement<Functions::RefinedGlobalBasis<
                Functions::LagrangeDGRefinedDGPreBasis
-                   <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
+                   <GV, level, k, Functions::FlatMultiIndex<std::size_t>, R>>>
        : std::true_type {};
 
-template<typename GV, int level, int k>
+template<typename GV, int level, int k, typename R>
 struct is_DGRefinedFiniteElement<Functions::RefinedGlobalBasis<
                Functions::BernsteinDGRefinedDGPreBasis
-                   <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
+                   <GV, level, k, Functions::FlatMultiIndex<std::size_t>, R>>>
        : std::true_type {};
 
 template<typename InnerProduct>
@@ -183,16 +183,16 @@ template <typename GlobalBasis>
 struct levelOfFE : std::integral_constant<int, 0> {};
 
 #ifndef DOXYGEN
-template<class GV, int level, int k>
+template<class GV, int level, int k, typename R>
 struct levelOfFE<Functions::RefinedGlobalBasis<
              Functions::LagrangeDGRefinedDGPreBasis
-                 <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
+                 <GV, level, k, Functions::FlatMultiIndex<std::size_t>, R>>>
        : std::integral_constant<int, level> {};
 
-template<class GV, int level, int k>
+template<class GV, int level, int k, typename R>
 struct levelOfFE<Functions::RefinedGlobalBasis<
              Functions::BernsteinDGRefinedDGPreBasis
-                 <GV, level, k, Functions::FlatMultiIndex<std::size_t> > > >
+                 <GV, level, k, Functions::FlatMultiIndex<std::size_t>, R>>>
        : std::integral_constant<int, level> {};
 
 template<class InnerProduct>
@@ -215,16 +215,16 @@ template <typename GlobalBasis>
 struct is_SubsampledFiniteElement : std::false_type {};
 
 #ifndef DOXYGEN
-template<class GV, int s, int k>
+template<class GV, int s, int k, typename R>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
              Functions::LagrangeDGSubsampledDGPreBasis
-                 <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
+                 <GV, s, k, Functions::FlatMultiIndex<std::size_t>, R>>>
        : std::true_type {};
 
-template<class GV, int s, int k>
+template<class GV, int s, int k, typename R>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
              Functions::LagrangeSubsampledDGPreBasis
-                 <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
+                 <GV, s, k, Functions::FlatMultiIndex<std::size_t>, R>>>
        : std::true_type {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
@@ -241,16 +241,16 @@ template <typename GlobalBasis>
 struct numberOfSamples : std::integral_constant<int, 1> {};
 
 #ifndef DOXYGEN
-template<class GV, int s, int k>
+template<class GV, int s, int k, typename R>
 struct numberOfSamples<Functions::DefaultGlobalBasis<
              Functions::LagrangeDGSubsampledDGPreBasis
-                 <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
+                 <GV, s, k, Functions::FlatMultiIndex<std::size_t>, R>>>
        : std::integral_constant<int, s> {};
 
-template<class GV, int s, int k>
+template<class GV, int s, int k, typename R>
 struct numberOfSamples<Functions::DefaultGlobalBasis<
              Functions::LagrangeSubsampledDGPreBasis
-                 <GV, s, k, Functions::FlatMultiIndex<std::size_t> > > >
+                 <GV, s, k, Functions::FlatMultiIndex<std::size_t>, R>>>
        : std::integral_constant<int, s> {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
@@ -309,53 +309,53 @@ struct changeGridView<Functions::LagrangeDGPreBasis<GV, k, MI>, GridView>
   typedef Functions::LagrangeDGPreBasis<GridView, k, MI> type;
 };
 
-template<typename GV, int level, int k, class MI, class GridView>
-struct changeGridView<Functions::LagrangeDGRefinedDGPreBasis<GV, level, k, MI>,
+template<typename GV, int level, int k, class MI, typename R, class GridView>
+struct changeGridView<Functions::LagrangeDGRefinedDGPreBasis<GV, level, k, MI, R>,
                       GridView>
 {
-  typedef Functions::LagrangeDGRefinedDGPreBasis<GridView, level, k, MI> type;
+  typedef Functions::LagrangeDGRefinedDGPreBasis<GridView, level, k, MI, R> type;
 };
 
-template<typename GV, int k, class MI, class GridView>
-struct changeGridView<Functions::BernsteinPreBasis<GV, k, MI>, GridView>
+template<typename GV, int k, class MI, typename R, class GridView>
+struct changeGridView<Functions::BernsteinPreBasis<GV, k, MI, R>, GridView>
 {
-  typedef Functions::BernsteinPreBasis<GridView, k, MI> type;
+  typedef Functions::BernsteinPreBasis<GridView, k, MI, R> type;
 };
 
-template<typename GV, int k, class MI, class GridView>
-struct changeGridView<Functions::BernsteinDGPreBasis<GV, k, MI>, GridView>
+template<typename GV, int k, class MI, typename R, class GridView>
+struct changeGridView<Functions::BernsteinDGPreBasis<GV, k, MI, R>, GridView>
 {
-  typedef Functions::BernsteinDGPreBasis<GridView, k, MI> type;
+  typedef Functions::BernsteinDGPreBasis<GridView, k, MI, R> type;
 };
 
-template<typename GV, int level, int k, class MI, class GridView>
+template<typename GV, int level, int k, class MI, typename R, class GridView>
 struct changeGridView<Functions::BernsteinDGRefinedDGPreBasis
-                                                <GV, level, k, MI>,
+                                                <GV, level, k, MI, R>,
                       GridView>
 {
-  typedef Functions::BernsteinDGRefinedDGPreBasis<GridView, level, k, MI>
+  typedef Functions::BernsteinDGRefinedDGPreBasis<GridView, level, k, MI, R>
       type;
 };
 
-template<typename GV, int s, int k, class MI, class GridView>
-struct changeGridView<Functions::LagrangeDGSubsampledDGPreBasis<GV, s, k, MI>,
+template<typename GV, int s, int k, class MI, typename R, class GridView>
+struct changeGridView<Functions::LagrangeDGSubsampledDGPreBasis<GV, s, k, MI, R>,
                       GridView>
 {
-  typedef Functions::LagrangeDGSubsampledDGPreBasis<GridView, s, k, MI> type;
+  typedef Functions::LagrangeDGSubsampledDGPreBasis<GridView, s, k, MI, R> type;
 };
 
-template<typename GV, int s, int k, class MI, class GridView>
-struct changeGridView<Functions::LagrangeSubsampledDGPreBasis<GV, s, k, MI>,
+template<typename GV, int s, int k, class MI, typename R, class GridView>
+struct changeGridView<Functions::LagrangeSubsampledDGPreBasis<GV, s, k, MI, R>,
                       GridView>
 {
-  typedef Functions::LagrangeSubsampledDGPreBasis<GridView, s, k, MI> type;
+  typedef Functions::LagrangeSubsampledDGPreBasis<GridView, s, k, MI, R> type;
 };
 
-template<typename GV, int k, class MI, class GridView>
-struct changeGridView<Functions::LagrangeTracePreBasis<GV, k, MI>,
+template<typename GV, int k, class MI, typename R, class GridView>
+struct changeGridView<Functions::LagrangeTracePreBasis<GV, k, MI, R>,
                       GridView>
 {
-  typedef Functions::LagrangeTracePreBasis<GridView, k, MI> type;
+  typedef Functions::LagrangeTracePreBasis<GridView, k, MI, R> type;
 };
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
@@ -369,18 +369,18 @@ struct changeGridView<Functions::OptimalTestBasisPreBasis
     testIndex, MI>   type;
 };
 
-template<typename GV, class MI, class GridView>
-struct changeGridView<Functions::HangingNodeBernsteinP2PreBasis<GV, MI>,
+template<typename GV, class MI, typename R, class GridView>
+struct changeGridView<Functions::HangingNodeBernsteinP2PreBasis<GV, MI, R>,
                       GridView>
 {
-  typedef Functions::HangingNodeBernsteinP2PreBasis<GridView, MI> type;
+  typedef Functions::HangingNodeBernsteinP2PreBasis<GridView, MI, R> type;
 };
 
-template<typename GV, class MI, class GridView>
-struct changeGridView<Functions::HangingNodeLagrangeP2PreBasis<GV, MI>,
+template<typename GV, class MI, typename R, class GridView>
+struct changeGridView<Functions::HangingNodeLagrangeP2PreBasis<GV, MI, R>,
                       GridView>
 {
-  typedef Functions::HangingNodeLagrangeP2PreBasis<GridView, MI> type;
+  typedef Functions::HangingNodeLagrangeP2PreBasis<GridView, MI, R> type;
 };
 
 template<typename InnerProduct, class GridView>

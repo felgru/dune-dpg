@@ -24,14 +24,14 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int k>
-using PQkFaceNode = LagrangeFaceNode<GV, k>;
+template<typename GV, int k, typename R=double>
+using PQkFaceNode = LagrangeFaceNode<GV, k, R>;
 
-template<typename GV, int k, class MI>
-using PQkFaceNodeIndexSet = LagrangeFaceNodeIndexSet<GV, k, MI>;
+template<typename GV, int k, class MI, typename R=double>
+using PQkFaceNodeIndexSet = LagrangeFaceNodeIndexSet<GV, k, MI, R>;
 
-template<typename GV, int k, class MI>
-using PQkFacePreBasis = LagrangeFacePreBasis<GV, k, MI>;
+template<typename GV, int k, class MI, typename R=double>
+using PQkFacePreBasis = LagrangeFacePreBasis<GV, k, MI, R>;
 
 
 
@@ -50,10 +50,10 @@ using PQkFacePreBasis = LagrangeFacePreBasis<GV, k, MI>;
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
  */
-template<typename GV, int k>
+template<typename GV, int k, typename R=double>
 using PQkFaceNodalBasis
 DUNE_DEPRECATED_MSG("PQkFaceNodalBasis is deprecated. Use LagrangeFaceBasis from <dune/functions/functionspacebases/lagrangefacebasis.hh> instead.")
-    = LagrangeFaceBasis<GV, k>;
+    = LagrangeFaceBasis<GV, k, R>;
 
 
 

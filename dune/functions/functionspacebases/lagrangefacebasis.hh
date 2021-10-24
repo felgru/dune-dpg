@@ -32,18 +32,18 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int k>
+template<typename GV, int k, typename R=double>
 class LagrangeFaceNode;
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R=double>
 class LagrangeFaceNodeIndexSet;
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R=double>
 class LagrangeFacePreBasis;
 
 
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R>
 class LagrangeFacePreBasis
 {
   static constexpr int dim = GV::dimension;
@@ -61,9 +61,9 @@ public:
   static constexpr int dofsPerQuad     = (k+1)*(k+1);
 
 
-  using Node = LagrangeFaceNode<GV, k>;
+  using Node = LagrangeFaceNode<GV, k, R>;
 
-  using IndexSet = LagrangeFaceNodeIndexSet<GV, k, MI>;
+  using IndexSet = LagrangeFaceNodeIndexSet<GV, k, MI, R>;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -224,14 +224,14 @@ public:
 
 
 
-template<typename GV, int k>
+template<typename GV, int k, typename R>
 class LagrangeFaceNode :
   public LeafBasisNode
 {
   static constexpr int dim = GV::dimension;
 
   using FiniteElementCache = typename Dune::PQkFaceLocalFiniteElementCache
-                                        <typename GV::ctype, double, dim, k>;
+                                        <typename GV::ctype, R, dim, k>;
 
 public:
 
@@ -276,7 +276,7 @@ protected:
 
 
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R>
 class LagrangeFaceNodeIndexSet
 {
   enum {dim = GV::dimension};
@@ -288,7 +288,7 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using PreBasis = LagrangeFacePreBasis<GV, k, MI>;
+  using PreBasis = LagrangeFacePreBasis<GV, k, MI, R>;
 
   using Node = typename PreBasis::Node;
 
@@ -342,7 +342,7 @@ namespace BasisFactory {
 
 namespace Imp {
 
-template<std::size_t k>
+template<std::size_t k, typename R=double>
 struct LagrangeFacePreBasisFactory
 {
   static const std::size_t requiredMultiIndexSize = 1;
@@ -350,16 +350,16 @@ struct LagrangeFacePreBasisFactory
   template<class MultiIndex, class GridView, class size_type=std::size_t>
   auto makePreBasis(const GridView& gridView) const
   {
-    return LagrangeFacePreBasis<GridView, k, MultiIndex>(gridView);
+    return LagrangeFacePreBasis<GridView, k, MultiIndex, R>(gridView);
   }
 };
 
 } // end namespace BasisFactory::Imp
 
-template<std::size_t k>
+template<std::size_t k, typename R=double>
 auto lagrangeFace()
 {
-  return Imp::LagrangeFacePreBasisFactory<k>();
+  return Imp::LagrangeFacePreBasisFactory<k, R>();
 }
 
 } // end namespace BasisFactory
@@ -380,9 +380,10 @@ auto lagrangeFace()
  *
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
+ * \tparam R The range type of the local basis
  */
-template<typename GV, int k>
-using LagrangeFaceBasis = DefaultGlobalBasis<LagrangeFacePreBasis<GV, k, FlatMultiIndex<std::size_t> > >;
+template<typename GV, int k, typename R=double>
+using LagrangeFaceBasis = DefaultGlobalBasis<LagrangeFacePreBasis<GV, k, FlatMultiIndex<std::size_t>, R> >;
 
 
 

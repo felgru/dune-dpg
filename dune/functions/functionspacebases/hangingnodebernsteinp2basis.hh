@@ -36,13 +36,13 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV>
+template<typename GV, typename R=double>
 class HangingNodeBernsteinP2Node;
 
-template<typename GV, class MI>
+template<typename GV, class MI, typename R=double>
 class HangingNodeBernsteinP2NodeIndexSet;
 
-template<typename GV, class MI>
+template<typename GV, class MI, typename R=double>
 class HangingNodeBernsteinP2PreBasis;
 
 
@@ -54,10 +54,11 @@ class HangingNodeBernsteinP2PreBasis;
  *
  * \tparam GV  The grid view that the FE basis is defined on
  * \tparam MI  Type to be used for multi-indices
+ * \tparam R   Range type used for shape function values
  *
  * \note This only works on 2d grids
  */
-template<typename GV, class MI>
+template<typename GV, class MI, typename R>
 class HangingNodeBernsteinP2PreBasis
 {
   static constexpr int dim = GV::dimension;
@@ -72,16 +73,16 @@ public:
 
 private:
 
-  template<typename, class>
+  template<typename, class, typename>
   friend class HangingNodeBernsteinP2NodeIndexSet;
 
-  using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;
+  using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, R, dim, 2>;
 
 public:
 
-  using Node = HangingNodeBernsteinP2Node<GV>;
+  using Node = HangingNodeBernsteinP2Node<GV, R>;
 
-  using IndexSet = HangingNodeBernsteinP2NodeIndexSet<GV, MI>;
+  using IndexSet = HangingNodeBernsteinP2NodeIndexSet<GV, MI, R>;
 
   //! Type used for global numbering of the basis vectors
   using MultiIndex = MI;
@@ -318,13 +319,13 @@ protected:
 
 
 
-template<typename GV>
+template<typename GV, typename R>
 class HangingNodeBernsteinP2Node :
   public LeafBasisNode
 {
   static constexpr int dim = GV::dimension;
 
-  using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, double, dim, 2>;
+  using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, R, dim, 2>;
 
 public:
 
@@ -369,7 +370,7 @@ protected:
 };
 
 
-template<typename GV, class MI>
+template<typename GV, class MI, typename R>
 class HangingNodeBernsteinP2NodeIndexSet
 {
   enum {dim = GV::dimension};
@@ -381,7 +382,7 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using PreBasis = HangingNodeBernsteinP2PreBasis<GV, MI>;
+  using PreBasis = HangingNodeBernsteinP2PreBasis<GV, MI, R>;
 
   using Node = typename PreBasis::Node;
 
@@ -464,6 +465,7 @@ namespace BasisFactory {
 
 namespace Imp {
 
+template<typename R=double>
 struct HangingNodeBernsteinP2PreBasisFactory
 {
   static const std::size_t requiredMultiIndexSize = 1;
@@ -471,7 +473,7 @@ struct HangingNodeBernsteinP2PreBasisFactory
   template<class MultiIndex, class GridView>
   auto makePreBasis(const GridView& gridView) const
   {
-    return HangingNodeBernsteinP2PreBasis<GridView, MultiIndex>(gridView);
+    return HangingNodeBernsteinP2PreBasis<GridView, MultiIndex, R>(gridView);
   }
 };
 
@@ -483,10 +485,13 @@ struct HangingNodeBernsteinP2PreBasisFactory
  * \brief Create a pre-basis builder that can build a hanging node P_2 pre-basis
  *
  * \ingroup FunctionSpaceBasesImplementations
+ *
+ * \tparam R The range type of the local basis
  */
+template<typename R=double>
 auto hangingNodeP2()
 {
-  return Imp::HangingNodeBernsteinP2PreBasisFactory();
+  return Imp::HangingNodeBernsteinP2PreBasisFactory<R>();
 }
 
 } // end namespace BasisFactory
@@ -508,9 +513,10 @@ auto hangingNodeP2()
  * of HangingNodeBernsteinP2PreBasis.
  *
  * \tparam GV The GridView that the space is defined on
+ * \tparam R The range type of the local basis
  */
-template<typename GV>
-using HangingNodeBernsteinP2Basis = ConstrainedGlobalBasis<HangingNodeBernsteinP2PreBasis<GV, FlatMultiIndex<std::size_t>> >;
+template<typename GV, typename R=double>
+using HangingNodeBernsteinP2Basis = ConstrainedGlobalBasis<HangingNodeBernsteinP2PreBasis<GV, FlatMultiIndex<std::size_t>, R> >;
 
 
 

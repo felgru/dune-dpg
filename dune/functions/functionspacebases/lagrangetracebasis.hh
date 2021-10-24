@@ -33,18 +33,18 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int k>
+template<typename GV, int k, typename R=double>
 class LagrangeTraceNode;
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R=double>
 class LagrangeTraceNodeIndexSet;
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R=double>
 class LagrangeTracePreBasis;
 
 
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R>
 class LagrangeTracePreBasis
 {
   static constexpr int dim = GV::dimension;
@@ -62,9 +62,9 @@ public:
   static constexpr int dofsPerQuad     = (k-1)*(k-1);
 
 
-  using Node = LagrangeTraceNode<GV, k>;
+  using Node = LagrangeTraceNode<GV, k, R>;
 
-  using IndexSet = LagrangeTraceNodeIndexSet<GV, k, MI>;
+  using IndexSet = LagrangeTraceNodeIndexSet<GV, k, MI, R>;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -234,14 +234,14 @@ public:
 
 
 
-template<typename GV, int k>
+template<typename GV, int k, typename R>
 class LagrangeTraceNode :
   public LeafBasisNode
 {
   static constexpr int dim = GV::dimension;
 
   using FiniteElementCache = typename Dune::PQkTraceLocalFiniteElementCache
-                                        <typename GV::ctype, double, dim, k>;
+                                        <typename GV::ctype, R, dim, k>;
 
 public:
 
@@ -286,7 +286,7 @@ protected:
 
 
 
-template<typename GV, int k, class MI>
+template<typename GV, int k, class MI, typename R>
 class LagrangeTraceNodeIndexSet
 {
   enum {dim = GV::dimension};
@@ -298,7 +298,7 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using PreBasis = LagrangeTracePreBasis<GV, k, MI>;
+  using PreBasis = LagrangeTracePreBasis<GV, k, MI, R>;
 
   using Node = typename PreBasis::Node;
 
@@ -352,7 +352,7 @@ namespace BasisFactory {
 
 namespace Imp {
 
-template<std::size_t k>
+template<std::size_t k, typename R=double>
 struct LagrangeTracePreBasisFactory
 {
   static const std::size_t requiredMultiIndexSize = 1;
@@ -360,16 +360,16 @@ struct LagrangeTracePreBasisFactory
   template<class MultiIndex, class GridView>
   auto makePreBasis(const GridView& gridView) const
   {
-    return LagrangeTracePreBasis<GridView, k, MultiIndex>(gridView);
+    return LagrangeTracePreBasis<GridView, k, MultiIndex, R>(gridView);
   }
 };
 
 } // end namespace BasisFactory::Imp
 
-template<std::size_t k>
+template<std::size_t k, typename R=double>
 auto lagrangeTrace()
 {
-  return Imp::LagrangeTracePreBasisFactory<k>();
+  return Imp::LagrangeTracePreBasisFactory<k, R>();
 }
 
 } // end namespace BasisFactory
@@ -390,9 +390,10 @@ auto lagrangeTrace()
  *
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
+ * \tparam R The range type of the local basis
  */
-template<typename GV, int k>
-using LagrangeTraceBasis = DefaultGlobalBasis<LagrangeTracePreBasis<GV, k, FlatMultiIndex<std::size_t> > >;
+template<typename GV, int k, typename R=double>
+using LagrangeTraceBasis = DefaultGlobalBasis<LagrangeTracePreBasis<GV, k, FlatMultiIndex<std::size_t>, R> >;
 
 
 

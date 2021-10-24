@@ -23,12 +23,12 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int level, int k>
-using PQkDGRefinedDGNode = LagrangeDGRefinedDGNode<GV, level, k>;
+template<typename GV, int level, int k, typename R=double>
+using PQkDGRefinedDGNode = LagrangeDGRefinedDGNode<GV, level, k, R>;
 
-template<typename GV, int level, int k, class MI>
+template<typename GV, int level, int k, class MI, typename R=double>
 using PQkDGRefinedDGNodeIndexSet
-    = LagrangeDGRefinedDGNodeIndexSet<GV, level, k, MI>;
+    = LagrangeDGRefinedDGNodeIndexSet<GV, level, k, MI, R>;
 
 // *****************************************************************************
 // This is the actual global basis implementation based on the reusable parts.
@@ -39,10 +39,10 @@ using PQkDGRefinedDGNodeIndexSet
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
  */
-template<typename GV, int level, int k>
+template<typename GV, int level, int k, typename R=double>
 using PQkDGRefinedDGBasis
 DUNE_DEPRECATED_MSG("PQkDGRefinedDGBasis is deprecated. Use LagrangeDGRefinedDGBasis from <dune/functions/functionspacebases/lagrangedgrefineddgbasis.hh> instead.")
-    = LagrangeDGRefinedDGBasis<GV, level, k>;
+    = LagrangeDGRefinedDGBasis<GV, level, k, R>;
 
 
 } // end namespace Functions

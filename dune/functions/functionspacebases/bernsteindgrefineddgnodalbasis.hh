@@ -35,14 +35,14 @@ namespace Functions {
 // set and can be used without a global basis.
 // *****************************************************************************
 
-template<typename GV, int level, int k>
+template<typename GV, int level, int k, typename R=double>
 class BernsteinDGRefinedDGNode;
 
-template<typename GV, int level, int k, class MI>
+template<typename GV, int level, int k, class MI, typename R=double>
 class BernsteinDGRefinedDGNodeIndexSet;
 
 
-template<typename GV, int level, int k, class MI>
+template<typename GV, int level, int k, class MI, typename R=double>
 class BernsteinDGRefinedDGPreBasis
   : public DGRefinedPreBasisConstants<GV::dimension, level, k>
 {
@@ -68,9 +68,9 @@ public:
       * RefinementConstants::dofsPerSubQuad;
 
 
-  using Node = BernsteinDGRefinedDGNode<GV, level, k>;
+  using Node = BernsteinDGRefinedDGNode<GV, level, k, R>;
 
-  using IndexSet = BernsteinDGRefinedDGNodeIndexSet<GV, level, k, MI>;
+  using IndexSet = BernsteinDGRefinedDGNodeIndexSet<GV, level, k, MI, R>;
 
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
@@ -157,7 +157,7 @@ public:
 
 
 
-template<typename GV, int level, int k>
+template<typename GV, int level, int k, typename R>
 class BernsteinDGRefinedDGNode :
   public LeafBasisNode,
   public RefinedNode < typename GV::template Codim<0>::Entity
@@ -168,7 +168,7 @@ class BernsteinDGRefinedDGNode :
   using RefinedNodeBase =
           RefinedNode < typename GV::template Codim<0>::Entity
                       , typename GV::ctype, dim, level>;
-  using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, double, dim, k>;
+  using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, R, dim, k>;
 
 public:
 
@@ -224,7 +224,7 @@ protected:
 
 
 
-template<typename GV, int level, int k, class MI>
+template<typename GV, int level, int k, class MI, typename R>
 class BernsteinDGRefinedDGNodeIndexSet
 {
   static constexpr int dim = GV::dimension;
@@ -236,7 +236,7 @@ public:
   /** \brief Type used for global numbering of the basis vectors */
   using MultiIndex = MI;
 
-  using PreBasis = BernsteinDGRefinedDGPreBasis<GV, level, k, MI>;
+  using PreBasis = BernsteinDGRefinedDGPreBasis<GV, level, k, MI, R>;
 
   using Node = typename PreBasis::Node;
 
@@ -324,9 +324,10 @@ protected:
  *
  * \tparam GV The GridView that the space is defined on
  * \tparam k The order of the basis
+ * \tparam R The range type of the local basis
  */
-template<typename GV, int level, int k>
-using BernsteinDGRefinedDGBasis = RefinedGlobalBasis<BernsteinDGRefinedDGPreBasis<GV, level, k, FlatMultiIndex<std::size_t> > >;
+template<typename GV, int level, int k, typename R=double>
+using BernsteinDGRefinedDGBasis = RefinedGlobalBasis<BernsteinDGRefinedDGPreBasis<GV, level, k, FlatMultiIndex<std::size_t>, R> >;
 
 
 
