@@ -17,11 +17,6 @@ install(FILES
         normalizedbasisadaptor.hh
         normalizedrefinedbasisadaptor.hh
         optimaltestbasis.hh
-        pqkdgrefineddgnodalbasis.hh
-        pqkdgsubsampleddgbasis.hh
-        pqkfacenodalbasis.hh
-        pqksubsampleddgbasis.hh
-        pqktracenodalbasis.hh
         referencerefinementfactory.hh
         refinedglobalbasis.hh
         refinedlocalview.hh

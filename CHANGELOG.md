@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
+## 0.6 (Unreleased)
+### Changed
+
+### Deprecated
+
+### Removed
+* The deprecated spaces `PQkDGRefinedDGBasis`,
+  `PQkSubsampledDGNodalBasis`, `PQkDGSubsampledDGNodalBasis`,
+  `PQkFaceNodalBasis` and `PQkTraceNodalBasis` have been removed.
+  Instead they should be used under their new names starting with
+  Lagrange... .
+
 ## 0.5 - 2021-11-01
 ### Changed
 * We now require a C++17-compatible compiler, e.g. GCC 7 or later.
