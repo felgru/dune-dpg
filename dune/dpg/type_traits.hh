@@ -3,17 +3,13 @@
 #ifndef DUNE_DPG_TYPE_TRAITS_HH
 #define DUNE_DPG_TYPE_TRAITS_HH
 
+#include <tuple>
 #include <type_traits>
+#include <vector>
+
 #include <dune/common/keywords.hh>
 #include <dune/common/tupleutility.hh>
 #include <dune/common/version.hh>
-
-#ifndef DOXYGEN
-namespace std {
-  template<class T, class Alloc> class vector;
-  template< std::size_t I, class T > class tuple_element;
-}
-#endif
 
 namespace Dune {
 
