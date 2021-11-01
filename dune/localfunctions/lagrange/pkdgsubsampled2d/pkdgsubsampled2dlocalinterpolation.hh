@@ -5,7 +5,6 @@
 #define DUNE_LOCALFUNCTIONS_PKDGSUBSAMPLED2DLOCALINTERPOLATION_HH
 
 #include <dune/common/fvector.hh>
-#include <dune/common/power.hh>
 
 #include <dune/geometry/type.hh>
 

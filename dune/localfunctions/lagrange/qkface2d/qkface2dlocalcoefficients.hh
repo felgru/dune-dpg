@@ -9,7 +9,6 @@
 #include <vector>
 
 #include <dune/common/exceptions.hh>
-#include <dune/common/power.hh>
 
 #include <dune/localfunctions/common/localkey.hh>
 
