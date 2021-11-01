@@ -37,11 +37,6 @@ namespace Functions {
 template<typename GV, int k, typename R=double>
 class BernsteinNode;
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
-template<typename GV, int k, class MI, typename R=double>
-class BernsteinNodeIndexSet;
-#endif
-
 #if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
 template<typename GV, int k, typename R=double>
 #else
@@ -82,11 +77,6 @@ public:
 
 private:
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
-  template<typename, int, class, typename>
-  friend class BernsteinNodeIndexSet;
-#endif
-
   // Precompute the number of dofs per entity type
   constexpr static size_type dofsPerVertex =
       k == 0 ? (dim == 0 ? 1 : 0) : 1;
@@ -108,10 +98,6 @@ private:
 public:
 
   using Node = BernsteinNode<GV, k, R>;
-
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
-  using IndexSet = BernsteinNodeIndexSet<GV, k, MI, R>;
-#endif
 
 #if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   static constexpr size_type maxMultiIndexSize = 1;
@@ -169,19 +155,6 @@ public:
   {
     return Node{};
   }
-
-  /**
-   * \brief Create tree node index set
-   *
-   * Create an index set suitable for the tree node obtained
-   * by makeNode().
-   */
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
-  IndexSet makeIndexSet() const
-  {
-    return IndexSet{*this};
-  }
-#endif
 
   //! Same as size(prefix) with empty prefix
   size_type size() const
@@ -418,70 +391,6 @@ protected:
   const FiniteElement* finiteElement_;
   const Element* element_;
 };
-
-
-
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
-template<typename GV, int k, class MI, typename R>
-class BernsteinNodeIndexSet
-{
-  enum {dim = GV::dimension};
-
-public:
-
-  using size_type = std::size_t;
-
-  /** \brief Type used for global numbering of the basis vectors */
-  using MultiIndex = MI;
-
-  using PreBasis = BernsteinPreBasis<GV, k, MI, R>;
-
-  using Node = typename PreBasis::Node;
-
-  BernsteinNodeIndexSet(const PreBasis& preBasis) :
-    preBasis_(&preBasis),
-    node_(nullptr)
-  {}
-
-  /** \brief Bind the view to a grid element
-   *
-   * Having to bind the view to an element before being able to actually access any of its data members
-   * offers to centralize some expensive setup code in the 'bind' method, which can save a lot of run-time.
-   */
-  void bind(const Node& node)
-  {
-    node_ = &node;
-  }
-
-  /** \brief Unbind the view
-   */
-  void unbind()
-  {
-    node_ = nullptr;
-  }
-
-  /** \brief Size of subtree rooted in this node (element-local)
-   */
-  size_type size() const
-  {
-    assert(node_ != nullptr);
-    return node_->finiteElement().size();
-  }
-
-  //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-  template<typename It>
-  It indices(It it) const
-  {
-    assert(node_ != nullptr);
-    return preBasis_->indices(*node_, it);
-  }
-
-protected:
-  const PreBasis* preBasis_;
-
-  const Node* node_;
-};
-#endif
 
 
 
