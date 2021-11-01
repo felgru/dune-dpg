@@ -8,6 +8,7 @@
 #include <dune/dpg/type_traits.hh>
 #include <dune/geometry/affinegeometry.hh>
 #include <dune/geometry/referenceelements.hh>
+#include <dune/grid/common/rangegenerators.hh>
 
 namespace Dune {
 
@@ -242,9 +243,8 @@ unsigned int outflowFacesOfElement
      typename Element::Geometry::GlobalCoordinate direction)
 {
   unsigned int nOutflowFaces = 0;
-  for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
+  for (const auto& face : subEntities(element, Codim<1>{}))
   {
-    const auto face = element.template subEntity<1>(f);
     const double prod = direction
       * FaceComputations<Element>(face, element).unitOuterNormal();
     if(prod > 0)
