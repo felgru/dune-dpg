@@ -62,8 +62,8 @@ Installation and compilation of dune and dune-dpg
 
 We give detailed installation guidelines using GCC and the UG grid manager.
 The URLs that are given below were still active on December 2016. We apologize
-for possible future inconsistencies in the links and hope that the user
-will nevertheless find their way.
+for possible future inconsistencies in the links and hope that you
+will nevertheless find your way.
 
 1) Create a directory to harbor the source code of the Dune modules.
    We will call this directory `$DUNEDIR`.
@@ -76,8 +76,8 @@ will nevertheless find their way.
 Installation of Dune on Debian GNU/Linux
 ----------------------------------------
 
-2) If you are using Debian unstable, the Dune 2.6 core libraries can be
-   installed from the Debian repositories with
+2) If you are using Debian bullseye or newer, the Dune 2.7 core libraries
+   can be installed from the Debian repositories with
 
     apt install libdune-common-dev libdune-geometry-dev libdune-grid-dev \
                 libdune-istl-dev libdune-localfunctions-dev \
@@ -86,7 +86,6 @@ Installation of Dune on Debian GNU/Linux
 
    Alternatively, you can download the sources of the Dune core modules
    into `$DUNEDIR` like it is explained below in the MacOS instructions.
-   This is necessary if you are using an older Debian release like Jessie.
 
    If you are using a Debian release which does not include Boost Hana
    (i.e., Boost < 1.61), you can download a recent version from the Boost
@@ -100,29 +99,17 @@ Installation of Dune on other Linux distributions and MacOS
 
 2) Download and extract the following dune sources to `$DUNEDIR`:
 
-  - Version >= 2.6 of the following Dune core modules:
+  - Version >= 2.7 of the following Dune core modules:
     dune-common, dune-geometry, dune-grid, dune-istl,
     dune-localfunctions
-    Link: https://dune-project.org/releases/2.6.0/
-  - Version >= 2.6 of the following Dune staging modules:
+    Link: https://dune-project.org/releases/2.7.0/
+  - Version >= 2.7 of the following Dune staging modules:
     dune-uggrid (https://www.dune-project.org/modules/dune-uggrid/),
     dune-typetree (https://www.dune-project.org/modules/dune-typetree/),
     dune-functions (https://www.dune-project.org/modules/dune-functions/)
   - The current development version 2.7 from the Git master branch
     of dune-subgrid:
     https://git.imp.fu-berlin.de/agnumpde/dune-subgrid
-
-Careful: If you want to use the UMFPack wrapper from dune-istl 2.6
-         to solve large linear systems (with matrices > 2GB) you
-         need to apply the patch from
-         [this bugreport](https://gitlab.dune-project.org/core/dune-istl/issues/33)
-         to dune-istl before compiling it in step 5).
-         Beginning with dune-istl 2.7, this patch has been integrated
-         into dune-istl and doesn't need to be applied manually anymore.
-         But if you are using dune-istl 2.6, we distribute this patch
-         with dune-dpg under `contrib/umfpack_dl.diff` for your convenience.
-         Apply it with `patch -p1 < ../dune-dpg/contrib/umfpack_dl.diff`
-         in the dune-istl directory.
 
 Preparing dune-dpg
 ------------------
