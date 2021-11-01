@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
-## 0.5 (Unreleased)
+## 0.5 - 2021-11-01
 ### Changed
 * We now require a C++17-compatible compiler, e.g. GCC 7 or later.
 * dune-dpg now requires at least version 2.7 of the Dune core modules
@@ -33,6 +33,9 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   `PQkDGSubsampledDGNodalBasis`, `PQkFaceNodalBasis` and
   `PQkTraceNodalBasis` have been deprecated. All those spaces are
   now available under a name starting with Lagrange... .
+* When building against dune-functions >= 2.8, we do not provide any
+  `NodeIndexSet`s anymore, as those were deprecated in dune-functions
+  2.8.  Instead there is a new `indices` function in each `PreBasis`.
 
 ### Removed
 * `bindLocalIndexSets` and `getLocalIndexSets` have been removed,
