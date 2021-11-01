@@ -5,7 +5,7 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 
 #include <dune/localfunctions/lagrange/pqkdgsubsampledfactory.hh>
 
@@ -140,8 +140,7 @@ public:
 
   size_type maxNodeSize() const
   {
-    return StaticPower<s,GV::dimension>::power
-           * StaticPower<k+1,GV::dimension>::power;
+    return power(s, dim) * power(k+1, dim);
   }
 
 //protected:

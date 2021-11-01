@@ -6,7 +6,7 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 
 #include <dune/geometry/type.hh>
 
@@ -34,7 +34,7 @@ namespace Dune
   template<class D, class R, unsigned int s, unsigned int k>
   class PkDGSubsampled2DLocalBasis
   {
-    enum { n = (k+1)*(k+2)/2*StaticPower<s,2>::power };
+    enum { n = (k+1)*(k+2)/2 * power(s, 2) };
     enum { d = 2 };
 
     using SubBasis = typename LagrangeSimplexLocalFiniteElement<D, R, 2, k>

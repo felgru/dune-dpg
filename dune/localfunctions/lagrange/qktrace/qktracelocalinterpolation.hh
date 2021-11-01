@@ -5,7 +5,7 @@
 #define DUNE_LOCALFUNCTIONS_QKTRACELOCALINTERPOLATION_HH
 
 #include <dune/common/fvector.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 
 #include <dune/geometry/type.hh>
 
@@ -43,9 +43,9 @@ namespace Dune
 
       auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
 
-      out.resize(StaticPower<k+1,d>::power-StaticPower<k-1,d>::power);
-      unsigned int i=0;
-      for (int l=0; l<StaticPower<k+1,d>::power; l++)
+      out.resize(power(k+1, d) - power(k-1, d));
+      unsigned int i = 0;
+      for (int l = 0; l < power(k+1, d); l++)
       {
         // convert index i to multiindex
         const Dune::FieldVector<int,d> alpha(multiindex(l));

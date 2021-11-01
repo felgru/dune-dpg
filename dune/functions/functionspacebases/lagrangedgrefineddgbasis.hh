@@ -5,7 +5,7 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 #include <dune/common/version.hh>
 
 #include <dune/localfunctions/lagrange/pqkfactory.hh>
@@ -168,7 +168,7 @@ public:
 
   size_type maxNodeSize() const
   {
-    return StaticPower<4,level>::power*StaticPower<(k+1),GV::dimension>::power;
+    return power(4, level) * power(k+1, dim);
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis

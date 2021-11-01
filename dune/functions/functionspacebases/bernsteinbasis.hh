@@ -5,7 +5,7 @@
 
 #include <array>
 #include <dune/common/exceptions.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 #include <dune/common/version.hh>
 
 #include <dune/localfunctions/bernstein/pqkfactory.hh>
@@ -230,7 +230,7 @@ public:
   //! Get the maximal number of DOFs associated to node for any element
   size_type maxNodeSize() const
   {
-    return StaticPower<(k+1),GV::dimension>::power;
+    return power(k+1, dim);
   }
 
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
@@ -374,7 +374,7 @@ class BernsteinNode :
   public LeafBasisNode
 {
   static constexpr int dim = GV::dimension;
-  static const int maxSize = StaticPower<(k+1),GV::dimension>::power;
+  static const int maxSize = power(k+1, dim);
 
   using FiniteElementCache = typename Dune::BernsteinLocalFiniteElementCache<typename GV::ctype, R, dim, k>;
 
