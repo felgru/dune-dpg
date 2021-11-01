@@ -42,7 +42,7 @@ public:
   }
 
   /**
-   * \brief Obtain local contex this LocalFunction is bound to
+   * \brief Obtain the local context this LocalFunction is bound to
    */
   const LocalContext& localContext() const
   {
@@ -163,7 +163,7 @@ public:
   }
 
   /**
-   * \brief Obtain local contex this LocalFunction is bound to
+   * \brief Obtain the local context this LocalFunction is bound to
    */
   const LocalContext& localContext() const
   {

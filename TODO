@@ -6,7 +6,7 @@ known bugs:
 * When calling the update() method of normalized spaces, we do not
   update the gridviews associated with the GridViewFunctions in the
   coefficients of the inner product that handles the normalization.
-  That is not a problem for constant or piecwise constant coefficients
+  That is not a problem for constant or piecewise constant coefficients
   but might lead to wrong evaluations for other GridViewFunctions.
 * src/kernel_svds.cc does not work for non-wavelet kernels due to
   changes in the scattering kernel functions.

@@ -155,7 +155,7 @@ public:
 #if DUNE_DPG_USE_LEAST_SQUARES_INSTEAD_OF_CHOLESKY
     // Solve a least-squares problem for coefficientMatrix_
     // to make sure that it is well defined even when the Gramian of
-    // the inner product is severly ill conditioned.
+    // the inner product is severely ill conditioned.
     solveLeastSquares(stiffnessMatrix, bilinearMatrix, coefficientMatrix_);
 #else
     {

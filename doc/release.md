@@ -1,7 +1,7 @@
 Release process
 ===============
 
-To create a new relase of dune-dpg follow these steps:
+To create a new release of dune-dpg follow these steps:
 
 1. Create a new branch for the release and set the version number in
    dune.module. Replace `$VERSION` with the version of the new release.

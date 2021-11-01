@@ -108,7 +108,7 @@ Installation of Dune on other Linux distributions and MacOS
     dune-uggrid (https://www.dune-project.org/modules/dune-uggrid/),
     dune-typetree (https://www.dune-project.org/modules/dune-typetree/),
     dune-functions (https://www.dune-project.org/modules/dune-functions/)
-  - The current developement version 2.7 from the Git master branch
+  - The current development version 2.7 from the Git master branch
     of dune-subgrid:
     https://git.imp.fu-berlin.de/agnumpde/dune-subgrid
 
@@ -230,7 +230,7 @@ your dpg-program (i.e. `plot_solution`):
 You must call MPIHelper::instance(argc,argv) in your main() function
 before using the MPI CollectiveCommunication!"
 ```
-This can be fixed by disabeling MPI by adding
+This can be fixed by disabling MPI by adding
 `-DCMAKE_DISABLE_FIND_PACKAGE_MPI=TRUE` in the `CMAKE_FLAGS` of your
 dune.opts file.
 

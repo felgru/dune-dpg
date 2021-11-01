@@ -1,7 +1,7 @@
 #
 # Module that checks whether boost::hana is available and usable.
 #
-# Sets the follwing variable:
+# Sets the following variable:
 #
 # HAVE_BOOST_HANA True if boost::hana is available.
 #

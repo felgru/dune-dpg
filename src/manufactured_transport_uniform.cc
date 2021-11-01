@@ -69,7 +69,7 @@ double fInnerD1(const Domain& x,
   // return -2*(x[1]-0.5); //v RT
 }
 
-// This function satifies the zero incoming flux bounday conditions
+// This function satisfies the zero incoming flux boundary condition
 template <class Domain,class Direction>
 double fBoundary(const Domain& x,
                  const Direction& s)

@@ -936,7 +936,7 @@ namespace ScatteringKernelApproximation {
           const size_t quadOrder = 2*nQuadAngle-1;
           const auto uWltPair = DWT(uLegendre, wltOrder+1, uLevel, quadOrder);
           Eigen::VectorXd uWlt = PairToXd(uWltPair);
-          // Approx with trucated kernelMatrix
+          // Approx with truncated kernelMatrix
           Eigen::VectorXd KuWlt
             = kernelMatrixTH.topLeftCorner(rows,uWlt.size()) * uWlt;
           // Express Ku in Legendre basis on each segment of [-pi,pi]

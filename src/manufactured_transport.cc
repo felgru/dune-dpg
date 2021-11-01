@@ -75,7 +75,7 @@ double fInnerD1(const Domain& x,
   return std::expm1(c[0]*x[0])*std::exp(c[1]*x[1])*c[1];
 }
 
-// This function satifies the zero incoming flux bounday conditions
+// This function satisfies the zero incoming flux boundary condition
 template <class Domain,class Direction>
 double fBoundary(const Domain& x,
                  const Direction& s)

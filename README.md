@@ -10,7 +10,7 @@ finite elements](http://dx.doi.org/10.11588/ans.2017.1.27719)
 by F. Gruber, A. Klewinghaus and O. Mula.
 
 For build instruction see the accompanying [INSTALL.md](INSTALL.md) file.
-See [doc/experiments.md](doc/experiments.md) for explainations on how to
+See [doc/experiments.md](doc/experiments.md) for explanations on how to
 run the example programs bundled with dune-dpg.
 If you are interested in an API documentation of dune-dpg, see the
 instructions in section [Generating API documentation with Doxygen]

@@ -107,7 +107,7 @@ public:
                              * gridView_.size(GeometryTypes::triangle);
     } else {
       static_assert(dim >= 1 && dim <= 2,
-                    "BernsteinDGRefinedDGPreBasis not implmented grids of this dimension!");
+                    "BernsteinDGRefinedDGPreBasis not implemented on grids of this dimension!");
     }
   }
 

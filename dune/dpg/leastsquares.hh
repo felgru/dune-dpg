@@ -16,7 +16,7 @@ namespace Dune {
  *
  * Solve a least-squares problem for X
  * to make sure that it is well defined even when A
- * is severly ill conditioned.
+ * is severely ill conditioned.
  */
 template<class Matrix>
 void solveLeastSquares(const Matrix& A, const Matrix& b, Matrix& x)
@@ -34,7 +34,7 @@ void solveLeastSquares(const Matrix& A, const Matrix& b, Matrix& x)
  *
  * Solve a least-squares problem for x
  * to make sure that it is well defined even when A
- * is severly ill conditioned.
+ * is severely ill conditioned.
  *
  * \note This destroys the input b and overwrites it with the
  *       least squares solution.

@@ -182,7 +182,7 @@ public:
 
   /**
    * \note We don't update anything here, as we expect the spaces referred
-   * to in testspaceCoefficientMatrix_ to be updated seperately.
+   * to in testspaceCoefficientMatrix_ to be updated separately.
    */
   void update (const GridView&)
   {}

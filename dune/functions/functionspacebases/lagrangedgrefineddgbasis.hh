@@ -107,7 +107,7 @@ public:
                              * gridView_.size(GeometryTypes::triangle);
     } else {
       static_assert(dim >= 1 && dim <= 2,
-                      "LagrangeDGRefinedDGPreBasis not implmented for grids of this dimension.");
+                      "LagrangeDGRefinedDGPreBasis not implemented for grids of this dimension.");
     }
   }
 
