@@ -78,7 +78,7 @@ namespace Dune {
     static
     double computeL2error(const FEBasis& ,
                           const BlockVector<FieldVector<double,1> >& ,
-                          Function&&,
+                          const Function&,
                           unsigned int = 5);
 
     template <class InnerProduct, class LinearForm,
@@ -142,7 +142,7 @@ namespace Dune {
     static double computeL2errorSquareElement(
         const LocalView& ,
         const BlockVector<FieldVector<double,1> >& ,
-        Function&&,
+        const Function&,
         unsigned int = 5);
 
     template <class InnerProduct, class LinearForm,
@@ -276,7 +276,7 @@ namespace Dune {
   double ErrorTools::computeL2errorSquareElement(
       const LocalView& localView,
       const BlockVector<FieldVector<double,1> >& u,
-      Function&& uRef,
+      const Function& uRef,
       const unsigned int quadOrder)
   {
     // Get the grid element from the local FE basis view
@@ -351,7 +351,7 @@ namespace Dune {
   double ErrorTools::computeL2error(
       const FEBasis& feBasis,
       const BlockVector<FieldVector<double,1> >& u,
-      Function&& uRef,
+      const Function& uRef,
       const unsigned int quadratureOrder)
   {
     const auto gridView = feBasis.gridView();
