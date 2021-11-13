@@ -4,6 +4,7 @@
 #define DUNE_DPG_INTEGRALTERM_HH
 
 #include <tuple>
+#include <utility>
 
 #include <dune/geometry/quadraturerules/splitquadraturerule.hh>
 #include <dune/istl/matrix.hh>
@@ -45,7 +46,7 @@ namespace Dune {
      * \note For your convenience, use make_IntegralTerm() instead.
      */
     IntegralTerm (LocalCoefficients&& localCoefficients)
-        : localCoefficients_(localCoefficients)
+        : localCoefficients_(std::move(localCoefficients))
     {};
 
     /**

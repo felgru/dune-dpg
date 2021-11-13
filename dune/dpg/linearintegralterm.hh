@@ -4,6 +4,7 @@
 #define DUNE_DPG_LINEARINTEGRALTERM_HH
 
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "assemble_types.hh"
@@ -42,7 +43,7 @@ namespace Dune {
      * \note For your convenience, use make_LinearIntegralTerm() instead.
      */
     LinearIntegralTerm (LocalCoefficients&& localCoefficients)
-        : localCoefficients_(localCoefficients)
+        : localCoefficients_(std::move(localCoefficients))
     {};
 
     /**

@@ -6,12 +6,13 @@
 #include <cmath>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Dune {
 
 struct KanschatScattering {
-  KanschatScattering(std::vector<double>&& a) : a(a) {}
+  KanschatScattering(std::vector<double>&& a) : a(std::move(a)) {}
 
   double operator()(double angle) const {
     double scattering = 0;
