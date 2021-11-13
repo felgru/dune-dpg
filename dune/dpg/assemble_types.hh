@@ -1,6 +1,8 @@
 #ifndef DUNE_DPG_ASSEMBLE_TYPES_HH
 #define DUNE_DPG_ASSEMBLE_TYPES_HH
 
+#include <utility>
+
 namespace Dune {
 
 //! The domain over which we integrate
@@ -44,7 +46,7 @@ struct BilinearTermWithIndices
   Term term;
 
   BilinearTermWithIndices(Term&& term)
-    : term(term) {};
+    : term(std::move(term)) {};
 };
 
 template <class spaceIndex,
@@ -56,7 +58,7 @@ struct LinearTermWithIndex
   Term term;
 
   LinearTermWithIndex(Term&& term)
-    : term(term) {};
+    : term(std::move(term)) {};
 };
 
 } // end namespace Dune

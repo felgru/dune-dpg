@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 namespace Dune {
 
@@ -24,7 +25,7 @@ class FunctionPlotter
 public:
   FunctionPlotter() = delete;
 
-  FunctionPlotter(std::string filename) : filename(filename) {}
+  FunctionPlotter(std::string filename) : filename(std::move(filename)) {}
 
   template<class CoefficientVector, class FEBasis,
       typename std::enable_if<!is_RefinedFiniteElement<FEBasis>::value

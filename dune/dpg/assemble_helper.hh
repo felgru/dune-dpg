@@ -86,7 +86,7 @@ struct getLocalMatrixHelper
   {}
 
   /**
-   * \tparam Term an IntegralTerm
+   * \tparam BilinearTerm an IntegralTerm
    */
   template <class lhsSpaceIndex,
             class rhsSpaceIndex,
