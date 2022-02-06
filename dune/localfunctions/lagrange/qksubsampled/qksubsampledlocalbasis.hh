@@ -6,7 +6,7 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 
 #include <dune/geometry/type.hh>
 
@@ -34,7 +34,7 @@ namespace Dune
   template<class D, class R, int s, int k, int d>
   class QkSubsampledLocalBasis
   {
-    enum { n = StaticPower<(s*k)+1,d>::power };
+    enum { n = power((s*k)+1, d) };
 
     // ith Lagrange polynomial of degree k in one dimension
     static R p (int i, D x)

@@ -8,7 +8,7 @@
 #include <utility>
 
 #include <dune/common/exceptions.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 
 #include <dune/localfunctions/bernstein/pqkfactory.hh>
 
@@ -302,7 +302,7 @@ public:
   //! Get the maximal number of DOFs associated to node for any element
   size_type maxNodeSize() const
   {
-    return StaticPower<(2+1),GV::dimension>::power;
+    return power(2+1, dim);
   }
 
 protected:

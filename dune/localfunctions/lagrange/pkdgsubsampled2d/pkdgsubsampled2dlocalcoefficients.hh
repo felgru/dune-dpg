@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <dune/common/exceptions.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 
 #include <dune/localfunctions/common/localkey.hh>
 
@@ -22,7 +22,7 @@ namespace Dune
    */
   template<int s, int k>
   class PkDGSubsampled2DLocalCoefficients {
-    enum { N = (k+1)*(k+2)/2*StaticPower<s,2>::power };
+    enum { N = (k+1)*(k+2)/2 * power(s, 2) };
 
   public:
     //! \brief Standard constructor

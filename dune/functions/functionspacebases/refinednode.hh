@@ -4,7 +4,7 @@
 #define DUNE_FUNCTIONS_FUNCTIONSPACEBASES_REFINEDNODE_HH
 
 #include <dune/common/hybridutilities.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 #include <dune/common/std/type_traits.hh>
 #include <dune/functions/functionspacebases/referencerefinementfactory.hh>
 #include <dune/typetree/traversal.hh>
@@ -67,9 +67,9 @@ struct DGRefinedPreBasisConstants<2, level, k>
   const static int dofsPerSubTriangle    = (k+1)*(k+2)/2;
   const static int dofsPerSubQuad        = (k+1)*(k+1);
 
-  const static int numberOfSubEdges        = StaticPower<2,level>::power;
-  const static int numberOfSubTriangles    = StaticPower<4,level>::power;
-  const static int numberOfSubQuads        = StaticPower<4,level>::power;
+  const static int numberOfSubEdges      = power(2, level);
+  const static int numberOfSubTriangles  = power(4, level);
+  const static int numberOfSubQuads      = power(4, level);
 };
 
 class ResetSubElementsVisitor

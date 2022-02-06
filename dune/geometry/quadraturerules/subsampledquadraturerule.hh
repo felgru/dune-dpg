@@ -8,7 +8,7 @@
  */
 
 #include <dune/common/fvector.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 
 #include <dune/geometry/quadraturerules.hh>
 
@@ -46,7 +46,7 @@ namespace Dune {
       : QuadratureRule<ctype,dim>(quad.type(), quad.order())
     {
       if(quad.type().isCube()) {
-        constexpr unsigned int numSections = StaticPower<s,dim>::power;
+        constexpr unsigned int numSections = power(s, dim);
         constexpr ctype volumeFraction = 1./static_cast<ctype>(numSections);
 
         this->reserve(numSections*quad.size());
@@ -69,7 +69,7 @@ namespace Dune {
         }
 
       } else if(quad.type().isTriangle()) {
-        constexpr unsigned int numSections = StaticPower<s,dim>::power;
+        constexpr unsigned int numSections = power(s, dim);
         constexpr ctype volumeFraction = 1./static_cast<ctype>(numSections);
 
         this->reserve(numSections*quad.size());

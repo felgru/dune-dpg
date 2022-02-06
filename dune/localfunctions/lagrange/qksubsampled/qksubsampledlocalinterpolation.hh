@@ -5,7 +5,7 @@
 #define DUNE_LOCALFUNCTIONS_QKSUBSAMPLEDLOCALINTERPOLATION_HH
 
 #include <dune/common/fvector.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 
 #include <dune/geometry/type.hh>
 
@@ -43,9 +43,9 @@ namespace Dune
 
       auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
 
-      out.resize(StaticPower<s*k+1,d>::power);
+      out.resize(power(s*k+1, d));
 
-      for (int i=0; i<StaticPower<s*k+1,d>::power; i++)
+      for (int i = 0; i < power(s*k+1, d); i++)
       {
         // convert index i to multiindex
         Dune::FieldVector<int,d> alpha(multiindex(i));

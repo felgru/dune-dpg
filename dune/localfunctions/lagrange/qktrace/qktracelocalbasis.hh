@@ -6,7 +6,7 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 
 #include <dune/geometry/type.hh>
 
@@ -77,7 +77,7 @@ namespace Dune
     //! \brief number of shape functions
     unsigned int size () const
     {
-      return (StaticPower<k+1,d>::power -  StaticPower<k-1,d>::power);
+      return (power(k+1, d) - power(k-1, d));
     }
 
     //! \brief Evaluate all shape functions
@@ -86,7 +86,7 @@ namespace Dune
     {
       out.resize(size());
       size_t i = 0;
-      for (size_t l=0; l<StaticPower<k+1,d>::power; l++)
+      for (size_t l = 0; l < power(k+1, d); l++)
       {
         // convert index l to multiindex
         Dune::FieldVector<int,d> alpha(multiindex(l));
@@ -121,7 +121,7 @@ namespace Dune
       out.resize(size());
 
       size_t i = 0;
-      for (size_t l=0; l<StaticPower<k+1,d>::power; l++)
+      for (size_t l = 0; l < power(k+1, d); l++)
       {
         // convert index l to multiindex
         Dune::FieldVector<int,d> alpha(multiindex(l));

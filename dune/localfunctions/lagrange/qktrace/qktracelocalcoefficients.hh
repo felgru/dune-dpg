@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <dune/common/exceptions.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 
 #include <dune/localfunctions/common/localkey.hh>
 
@@ -74,7 +74,7 @@ namespace Dune
 
       subEntity[lastIndex++] = 3;                 // corner 3
 
-      assert(((StaticPower<k+1,d>::power -  StaticPower<k-1,d>::power)==lastIndex));
+      assert(((power(k+1, d) - power(k-1, d)) == lastIndex));
     }
 
 
@@ -83,8 +83,8 @@ namespace Dune
       assert(k>0);
       unsigned lastIndex=0;
 #ifndef NDEBUG
-      const unsigned numIndices = (StaticPower<k+1,d>::power -  StaticPower<k-1,d>::power);
-      const unsigned numFaceIndices = StaticPower<k+1,d-1>::power;
+      const unsigned numIndices = power(k+1, d) - power(k-1, d);
+      const unsigned numFaceIndices = power(k+1, d-1);
 #endif
       const unsigned numInnerEdgeDofs = k-1;
 
@@ -182,13 +182,13 @@ namespace Dune
 
   public:
     //! \brief Default constructor
-    QkTraceLocalCoefficients () : li(StaticPower<k+1,d>::power-StaticPower<k-1,d>::power)
+    QkTraceLocalCoefficients () : li(power(k+1, d) - power(k-1, d))
     {
       // Set up array of codimension-per-dof-number
       std::vector<unsigned int> codim(li.size());
 
       size_t i = 0;
-      for (size_t l=0; l<StaticPower<k+1,d>::power; l++)
+      for (size_t l = 0; l < power(k+1, d); l++)
       {
         // convert index l to multiindex
         std::array<unsigned int,d> mIdx = multiindex(l);
@@ -215,7 +215,7 @@ namespace Dune
       std::vector<unsigned int> index(size());
 
       i = 0;
-      for (size_t l=0; l<StaticPower<k+1,d>::power; l++)
+      for (size_t l = 0; l < power(k+1, d); l++)
       {
         // convert index l to multiindex
         std::array<unsigned int,d> mIdx = multiindex(l);
@@ -266,7 +266,7 @@ namespace Dune
     //! number of coefficients
     std::size_t size () const
     {
-      return StaticPower<k+1,d>::power-StaticPower<k-1,d>::power;
+      return power(k+1, d) - power(k-1, d);
     }
 
     //! get i'th index

@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <dune/common/exceptions.hh>
-#include <dune/common/power.hh>
+#include <dune/common/math.hh>
 
 #include <dune/localfunctions/common/localkey.hh>
 
@@ -62,7 +62,7 @@ namespace Dune
 
       subEntity[lastIndex++] = 1;                 // corner 1
 
-      assert((StaticPower<s*k+1,d>::power==lastIndex));
+      assert((power(s*k+1, d) == lastIndex));
     }
 
     void setup2d(std::vector<unsigned int>& subEntity)
@@ -112,7 +112,7 @@ namespace Dune
 
       subEntity[lastIndex++] = 3;                 // corner 3
 
-      assert((StaticPower<s*k+1,d>::power==lastIndex));
+      assert((power(s*k+1, d) == lastIndex));
     }
 
 
@@ -128,8 +128,8 @@ namespace Dune
 
       unsigned lastIndex=0;
 #ifndef NDEBUG
-      const unsigned numIndices = StaticPower<s*k+1,d>::power;
-      const unsigned numFaceIndices = StaticPower<s*k+1,d-1>::power;
+      const unsigned numIndices = power(s*k+1, d);
+      const unsigned numFaceIndices = power(s*k+1, d-1);
 #endif
       const unsigned numInnerEdgeDofs = s*k-1;
 
@@ -227,7 +227,7 @@ namespace Dune
 
   public:
     //! \brief Default constructor
-    QkSubsampledLocalCoefficients () : li(StaticPower<s*k+1,d>::power)
+    QkSubsampledLocalCoefficients () : li(power(s*k+1, d))
     {
       // Set up array of codimension-per-dof-number
       std::vector<unsigned int> codim(li.size());
@@ -293,7 +293,7 @@ namespace Dune
     //! number of coefficients
     std::size_t size () const
     {
-      return StaticPower<s*k+1,d>::power;
+      return power(s*k+1, d);
     }
 
     //! get i'th index
