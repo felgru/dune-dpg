@@ -98,6 +98,13 @@ public:
 #endif
   }
 
+  /** \brief Return if the view is bound to a grid element
+   */
+  bool bound() const
+  {
+    return static_cast<bool>(element_);
+  }
+
   void resetSubElements()
   {
     resetSubElementsOfTree(tree_);
