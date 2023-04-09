@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
 ## 0.6 (Unreleased)
+### Added
+* A new cmake option `-DINSTALL_EXAMPLES=ON` can now be used to install
+  the example programs from the src directory with `make install`.
+  By default this option is disable, i.e. the example programs are not
+  installed as before.
+
 ### Changed
 * dune-dpg now requires at least version 2.8 of the Dune core modules
   and has been tested to be compatible with version 2.9.
