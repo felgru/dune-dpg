@@ -9,6 +9,16 @@ They can be installed via
 
     apt install git cmake libboost-dev libsuitesparse-dev
 
+On GNU Guix
+-----------
+
+We provide a `guix.scm` file which defines a Guix package for dune-dpg
+so that you can simply run
+```shell
+guix shell
+```
+to spawn a shell that has all dependencies available.
+
 Using Homebrew on MacOS
 -----------------------
 
@@ -93,6 +103,34 @@ Installation of Dune on Debian GNU/Linux
    line to your dune.opts file
 
     CMAKE_FLAGS+=" -DBOOST_INCLUDEDIR=$BOOSTDIR"
+
+Building dune-dpg on GNU Guix
+-----------------------------
+
+If you want to hack on dune-dpg, you can easily create a development
+environment by running
+```shell
+guix shell
+```
+at the root of your dune-dpg directory. This will spawn a shell
+containing all dependencies required to build dune-dpg.
+
+You can now build dune-dpg with
+```shell
+mkdir build
+cd build
+cmake ..
+make
+```
+TODO: Currently, `dune_dpg_rad_trans_asti` fails to build, as it says UMFPack
+is not defined.
+
+You can also run
+```shell
+guix build -f guix.scm
+```
+to build the dune-dpg package from the source files that are currently
+found in your dune-dpg source directory.
 
 Installation of Dune on other Linux distributions and MacOS
 -----------------------------------------------------------

@@ -6,6 +6,8 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
 ## 0.6 (Unreleased)
 ### Added
+* We now provide a guix.scm file to easily set up a build environment
+  with `guix shell`. See INSTALL.md for more information.
 * A new cmake option `-DINSTALL_EXAMPLES=ON` can now be used to install
   the example programs from the src directory with `make install`.
   By default this option is disable, i.e. the example programs are not
