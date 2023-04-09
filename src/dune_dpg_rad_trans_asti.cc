@@ -16,6 +16,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <ctime>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -138,7 +139,7 @@ int main(int argc, char** argv)
                  << std::put_time(std::localtime(&cnow), "%F-time%H%M%S");
     outdir = folderstream.str();
   }
-  std::system(("mkdir -p "+outdir).data());
+  std::filesystem::create_directories(outdir);
   std::cout << "output path: " << outdir << "\n\n";
 
   ///////////////////////////////////
