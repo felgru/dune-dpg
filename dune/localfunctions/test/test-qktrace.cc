@@ -29,9 +29,9 @@ int main() try
     const unsigned int order=2;
     std::cout << "order : " << order << std::endl;
     Dune::QkTraceLocalFiniteElement<double,double,dim,order> lagrangeFaceQuad;
-    success = success && testFE(lagrangeFaceQuad,
+    success = success && testFE(lagrangeFaceQuad
 #if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,8)
-                                DisableRepresentConstants
+                                , DisableRepresentConstants
 #endif
                                 );
   }
