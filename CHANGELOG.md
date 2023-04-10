@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
+## 0.5.1 - 2023-04-10
+### Added
+* Implemented RefinedLocalView::bound() as required by the LocalView
+  concept as of dune-functions 2.9.
+
+### Changed
+* Updated URL of dune-subgrid Git repository in our documentation.
+
+### Fixed
+* Fixed compilation with dune-localfunction < 2.8.
+
 ## 0.5 - 2021-11-01
 ### Changed
 * We now require a C++17-compatible compiler, e.g. GCC 7 or later.
