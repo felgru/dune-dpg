@@ -21,6 +21,14 @@ debian:10  gcc:
     DUNECI_TOOLCHAIN: gcc-7-17
   tags: [duneci]
 
+debian:10  gcc  dune-2.7:
+  image: registry.dune-project.org/docker/ci/debian:10
+  script: duneci-standard-test
+  variables:
+    DUNECI_TOOLCHAIN: gcc-7-17
+    DUNECI_BRANCH: releases/2.7
+  tags: [duneci]
+
 debian:10  clang:
   image: registry.dune-project.org/docker/ci/debian:10
   script: duneci-standard-test
