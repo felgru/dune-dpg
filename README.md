@@ -42,7 +42,7 @@ libraries installed on your system:
       (https://dune-project.org/groups/grid/)
     - for the plot_solution and the ASTI programs, you will also need
       dune-subgrid (>= 2.7)
-      (https://git.imp.fu-berlin.de/agnumpde/dune-subgrid)
+      (https://gitlab.dune-project.org/extensions/dune-subgrid)
 
 Instructions on how to build dune-dpg can be found in [INSTALL.md](INSTALL.md).
 

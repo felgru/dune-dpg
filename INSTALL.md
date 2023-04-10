@@ -109,7 +109,7 @@ Installation of Dune on other Linux distributions and MacOS
     dune-functions (https://www.dune-project.org/modules/dune-functions/)
   - The current development version 2.7 from the Git master branch
     of dune-subgrid:
-    https://git.imp.fu-berlin.de/agnumpde/dune-subgrid
+    https://gitlab.dune-project.org/extensions/dune-subgrid
 
 Preparing dune-dpg
 ------------------
