@@ -8,7 +8,11 @@
 #include <dune/common/math.hh>
 #include <dune/common/version.hh>
 
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,9)
+#include <dune/localfunctions/lagrange/lagrangelfecache.hh>
+#else
 #include <dune/localfunctions/lagrange/pqkfactory.hh>
+#endif
 
 #include <dune/typetree/leafnode.hh>
 
@@ -225,7 +229,11 @@ class LagrangeDGRefinedDGNode :
   using RefinedNodeBase =
           RefinedNode < typename GV::template Codim<0>::Entity
                       , typename GV::ctype, dim, level>;
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,9)
+  using FiniteElementCache = typename Dune::LagrangeLocalFiniteElementCache<typename GV::ctype, R, dim, k>;
+#else
   using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, R, dim, k>;
+#endif
 
 public:
 
