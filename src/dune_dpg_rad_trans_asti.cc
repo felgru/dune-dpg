@@ -53,6 +53,7 @@ void printHelp(const char* name) {
             << " -s: plot scattering integral\n"
             << " -r: plot right hand side\n"
             << " -i: plot integrated solution\n"
+            << " -t: log runtime of solver for each iteration and direction\n"
             << " -n <n>: set maximal number of inner iterations to <n>\n"
             << " -o <dir>: set output directory to <dir>, default is "
                "\"./results/<current date and time>\"\n"
@@ -90,6 +91,7 @@ int main(int argc, char** argv)
   ///////////////////////////////////
 
   ASTIPlotFlags plotFlags = ASTIPlotFlags::doNotPlot;
+  ASTILogFlags logFlags = ASTILogFlags::defaultLog;
   std::string outdir = "";
   unsigned int maxNumberOfInnerIterations = 64;
   double accuracyRatio = 0.5;
@@ -97,13 +99,14 @@ int main(int argc, char** argv)
 
   {
     int opt;
-    while ((opt = getopt(argc,argv,"n:o:k:l:psrih")) != EOF)
+    while ((opt = getopt(argc,argv,"n:o:k:l:psrith")) != EOF)
       switch(opt)
       {
         case 'p': plotFlags |= ASTIPlotFlags::plotOuterIterations; break;
         case 's': plotFlags |= ASTIPlotFlags::plotScattering; break;
         case 'r': plotFlags |= ASTIPlotFlags::plotRhs; break;
         case 'i': plotFlags |= ASTIPlotFlags::plotIntegratedSolution; break;
+        case 't': logFlags |= ASTILogFlags::logDirectionSolveTime; break;
         case 'n': maxNumberOfInnerIterations = std::atoi(optarg); break;
         case 'o': outdir = optarg; break;
         case 'k': accuracyRatio = std::atof(optarg); break;
@@ -280,16 +283,16 @@ int main(int argc, char** argv)
   const double err0 = fnorm / cB;
 
   ASTIApproximationParameters approximationParameters(accuracyRatio,
-                                                         rho, CT, err0,
-                                                         scatteringTruthLevel,
-                                                         RHSApproximation{});
+                                                      rho, CT, err0,
+                                                      scatteringTruthLevel,
+                                                      RHSApproximation{});
 
   ASTI<ScatteringKernelApproximation::AlpertWavelet::SVD<wltOrder>,
-          RHSApproximation>()
+       RHSApproximation>()
       .solve(*grid, f, g, homogeneous_inflow_boundary, sigma,
              HenyeyGreensteinScattering(gamma),
              approximationParameters, targetAccuracy, N,
-             maxNumberOfInnerIterations, outdir, plotFlags);
+             maxNumberOfInnerIterations, outdir, plotFlags, logFlags);
 
   return 0;
 }
