@@ -54,6 +54,7 @@ void printHelp(const char* name) {
             << " -r: plot right hand side\n"
             << " -i: plot integrated solution\n"
             << " -t: log runtime of solver for each iteration and direction\n"
+            << "     and log runtime of scattering approximation\n"
             << " -n <n>: set maximal number of inner iterations to <n>\n"
             << " -o <dir>: set output directory to <dir>, default is "
                "\"./results/<current date and time>\"\n"
@@ -106,7 +107,7 @@ int main(int argc, char** argv)
         case 's': plotFlags |= ASTIPlotFlags::plotScattering; break;
         case 'r': plotFlags |= ASTIPlotFlags::plotRhs; break;
         case 'i': plotFlags |= ASTIPlotFlags::plotIntegratedSolution; break;
-        case 't': logFlags |= ASTILogFlags::logDirectionSolveTime; break;
+        case 't': logFlags |= ASTILogFlags::logTimings; break;
         case 'n': maxNumberOfInnerIterations = std::atoi(optarg); break;
         case 'o': outdir = optarg; break;
         case 'k': accuracyRatio = std::atof(optarg); break;

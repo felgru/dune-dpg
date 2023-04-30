@@ -55,6 +55,8 @@ bool flagIsSet(ASTIPlotFlags flags, ASTIPlotFlags flag) {
 enum class ASTILogFlags : unsigned char {
   defaultLog = 0,
   logDirectionSolveTime = 1 << 0,
+  logKernelApproximationTime = 1 << 1,
+  logTimings = 0b11,
 };
 
 constexpr inline

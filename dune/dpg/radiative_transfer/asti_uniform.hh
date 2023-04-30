@@ -302,10 +302,13 @@ class ASTILogger {
       ofs << "Singular values of kernel matrix:\n"
           << kernelApproximation.getSingularValues() << '\n';
     }
-    ofs << "Computing time: "
+    if(flagIsSet(logFlags, ASTILogFlags::logDirectionSolveTime)) {
+      ofs << "Computing time: "
           << std::chrono::duration_cast<std::chrono::microseconds>
-          (endScatteringApproximation - startScatteringApproximation).count()
-          << "us\n" << std::flush;
+            (endScatteringApproximation - startScatteringApproximation).count()
+          << "us\n";
+    }
+    ofs << std::flush;
   }
 
   void logInnerIterationsHeader()
