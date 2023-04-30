@@ -92,7 +92,8 @@ class ASTI {
              unsigned int maxNumberOfIterations,
              unsigned int maxNumberOfInnerIterations,
              const std::string& outputfolder,
-             ASTIPlotFlags plotFlags = ASTIPlotFlags::doNotPlot);
+             ASTIPlotFlags plotFlags = ASTIPlotFlags::doNotPlot,
+             ASTILogFlags logFlags = ASTILogFlags::defaultLog);
 
   private:
   using VectorType = BlockVector<FieldVector<double,1>>;
@@ -180,6 +181,7 @@ class TransportLogger {
   explicit TransportLogger(std::ofstream& ofs,
                            unsigned int outerIteration,
                            unsigned int direction,
+                           ASTILogFlags logFlags,
                            PassKey<ASTILogger>)
     : ofs(ofs)
     , n(outerIteration)
@@ -222,14 +224,17 @@ class TransportLogger {
 class ASTILogger {
   public:
   template<class ScatteringKernelApproximation, class RHSApproximation>
-  explicit ASTILogger(std::string filename,
-                         PassKey<ASTI<ScatteringKernelApproximation,
-                                         RHSApproximation>>) : ofs(filename) {}
+  explicit ASTILogger(ASTILogFlags logFlags,
+                      std::string filename,
+                      PassKey<ASTI<ScatteringKernelApproximation,
+                                   RHSApproximation>>)
+  : logFlags(logFlags)
+  , ofs(filename) {}
 
   TransportLogger transportLogger(unsigned int outerIteration,
                                   unsigned int direction)
   {
-    return TransportLogger(ofs, outerIteration, direction, {});
+    return TransportLogger(ofs, outerIteration, direction, logFlags, {});
   }
 
   template<class Kernel, class KernelApproximation>
@@ -297,10 +302,13 @@ class ASTILogger {
       ofs << "Singular values of kernel matrix:\n"
           << kernelApproximation.getSingularValues() << '\n';
     }
-    ofs << "Computing time: "
+    if(flagIsSet(logFlags, ASTILogFlags::logDirectionSolveTime)) {
+      ofs << "Computing time: "
           << std::chrono::duration_cast<std::chrono::microseconds>
-          (endScatteringApproximation - startScatteringApproximation).count()
-          << "us\n" << std::flush;
+            (endScatteringApproximation - startScatteringApproximation).count()
+          << "us\n";
+    }
+    ofs << std::flush;
   }
 
   void logInnerIterationsHeader()
@@ -352,6 +360,7 @@ class ASTILogger {
   }
 
   private:
+  const ASTILogFlags logFlags;
   std::ofstream ofs;
 };
 
@@ -615,7 +624,8 @@ void ASTI<ScatteringKernelApproximation, RHSApproximation>::solve(
            unsigned int maxNumberOfIterations,
            unsigned int maxNumberOfInnerIterations,
            const std::string& outputfolder,
-           ASTIPlotFlags plotFlags) {
+           ASTIPlotFlags plotFlags,
+           ASTILogFlags logFlags) {
   static_assert(std::is_same<RHSApproximation, FeRHS>::value
       || std::is_same<RHSApproximation, ApproximateRHS>::value,
       "Unknown type provided for RHSApproximation!\n"
@@ -630,7 +640,7 @@ void ASTI<ScatteringKernelApproximation, RHSApproximation>::solve(
   // To print information in dune-dpg/results/
   /////////////////////////////////////////////
 
-  ASTILogger logger(outputfolder+"/output",
+  ASTILogger logger(logFlags, outputfolder+"/output",
       PassKey<ASTI<ScatteringKernelApproximation, RHSApproximation>>{});
   ASTIPlotter plotter(plotFlags, outputfolder);
 

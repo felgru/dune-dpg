@@ -52,6 +52,36 @@ bool flagIsSet(ASTIPlotFlags flags, ASTIPlotFlags flag) {
   return static_cast<T>(flags & flag) != T{0};
 }
 
+enum class ASTILogFlags : unsigned char {
+  defaultLog = 0,
+  logDirectionSolveTime = 1 << 0,
+  logKernelApproximationTime = 1 << 1,
+  logTimings = 0b11,
+};
+
+constexpr inline
+ASTILogFlags operator|(ASTILogFlags a, ASTILogFlags b) {
+  using T = std::underlying_type_t<ASTILogFlags>;
+  return static_cast<ASTILogFlags>(static_cast<T>(a) | static_cast<T>(b));
+}
+
+constexpr inline
+ASTILogFlags operator&(ASTILogFlags a, ASTILogFlags b) {
+  using T = std::underlying_type_t<ASTILogFlags>;
+  return static_cast<ASTILogFlags>(static_cast<T>(a) & static_cast<T>(b));
+}
+
+constexpr inline
+ASTILogFlags& operator|=(ASTILogFlags& a, ASTILogFlags b) {
+  return a = (a | b);
+}
+
+constexpr inline
+bool flagIsSet(ASTILogFlags flags, ASTILogFlags flag) {
+  using T = std::underlying_type_t<ASTILogFlags>;
+  return static_cast<T>(flags & flag) != T{0};
+}
+
 struct FeRHS {};
 struct ApproximateRHS {};
 
