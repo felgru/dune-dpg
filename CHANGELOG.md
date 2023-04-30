@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
+## 0.5.2 - 2023-04-30
+### Added
+* The ASTI example programs now have a -t argument that logs the runtime
+  of the dpg solver for each iteration and direction.
+
+### Changed
+* ASTI: Logging the runtime of the scattering approximation has been
+  disabled unless the -t option has been given.
+* The amount of memory allocations for evaluating local functions has
+  been drastically reduced by re-using the std::vector that holds those
+  local function evaluations. This lead to more than 30% of runtime
+  reduction for the example from Felix' thesis.
+
 ## 0.5.1 - 2023-04-10
 ### Added
 * Implemented RefinedLocalView::bound() as required by the LocalView
