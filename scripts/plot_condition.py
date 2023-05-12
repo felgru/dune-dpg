@@ -1,12 +1,9 @@
 #!/usr/bin/python3
-# -*- coding: utf8 -*-
-from __future__ import (absolute_import, print_function)
 import argparse
 import fileinput
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import re
-import sys
 
 # to fix cut-off x label
 mpl.rcParams.update({'figure.autolayout': True})

@@ -118,8 +118,8 @@ plot(data,
      ylabel='a posteriori errors')
 
 plot(data,
-     dataselect=lambda d: map(lambda (l, a): a/l,
-                              zip(d['l2'], d['apost'])),
+     dataselect=lambda d: [a/l
+                           for l, a in zip(d['l2'], d['apost'])],
      labelmaker=lambda ls, ks, la, ka: \
                        '$\\mathbb{V}_h$, with $h=2^{-' + str(ls) + '}H$',
      outputfile='error_apost_rel.pdf',

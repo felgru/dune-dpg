@@ -1,12 +1,9 @@
 #!/usr/bin/python3
-# -*- coding: utf8 -*-
 import argparse
 import fileinput
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import numpy as np
 import re
-import sys
 
 aparser = argparse.ArgumentParser(description='Plot singular values')
 aparser.add_argument('-o', dest='outfile', default='singular_values.pdf')

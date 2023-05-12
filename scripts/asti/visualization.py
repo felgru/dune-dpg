@@ -1,11 +1,7 @@
 #!/usr/bin/python3
-# -*- coding: utf8 -*-
-from __future__ import (absolute_import, print_function)
 import argparse
-import sys, os
+import os
 import re
-import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 def createArrowPlots(datafile):

@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-# -*- coding: utf8 -*-
 import argparse
 import fileinput
 import matplotlib as mpl
