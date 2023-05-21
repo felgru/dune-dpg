@@ -1,6 +1,7 @@
 #!/usr/bin/python3
-import os
 import re
+from pathlib import Path
+
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -15,9 +16,9 @@ def insertData(data, ls, ks, la, ka, n, l2error, aposteriori):
     if ka not in data[ls][ks][la]:
         data[ls][ks][la][ka] = dict()
     if 'n' not in data[ls][ks][la][ka]:
-        data[ls][ks][la][ka]['n']     = list()
-        data[ls][ks][la][ka]['l2']    = list()
-        data[ls][ks][la][ka]['apost'] = list()
+        data[ls][ks][la][ka]['n']     = []
+        data[ls][ks][la][ka]['l2']    = []
+        data[ls][ks][la][ka]['apost'] = []
     data[ls][ks][la][ka]['n'].append(n)
     data[ls][ks][la][ka]['l2'].append(l2error)
     data[ls][ks][la][ka]['apost'].append(aposteriori)
@@ -27,7 +28,7 @@ def readData(data, datafile):
         '^([0-9]+)\s*([0-9]+)\s*([0-9]+)\s*([0-9]+)\s*([0-9]+)\s*'
         '([0-9\.e\-\+]+)\s*([0-9\.e\-\+]+)',
         re.MULTILINE)
-    with open(datafile,"r") as errors:
+    with open(datafile, "r") as errors:
         errors = errors.read()
         for (ls, ks, la, ka, n, l2error, aposteriori) \
                 in dataPattern.findall(errors):
@@ -89,10 +90,9 @@ def plot(data,
     plt.clf()
 
 
-datadir = '.'
-datafiles = map(lambda s: datadir + '/' + s,
-                filter(lambda s: s.startswith('convergence_error_'),
-                       os.listdir(datadir)))
+datadir = Path('.')
+datafiles = filter(lambda s: s.name.startswith('convergence_error_'),
+                   datadir.iterdir())
 data = dict()
 for datafile in datafiles:
     readData(data, datafile)

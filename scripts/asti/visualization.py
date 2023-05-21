@@ -2,6 +2,7 @@
 import argparse
 import os
 import re
+
 import matplotlib.pyplot as plt
 
 def createArrowPlots(datafile):
@@ -9,7 +10,7 @@ def createArrowPlots(datafile):
         r'Directions are:\n'
         r'((\-?[0-9]+\.?[0-9]*e?-?[0-9]* \-?[0-9]+\.?[0-9]*e?-?[0-9]*\n)*)'
         , re.MULTILINE)
-    with open(datafile,"r") as errors:
+    with open(datafile, "r") as errors:
         errors = errors.read()
         directions = dirPattern.findall(errors)
         # Number of iterations
@@ -37,9 +38,9 @@ def drawArrowPlot(n, dirNum, lx, ly):
 
 def reorder(S):
     reorderedS = []
-    for n in range(len(S)):
-        s_to_south = [s for s in S[n] if s['angle'][1]<=0.]
-        s_to_north = [s for s in S[n] if s['angle'][1]>0.]
+    for Sn in S:
+        s_to_south = [s for s in Sn if s['angle'][1]<=0.]
+        s_to_north = [s for s in Sn if s['angle'][1]>0.]
         reorder_s_to_south = sorted(s_to_south, key=lambda x: x['angle'][0])
         reorder_s_to_north = sorted(s_to_north, key=lambda x: -x['angle'][0])
         reorderedS.append(reorder_s_to_south+reorder_s_to_north)

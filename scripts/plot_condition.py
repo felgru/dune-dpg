@@ -14,8 +14,8 @@ aparser.add_argument('--presentation', dest='presentation',
                      action='store_true', default=False,
                      help='generate plot for presentations')
 args, unk = aparser.parse_known_args()
-levels = list()
-conditions = list()
+levels = []
+conditions = []
 line_pattern = re.compile(r'([0-9]*): ([0-9]*\.?[0-9]*e?[+-]?[0-9]?[0-9]?)')
 for line in fileinput.input(unk):
     m = line_pattern.match(line)

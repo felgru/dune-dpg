@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import argparse
-import sys
+import math
+
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -414,7 +415,7 @@ def plot_inner_iterations(data,
     maxNumInnerIterations = []
     avgNumInnerIterations = []
     for oi in iterationIndices:
-        minNum = sys.maxsize
+        minNum = math.inf
         maxNum = 0
         sum = 0
         for direction in innerIterationStats[oi]:
@@ -430,7 +431,7 @@ def plot_inner_iterations(data,
     maxLevel = []
     avgLevel = []
     for oi in iterationIndices:
-        minNum = sys.maxsize
+        minNum = math.inf
         maxNum = 0
         sum = 0
         for direction in innerIterationStats[oi]:
@@ -519,7 +520,7 @@ def _plot_Dofs_per_direction(data,
     violinPos = []
     violinVal = []
     for i, num_Dofs in zip(iterationIndices, num_Dofs_per_iteration):
-        minNum = sys.maxsize
+        minNum = math.inf
         maxNum = 0
         for num in num_Dofs:
             minNum = min(minNum, num)

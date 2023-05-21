@@ -54,10 +54,10 @@ def readData(datafile):
         errors = errors.read()
         parametersMatch = parametersPattern.search(errors)
         parameters = { 'eps': parametersMatch.group(2)
-                     , 'gamma':   parametersMatch.group(3)
-                     , 'wltOrder':    parametersMatch.group(4)
-                     , 'kernelApproxType':    parametersMatch.group(5)
-                     , 'maxWltLevel':     parametersMatch.group(6)
+                     , 'gamma': parametersMatch.group(3)
+                     , 'wltOrder': parametersMatch.group(4)
+                     , 'kernelApproxType': parametersMatch.group(5)
+                     , 'maxWltLevel': parametersMatch.group(6)
                      , 'maxNumS': parametersMatch.group(7)
                      , 'rho': parametersMatch.group(9)
                      , 'kappa1': parametersMatch.group(10)
@@ -71,7 +71,8 @@ def readData(datafile):
         singularValues = []
         if(parameters['kernelApproxType']=='SVD'):
             svPat = re.compile(r'([0-9]+\.?[0-9]*e?-?[0-9]*)\n', re.MULTILINE)
-            singularValues = svPat.findall(singularValuesPattern.search(errors).group())[1:]
+            singularValues = [float(sv)
+                              for sv in svPat.findall(singularValuesPattern.search(errors).group())[1:]]
         iterationIndices = [int(i) for i in iterationIndicesPattern.findall(errors)][1:]
         etas = [float(eta) for eta in etaPattern.findall(errors)][1:]
         wltLevel = [int(l) for l in wltLevelPattern.findall(errors)][1:]

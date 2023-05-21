@@ -13,10 +13,10 @@ mpl.rc('font',**{'family':'serif','serif':['Palatino'],'size':16})
 mpl.rc('text', usetex=True)
 
 line_pattern = re.compile(r'([0-9]*)\s*([0-9]*)\s*([0-9]*)\s*([0-9]*)')
-h = list()
-buffered = list()
-unbuffered = list()
-umfpack = list()
+h = []
+buffered = []
+unbuffered = []
+umfpack = []
 for line in fileinput.input(unk):
     match = line_pattern.match(line)
     h.append(1./float(match.group(1)))

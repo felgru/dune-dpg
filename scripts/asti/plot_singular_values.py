@@ -14,11 +14,11 @@ args, unk = aparser.parse_known_args()
 
 henyeyGreenstein = re.compile(
             r'Henyey Greenstein kernel with gamma = ([0-9\.e\-\+]+)')
-singularValues = list()
-labels = list()
+singularValues = []
+labels = []
 for line in fileinput.input(unk):
     if fileinput.isfirstline():
-        singularValues.append(list())
+        singularValues.append([])
         m = henyeyGreenstein.search(line)
         if m:
             gamma = float(m.group(1))
