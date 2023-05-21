@@ -50,6 +50,7 @@ def readData(datafile):
             r'a posteriori error for current direction: [0-9]*\.?[0-9]*e?[+-]?[0-9]+? '
                   r'\((enough|not enough)'
             , re.MULTILINE)
+    timeInnerIterationPattern = re.compile(r'Calculating solution for outer iteration (\d+), direction (\d+) took (\d+)ms.')
     with open(datafile,"r") as errors:
         errors = errors.read()
         parametersMatch = parametersPattern.search(errors)
@@ -96,6 +97,10 @@ def readData(datafile):
                     , 'numDOFs': int(m.group(4))
                     })
         del innerIterationsStats[0]
+        timeInnerIterations = defaultdict(list)
+        for m in timeInnerIterationPattern.finditer(errors):
+            timeInnerIterations[int(m.group(1))].append(int(m.group(3)))
+        del timeInnerIterations[0]
 
     return { 'params': parameters
            , 'singularValues': singularValues
@@ -113,4 +118,5 @@ def readData(datafile):
            , 'globalAccAposteriori': globalAccAposteriori
            , 'dofs': dofs
            , 'innerIterationsStats': innerIterationsStats
+           , 'timeInnerIterations': timeInnerIterations
            }
