@@ -33,7 +33,7 @@ def drawArrowPlot(n, dirNum, lx, ly):
     y0 = 0.
     plt.quiver(x0, y0, lx, ly, angles='xy', scale_units='xy', scale = 1)
     plt.axis([-1, 1, -1, 1])
-    plt.savefig('dir-n{}-dir{:0>4}.pdf'.format(n, dirNum))
+    plt.savefig(f'dir-n{n}-dir{dirNum:0>4}.pdf')
     plt.clf()
 
 def reorder(S):
@@ -60,10 +60,10 @@ def mergePlots(N, reorderedS
             newindex = reorderedS[n].index(s)
             # Definition of file names
             # File names for u and direction (they have the old indexes)
-            filenameU   = '{}-n{}-dir{:0>4}'.format(prefixU, n, oldindex)
-            filenameDir = '{}-n{}-dir{:0>4}'.format(prefixDir, n, oldindex)
+            filenameU   = f'{prefixU}-n{n}-dir{oldindex:0>4}'
+            filenameDir = f'{prefixDir}-n{n}-dir{oldindex:0>4}'
             # File name for merged file (it has the new index)
-            fileMerge   = '{}-n{}-dir{:0>4}'.format(prefixMerge, n, newindex)
+            fileMerge   = f'{prefixMerge}-n{n}-dir{newindex:0>4}'
 
             # We convert png file of u into a pdf
             # (because Visit cannot save in pdf)

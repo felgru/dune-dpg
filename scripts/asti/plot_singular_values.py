@@ -22,7 +22,7 @@ for line in fileinput.input(unk):
         m = henyeyGreenstein.search(line)
         if m:
             gamma = float(m.group(1))
-            label = '$\gamma = {}$'.format(gamma)
+            label = f'$\gamma = {gamma}$'
         else:
             label = line
         labels.append(label)

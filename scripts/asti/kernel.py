@@ -177,16 +177,18 @@ if args.plot_matrices:
     MS = plt.matshow(result, cmap=plt.cm.autumn)
     cbar = plt.colorbar(MS)
     if(args.plot_title):
-        titleStr='Wlt analysis with $0\leq j\leq {}$ for \n'.format(J) \
-            + r"$k(\varphi)=(1-\gamma^2)/" \
-            + r"(1+\gamma^2-2\gamma\cos(\varphi))$" \
-            + r'$,\ \gamma={}$'.format(g)
+        titleStr = (
+            rf'Wlt analysis with $0\leq j\leq {J}$ for \n'
+            r'$k(\varphi)=(1-\gamma^2)/'
+            r'(1+\gamma^2-2\gamma\cos(\varphi))$'
+            rf'$,\ \gamma={g}$'
+        )
         plt.title(titleStr)
     plt.xlabel('$(j,k)$')
-    plt.ylabel('$(j\',k\')$')
+    plt.ylabel("$(j',k')$")
     # plt.show()
 
-    titleSave="wlt_analysis-J_{}-gamma_{}.pdf".format(J, g)
+    titleSave = f"wlt_analysis-J_{J}-gamma_{g}.pdf"
     plt.savefig(titleSave, bbox_inches="tight")
     plt.clf()
 
@@ -198,16 +200,18 @@ if args.plot_matrices:
     MS = plt.matshow(log_result, norm=mpl.colors.LogNorm(), cmap=plt.cm.autumn)
     cbar = plt.colorbar(MS)
     if(args.plot_title):
-        titleStr='Wlt analysis with $0\leq j\leq {}$ for \n'.format(J) \
-            + r"$k(\varphi)=(1-\gamma^2)/" \
-            + r"(1+\gamma^2-2\gamma\cos(\varphi))$" \
-            + r'$,\ \gamma={}$'.format(g)
+        titleStr = (
+            rf'Wlt analysis with $0\leq j\leq {J}$ for \n'
+            r'$k(\varphi)=(1-\gamma^2)/'
+            r'(1+\gamma^2-2\gamma\cos(\varphi))$'
+            rf'$,\ \gamma={g}$'
+        )
         plt.title(titleStr)
     plt.xlabel('$(j,k)$')
-    plt.ylabel('$(j\',k\')$')
+    plt.ylabel("$(j',k')$")
     # plt.show()
 
-    titleSave="wlt_analysis-J_{}-gamma_{}-log.pdf".format(J, g)
+    titleSave=f"wlt_analysis-J_{J}-gamma_{g}-log.pdf"
     plt.savefig(titleSave, bbox_inches="tight")
     plt.clf()
 
@@ -228,14 +232,16 @@ else:
     plt.xlim(-r, r)
 
 if(args.plot_title):
-    titleStr=r"$k(\varphi)=(1-\gamma^2)/" \
-        + r"(1+\gamma^2-2\gamma\cos(\varphi))$" \
-        + r'$,\ \gamma={}$'.format(g)
+    titleStr = (
+        r'$k(\varphi)=(1-\gamma^2)/'
+        r'(1+\gamma^2-2\gamma\cos(\varphi))$'
+        rf'$,\ \gamma={g}$'
+    )
     plt.title(titleStr)
     plt.ylabel(r"$k(\varphi)$")
 plt.xlabel(r"$\varphi$")
 # plt.show()
 
 plt.tight_layout()
-titleSave="phi-gamma_{}.pdf".format(g)
+titleSave = f"phi-gamma_{g}.pdf"
 plt.savefig(titleSave)

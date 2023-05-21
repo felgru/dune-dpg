@@ -43,8 +43,7 @@ def readData(data, datafile):
 
 def plot(data,
          dataselect=lambda d: d['l2'],
-         labelmaker=lambda ls, ks, la, ka: \
-                           str(ls)+' '+str(ks)+' '+str(la)+' '+str(ka),
+         labelmaker=lambda ls, ks, la, ka: f'{ls} {ks} {la} {ka}',
          outputfile='error.pdf',
          title=None,
          xlabel='mesh size $H$',
@@ -103,7 +102,7 @@ mpl.rc('text', usetex=True)
 plot(data,
      dataselect=lambda d: d['l2'],
      labelmaker=lambda ls, ks, la, ka: \
-                       '$\\mathbb{V}_h$, with $h=2^{-' + str(ls) + '}H$',
+                       f'$\\mathbb{{V}}_h$, with $h=2^{{-{ls}}}H$',
      outputfile='error.pdf',
      # title='$L_2$ error of $\\varphi$',
      ylabel='$L_2$ errors',
@@ -112,7 +111,7 @@ plot(data,
 plot(data,
      dataselect=lambda d: d['apost'],
      labelmaker=lambda ls, ks, la, ka: \
-                       '$\\mathbb{V}_h$, with $h=2^{-' + str(ls) + '}H$',
+                       f'$\\mathbb{{V}}_h$, with $h=2^{{-{ls}}}H$',
      outputfile='error_aposteriori.pdf',
      # title='a posteriori error of $u=(\\varphi, \\theta)$',
      ylabel='a posteriori errors')
@@ -121,7 +120,7 @@ plot(data,
      dataselect=lambda d: [a/l
                            for l, a in zip(d['l2'], d['apost'])],
      labelmaker=lambda ls, ks, la, ka: \
-                       '$\\mathbb{V}_h$, with $h=2^{-' + str(ls) + '}H$',
+                       f'$\\mathbb{{V}}_h$, with $h=2^{{-{ls}}}H$',
      outputfile='error_apost_rel.pdf',
      # title='relative a posteriori error' \
      #       '$\\frac{e_{a posteriori}}{e_{exact}}$',

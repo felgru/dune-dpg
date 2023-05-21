@@ -43,7 +43,7 @@ def print_rows(data):
     for n, err, dofs in zip(data['iterationIndices'],
                             data['globalAccAposteriori'],
                             data['dofs']):
-        print(r'{n} & {err} & {dofs} \\'.format(n=n, err=err, dofs=dofs))
+        print(rf'{n} & {err} & {dofs} \\')
 
 data = readData(args.infile)
 if args.standalone:
