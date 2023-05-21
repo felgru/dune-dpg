@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import argparse
-import os
 import re
+import subprocess
 
 import matplotlib.pyplot as plt
 
@@ -68,22 +68,31 @@ def mergePlots(N, reorderedS
             # We convert png file of u into a pdf
             # (because Visit cannot save in pdf)
             if convert_u_png_to_pdf:
-                cmd = 'convert {0}.png {0}.pdf'.format(filenameU)
-                os.system(cmd)
+                subprocess.run(['convert',
+                                f'{filenameU}.png', f'{filenameU.pdf}'])
             # We merge the two files
-            cmd = 'pdfjam '+filenameU+'.pdf'+' '+filenameDir+'.pdf -o '+fileMerge+'.pdf --nup 2x1 --twoside --landscape --scale 1.1 --delta "-2.0cm 0.cm" --offset \'2cm 0cm\''
-            os.system(cmd)
+            subprocess.run(['pdfjam', f'{filenameU}.pdf', f'{filenameDir}.pdf',
+                            '-o', f'{fileMerge}.pdf',
+                            '--nup', '2x1',
+                            '--twoside', '--landscape',
+                            '--scale', '1.1',
+                            '--delta', '"-2.0cm 0.cm"',
+                            '--offset', '"2cm 0cm"'])
         # We put together the merged files of each iteration
-        cmd = 'pdfjam {1}-n{0}-dir*.pdf -o {2}-n{0}.pdf --landscape'.format(n, prefixMerge, prefixSummary)
-        os.system(cmd)
+        subprocess.run(['pdfjam',
+                        *sorted(Path('.').glob(f'{prefixMerge}-n{n}-dir*.pdf')),
+                        '-o', f'{prefixSummary}-n{n}.pdf',
+                        '--landscape'])
 
 def makeVideo(N
     , prefixSummary = 'summary-elevate'
     , prefixVideo = 'video-elevate'):
     for n in range(N):
         # Make a gif movie
-        cmd = 'convert -verbose -delay 100 -loop 1 -density 300 {1}-n{0}.pdf {2}-n{0}.gif'.format(n, prefixSummary, prefixVideo)
-        os.system(cmd)
+        subprocess.run(['convert', '-verbose',
+                        '-delay', '100', '-loop', '1', '-density', '300',
+                        f'{prefixSummary}-n{n}.pdf',
+                        f'{prefixVideo}-n{n}.gif'])
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
