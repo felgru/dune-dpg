@@ -690,7 +690,7 @@ namespace Dune {
  * This means, given a ratio \f$\theta \in (0,1]\f$, the set
  * \f$\mathcal M \subset \Omega_h\f$ of marked elements satisfies
  * \f[\mathrm{err}(u_h, \mathcal M)
-     \geq \mathrm{err}(u_h, \Omega_h).\f]
+     \geq \theta \mathrm{err}(u_h, \Omega_h).\f]
  *
  * \param grid
  * \param ratio  the marking ratio \f$\theta \in (0,1]\f$
