@@ -421,7 +421,7 @@ namespace Dune {
     const size_t localSolutionDofs
         = computeOffsets(localSolutionSpaceOffsets, solutionLocalViews);
 
-    // Create and fill vectors with cofficients
+    // Create and fill vectors with coefficients
     // corresponding to local dofs on element
     // for the solution and for the righthand side
     BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);
@@ -588,7 +588,7 @@ namespace Dune {
     const size_t localTestDofs
         = computeOffsets(localTestSpaceOffsets, testLocalViews);
 
-    // Create and fill vectors with cofficients
+    // Create and fill vectors with coefficients
     // corresponding to local dofs on element
     // for the solution and for the righthand side
     BlockVector<FieldVector<double,1> > solutionElement(localSolutionDofs);

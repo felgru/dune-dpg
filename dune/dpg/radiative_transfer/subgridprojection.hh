@@ -253,7 +253,7 @@ namespace detail {
 
     bool containsPoint(const FieldVector<double, 2>& point) const
     {
-      // Convert point to baricentric cooradinates and test
+      // Convert point to barycentric coordinates and test
       // for positivity.
       FieldVector<double, 2> bc(r);
       m.umv(point, bc);
