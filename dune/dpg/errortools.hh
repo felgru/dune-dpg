@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <iterator>
 #include <numeric>
 #include <tuple>
 #include <type_traits>
@@ -683,6 +684,61 @@ namespace Dune {
    return std::sqrt(squaredResidual);
 
   }
+
+  namespace Doerfler {
+    /** Partition sorted Sequence of errorEstimates into entities to mark and
+     *  not to mark.
+     *
+     *  Precondition: sequence is sorted descendingly on its second entry.
+     *
+     *  \return past the end iterator for marked entities.
+     */
+    template <class It>
+    std::pair<double, It> partition(
+        double ratio,
+        It begin,
+        It end)
+    {
+      using ItValue = typename std::iterator_traits<It>::value_type;
+      static_assert(std::tuple_size_v<ItValue> == 2,
+                    "Dörfler partition needs iterator over pairs.");
+      static_assert(std::is_same_v<std::tuple_element_t<1, ItValue>, double>,
+                    "Second entry of iterator values has to be double.");
+      const double errorSquared = std::accumulate(
+          begin, end, 0.,
+          [](double a, const auto& b) {
+              return a + std::get<1>(b);
+          });
+      // Since we used squared errors, we have to square the marking ratio
+      const double targetError = ratio * ratio * errorSquared;
+      double error = 0.;
+      auto currElem = begin;
+      while(error < targetError) {
+        error += std::get<1>(*currElem);
+        ++currElem;
+      }
+
+      return {errorSquared, currElem};
+    }
+
+    template <class Grid, class It>
+    void mark(
+        Grid& grid,
+        It begin,
+        It end)
+    {
+      using Entity = typename Grid::template Codim<0>::Entity;
+      using EntitySeed = std::tuple_element_t<
+        0, typename std::iterator_traits<It>::value_type>;
+      static_assert(std::is_same<EntitySeed,
+          typename Entity::EntitySeed>::value,
+          "EntitySeed type does not fit the Grid type.");
+
+      for(auto currElem = begin; currElem != end; ++currElem) {
+        grid.mark(1, grid.entity(std::get<0>(*currElem)));
+      }
+    }
+  }  // end namespace Doerfler
 
 /**
  * \brief Mark elements for refinement according to Dörfler's strategy
