@@ -46,6 +46,10 @@ add_executable("plot_extension" plot_extension.cc)
 add_dune_ug_flags(plot_extension)
 target_link_dune_default_libraries("plot_extension")
 
+add_executable("plot_projection" plot_projection.cc)
+add_dune_ug_flags(plot_projection)
+target_link_dune_default_libraries("plot_projection")
+
 add_executable("trial-to-test-condition" trial-to-test-condition.cc)
 add_dune_ug_flags(trial-to-test-condition)
 target_link_dune_default_libraries("trial-to-test-condition")
