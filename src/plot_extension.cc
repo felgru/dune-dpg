@@ -8,9 +8,6 @@
 #include <tuple>
 #include <vector>
 
-#include <boost/math/constants/constants.hpp>
-
-#include <dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
