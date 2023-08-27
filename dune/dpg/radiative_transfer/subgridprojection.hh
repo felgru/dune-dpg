@@ -805,7 +805,7 @@ private:
 
     size_t subElementOffset = 0;
     localView.resetSubElements();
-    for(const auto subElement : elements(referenceGridView)) {
+    for(const auto& subElement : elements(referenceGridView)) {
       localView.bindSubElement(subElement);
       auto&& localFiniteElement = localView.tree().finiteElement();
 

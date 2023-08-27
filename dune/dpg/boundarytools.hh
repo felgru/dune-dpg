@@ -130,7 +130,7 @@ namespace Dune {
 
     auto localBeta = localFunction(beta);
 
-    for(const auto e : elements(gridView))
+    for(const auto& e : elements(gridView))
     {
       localBeta.bind(e);
       const auto betaAtElementCenter
@@ -264,7 +264,7 @@ namespace Dune {
     auto localView = feBasis.localView();
     using LocalView = decltype(localView);
 
-    for(const auto e : elements(gridView))
+    for(const auto& e : elements(gridView))
     {
       localView.bind(e);
       const auto& localFE = localView.tree().finiteElement();
