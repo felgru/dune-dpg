@@ -175,6 +175,8 @@ template<typename InnerProduct>
 class NormalizedNode :
   public LeafBasisNode
 {
+  static_assert(std::tuple_size_v<typename InnerProduct::TestSpaces> == 1,
+      "InnerProduct of NormalizedBasis needs to contain exactly 1 space!");
   using Basis = std::tuple_element_t<0, typename InnerProduct::TestSpaces>;
   using LocalViews
       = Dune::detail::getLocalViews_t<typename InnerProduct::TestSpaces>;
