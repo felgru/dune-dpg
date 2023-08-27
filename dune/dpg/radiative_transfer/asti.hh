@@ -354,8 +354,13 @@ class SubGridSpaces {
 #else
   static auto scatteringHostGridBasis(HostGridView hostGridView) {
 #if ASTI_NORMALIZED_SPACES
+    // TODO: Do we even need to normalize the scatering basis?
+    //       Using the unnormalized basis might lead to one more interpolation
+    //       step during SubGrid projection, but on the other hand, all other
+    //       operatons are faster on the unnormalized basis.
     using FEBasisInteriorHost
-        = changeGridView_t<typename Spaces::FEBasisInterior, HostGridView>;
+        = changeGridView_t<typename FEBasisInterior::PreBasis::WrappedBasis,
+                           HostGridView>;
     auto interiorSpace = make_space_tuple<FEBasisInteriorHost>(hostGridView);
     auto l2InnerProduct
       = innerProductWithSpace(interiorSpace)
