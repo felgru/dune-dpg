@@ -82,7 +82,7 @@ public:
 #endif
 
   /** \brief Constructor for a given grid view object */
-  NormalizedPreBasis(const InnerProduct& ip) :
+  explicit NormalizedPreBasis(const InnerProduct& ip) :
     wrappedPreBasis_(std::get<0>(*ip.getTestSpaces()).preBasis()),
     innerProduct_(ip)
   {}
@@ -108,7 +108,7 @@ public:
 
   Node makeNode() const
   {
-    return Node{innerProduct_};
+    return Node{*this};
   }
 
 #if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
@@ -190,7 +190,7 @@ public:
   using FiniteElement
       = ScaledLocalFiniteElement<typename WrappedNode::FiniteElement>;
 
-  NormalizedNode(const PreBasis& preBasis) :
+  explicit NormalizedNode(const PreBasis& preBasis) :
     wrappedNode_(),
     innerProduct_(preBasis.innerProduct()),
     localViews_(Dune::detail::getLocalViews(*innerProduct_.getTestSpaces())),
