@@ -7,6 +7,10 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 ## 0.6 (Unreleased)
 ### Changed
 
+### Fixed
+* `changeGridView` now works on `NormalizedBasis`, `InnerProduct` and
+  `BilinearForm`.
+
 ### Deprecated
 
 ### Removed

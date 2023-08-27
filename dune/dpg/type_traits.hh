@@ -3,6 +3,7 @@
 #ifndef DUNE_DPG_TYPE_TRAITS_HH
 #define DUNE_DPG_TYPE_TRAITS_HH
 
+#include <memory>
 #include <tuple>
 #include <type_traits>
 #include <vector>
@@ -606,6 +607,13 @@ struct changeGridView<std::tuple<Spaces...>, GridView>
   { typedef changeGridView_t<Space, GridView> Type; };
 
   typedef typename ForEachType<changeGridView_, std::tuple<Spaces...>>::Type
+      type;
+};
+
+template<class GridView, class... Spaces>
+struct changeGridView<std::shared_ptr<std::tuple<Spaces...>>, GridView>
+{
+  typedef std::shared_ptr<changeGridView_t<std::tuple<Spaces...>, GridView>>
       type;
 };
 
