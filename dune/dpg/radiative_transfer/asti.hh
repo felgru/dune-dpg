@@ -357,7 +357,7 @@ class SubGridSpaces {
     // TODO: Do we even need to normalize the scatering basis?
     //       Using the unnormalized basis might lead to one more interpolation
     //       step during SubGrid projection, but on the other hand, all other
-    //       operatons are faster on the unnormalized basis.
+    //       operations are faster on the unnormalized basis.
     using FEBasisInteriorHost
         = changeGridView_t<typename FEBasisInterior::PreBasis::WrappedBasis,
                            HostGridView>;

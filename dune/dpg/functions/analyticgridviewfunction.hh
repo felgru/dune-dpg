@@ -50,10 +50,10 @@ public:
   using Element = typename EntitySet::Element;
   using Geometry = typename Element::Geometry;
 
-  // Use the inderiction via derivativeIfImplemented to also support
+  // Use the indirection via derivativeIfImplemented to also support
   // function types F that do not implement derivative. In this case
-  // the interface type DifferentiableFunction is used a dummy for
-  // the derivative type
+  // the interface type DifferentiableFunction is using a dummy for
+  // the derivative type.
   using DerivativeDummy = DifferentiableFunction<DerivativeSignature>;
   using GlobalRawDerivative = decltype(Imp::derivativeIfImplemented<DerivativeDummy, F>(std::declval<F>()));
   using Derivative = AnalyticGridViewFunction<DerivativeSignature, GridView, GlobalRawDerivative, DerivativeTraits>;
