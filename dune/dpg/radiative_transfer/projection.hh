@@ -69,8 +69,7 @@ namespace Imp {
     const ProjectionMap<Grid>& projection,
     GlobalBasis& globalBasis)
   {
-    std::vector<double> projectionVector{};
-    projectionVector.reserve(globalBasis.size());
+    std::vector<double> projectionVector(globalBasis.size());
     auto localView = globalBasis.localView();
     for(const auto& e : elements(globalBasis.gridView()))
     {
