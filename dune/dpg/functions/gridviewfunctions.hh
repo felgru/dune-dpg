@@ -128,6 +128,96 @@ namespace detail {
   }
 }
 
+template<class Range, class LocalDomain, class LocalContext>
+class LocalZeroGridViewFunction
+{
+  using Domain = LocalDomain;
+
+public:
+  LocalZeroGridViewFunction() {}
+
+  Range operator() (const Domain&) const
+  {
+    return Range(0.);
+  }
+
+  //! Create a derivative grid-function returning constant 0.
+  friend LocalZeroGridViewFunction<Range, LocalDomain, LocalContext>
+    derivative(const LocalZeroGridViewFunction&)
+  {
+    return {};
+  }
+
+  void bind(const LocalContext& localContext)
+  {
+    context = &localContext;
+  }
+
+  /**
+   * \brief Unbind from local context
+   */
+  void unbind()
+  {
+    context = nullptr;
+  }
+
+  /**
+   * \brief Obtain the local context this LocalFunction is bound to
+   */
+  const LocalContext& localContext() const
+  {
+    return *context;
+  }
+
+private:
+  const LocalContext* context = nullptr;
+};
+
+template<class Range, class GridView>
+class ZeroGridViewFunction
+{
+  using EntitySet = GridViewEntitySet<GridView, 0>;
+  using Domain
+      = typename GridView::template Codim<0>::Geometry::GlobalCoordinate;
+  using LocalCoordinate = typename EntitySet::LocalCoordinate;
+  // using LocalSignature = typename Range(LocalCoordinate);
+
+public:
+  using Element = typename EntitySet::Element;
+
+  using LocalFunction
+    = LocalZeroGridViewFunction<Range, LocalCoordinate, Element>;
+
+  ZeroGridViewFunction(const GridView& gridView) :
+    entitySet_(gridView)
+  {}
+
+  Range operator()(const Domain& x) const
+  {
+    return Range(0.);
+  }
+
+  friend LocalFunction localFunction(const ZeroGridViewFunction&)
+  {
+    return LocalFunction();
+  }
+
+  //! Create a derivative grid-function returning constant 0.
+  friend ZeroGridViewFunction<Range, GridView>
+    derivative(const ZeroGridViewFunction& t)
+  {
+    return {t.entitySet_.gridView()};
+  }
+
+  const EntitySet& entitySet() const
+  {
+    return entitySet_;
+  }
+
+private:
+  EntitySet entitySet_;
+};
+
 template<class Range, class LocalDomain, class LocalContext, class F>
 class LocalPiecewiseConstantGridViewFunction
 {
@@ -145,6 +235,13 @@ public:
   Range operator() (const Domain&) const
   {
     return constant;
+  }
+
+  //! Create a derivative grid-function returning constant 0.
+  friend LocalZeroGridViewFunction<Range, LocalDomain, LocalContext>
+    derivative(const LocalPiecewiseConstantGridViewFunction&)
+  {
+    return {};
   }
 
   void bind(const LocalContext& localContext)
@@ -207,6 +304,13 @@ public:
     localFunction(const PiecewiseConstantGridViewFunction& t)
   {
     return LocalFunction(t.f_);
+  }
+
+  //! Create a derivative grid-function returning constant 0.
+  friend ZeroGridViewFunction<Range, GridView>
+    derivative(const PiecewiseConstantGridViewFunction& t)
+  {
+    return {t.entitySet_.gridView()};
   }
 
   const EntitySet& entitySet() const
