@@ -5,6 +5,8 @@
 
 #include <vector>
 
+#include <dune/common/version.hh>
+
 #include <dune/localfunctions/common/localinterpolation.hh>
 
 namespace Dune
@@ -24,11 +26,19 @@ namespace Dune
   public:
 
     template<typename F, typename C>
-    void interpolate (const F& ff, std::vector<C>& out) const
+    void interpolate (
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,10)
+        const F& f,
+#else
+        const F& ff,
+#endif
+        std::vector<C>& out) const
     {
       typename LB::Traits::DomainType x;
 
+#if DUNE_VERSION_LT(DUNE_LOCALFUNCTIONS,2,10)
       auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
+#endif
 
       out.resize(N);
       for (int l=0; l<=k; l++)

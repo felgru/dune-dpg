@@ -24,4 +24,8 @@ add_subdirectory("doc")
 add_subdirectory("cmake/modules")
 
 # finalize the dune project, e.g. generating config.h etc.
-finalize_dune_project(GENERATE_CONFIG_H_CMAKE)
+if(dune-common_VERSION VERSION_GREATER_EQUAL 2.10)
+  finalize_dune_project()
+else()
+  finalize_dune_project(GENERATE_CONFIG_H_CMAKE)
+endif()

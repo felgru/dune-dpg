@@ -19,6 +19,11 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   `PQkFaceNodalBasis` and `PQkTraceNodalBasis` have been removed.
   Instead they should be used under their new names starting with
   Lagrange... .
+* When building against dune-localfunctions 2.10, the interpolate
+  methods of dune-dpg's LocalInterpolation classes only accept functions
+  that are callables with one argument, returning the evaluation. The old
+  f.evaluate(x, y) interface has been removed in dune-localfunctions 2.10
+  and is thus not supported anymore.
 
 ## 0.5.2 - 2023-04-30
 ### Added

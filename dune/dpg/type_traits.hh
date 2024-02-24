@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <dune/common/keywords.hh>
 #include <dune/common/tupleutility.hh>
 #include <dune/common/version.hh>
 
@@ -653,7 +652,7 @@ struct uses_only_constant_coefficients<std::tuple<Terms...>>
       uses_only_constant_coefficients<typename Terms::Term>...> {};
 
 template<class Term>
-DUNE_INLINE_VARIABLE constexpr bool uses_only_constant_coefficients_v
+inline constexpr bool uses_only_constant_coefficients_v
     = uses_only_constant_coefficients<Term>::value;
 
 } // end namespace Dune
