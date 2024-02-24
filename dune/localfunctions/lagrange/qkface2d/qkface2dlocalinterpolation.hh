@@ -5,6 +5,7 @@
 #define DUNE_LOCALFUNCTIONS_QKFACE2DLOCALINTERPOLATION_HH
 
 #include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
 
 #include <dune/geometry/type.hh>
 
@@ -24,11 +25,19 @@ namespace Dune
 
     //! \brief Local interpolation of a function -> works only for functions with support only on the boundary
     template<typename F, typename C>
-    void interpolate (const F& ff, std::vector<C>& out) const
+    void interpolate (
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,10)
+        const F& f,
+#else
+        const F& ff,
+#endif
+        std::vector<C>& out) const
     {
       typename LB::Traits::DomainType x;
 
+#if DUNE_VERSION_LT(DUNE_LOCALFUNCTIONS,2,10)
       auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
+#endif
 
       out.resize(4*(k+1));
       for (unsigned int l=0; l<=k; l++)
@@ -56,11 +65,19 @@ namespace Dune
   public:
     //! \brief Local interpolation of a function
     template<typename F, typename C>
-    void interpolate (const F& ff, std::vector<C>& out) const
+    void interpolate (
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,10)
+        const F& f,
+#else
+        const F& ff,
+#endif
+        std::vector<C>& out) const
     {
       typename LB::Traits::DomainType x(0);
 
+#if DUNE_VERSION_LT(DUNE_LOCALFUNCTIONS,2,10)
       auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
+#endif
 
       out.resize(1);
       out[0] = f(x);

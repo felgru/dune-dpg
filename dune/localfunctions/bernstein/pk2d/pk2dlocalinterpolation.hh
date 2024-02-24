@@ -8,6 +8,7 @@
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
 
 #include <dune/localfunctions/common/localinterpolation.hh>
 
@@ -30,13 +31,21 @@ namespace Dune
   public:
 
     template<typename F, typename C>
-    void interpolate (const F& ff, std::vector<C>& out) const
+    void interpolate (
+#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,10)
+        const F& f,
+#else
+        const F& ff,
+#endif
+        std::vector<C>& out) const
     {
       typedef typename LB::Traits::DomainFieldType D;
       typedef typename LB::Traits::RangeFieldType R;
 
       typename LB::Traits::DomainType x;
+#if DUNE_VERSION_LT(DUNE_LOCALFUNCTIONS,2,10)
       auto&& f = Impl::makeFunctionWithCallOperator<typename LB::Traits::DomainType>(ff);
+#endif
       FieldMatrix<C, N, N> vandermonde;
       FieldVector<C, N> fEvaluations;
       int n=0;
