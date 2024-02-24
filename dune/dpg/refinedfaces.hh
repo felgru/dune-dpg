@@ -8,6 +8,7 @@
 #include <dune/dpg/type_traits.hh>
 #include <dune/geometry/affinegeometry.hh>
 #include <dune/geometry/referenceelements.hh>
+#include <dune/grid/common/rangegenerators.hh>
 
 namespace Dune {
 
@@ -248,9 +249,8 @@ unsigned int outflowFacesOfSubElement
      typename Element::Geometry::GlobalCoordinate direction)
 {
   unsigned int nOutflowFaces = 0;
-  for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
+  for (const auto& face : subEntities(subElement, Codim<1>{}))
   {
-    const auto face = subElement.template subEntity<1>(f);
     /* This won't work for curvilinear elements, but they don't seem
      * to be supported by UG anyway. */
     const auto unitOuterNormal

@@ -1,5 +1,8 @@
 #include <numeric>
+
 #include <dune/geometry/quadraturerules/splitquadraturerule.hh>
+#include <dune/grid/common/rangegenerators.hh>
+
 #include "quadratureorder.hh"
 #include "refinedfaces.hh"
 #include "traveldistancenorm.hh"
@@ -154,10 +157,9 @@ faceImpl(TestLocalView& testLocalView,
     RefinedFaceIntegrationData<type> integrationData(
         geometry, subGeometryInReferenceElement, direction);
 
-    for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
+    for (const auto& face : subEntities(subElement, Codim<1>{}))
     {
       using SubElement = std::decay_t<decltype(subElement)>;
-      const auto face = subElement.template subEntity<1>(f);
       const auto faceComputations
           = RefinedFaceComputations<SubElement>(face, subElement, element);
 

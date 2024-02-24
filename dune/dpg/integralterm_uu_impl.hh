@@ -121,9 +121,8 @@ faceImpl(const LhsLocalView& lhsLocalView,
 
   FaceIntegrationData<type> integrationData(geometry, direction);
 
-  for (unsigned short f = 0, fMax = element.subEntities(1); f < fMax; f++)
+  for (const auto& face : subEntities(element, Codim<1>{}))
   {
-    auto face = element.template subEntity<1>(f);
     const auto faceComputations = FaceComputations<Element>(face, element);
     if(faceComputations.template skipFace<type>(direction)) continue;
 

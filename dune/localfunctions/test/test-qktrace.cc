@@ -9,8 +9,6 @@
 #include "../lagrange/qktrace.hh"
 #include <dune/localfunctions/test/test-localfe.hh>
 
-#include <dune/common/version.hh>
-
 int main() try
 {
   bool success = true;
@@ -29,11 +27,7 @@ int main() try
     const unsigned int order=2;
     std::cout << "order : " << order << std::endl;
     Dune::QkTraceLocalFiniteElement<double,double,dim,order> lagrangeFaceQuad;
-    success = success && testFE(lagrangeFaceQuad
-#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,8)
-                                , DisableRepresentConstants
-#endif
-                                );
+    success = success && testFE(lagrangeFaceQuad, DisableRepresentConstants);
   }
 
   return success ? 0 : 1;

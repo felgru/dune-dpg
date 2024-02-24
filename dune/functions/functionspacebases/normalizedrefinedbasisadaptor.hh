@@ -43,11 +43,6 @@ namespace Functions {
 template<typename InnerProduct>
 class NormalizedRefinedNode;
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
-template<typename Basis>
-class NormalizedRefinedNodeIndexSet;
-#endif
-
 
 template<typename InnerProduct>
 class NormalizedRefinedPreBasis
@@ -64,11 +59,6 @@ public:
   using WrappedBasis = Basis;
 
   using Node = NormalizedRefinedNode<InnerProduct>;
-
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
-  using IndexSet = NormalizedRefinedNodeIndexSet<
-                      NormalizedRefinedPreBasis<InnerProduct>>;
-#endif
 
   /** \brief Type used for global numbering of the basis vectors */
 #if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
@@ -113,13 +103,6 @@ public:
   {
     return Node{innerProduct_};
   }
-
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
-  IndexSet makeIndexSet() const
-  {
-    return IndexSet{*this};
-  }
-#endif
 
   size_type size() const
   {
@@ -286,67 +269,6 @@ protected:
   std::size_t nextScalingWeightsOffset_;
   FiniteElement finiteElement_;
 };
-
-
-
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,8)
-template<typename PB>
-class NormalizedRefinedNodeIndexSet
-{
-  using Basis = typename PB::WrappedBasis;
-
-  using WrappedIndexSet = typename Basis::PreBasis::IndexSet;
-
-public:
-
-  using size_type = std::size_t;
-
-  /** \brief Type used for global numbering of the basis vectors */
-  using MultiIndex = typename Basis::MultiIndex;
-
-  using PreBasis = PB;
-
-  using Node = typename PreBasis::Node;
-
-  NormalizedRefinedNodeIndexSet(const PreBasis& preBasis) :
-    wrappedIndexSet_(preBasis.wrappedPreBasis())
-  {}
-
-  /** \brief Bind the view to a grid element
-   *
-   * Having to bind the view to an element before being able to actually access any of its data members
-   * offers to centralize some expensive setup code in the 'bind' method, which can save a lot of run-time.
-   */
-  void bind(const Node& node)
-  {
-    wrappedIndexSet_.bind(node.wrappedBasisNode());
-  }
-
-  /** \brief Unbind the view
-   */
-  void unbind()
-  {
-    wrappedIndexSet_.unbind();
-  }
-
-  /** \brief Size of subtree rooted in this node (element-local)
-   */
-  size_type size() const
-  {
-    return wrappedIndexSet_.size();
-  }
-
-  //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis
-  template<typename It>
-  It indices(It it) const
-  {
-    return wrappedIndexSet_.indices(it);
-  }
-
-protected:
-  WrappedIndexSet wrappedIndexSet_;
-};
-#endif
 
 
 

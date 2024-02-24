@@ -181,10 +181,9 @@ faceImpl(LhsLocalView& lhsLocalView,
     RefinedFaceIntegrationData<type> integrationData(
         geometry, subGeometryInReferenceElement, direction);
 
-    for (unsigned short f = 0, fMax = subElement.subEntities(1); f < fMax; f++)
+    for (const auto& face : subEntities(subElement, Codim<1>{}))
     {
       using SubElement = std::decay_t<decltype(subElement)>;
-      const auto face = subElement.template subEntity<1>(f);
       const auto faceComputations
           = RefinedFaceComputations<SubElement>(face, subElement, element);
       if(faceComputations.template skipFace<type>(direction)) continue;
