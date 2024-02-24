@@ -8,7 +8,6 @@
 #include <dune/common/concept.hh>
 #include <dune/common/reservedvector.hh>
 #include <dune/common/typeutilities.hh>
-#include <dune/common/version.hh>
 
 #include <dune/functions/common/type_traits.hh>
 #include <dune/functions/functionspacebases/refinedlocalview.hh>
@@ -53,14 +52,10 @@ public:
   using GridView = typename PreBasis::GridView;
 
   //! Type used for global numbering of the basis vectors
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   using MultiIndex = std::conditional_t<
       (PreBasis::multiIndexBufferSize == 1),
       FlatMultiIndex<std::size_t>,
       Dune::ReservedVector<std::size_t, PreBasis::multiIndexBufferSize>>;
-#else
-  using MultiIndex = typename PreBasis::MultiIndex;
-#endif
 
   //! Type used for indices and size information
   using size_type = std::size_t;
@@ -68,19 +63,9 @@ public:
   //! Type of the local view on the restriction of the basis to a single element
   using LocalView = RefinedLocalView<RefinedGlobalBasis<PreBasis>>;
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,9)
-  //! Node index set provided by PreBasis
-  using NodeIndexSet = typename PreBasis::IndexSet;
-#endif
-
   //! Type used for prefixes handed to the size() method
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   using SizePrefix
     = Dune::ReservedVector<std::size_t, PreBasis::multiIndexBufferSize>;
-#else
-  using SizePrefix = typename PreBasis::SizePrefix;
-#endif
-
 
   /**
    * \brief Constructor

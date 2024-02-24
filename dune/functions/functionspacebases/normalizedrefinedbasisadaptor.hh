@@ -7,7 +7,6 @@
 #include <cmath>
 
 #include <dune/common/std/type_traits.hh>
-#include <dune/common/version.hh>
 
 #include <dune/dpg/assemble_helper.hh>
 
@@ -61,18 +60,12 @@ public:
   using Node = NormalizedRefinedNode<InnerProduct>;
 
   /** \brief Type used for global numbering of the basis vectors */
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   static constexpr size_type maxMultiIndexSize
       = WrappedPreBasis::maxMultiIndexSize;
   static constexpr size_type minMultiIndexSize
       = WrappedPreBasis::minMultiIndexSize;
   static constexpr size_type multiIndexBufferSize
       = WrappedPreBasis::multiIndexBufferSize;
-#else
-  using MultiIndex = typename Basis::MultiIndex;
-
-  using SizePrefix = Dune::ReservedVector<size_type, 1>;
-#endif
 
   /** \brief Constructor for a given grid view object */
   NormalizedRefinedPreBasis(const InnerProduct& ip) :
@@ -110,12 +103,8 @@ public:
   }
 
   //! Return number possible values for next position in multi index
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<class SizePrefix>
   size_type size(const SizePrefix& prefix) const
-#else
-  size_type size(const SizePrefix prefix) const
-#endif
   {
     return wrappedPreBasis_.size(prefix);
   }

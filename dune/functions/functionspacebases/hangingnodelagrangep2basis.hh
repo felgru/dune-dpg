@@ -8,13 +8,8 @@
 
 #include <dune/common/exceptions.hh>
 #include <dune/common/math.hh>
-#include <dune/common/version.hh>
 
-#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,9)
 #include <dune/localfunctions/lagrange/lagrangelfecache.hh>
-#else
-#include <dune/localfunctions/lagrange/pqkfactory.hh>
-#endif
 
 #include <dune/typetree/leafnode.hh>
 
@@ -80,11 +75,7 @@ private:
   template<typename, class, typename>
   friend class HangingNodeLagrangeP2NodeIndexSet;
 
-#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,9)
   using FiniteElementCache = typename Dune::LagrangeLocalFiniteElementCache<typename GV::ctype, R, dim, 2>;
-#else
-  using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, R, dim, 2>;
-#endif
 
 public:
 
@@ -314,11 +305,7 @@ class HangingNodeLagrangeP2Node :
 {
   static constexpr int dim = GV::dimension;
 
-#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,9)
   using FiniteElementCache = typename Dune::LagrangeLocalFiniteElementCache<typename GV::ctype, R, dim, 2>;
-#else
-  using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, R, dim, 2>;
-#endif
 
 public:
 

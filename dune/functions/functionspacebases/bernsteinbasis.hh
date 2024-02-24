@@ -6,7 +6,6 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/math.hh>
-#include <dune/common/version.hh>
 
 #include <dune/localfunctions/bernstein/pqkfactory.hh>
 
@@ -37,11 +36,7 @@ namespace Functions {
 template<typename GV, int k, typename R=double>
 class BernsteinNode;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
 template<typename GV, int k, typename R=double>
-#else
-template<typename GV, int k, class MI, typename R=double>
-#endif
 class BernsteinPreBasis;
 
 
@@ -58,11 +53,7 @@ class BernsteinPreBasis;
  *
  * \note This only works for 2d simplex grids.
  */
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
 template<typename GV, int k, typename R>
-#else
-template<typename GV, int k, class MI, typename R>
-#endif
 class BernsteinPreBasis
 {
   static constexpr int dim = GV::dimension;
@@ -99,17 +90,9 @@ public:
 
   using Node = BernsteinNode<GV, k, R>;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   static constexpr size_type maxMultiIndexSize = 1;
   static constexpr size_type minMultiIndexSize = 1;
   static constexpr size_type multiIndexBufferSize = 1;
-#else
-  //! Type used for global numbering of the basis vectors
-  using MultiIndex = MI;
-
-  //! Type used for prefixes handed to the size() method
-  using SizePrefix = Dune::ReservedVector<size_type, 1>;
-#endif
 
   //! Constructor for a given grid view object
   BernsteinPreBasis(const GridView& gv) :
@@ -183,12 +166,8 @@ public:
   }
 
   //! Return number of possible values for next position in multi index
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<class SizePrefix>
   size_type size(const SizePrefix& prefix) const
-#else
-  size_type size(const SizePrefix prefix) const
-#endif
   {
     assert(prefix.size() == 0 || prefix.size() == 1);
     return (prefix.size() == 0) ? size() : 0;
@@ -396,24 +375,6 @@ protected:
 
 namespace BasisFactory {
 
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,9)
-namespace Imp {
-
-template<std::size_t k, typename R=double>
-struct BernsteinPreBasisFactory
-{
-  static const std::size_t requiredMultiIndexSize = 1;
-
-  template<class MultiIndex, class GridView>
-  auto makePreBasis(const GridView& gridView) const
-  {
-    return BernsteinPreBasis<GridView, k, MultiIndex, R>(gridView);
-  }
-};
-
-} // end namespace BasisFactory::Imp
-#endif
-
 
 
 /**
@@ -427,13 +388,9 @@ struct BernsteinPreBasisFactory
 template<std::size_t k, typename R=double>
 auto bernstein()
 {
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   return [](const auto& gridView) {
     return BernsteinPreBasis<std::decay_t<decltype(gridView)>, k, R>(gridView);
   };
-#else
-  return Imp::BernsteinPreBasisFactory<k, R>();
-#endif
 }
 
 } // end namespace BasisFactory
@@ -461,11 +418,7 @@ auto bernstein()
  * \tparam R The range type of the local basis
  */
 template<typename GV, int k, typename R=double>
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
 using BernsteinBasis = DefaultGlobalBasis<BernsteinPreBasis<GV, k, R>>;
-#else
-using BernsteinBasis = DefaultGlobalBasis<BernsteinPreBasis<GV, k, FlatMultiIndex<std::size_t>, R> >;
-#endif
 
 
 
