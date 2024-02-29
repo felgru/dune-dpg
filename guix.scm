@@ -35,7 +35,8 @@
                         #:select? (git-predicate %source-dir)))
     (build-system cmake-build-system)
     (arguments
-     `(#:phases
+     `(#:configure-flags '("-DINSTALL_EXAMPLES=ON")
+       #:phases
        (modify-phases %standard-phases
          (add-after 'build 'build-tests
            (lambda* (#:key make-flags parallel-build? #:allow-other-keys)
