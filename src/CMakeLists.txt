@@ -86,6 +86,11 @@ foreach(level 0 1 2)
   target_compile_definitions(${profile_executable}
                              PUBLIC LEVEL_SEARCH=${level};
                                     K_SEARCH=${degree})
+  if(INSTALL_EXAMPLES)
+    install(TARGETS
+      ${profile_executable}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  endif()
 endforeach()
 
 foreach(level RANGE 0 3)
@@ -105,6 +110,11 @@ foreach(level RANGE 0 3)
                                     K_SEARCH=${degree};
                                     LEVEL_APOSTERIORI=${alevel};
                                     K_APOSTERIORI=${adegree})
+  if(INSTALL_EXAMPLES)
+    install(TARGETS
+      ${convergence_test}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  endif()
 endforeach()
 
 if(dune-subgrid_FOUND)
@@ -174,3 +184,29 @@ target_link_dune_default_libraries("kernel_svds")
 
 add_executable("kernel_truncations" kernel_truncations.cc)
 target_link_dune_default_libraries("kernel_truncations")
+
+if(INSTALL_EXAMPLES)
+  install(TARGETS
+    asti_peaky_uniform
+    asti_checkerboard_uniform
+    dune_dpg_opt_testspace
+    dune_dpg_saddlepoint
+    kernel_svds
+    kernel_truncations
+    manufactured_transport_uniform
+    plot_extension
+    plot_solution_simple
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+  if(dune-subgrid_FOUND)
+    install(TARGETS
+      asti_checkerboard
+      asti_checkerboard_normalized
+      asti_peaky
+      asti_peaky_normalized
+      dune_dpg_error
+      manufactured_transport
+      plot_solution
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  endif()
+endif()

@@ -1,4 +1,5 @@
 # File for module specific CMake tests.
+option(INSTALL_EXAMPLES "Install example programs to bin directory" OFF)
 include(DuneBoost)
 find_package(BoostHana 1.61 REQUIRED)
 find_package(SuiteSparse COMPONENTS UMFPACK)
