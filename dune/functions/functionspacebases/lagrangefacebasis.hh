@@ -186,7 +186,7 @@ public:
         }
         else
         {
-          const Dune::ReferenceElement<double,dim> refElement
+          const auto refElement
               = Dune::referenceElement<double,dim>(element.type());
 
           // we have to reverse the numbering if the local triangle edge is

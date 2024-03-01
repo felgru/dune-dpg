@@ -25,6 +25,10 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 ### Deprecated
 
 ### Removed
+* refinedglobalbasis.hh still contained a fallback for the deprecated
+  `BasisBuilder` namespace, which we've renamed in 0.4 to `BasisFactory`
+  in accordance with a rename in dune-functions 2.6. This last
+  `BasisBuilder` namespace has now been removed.
 * The deprecated spaces `PQkDGRefinedDGBasis`,
   `PQkSubsampledDGNodalBasis`, `PQkDGSubsampledDGNodalBasis`,
   `PQkFaceNodalBasis` and `PQkTraceNodalBasis` have been removed.
