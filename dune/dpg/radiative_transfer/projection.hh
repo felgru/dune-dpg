@@ -29,7 +29,7 @@ namespace Imp {
   class ProjectionMap
   {
     public:
-      using Entity = typename Grid::LeafGridView::Codim<0>::Entity;
+      using Entity = typename Grid::LeafGridView::template Codim<0>::Entity;
       using EntitySeed = typename Entity::EntitySeed;
       using IdSet = typename Grid::GlobalIdSet;
       using IdType = typename IdSet::IdType;
