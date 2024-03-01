@@ -193,13 +193,6 @@ auto makeRefiendBasis(const GridView& gridView,
 
 } // end namespace BasisFactory
 
-// Backward compatibility
-namespace BasisBuilder {
-
-  using namespace BasisFactory;
-
-}
-
 
 
 } // end namespace Functions
