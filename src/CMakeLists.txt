@@ -60,11 +60,20 @@ if(dune-grid_VERSION VERSION_LESS 2.10)
 endif()
 target_link_dune_default_libraries("plot_extension")
 
-add_executable("plot_projection" plot_projection.cc)
-if(dune-grid_VERSION VERSION_LESS 2.10)
-  add_dune_ug_flags(plot_projection)
+if(EIGEN3_VERSION VERSION_LESS 3.4)
+  message(WARNING "Not building plot_projection since your Eigen3 does not"
+                  " is too old for our projection code.  Please install at"
+                  " least Eigen 3.4.")
+else()
+  add_executable("plot_projection" plot_projection.cc)
+  if(dune-grid_VERSION VERSION_LESS 2.10)
+    add_dune_ug_flags(plot_projection)
+  endif()
+  target_link_dune_default_libraries("plot_projection")
+  install(TARGETS
+    plot_projection
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
-target_link_dune_default_libraries("plot_projection")
 
 add_executable("trial-to-test-condition" trial-to-test-condition.cc)
 if(dune-grid_VERSION VERSION_LESS 2.10)
