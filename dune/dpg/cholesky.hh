@@ -20,7 +20,7 @@ template<typename MatrixType>
 class Cholesky
 {
 public:
-  Cholesky<MatrixType>(const MatrixType& matrix)
+  Cholesky(const MatrixType& matrix)
     : eigenMatrix(toEigenMatrix(matrix))
     , ldltDecomposition(eigenMatrix)
   {}
