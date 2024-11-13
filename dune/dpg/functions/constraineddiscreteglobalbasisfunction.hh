@@ -8,7 +8,6 @@
 #include <vector>
 
 #include <dune/dpg/functions/localindexsetiteration.hh>
-#include <dune/functions/functionspacebases/defaultnodetorangemap.hh>
 #include <dune/functions/gridfunctions/gridviewentityset.hh>
 #include <dune/functions/gridfunctions/gridfunction.hh>
 
