@@ -68,7 +68,7 @@ namespace detail {
                            unsigned int quadratureOrder)
     {
       return ChooseQuadratureImpl<type>
-        ::template Quadrature(element, quadratureOrder);
+        ::Quadrature(element, quadratureOrder);
     }
   };
 
