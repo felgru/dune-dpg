@@ -325,13 +325,13 @@ private:
 
 template<class F, class GridView>
 PiecewiseConstantGridViewFunction<
-  typename std::result_of<F(typename GridView::template Codim<0>::Geometry::GlobalCoordinate)>::type,  // Range
+  typename std::invoke_result_t<F, typename GridView::template Codim<0>::Geometry::GlobalCoordinate>,  // Range
   GridView,
   typename std::decay<F>::type >                                                                      // Raw type of F (without & or &&)
   makePiecewiseConstantGridViewFunction(F&& f, const GridView& gridView)
 {
   using Domain = typename GridView::template Codim<0>::Geometry::GlobalCoordinate;
-  using Range = typename std::result_of<F(Domain)>::type;
+  using Range = typename std::invoke_result_t<F, Domain>;
   using FRaw = typename std::decay<F>::type;
 
   return PiecewiseConstantGridViewFunction<Range, GridView, FRaw>

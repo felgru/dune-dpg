@@ -6,6 +6,8 @@
 #include <dune/dpg/quadratureorder.hh>
 #include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
 
+#include <type_traits>
+
 namespace Dune {
 namespace Functions {
 
@@ -97,7 +99,7 @@ private:
 
 template<unsigned int quadratureOrder, class F, class GridView>
 AnalyticGridViewFunctionWithQuadratureOrder<quadratureOrder,
-  typename std::result_of<F(typename GridView::template Codim<0>::Geometry::GlobalCoordinate)>::type  // Range
+  typename std::invoke_result_t<F, typename GridView::template Codim<0>::Geometry::GlobalCoordinate>  // Range
   (typename GridView::template Codim<0>::Geometry::GlobalCoordinate),                                 // Domain
   GridView,
   typename std::decay<F>::type >                                                                      // Raw type of F (without & or &&)
@@ -105,7 +107,7 @@ AnalyticGridViewFunctionWithQuadratureOrder<quadratureOrder,
                                                   const GridView& gridView)
 {
   using Domain = typename GridView::template Codim<0>::Geometry::GlobalCoordinate;
-  using Range = typename std::result_of<F(Domain)>::type;
+  using Range = typename std::invoke_result_t<F, Domain>;
   using FRaw = typename std::decay<F>::type;
 
   return AnalyticGridViewFunctionWithQuadratureOrder<quadratureOrder,
