@@ -36,7 +36,9 @@ namespace Functions {
 #endif
   class LagrangePreBasis;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,11)
+  template<typename GV, int k, typename R>
+#elif DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<typename GV, int k>
 #else
   template<typename GV, int k, class MI>
@@ -419,11 +421,19 @@ struct changeGridView<Functions::LagrangePreBasis<GV, k, R>, GridView>
   typedef Functions::LagrangePreBasis<GridView, k, R> type;
 };
 
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,11)
+template<typename GV, int k, class GridView, class R>
+struct changeGridView<Functions::LagrangeDGPreBasis<GV, k, R>, GridView>
+{
+  typedef Functions::LagrangeDGPreBasis<GridView, k, R> type;
+};
+#else
 template<typename GV, int k, class GridView>
 struct changeGridView<Functions::LagrangeDGPreBasis<GV, k>, GridView>
 {
   typedef Functions::LagrangeDGPreBasis<GridView, k> type;
 };
+#endif
 
 template<typename GV, int level, int k, typename R, class GridView>
 struct changeGridView<Functions::LagrangeDGRefinedDGPreBasis<GV, level, k, R>,

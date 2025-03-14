@@ -15,7 +15,7 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 * dune-dpg now requires at least version 2.8 of the Dune core modules
-  and has been tested to be compatible with version 2.9.
+  and has been tested to be compatible with version 2.10.
 
 ### Fixed
 * `changeGridView` now works on `NormalizedBasis`, `InnerProduct` and
