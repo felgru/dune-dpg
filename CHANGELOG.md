@@ -14,7 +14,7 @@ and this project does not adhere to [Semantic Versioning](http://semver.org/).
   installed as before.
 
 ### Changed
-* dune-dpg now requires at least version 2.8 of the Dune core modules
+* dune-dpg now requires at least version 2.9 of the Dune core modules
   and has been tested to be compatible with version 2.10.
 
 ### Fixed

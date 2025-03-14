@@ -15,11 +15,6 @@ namespace Dune {
 
 #ifndef DOXYGEN
 namespace Functions {
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS,2,9)
-  template<class size_type>
-  class FlatMultiIndex;
-#endif
-
   template<class PB>
   class DefaultGlobalBasis;
 
@@ -29,77 +24,38 @@ namespace Functions {
   template<class PB>
   class RefinedGlobalBasis;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<typename GV, int k, typename R>
-#else
-  template<typename GV, int k, class MI, typename R>
-#endif
   class LagrangePreBasis;
 
 #if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,11)
   template<typename GV, int k, typename R>
-#elif DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
-  template<typename GV, int k>
 #else
-  template<typename GV, int k, class MI>
+  template<typename GV, int k>
 #endif
   class LagrangeDGPreBasis;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<typename GV, int level, int k, typename R>
-#else
-  template<typename GV, int level, int k, class MI, typename R>
-#endif
   class LagrangeDGRefinedDGPreBasis;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<typename GV, int k, typename R>
-#else
-  template<typename GV, int k, class MI, typename R>
-#endif
   class BernsteinPreBasis;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<typename GV, int k, typename R>
-#else
-  template<typename GV, int k, class MI, typename R>
-#endif
   class BernsteinDGPreBasis;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<typename GV, int level, int k, typename R>
-#else
-  template<typename GV, int level, int k, class MI, typename R>
-#endif
   class BernsteinDGRefinedDGPreBasis;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<typename GV, int s, int k, typename R>
-#else
-  template<typename GV, int s, int k, class MI, typename R>
-#endif
   class LagrangeDGSubsampledDGPreBasis;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<typename GV, int s, int k, typename R>
-#else
-  template<typename GV, int s, int k, class MI, typename R>
-#endif
   class LagrangeSubsampledDGPreBasis;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<typename GV, int k, typename R>
-#else
-  template<typename GV, int k, class MI, typename R>
-#endif
   class LagrangeTracePreBasis;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
-#else
-  template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
-           class MI>
-#endif
   class OptimalTestBasisPreBasis;
 
   template<typename GV, class MI, typename R>
@@ -162,28 +118,14 @@ struct is_OptimalTestSpace : std::false_type {};
 #ifndef DOXYGEN
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct is_OptimalTestSpace<Functions::DefaultGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
             Functions::OptimalTestBasisPreBasis<
-                TestspaceCoefficientMatrix, testIndex>
-#else
-            Functions::OptimalTestBasisPreBasis<
-                TestspaceCoefficientMatrix, testIndex,
-                Functions::FlatMultiIndex<std::size_t> >
-#endif
-            > >
+                TestspaceCoefficientMatrix, testIndex> > >
   : std::true_type {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct is_OptimalTestSpace<Functions::RefinedGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
             Functions::OptimalTestBasisPreBasis<
-                TestspaceCoefficientMatrix, testIndex>
-#else
-            Functions::OptimalTestBasisPreBasis<
-                TestspaceCoefficientMatrix, testIndex,
-                Functions::FlatMultiIndex<std::size_t> >
-#endif
-            > >
+                TestspaceCoefficientMatrix, testIndex> > >
   : std::true_type {};
 #endif
 
@@ -196,24 +138,12 @@ struct is_DGRefinedFiniteElement : std::false_type {};
 #ifndef DOXYGEN
 template<typename GV, int level, int k, typename R>
 struct is_DGRefinedFiniteElement<Functions::RefinedGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
-               Functions::LagrangeDGRefinedDGPreBasis<GV, level, k, R>
-#else
-               Functions::LagrangeDGRefinedDGPreBasis
-                   <GV, level, k, Functions::FlatMultiIndex<std::size_t>, R>
-#endif
-               >>
+               Functions::LagrangeDGRefinedDGPreBasis<GV, level, k, R> >>
        : std::true_type {};
 
 template<typename GV, int level, int k, typename R>
 struct is_DGRefinedFiniteElement<Functions::RefinedGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
-               Functions::BernsteinDGRefinedDGPreBasis<GV, level, k, R>
-#else
-               Functions::BernsteinDGRefinedDGPreBasis
-                   <GV, level, k, Functions::FlatMultiIndex<std::size_t>, R>
-#endif
-               >>
+               Functions::BernsteinDGRefinedDGPreBasis<GV, level, k, R> >>
        : std::true_type {};
 
 template<typename InnerProduct>
@@ -228,15 +158,8 @@ struct is_ContinuouslyRefinedFiniteElement : std::false_type {};
 #ifndef DOXYGEN
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct is_ContinuouslyRefinedFiniteElement<Functions::RefinedGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
             Functions::OptimalTestBasisPreBasis<
-                TestspaceCoefficientMatrix, testIndex>
-#else
-            Functions::OptimalTestBasisPreBasis<
-                TestspaceCoefficientMatrix, testIndex,
-                Functions::FlatMultiIndex<std::size_t> >
-#endif
-            > >
+                TestspaceCoefficientMatrix, testIndex> >>
   : is_RefinedFiniteElement<typename std::tuple_element<testIndex,
                               typename TestspaceCoefficientMatrix::TestSpaces
                             >::type> {};
@@ -254,24 +177,12 @@ struct levelOfFE : std::integral_constant<int, 0> {};
 #ifndef DOXYGEN
 template<class GV, int level, int k, typename R>
 struct levelOfFE<Functions::RefinedGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
-             Functions::LagrangeDGRefinedDGPreBasis<GV, level, k, R>
-#else
-             Functions::LagrangeDGRefinedDGPreBasis
-                 <GV, level, k, Functions::FlatMultiIndex<std::size_t>, R>
-#endif
-             >>
+             Functions::LagrangeDGRefinedDGPreBasis<GV, level, k, R> >>
        : std::integral_constant<int, level> {};
 
 template<class GV, int level, int k, typename R>
 struct levelOfFE<Functions::RefinedGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
-             Functions::BernsteinDGRefinedDGPreBasis<GV, level, k, R>
-#else
-             Functions::BernsteinDGRefinedDGPreBasis
-                 <GV, level, k, Functions::FlatMultiIndex<std::size_t>, R>
-#endif
-             >>
+             Functions::BernsteinDGRefinedDGPreBasis<GV, level, k, R> >>
        : std::integral_constant<int, level> {};
 
 template<class InnerProduct>
@@ -282,15 +193,8 @@ struct levelOfFE<Functions::RefinedGlobalBasis<
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct levelOfFE<Functions::RefinedGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
             Functions::OptimalTestBasisPreBasis<
-                TestspaceCoefficientMatrix, testIndex>
-#else
-            Functions::OptimalTestBasisPreBasis<
-                TestspaceCoefficientMatrix, testIndex,
-                Functions::FlatMultiIndex<std::size_t> >
-#endif
-            > >
+                TestspaceCoefficientMatrix, testIndex> >>
   : levelOfFE<typename std::tuple_element<testIndex,
                 typename TestspaceCoefficientMatrix::TestSpaces
               >::type> {};
@@ -302,37 +206,18 @@ struct is_SubsampledFiniteElement : std::false_type {};
 #ifndef DOXYGEN
 template<class GV, int s, int k, typename R>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
-             Functions::LagrangeDGSubsampledDGPreBasis<GV, s, k, R>
-#else
-             Functions::LagrangeDGSubsampledDGPreBasis
-                 <GV, s, k, Functions::FlatMultiIndex<std::size_t>, R>
-#endif
-             >>
+             Functions::LagrangeDGSubsampledDGPreBasis<GV, s, k, R> >>
        : std::true_type {};
 
 template<class GV, int s, int k, typename R>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
-             Functions::LagrangeSubsampledDGPreBasis<GV, s, k, R>
-#else
-             Functions::LagrangeSubsampledDGPreBasis
-                 <GV, s, k, Functions::FlatMultiIndex<std::size_t>, R>
-#endif
-             >>
+             Functions::LagrangeSubsampledDGPreBasis<GV, s, k, R> >>
        : std::true_type {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct is_SubsampledFiniteElement<Functions::DefaultGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
             Functions::OptimalTestBasisPreBasis<
-                TestspaceCoefficientMatrix, testIndex>
-#else
-            Functions::OptimalTestBasisPreBasis<
-                TestspaceCoefficientMatrix, testIndex,
-                Functions::FlatMultiIndex<std::size_t> >
-#endif
-            > >
+                TestspaceCoefficientMatrix, testIndex> >>
   : is_SubsampledFiniteElement<typename std::tuple_element<testIndex,
                                  typename TestspaceCoefficientMatrix::TestSpaces
                                >::type> {};
@@ -344,37 +229,18 @@ struct numberOfSamples : std::integral_constant<int, 1> {};
 #ifndef DOXYGEN
 template<class GV, int s, int k, typename R>
 struct numberOfSamples<Functions::DefaultGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
-             Functions::LagrangeDGSubsampledDGPreBasis<GV, s, k, R>
-#else
-             Functions::LagrangeDGSubsampledDGPreBasis
-                 <GV, s, k, Functions::FlatMultiIndex<std::size_t>, R>
-#endif
-             >>
+             Functions::LagrangeDGSubsampledDGPreBasis<GV, s, k, R> >>
        : std::integral_constant<int, s> {};
 
 template<class GV, int s, int k, typename R>
 struct numberOfSamples<Functions::DefaultGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
-             Functions::LagrangeSubsampledDGPreBasis<GV, s, k, R>
-#else
-             Functions::LagrangeSubsampledDGPreBasis
-                 <GV, s, k, Functions::FlatMultiIndex<std::size_t>, R>
-#endif
-             >>
+             Functions::LagrangeSubsampledDGPreBasis<GV, s, k, R> >>
        : std::integral_constant<int, s> {};
 
 template<typename TestspaceCoefficientMatrix, std::size_t testIndex>
 struct numberOfSamples<Functions::DefaultGlobalBasis<
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
             Functions::OptimalTestBasisPreBasis<
-                TestspaceCoefficientMatrix, testIndex>
-#else
-            Functions::OptimalTestBasisPreBasis<
-                TestspaceCoefficientMatrix, testIndex,
-                Functions::FlatMultiIndex<std::size_t> >
-#endif
-            > >
+                TestspaceCoefficientMatrix, testIndex> >>
   : numberOfSamples<typename std::tuple_element<testIndex,
                       typename TestspaceCoefficientMatrix::TestSpaces
                     >::type> {};
@@ -414,7 +280,6 @@ struct changeGridView<Functions::RefinedGlobalBasis<PB>, GridView>
   typedef Functions::RefinedGlobalBasis<changeGridView_t<PB, GridView>> type;
 };
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
 template<typename GV, int k, typename R, class GridView>
 struct changeGridView<Functions::LagrangePreBasis<GV, k, R>, GridView>
 {
@@ -494,79 +359,6 @@ struct changeGridView<Functions::OptimalTestBasisPreBasis
     changeGridView_t<TestspaceCoefficientMatrix, GridView>,
     testIndex>   type;
 };
-#else
-template<typename GV, int k, class MI, typename R, class GridView>
-struct changeGridView<Functions::LagrangePreBasis<GV, k, MI, R>, GridView>
-{
-  typedef Functions::LagrangePreBasis<GridView, k, MI, R> type;
-};
-
-template<typename GV, int k, class MI, class GridView>
-struct changeGridView<Functions::LagrangeDGPreBasis<GV, k, MI>, GridView>
-{
-  typedef Functions::LagrangeDGPreBasis<GridView, k, MI> type;
-};
-
-template<typename GV, int level, int k, class MI, typename R, class GridView>
-struct changeGridView<Functions::LagrangeDGRefinedDGPreBasis<GV, level, k, MI, R>,
-                      GridView>
-{
-  typedef Functions::LagrangeDGRefinedDGPreBasis<GridView, level, k, MI, R> type;
-};
-
-template<typename GV, int k, class MI, typename R, class GridView>
-struct changeGridView<Functions::BernsteinPreBasis<GV, k, MI, R>, GridView>
-{
-  typedef Functions::BernsteinPreBasis<GridView, k, MI, R> type;
-};
-
-template<typename GV, int k, class MI, typename R, class GridView>
-struct changeGridView<Functions::BernsteinDGPreBasis<GV, k, MI, R>, GridView>
-{
-  typedef Functions::BernsteinDGPreBasis<GridView, k, MI, R> type;
-};
-
-template<typename GV, int level, int k, class MI, typename R, class GridView>
-struct changeGridView<Functions::BernsteinDGRefinedDGPreBasis
-                                                <GV, level, k, MI, R>,
-                      GridView>
-{
-  typedef Functions::BernsteinDGRefinedDGPreBasis<GridView, level, k, MI, R>
-      type;
-};
-
-template<typename GV, int s, int k, class MI, typename R, class GridView>
-struct changeGridView<Functions::LagrangeDGSubsampledDGPreBasis<GV, s, k, MI, R>,
-                      GridView>
-{
-  typedef Functions::LagrangeDGSubsampledDGPreBasis<GridView, s, k, MI, R> type;
-};
-
-template<typename GV, int s, int k, class MI, typename R, class GridView>
-struct changeGridView<Functions::LagrangeSubsampledDGPreBasis<GV, s, k, MI, R>,
-                      GridView>
-{
-  typedef Functions::LagrangeSubsampledDGPreBasis<GridView, s, k, MI, R> type;
-};
-
-template<typename GV, int k, class MI, typename R, class GridView>
-struct changeGridView<Functions::LagrangeTracePreBasis<GV, k, MI, R>,
-                      GridView>
-{
-  typedef Functions::LagrangeTracePreBasis<GridView, k, MI, R> type;
-};
-
-template<typename TestspaceCoefficientMatrix, std::size_t testIndex,
-         class MI, class GridView>
-struct changeGridView<Functions::OptimalTestBasisPreBasis
-                       <TestspaceCoefficientMatrix,
-                        testIndex, MI>, GridView>
-{
-  typedef Functions::OptimalTestBasisPreBasis<
-    changeGridView_t<TestspaceCoefficientMatrix, GridView>,
-    testIndex, MI>   type;
-};
-#endif
 
 template<typename GV, class MI, typename R, class GridView>
 struct changeGridView<Functions::HangingNodeBernsteinP2PreBasis<GV, MI, R>,

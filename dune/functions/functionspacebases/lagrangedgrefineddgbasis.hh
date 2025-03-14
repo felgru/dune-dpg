@@ -6,13 +6,8 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/math.hh>
-#include <dune/common/version.hh>
 
-#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,9)
 #include <dune/localfunctions/lagrange/lagrangelfecache.hh>
-#else
-#include <dune/localfunctions/lagrange/pqkfactory.hh>
-#endif
 
 #include <dune/typetree/leafnode.hh>
 
@@ -44,11 +39,7 @@ template<typename GV, int level, int k, typename R=double>
 class LagrangeDGRefinedDGNode;
 
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
 template<typename GV, int level, int k, typename R=double>
-#else
-template<typename GV, int level, int k, class MI, typename R=double>
-#endif
 class LagrangeDGRefinedDGPreBasis
   : public DGRefinedPreBasisConstants<GV::dimension, level, k>
 {
@@ -76,16 +67,9 @@ public:
 
   using Node = LagrangeDGRefinedDGNode<GV, level, k, R>;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   static constexpr size_type maxMultiIndexSize = 1;
   static constexpr size_type minMultiIndexSize = 1;
   static constexpr size_type multiIndexBufferSize = 1;
-#else
-  /** \brief Type used for global numbering of the basis vectors */
-  using MultiIndex = MI;
-
-  using SizePrefix = Dune::ReservedVector<size_type, 1>;
-#endif
 
   /** \brief Constructor for a given grid view object */
   LagrangeDGRefinedDGPreBasis(const GridView& gv) :
@@ -137,12 +121,8 @@ public:
   }
 
   //! Return number possible values for next position in multi index
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<class SizePrefix>
   size_type size(const SizePrefix& prefix) const
-#else
-  size_type size(const SizePrefix prefix) const
-#endif
   {
     assert(prefix.size() == 0 || prefix.size() == 1);
     return (prefix.size() == 0) ? size() : 0;
@@ -213,11 +193,7 @@ class LagrangeDGRefinedDGNode :
   using RefinedNodeBase =
           RefinedNode < typename GV::template Codim<0>::Entity
                       , typename GV::ctype, dim, level>;
-#if DUNE_VERSION_GTE(DUNE_LOCALFUNCTIONS,2,9)
   using FiniteElementCache = typename Dune::LagrangeLocalFiniteElementCache<typename GV::ctype, R, dim, k>;
-#else
-  using FiniteElementCache = typename Dune::PQkLocalFiniteElementCache<typename GV::ctype, R, dim, k>;
-#endif
 
 public:
 
@@ -286,11 +262,7 @@ protected:
  * \tparam R The range type of the local basis
  */
 template<typename GV, int level, int k, typename R=double>
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
 using LagrangeDGRefinedDGBasis = RefinedGlobalBasis<LagrangeDGRefinedDGPreBasis<GV, level, k, R>>;
-#else
-using LagrangeDGRefinedDGBasis = RefinedGlobalBasis<LagrangeDGRefinedDGPreBasis<GV, level, k, FlatMultiIndex<std::size_t>, R> >;
-#endif
 
 
 

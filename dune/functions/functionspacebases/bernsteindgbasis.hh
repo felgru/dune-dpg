@@ -6,7 +6,6 @@
 #include <array>
 #include <dune/common/exceptions.hh>
 #include <dune/common/math.hh>
-#include <dune/common/version.hh>
 
 #include <dune/functions/functionspacebases/nodes.hh>
 #include <dune/functions/functionspacebases/defaultglobalbasis.hh>
@@ -37,11 +36,7 @@ template<typename GV, int k, typename R=double>
 using BernsteinDGNode = BernsteinNode<GV, k, R>;
 
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
 template<typename GV, int k, typename R=double>
-#else
-template<typename GV, int k, class MI, typename R=double>
-#endif
 class BernsteinDGPreBasis
 {
   static constexpr int dim = GV::dimension;
@@ -65,16 +60,9 @@ public:
 
   using Node = BernsteinDGNode<GV, k, R>;
 
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   static constexpr size_type maxMultiIndexSize = 1;
   static constexpr size_type minMultiIndexSize = 1;
   static constexpr size_type multiIndexBufferSize = 1;
-#else
-  /** \brief Type used for global numbering of the basis vectors */
-  using MultiIndex = MI;
-
-  using SizePrefix = Dune::ReservedVector<size_type, 1>;
-#endif
 
   /** \brief Constructor for a given grid view object */
   BernsteinDGPreBasis(const GridView& gv) :
@@ -131,12 +119,8 @@ public:
   }
 
   //! Return number possible values for next position in multi index
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
   template<class SizePrefix>
   size_type size(const SizePrefix& prefix) const
-#else
-  size_type size(const SizePrefix prefix) const
-#endif
   {
     assert(prefix.size() == 0 || prefix.size() == 1);
     return (prefix.size() == 0) ? size() : 0;
@@ -226,11 +210,7 @@ public:
  * \tparam R The range type of the local basis
  */
 template<typename GV, int k, typename R=double>
-#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,9)
 using BernsteinDGBasis = DefaultGlobalBasis<BernsteinDGPreBasis<GV, k, R>>;
-#else
-using BernsteinDGBasis = DefaultGlobalBasis<BernsteinDGPreBasis<GV, k, FlatMultiIndex<std::size_t>, R> >;
-#endif
 
 
 
