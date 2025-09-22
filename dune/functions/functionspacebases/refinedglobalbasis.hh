@@ -8,11 +8,15 @@
 #include <dune/common/concept.hh>
 #include <dune/common/reservedvector.hh>
 #include <dune/common/typeutilities.hh>
+#include <dune/common/version.hh>
 
 #include <dune/functions/common/type_traits.hh>
-#include <dune/functions/functionspacebases/refinedlocalview.hh>
 #include <dune/functions/functionspacebases/concepts.hh>
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,11)
+#include <dune/functions/functionspacebases/containerdescriptors.hh>
+#endif
 #include <dune/functions/functionspacebases/flatmultiindex.hh>
+#include <dune/functions/functionspacebases/refinedlocalview.hh>
 
 
 
@@ -152,6 +156,17 @@ public:
   {
     return *this;
   }
+
+#if DUNE_VERSION_GTE(DUNE_FUNCTIONS,2,11)
+  //! Return the associated container descriptor
+  auto containerDescriptor() const
+  {
+    if constexpr (requires(PreBasis pb){ pb.containerDescriptor(); })
+      return preBasis_.containerDescriptor();
+    else
+      return ContainerDescriptors::Unknown{};
+  }
+#endif
 
 protected:
   PreBasis preBasis_;
